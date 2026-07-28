@@ -112,7 +112,15 @@ TONYS_PIZZA_PROJECT_SPEC/
     ├── 13_INSIDE_JOKE_MANAGER_AND_DYNAMIC_LORE.md
     ├── 14_WORLD_LORE_AND_CANON.md
     ├── 15_MVP_DEVELOPMENT_ROADMAP.md
-    └── 16_FINAL_RECONCILED_PLAN.md      ← APPROVED · CANONICAL
+    ├── 16_FINAL_RECONCILED_PLAN.md      ← APPROVED · CANONICAL
+    └── 17_ACCELERATED_ROADMAP.md        ← APPROVED · ordering only
+```
+
+### Working documents
+
+```text
+docs/IMPLEMENTATION_HANDOFF.md   the current engineering assignment
+content/counter-greetings.md     drafted Counter Greeting lines
 ```
 
 ### Art framework
@@ -159,6 +167,7 @@ Read every file before implementation, in this order:
 16. `PROJECT_SPEC/14_WORLD_LORE_AND_CANON.md`
 17. `PROJECT_SPEC/15_MVP_DEVELOPMENT_ROADMAP.md`
 18. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` ← **read last, obeyed first**
+19. `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` ← **implementation ordering**
 19. `CLAUDE_FIRST_PROMPT.md`
 
 Do not skip character, lore, content, art, or operations files because they appear less technical. They contain product rules that materially affect architecture and implementation.
@@ -243,12 +252,13 @@ Contains the exact first instruction to give Claude Code after the complete pack
 
 When requirements appear to conflict, use this order:
 
-1. `16_FINAL_RECONCILED_PLAN.md` — **approved, canonical, highest authority**;
-2. `00_PROJECT_RULES.md`;
-3. this final `README.md`;
-4. the most specialized canonical file for the relevant system;
-5. the most recent explicitly versioned requirement;
-6. commissioner clarification.
+1. `17_ACCELERATED_ROADMAP.md` — **implementation ordering only**; introduces no scope;
+2. `16_FINAL_RECONCILED_PLAN.md` — **approved, canonical, highest authority** on everything else;
+3. `00_PROJECT_RULES.md`;
+4. this final `README.md`;
+5. the most specialized canonical file for the relevant system;
+6. the most recent explicitly versioned requirement;
+7. commissioner clarification.
 
 `16` supersedes anything below it in this list. Where `16` is silent, the older documents govern in the order shown.
 

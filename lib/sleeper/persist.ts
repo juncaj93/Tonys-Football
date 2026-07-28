@@ -216,9 +216,13 @@ export async function persistChain(
               year: season.year,
               sleeperLeagueId: season.leagueId,
               status: seedSeasonStatus(season.status),
-              // A season already complete when we first saw it was
-              // reconstructed after the fact, never watched live. `16 §12`
-              // requires that distinction stay visible rather than disguised.
+              // A season already complete the first time we saw it was
+              // reconstructed after the fact, never watched live. That is
+              // what `is_historical` records — provenance, not completeness
+              // (`16 §12`). 2024 and 2025 are both historical AND complete.
+              //
+              // Only set on insert. A season we watched live keeps
+              // `is_historical = false` forever, even after it closes.
               isHistorical: season.isComplete,
             })
             .returning({ id: seasons.id });
