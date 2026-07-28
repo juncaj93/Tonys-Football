@@ -1,0 +1,1413 @@
+{
+  "baseUrl": "https://api.sleeper.app/v1",
+  "entries": [
+    {
+      "bytes": 3684,
+      "endpoint": {
+        "kind": "league",
+        "leagueId": "1113249275284205568"
+      },
+      "key": "league/1113249275284205568/league",
+      "result": "ok",
+      "sha256": "8bcdbb972ead4c697660534fa0fd804e0012c57d6cef3894d950c1c89aad0c42",
+      "status": 200
+    },
+    {
+      "bytes": 507,
+      "endpoint": {
+        "kind": "losers_bracket",
+        "leagueId": "1113249275284205568"
+      },
+      "key": "league/1113249275284205568/losers_bracket",
+      "result": "ok",
+      "sha256": "a489df2dd280780823baf176a9a7ba2fba00ffd9de22530f830245ab3fa24de8",
+      "status": 200
+    },
+    {
+      "bytes": 10064,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 1
+      },
+      "key": "league/1113249275284205568/matchups/01",
+      "result": "ok",
+      "sha256": "9f85e7c3e96fbcf704c07face3e049aba0e2fc1f2efa5399e051663067b0d611",
+      "status": 200
+    },
+    {
+      "bytes": 10288,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 2
+      },
+      "key": "league/1113249275284205568/matchups/02",
+      "result": "ok",
+      "sha256": "a0be90e1af6337f4372ed21538dfabb20c60709bd8bab03509ffa13fa6f186ad",
+      "status": 200
+    },
+    {
+      "bytes": 10208,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 3
+      },
+      "key": "league/1113249275284205568/matchups/03",
+      "result": "ok",
+      "sha256": "cd1b58c53afa4846ebf3d3f9ef829b0578e211e0504ac7f089ae25ebcec1b48e",
+      "status": 200
+    },
+    {
+      "bytes": 10211,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 4
+      },
+      "key": "league/1113249275284205568/matchups/04",
+      "result": "ok",
+      "sha256": "f088c9fcf052ca0e630b6e628222a0e5f66b4257d1c0303210cc76e0956a3cb4",
+      "status": 200
+    },
+    {
+      "bytes": 10233,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 5
+      },
+      "key": "league/1113249275284205568/matchups/05",
+      "result": "ok",
+      "sha256": "a6740bcfb5f3623a079982d49ef8dac4707d5166ec359c5ba6d7437c6c5473bc",
+      "status": 200
+    },
+    {
+      "bytes": 10110,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 6
+      },
+      "key": "league/1113249275284205568/matchups/06",
+      "result": "ok",
+      "sha256": "41c07ce6fa9063d0b36f8462bfbb90dbc59c68501d3d0fc891fa30a1f837f1de",
+      "status": 200
+    },
+    {
+      "bytes": 10210,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 7
+      },
+      "key": "league/1113249275284205568/matchups/07",
+      "result": "ok",
+      "sha256": "21a04305c5c38240a6652abedc77495b2028622fd422fc1f345aa654f4029a09",
+      "status": 200
+    },
+    {
+      "bytes": 10114,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 8
+      },
+      "key": "league/1113249275284205568/matchups/08",
+      "result": "ok",
+      "sha256": "8533903e5192f13542d2fc6064150ddcceefac89a04a71be15b2f5be9c167196",
+      "status": 200
+    },
+    {
+      "bytes": 10053,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 9
+      },
+      "key": "league/1113249275284205568/matchups/09",
+      "result": "ok",
+      "sha256": "80bc485a0651d72a149e043af09404bd9b1dbf2176251a20190f0a5fc5ad76ba",
+      "status": 200
+    },
+    {
+      "bytes": 10148,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 10
+      },
+      "key": "league/1113249275284205568/matchups/10",
+      "result": "ok",
+      "sha256": "a606965af3138a19ec3f288a0f8085d61050da59034fb12e090bae9d061b12c9",
+      "status": 200
+    },
+    {
+      "bytes": 10149,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 11
+      },
+      "key": "league/1113249275284205568/matchups/11",
+      "result": "ok",
+      "sha256": "281d885ce4cea74898b428df15c0e1c449ed701782e15549a013fecc7bb4fef5",
+      "status": 200
+    },
+    {
+      "bytes": 10121,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 12
+      },
+      "key": "league/1113249275284205568/matchups/12",
+      "result": "ok",
+      "sha256": "22cc14c84798b63b73550a7f18f82f3b1ca159424c63f9b48984240e1afb8cd5",
+      "status": 200
+    },
+    {
+      "bytes": 10246,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 13
+      },
+      "key": "league/1113249275284205568/matchups/13",
+      "result": "ok",
+      "sha256": "23373eae44d8960f68d63ed6370b71e086565b376bf1e36de4196496141288de",
+      "status": 200
+    },
+    {
+      "bytes": 10268,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 14
+      },
+      "key": "league/1113249275284205568/matchups/14",
+      "result": "ok",
+      "sha256": "b93589a7c46c714fc84e1d05ec4908b84e797d03ffa18b1f8e540be4deb6e048",
+      "status": 200
+    },
+    {
+      "bytes": 10244,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 15
+      },
+      "key": "league/1113249275284205568/matchups/15",
+      "result": "ok",
+      "sha256": "607c3c445482648735940908b7840daa27d2f358884140a1b117124b0c67f744",
+      "status": 200
+    },
+    {
+      "bytes": 10099,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 16
+      },
+      "key": "league/1113249275284205568/matchups/16",
+      "result": "ok",
+      "sha256": "0c09be8adb4fbd4bf843176a66e796dbd7903cc254418345b29e4f7906cc11d2",
+      "status": 200
+    },
+    {
+      "bytes": 10306,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 17
+      },
+      "key": "league/1113249275284205568/matchups/17",
+      "result": "ok",
+      "sha256": "5fc92a4374a97be536902e4034a8ba771813f26d8c828a36eefafdfa50bbcdbf",
+      "status": 200
+    },
+    {
+      "bytes": 10020,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1113249275284205568",
+        "week": 18
+      },
+      "key": "league/1113249275284205568/matchups/18",
+      "result": "ok",
+      "sha256": "5c76799faf4d11ca59d2c9956a25734c0295060d35f190c73f76e7b8c258004b",
+      "status": 200
+    },
+    {
+      "bytes": 13071,
+      "endpoint": {
+        "kind": "rosters",
+        "leagueId": "1113249275284205568"
+      },
+      "key": "league/1113249275284205568/rosters",
+      "result": "ok",
+      "sha256": "f86ca44f3d1454ac463dfd893fc6d75b27f137c906b4a01deabde0c517f58e3d",
+      "status": 200
+    },
+    {
+      "bytes": 20578,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 1
+      },
+      "key": "league/1113249275284205568/transactions/01",
+      "result": "ok",
+      "sha256": "261a691503f51d15d320b1694fae0dc29aa8c11ea6e57a6c61d5f24f97bf75b2",
+      "status": 200
+    },
+    {
+      "bytes": 27037,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 2
+      },
+      "key": "league/1113249275284205568/transactions/02",
+      "result": "ok",
+      "sha256": "086e77d7e9f48cda3c6c17273d0a0c0abf4811a8beb398ce592499c0975a038b",
+      "status": 200
+    },
+    {
+      "bytes": 22208,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 3
+      },
+      "key": "league/1113249275284205568/transactions/03",
+      "result": "ok",
+      "sha256": "48ea2bbc724ba1284a5cb859a9374c25ba73475ef643c968c8f5faf923c468f0",
+      "status": 200
+    },
+    {
+      "bytes": 21927,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 4
+      },
+      "key": "league/1113249275284205568/transactions/04",
+      "result": "ok",
+      "sha256": "2fb30888173bf05435b768035c722f582bbb77938993ae6023db1b65c80714bc",
+      "status": 200
+    },
+    {
+      "bytes": 17595,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 5
+      },
+      "key": "league/1113249275284205568/transactions/05",
+      "result": "ok",
+      "sha256": "7eb84373c25a64ac82a5305a4fa5c0b35dc07c0b5cef4abeb3ee3286e6a47302",
+      "status": 200
+    },
+    {
+      "bytes": 19262,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 6
+      },
+      "key": "league/1113249275284205568/transactions/06",
+      "result": "ok",
+      "sha256": "c7a1a3ed74e97ffdf214798a10d1a0b2fdb7b33f34248f7ca1018c724e80ffde",
+      "status": 200
+    },
+    {
+      "bytes": 20841,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 7
+      },
+      "key": "league/1113249275284205568/transactions/07",
+      "result": "ok",
+      "sha256": "43491b5e5a86b70f8555790c960ebcd5cdea1dbc856d7210d44358fcc59dd400",
+      "status": 200
+    },
+    {
+      "bytes": 12374,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 8
+      },
+      "key": "league/1113249275284205568/transactions/08",
+      "result": "ok",
+      "sha256": "98c1bf29de45cd9473ac0b98c9355fb574d6b01f2f84bd7db0e7e99dd34a6bbb",
+      "status": 200
+    },
+    {
+      "bytes": 18815,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 9
+      },
+      "key": "league/1113249275284205568/transactions/09",
+      "result": "ok",
+      "sha256": "8a08503a9b11ff53052c62e12957d7b3b7587e181db3c2770cc947ed1b6115d5",
+      "status": 200
+    },
+    {
+      "bytes": 19839,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 10
+      },
+      "key": "league/1113249275284205568/transactions/10",
+      "result": "ok",
+      "sha256": "994b497af18c0d00e4256030fe4179addab6191cd7764a706d8ed828fd0d5a1b",
+      "status": 200
+    },
+    {
+      "bytes": 14266,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 11
+      },
+      "key": "league/1113249275284205568/transactions/11",
+      "result": "ok",
+      "sha256": "8031fadfb9028be44ab7b10d1d0d83e60fc63af336e2e08bf69c91b59eb3e621",
+      "status": 200
+    },
+    {
+      "bytes": 21410,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 12
+      },
+      "key": "league/1113249275284205568/transactions/12",
+      "result": "ok",
+      "sha256": "b1e1399c798ffa77ce72e449a96eb7071d34b97bc629d56c867f7daf3d9ad607",
+      "status": 200
+    },
+    {
+      "bytes": 13314,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 13
+      },
+      "key": "league/1113249275284205568/transactions/13",
+      "result": "ok",
+      "sha256": "59794ccdbcee3649e2c08ee6220615beca6e942848878fb53ec0d30c5104cb4f",
+      "status": 200
+    },
+    {
+      "bytes": 15504,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 14
+      },
+      "key": "league/1113249275284205568/transactions/14",
+      "result": "ok",
+      "sha256": "a6ab5d35079279b52845f329fadd1cdcb1a41e2dd52f297229247e915efa5b95",
+      "status": 200
+    },
+    {
+      "bytes": 8833,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 15
+      },
+      "key": "league/1113249275284205568/transactions/15",
+      "result": "ok",
+      "sha256": "d7f94fae6f4120bf6a4a50c956e7c736e9ee66f2486cc7784906d191b3f2b412",
+      "status": 200
+    },
+    {
+      "bytes": 7802,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 16
+      },
+      "key": "league/1113249275284205568/transactions/16",
+      "result": "ok",
+      "sha256": "738e69fa602c023ca3177055f10eb77c37cfcbcd1b896ae4adaade37593e0d36",
+      "status": 200
+    },
+    {
+      "bytes": 8243,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 17
+      },
+      "key": "league/1113249275284205568/transactions/17",
+      "result": "ok",
+      "sha256": "d5a4a37b0d77960464f78ab6df844780d8a5a26ff45090ce8c19f8d6662153f5",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1113249275284205568",
+        "week": 18
+      },
+      "key": "league/1113249275284205568/transactions/18",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "bytes": 5065,
+      "endpoint": {
+        "kind": "users",
+        "leagueId": "1113249275284205568"
+      },
+      "key": "league/1113249275284205568/users",
+      "result": "ok",
+      "sha256": "680dd1f8b993b9151aec960e8466f54acbab7ed18cd5bd488033e9c88b96d0f0",
+      "status": 200
+    },
+    {
+      "bytes": 909,
+      "endpoint": {
+        "kind": "winners_bracket",
+        "leagueId": "1113249275284205568"
+      },
+      "key": "league/1113249275284205568/winners_bracket",
+      "result": "ok",
+      "sha256": "9af2517915ab93dfb89520a2b1b25f482cbefbe53b297e2b84a7746e06908031",
+      "status": 200
+    },
+    {
+      "bytes": 3967,
+      "endpoint": {
+        "kind": "league",
+        "leagueId": "1240008879295713280"
+      },
+      "key": "league/1240008879295713280/league",
+      "result": "ok",
+      "sha256": "ea1e06b8f10f615ad0367e415eed5c23baa32932dc88bc0ee81a0686cb5c4aea",
+      "status": 200
+    },
+    {
+      "bytes": 503,
+      "endpoint": {
+        "kind": "losers_bracket",
+        "leagueId": "1240008879295713280"
+      },
+      "key": "league/1240008879295713280/losers_bracket",
+      "result": "ok",
+      "sha256": "308d8687f148bce671b90b901d16d0a3a207399759df97eeb69c2dad978bd7f9",
+      "status": 200
+    },
+    {
+      "bytes": 10029,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 1
+      },
+      "key": "league/1240008879295713280/matchups/01",
+      "result": "ok",
+      "sha256": "192ce284a98c2a488f4a142735b126d7fc50a2697ca24c99baddd996a050f1f3",
+      "status": 200
+    },
+    {
+      "bytes": 10089,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 2
+      },
+      "key": "league/1240008879295713280/matchups/02",
+      "result": "ok",
+      "sha256": "cacacd451d508fe7c3f8527c3d187446b92407ec8711c97e1adf84215da0eab8",
+      "status": 200
+    },
+    {
+      "bytes": 10171,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 3
+      },
+      "key": "league/1240008879295713280/matchups/03",
+      "result": "ok",
+      "sha256": "e71a83df3a427bdc85d62cb5625b9a8d256d1d54f14db4d9c526cf7d94cd8b5f",
+      "status": 200
+    },
+    {
+      "bytes": 10333,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 4
+      },
+      "key": "league/1240008879295713280/matchups/04",
+      "result": "ok",
+      "sha256": "8f910372bfb70c136701e09243d9b31184273184ecc6f7a4728fe0da8b5839a6",
+      "status": 200
+    },
+    {
+      "bytes": 10545,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 5
+      },
+      "key": "league/1240008879295713280/matchups/05",
+      "result": "ok",
+      "sha256": "30631da72e5d945d23f6e5405831e5e1f10566ee9355f2d83acd04f1a0fec251",
+      "status": 200
+    },
+    {
+      "bytes": 10482,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 6
+      },
+      "key": "league/1240008879295713280/matchups/06",
+      "result": "ok",
+      "sha256": "a7112fbe3077ed40ba972eaf7cf81e2f67547ea0cc8684785b347f5c85b87b23",
+      "status": 200
+    },
+    {
+      "bytes": 10392,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 7
+      },
+      "key": "league/1240008879295713280/matchups/07",
+      "result": "ok",
+      "sha256": "87df5eec4b0af6c1df04bbcebf8dab18c4297d035599aafef1e5b30e4202415f",
+      "status": 200
+    },
+    {
+      "bytes": 10450,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 8
+      },
+      "key": "league/1240008879295713280/matchups/08",
+      "result": "ok",
+      "sha256": "018ef2cfbe5e7f2373c74c27c4377c6a8f73f7729d2af1063db8230f5b9cfc65",
+      "status": 200
+    },
+    {
+      "bytes": 10270,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 9
+      },
+      "key": "league/1240008879295713280/matchups/09",
+      "result": "ok",
+      "sha256": "1c567eab2c94dd38b296f2410837d1a678c1aec706dadb2b3da7d7df927a413c",
+      "status": 200
+    },
+    {
+      "bytes": 10336,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 10
+      },
+      "key": "league/1240008879295713280/matchups/10",
+      "result": "ok",
+      "sha256": "6d51fc71dcf28d8b9dc11bb97df38c7373218e3cd036129bbe27e8450123364b",
+      "status": 200
+    },
+    {
+      "bytes": 10376,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 11
+      },
+      "key": "league/1240008879295713280/matchups/11",
+      "result": "ok",
+      "sha256": "a0fd959bea78757f17cb82acdab3cbaf03278683d730223c586f915e044142fa",
+      "status": 200
+    },
+    {
+      "bytes": 10342,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 12
+      },
+      "key": "league/1240008879295713280/matchups/12",
+      "result": "ok",
+      "sha256": "b61bd43f77c6eb8b28a2dc88fa7dad599daa97b44aea17c55ba3a58aaee6a48f",
+      "status": 200
+    },
+    {
+      "bytes": 10425,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 13
+      },
+      "key": "league/1240008879295713280/matchups/13",
+      "result": "ok",
+      "sha256": "72b73f88223f31e5aaccbca08dbbee01664217def3cccb47b141172fef3219e2",
+      "status": 200
+    },
+    {
+      "bytes": 10435,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 14
+      },
+      "key": "league/1240008879295713280/matchups/14",
+      "result": "ok",
+      "sha256": "5e876e7b8636f0588b1751237393c8d6b723d0307a7676f2d9fe77964da3f1ae",
+      "status": 200
+    },
+    {
+      "bytes": 10286,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 15
+      },
+      "key": "league/1240008879295713280/matchups/15",
+      "result": "ok",
+      "sha256": "8a03972d496f5f98b10db1795034cf83581d5a2de27823c4e426779feea5848e",
+      "status": 200
+    },
+    {
+      "bytes": 10315,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 16
+      },
+      "key": "league/1240008879295713280/matchups/16",
+      "result": "ok",
+      "sha256": "93c835da2034568d8ceee9fa7a60c8088b81b34483199795b6f12b0d206ceb08",
+      "status": 200
+    },
+    {
+      "bytes": 10284,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 17
+      },
+      "key": "league/1240008879295713280/matchups/17",
+      "result": "ok",
+      "sha256": "fcb0d9007ab8ffb0f98827f683b87dd6b06dfec13b24b376c9b7a453d4f747ad",
+      "status": 200
+    },
+    {
+      "bytes": 10197,
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1240008879295713280",
+        "week": 18
+      },
+      "key": "league/1240008879295713280/matchups/18",
+      "result": "ok",
+      "sha256": "484ca9404c0aa3ac3c9480cca778646a6b40d2f560b82c4957a3990e6fa85714",
+      "status": 200
+    },
+    {
+      "bytes": 13903,
+      "endpoint": {
+        "kind": "rosters",
+        "leagueId": "1240008879295713280"
+      },
+      "key": "league/1240008879295713280/rosters",
+      "result": "ok",
+      "sha256": "f475f7f705699b7b02bcb57c02b286446dbc4501cb3ea595f24a6ab0aedb5c77",
+      "status": 200
+    },
+    {
+      "bytes": 11335,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 1
+      },
+      "key": "league/1240008879295713280/transactions/01",
+      "result": "ok",
+      "sha256": "9c9a6a3dc199e5e383c2de68f37882bfc017aee4f48146b8e59ac9362e0fe1bc",
+      "status": 200
+    },
+    {
+      "bytes": 16885,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 2
+      },
+      "key": "league/1240008879295713280/transactions/02",
+      "result": "ok",
+      "sha256": "875ae2ffcd3b52d718f3193d7fab0423abc32beeccdf615a6a241d4e3a8bd7b4",
+      "status": 200
+    },
+    {
+      "bytes": 15823,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 3
+      },
+      "key": "league/1240008879295713280/transactions/03",
+      "result": "ok",
+      "sha256": "e32c8292e686d42dafefb44b3588d989b7f31f70e3840af3e2ebb2d13af685d2",
+      "status": 200
+    },
+    {
+      "bytes": 12575,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 4
+      },
+      "key": "league/1240008879295713280/transactions/04",
+      "result": "ok",
+      "sha256": "5026c9e9cc52a1750d9ab966428291ab9b6ec0be7e4eda30495a300260f409a2",
+      "status": 200
+    },
+    {
+      "bytes": 21975,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 5
+      },
+      "key": "league/1240008879295713280/transactions/05",
+      "result": "ok",
+      "sha256": "db6215376498fa6bafdbff2a47fac79b830e5dd9ea0c38cae6cc54c04a10124e",
+      "status": 200
+    },
+    {
+      "bytes": 10861,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 6
+      },
+      "key": "league/1240008879295713280/transactions/06",
+      "result": "ok",
+      "sha256": "f583a7f7f0e17edb00174ca902c832844817c1c271ba38862953fb712cb158b3",
+      "status": 200
+    },
+    {
+      "bytes": 20911,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 7
+      },
+      "key": "league/1240008879295713280/transactions/07",
+      "result": "ok",
+      "sha256": "52a98ad809c1210e08d7f2cd839e6b1d50b44532d3659f20446c90e16717788c",
+      "status": 200
+    },
+    {
+      "bytes": 24396,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 8
+      },
+      "key": "league/1240008879295713280/transactions/08",
+      "result": "ok",
+      "sha256": "34de7eaaca680d5848e02aa2b6934d67ff1db2baa580b181da3b9ca62a347754",
+      "status": 200
+    },
+    {
+      "bytes": 15157,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 9
+      },
+      "key": "league/1240008879295713280/transactions/09",
+      "result": "ok",
+      "sha256": "9bf3a8b9d859a99192239a9826eb41f826d0ab98a9c662794b9ac06e1d05a7f1",
+      "status": 200
+    },
+    {
+      "bytes": 8434,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 10
+      },
+      "key": "league/1240008879295713280/transactions/10",
+      "result": "ok",
+      "sha256": "219e5d4ca7b0ab681fe2119f8ca45960ebe76e5f5a780aa3a69daf06c9d44771",
+      "status": 200
+    },
+    {
+      "bytes": 13622,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 11
+      },
+      "key": "league/1240008879295713280/transactions/11",
+      "result": "ok",
+      "sha256": "916e628875d4c9a3ea98789c993424402c7dc84fef84e523306bd84c95a76d57",
+      "status": 200
+    },
+    {
+      "bytes": 10365,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 12
+      },
+      "key": "league/1240008879295713280/transactions/12",
+      "result": "ok",
+      "sha256": "504c5fd10a58eb90f07c0b49714de63b16248d2141396649244f1d7214b725b6",
+      "status": 200
+    },
+    {
+      "bytes": 5311,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 13
+      },
+      "key": "league/1240008879295713280/transactions/13",
+      "result": "ok",
+      "sha256": "ea184f3dc501fe4b1b05878c98112159ea8d78fc1b67dfd7bb44bea726bf1dc6",
+      "status": 200
+    },
+    {
+      "bytes": 7012,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 14
+      },
+      "key": "league/1240008879295713280/transactions/14",
+      "result": "ok",
+      "sha256": "7aac5e800a836da6712b6ab51b4b5e26b940eaea1b3f0f4ab49815628086da42",
+      "status": 200
+    },
+    {
+      "bytes": 7992,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 15
+      },
+      "key": "league/1240008879295713280/transactions/15",
+      "result": "ok",
+      "sha256": "3590aa333762a1bed2f88af9f4ac52c9f4425de8f56d65cfaefa3a7ef6b19c85",
+      "status": 200
+    },
+    {
+      "bytes": 3708,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 16
+      },
+      "key": "league/1240008879295713280/transactions/16",
+      "result": "ok",
+      "sha256": "2391f5e30f034eb11308a466fe22c3b4d2e16b67de9e109372321e6f5a032299",
+      "status": 200
+    },
+    {
+      "bytes": 1874,
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 17
+      },
+      "key": "league/1240008879295713280/transactions/17",
+      "result": "ok",
+      "sha256": "1e7d288ea97e429a8200a60b7339cc035e44637d6925277bea299499f4281f4d",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1240008879295713280",
+        "week": 18
+      },
+      "key": "league/1240008879295713280/transactions/18",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "bytes": 5514,
+      "endpoint": {
+        "kind": "users",
+        "leagueId": "1240008879295713280"
+      },
+      "key": "league/1240008879295713280/users",
+      "result": "ok",
+      "sha256": "8f87fc0a084e382e5696de071d50d256cda89fcd3ae5fe34e9aeab7fabc7c4f4",
+      "status": 200
+    },
+    {
+      "bytes": 915,
+      "endpoint": {
+        "kind": "winners_bracket",
+        "leagueId": "1240008879295713280"
+      },
+      "key": "league/1240008879295713280/winners_bracket",
+      "result": "ok",
+      "sha256": "44abb7df8b7df4446582b4fa04402adfb20229cc1d5221c4ce28d61b44724dcd",
+      "status": 200
+    },
+    {
+      "bytes": 3538,
+      "endpoint": {
+        "kind": "league",
+        "leagueId": "1385016656425668608"
+      },
+      "key": "league/1385016656425668608/league",
+      "result": "ok",
+      "sha256": "17a95128218c3dc466a4ae284087838c8c69ca1cdcad6f306b3bc5bc5e2d03b6",
+      "status": 200
+    },
+    {
+      "bytes": 539,
+      "endpoint": {
+        "kind": "losers_bracket",
+        "leagueId": "1385016656425668608"
+      },
+      "key": "league/1385016656425668608/losers_bracket",
+      "result": "ok",
+      "sha256": "2e850405e1e58b268d286b274d505dcbda928efbd6aecf5ce785c5f1c19a4a5c",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 1
+      },
+      "key": "league/1385016656425668608/matchups/01",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 2
+      },
+      "key": "league/1385016656425668608/matchups/02",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 3
+      },
+      "key": "league/1385016656425668608/matchups/03",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 4
+      },
+      "key": "league/1385016656425668608/matchups/04",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 5
+      },
+      "key": "league/1385016656425668608/matchups/05",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 6
+      },
+      "key": "league/1385016656425668608/matchups/06",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 7
+      },
+      "key": "league/1385016656425668608/matchups/07",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 8
+      },
+      "key": "league/1385016656425668608/matchups/08",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 9
+      },
+      "key": "league/1385016656425668608/matchups/09",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 10
+      },
+      "key": "league/1385016656425668608/matchups/10",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 11
+      },
+      "key": "league/1385016656425668608/matchups/11",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 12
+      },
+      "key": "league/1385016656425668608/matchups/12",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 13
+      },
+      "key": "league/1385016656425668608/matchups/13",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 14
+      },
+      "key": "league/1385016656425668608/matchups/14",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 15
+      },
+      "key": "league/1385016656425668608/matchups/15",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 16
+      },
+      "key": "league/1385016656425668608/matchups/16",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 17
+      },
+      "key": "league/1385016656425668608/matchups/17",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "matchups",
+        "leagueId": "1385016656425668608",
+        "week": 18
+      },
+      "key": "league/1385016656425668608/matchups/18",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "bytes": 8853,
+      "endpoint": {
+        "kind": "rosters",
+        "leagueId": "1385016656425668608"
+      },
+      "key": "league/1385016656425668608/rosters",
+      "result": "ok",
+      "sha256": "b2244811ba8808bd91fc4df0f1c4c985c2ab0fef20bf13ab5a5e5a6bd6652d01",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 1
+      },
+      "key": "league/1385016656425668608/transactions/01",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 2
+      },
+      "key": "league/1385016656425668608/transactions/02",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 3
+      },
+      "key": "league/1385016656425668608/transactions/03",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 4
+      },
+      "key": "league/1385016656425668608/transactions/04",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 5
+      },
+      "key": "league/1385016656425668608/transactions/05",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 6
+      },
+      "key": "league/1385016656425668608/transactions/06",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 7
+      },
+      "key": "league/1385016656425668608/transactions/07",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 8
+      },
+      "key": "league/1385016656425668608/transactions/08",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 9
+      },
+      "key": "league/1385016656425668608/transactions/09",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 10
+      },
+      "key": "league/1385016656425668608/transactions/10",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 11
+      },
+      "key": "league/1385016656425668608/transactions/11",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 12
+      },
+      "key": "league/1385016656425668608/transactions/12",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 13
+      },
+      "key": "league/1385016656425668608/transactions/13",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 14
+      },
+      "key": "league/1385016656425668608/transactions/14",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 15
+      },
+      "key": "league/1385016656425668608/transactions/15",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 16
+      },
+      "key": "league/1385016656425668608/transactions/16",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 17
+      },
+      "key": "league/1385016656425668608/transactions/17",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "endpoint": {
+        "kind": "transactions",
+        "leagueId": "1385016656425668608",
+        "week": 18
+      },
+      "key": "league/1385016656425668608/transactions/18",
+      "result": "empty",
+      "status": 200
+    },
+    {
+      "bytes": 5154,
+      "endpoint": {
+        "kind": "users",
+        "leagueId": "1385016656425668608"
+      },
+      "key": "league/1385016656425668608/users",
+      "result": "ok",
+      "sha256": "3c148d8e89faf6d490ee61555c2821f3675712a1970ad6a2091e450ccaeedb9b",
+      "status": 200
+    },
+    {
+      "bytes": 976,
+      "endpoint": {
+        "kind": "winners_bracket",
+        "leagueId": "1385016656425668608"
+      },
+      "key": "league/1385016656425668608/winners_bracket",
+      "result": "ok",
+      "sha256": "643aa3573d6ebb5f718cd52d75a69d1c57d8acc9ecd63edf1dd01ee590859166",
+      "status": 200
+    },
+    {
+      "bytes": 249,
+      "endpoint": {
+        "kind": "state"
+      },
+      "key": "state/nfl",
+      "result": "ok",
+      "sha256": "6a986725d3946a550a82e67c34ec27c548ceeaed391eac3c8a9655f31093d377",
+      "status": 200
+    }
+  ],
+  "leagueIds": [
+    "1385016656425668608",
+    "1240008879295713280",
+    "1113249275284205568"
+  ],
+  "playerProjection": {
+    "file": "players/nfl-projection.json",
+    "playerCount": 351,
+    "sha256": "895b9b8491aadd5ccba9ad2b377783f523539c96bc51cde73619c9e7b7360cb8",
+    "sourceCount": 12202
+  },
+  "recordedAt": "2026-07-28T14:00:06.435Z",
+  "version": 1
+}

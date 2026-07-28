@@ -131,7 +131,11 @@ season_memberships (season_id, user_id, roster_id)
 
 Permanent things (inventory, basement, rings) FK to `users.id`. Seasonal things (ledger, stakes) FK to `season_memberships.id`.
 
-**Roster 7 in 2025 is not roster 7 in 2026.** Zack receives a new `users` row, never the Topouzian/Berardo slot.
+**Roster 4 in 2025 is not roster 4 in 2026.** Zack receives a new `users` row, never the Topouzian/Berardo slot.
+
+Verified against live data 2026-07-28: roster 4 is held by Berardo in 2024, Topouzian in 2025, and Zack in 2026 — three distinct Sleeper accounts in one slot across three seasons. (Earlier drafts of this section used roster 7 as the illustration; roster 7 is in fact held by the same manager all three years.)
+
+**Co-ownership.** Sleeper permits a roster to carry co-owners, and 2025 roster 4 does. Commissioner decision, 2026-07-28: co-owners are imported as `users` rows but hold **no `season_membership`**. Exactly one primary manager per roster, in this and future seasons, unless explicitly reconfigured. The co-owner is recorded alongside the membership, never as a second one — `UNIQUE(season_id, roster_id)` stands.
 
 ### 5.2 Core tables
 
@@ -328,7 +332,11 @@ Sleeper mints a **new league ID each season** when a league is renewed — which
 
 **Tier 1 — chain traversal (attempt first).** From the 2026 league, follow `previous_league_id` back through 2025 and 2024. Pull users, rosters, matchups, transactions, and the winners bracket; **derive champions from the bracket** rather than entering them.
 
-**Tier 2 — supplied IDs.** If the chain breaks, request the individual historical league IDs from the commissioner. Identical import path from there. **Not a blocker now.**
+> **Verified 2026-07-28 — Tier 1 succeeds; Tiers 2 and 3 are not needed.**
+> The chain is `1385016656425668608` (2026) → `1240008879295713280` (2025) → `1113249275284205568` (2024), terminating at 2024 with a null `previous_league_id`. The league's recorded history is exactly those two prior seasons.
+> Champions derive cleanly from the winners bracket, as `rosters[].settings.rank` is null on every roster in both completed seasons: **2025 → MattyB2317**, **2024 → BigJuncer** (confirmed by the commissioner as Alex). Both historical rings are therefore derivable, not entered.
+
+**Tier 2 — supplied IDs.** If the chain breaks, request the individual historical league IDs from the commissioner. Identical import path from there. **Not needed — Tier 1 succeeded.**
 
 **Tier 3 — manual.** Anything still unavailable: a one-time commissioner screen for champion, runner-up, final standings, and known stories, stored as `league_memories` with `confidence = commissioner_approved`.
 
@@ -336,7 +344,7 @@ Sleeper mints a **new league ID each season** when a league is renewed — which
 
 Historical championship rings for **Alex** and **Matty B** are granted once their seasons are verified through any tier.
 
-**Environment note:** `api.sleeper.app` is currently **403-blocked by this environment's network policy** (verified 2026-07-28). It must be allowlisted before live sync verification. All sync development runs against **recorded fixtures** regardless, which is the intended design.
+**Environment note:** `api.sleeper.app` is **reachable** (re-verified 2026-07-28, after the earlier 403 was resolved). All sync development still runs against **recorded fixtures** regardless, which is the intended design and is unaffected by live access — the fixtures are committed under `fixtures/sleeper/` and the test suite never touches the network.
 
 ---
 
@@ -386,10 +394,10 @@ Historical championship rings for **Alex** and **Matty B** are granted once thei
 
 ## 16. Open items (non-blocking)
 
-1. **Sleeper allowlisting** — `api.sleeper.app` 403s from this environment
+1. ~~**Sleeper allowlisting**~~ — **closed 2026-07-28.** `api.sleeper.app` is reachable.
 2. **Lions results source** — the victory-maniac cameo needs a non-Sleeper feed; undocumented, degrades gracefully
 3. **Simulation output review** — reward and pricing ranges need commissioner sign-off after P3
-4. **2024/2025 league IDs** — only if Tier 1 chain traversal fails
+4. ~~**2024/2025 league IDs**~~ — **closed 2026-07-28.** Tier 1 chain traversal succeeded; both seasons import from the chain.
 
 ---
 
