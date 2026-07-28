@@ -1,0 +1,115 @@
+{
+  "$comment": "Tony's Pizza Fantasy — locked palette. 32 colors. Every generated asset is quantized to exactly these values during processing; this file is the mechanism that keeps independently generated batches looking like one world. Do not add, remove, or edit a color without regenerating every affected asset.",
+  "version": "1.0",
+  "status": "PROVISIONAL — locked on approval of art test batch B0",
+  "totalColors": 32,
+
+  "ramps": {
+    "ink": {
+      "role": "Outlines, text, shadow anchors. Warm-biased so it never reads as pure black.",
+      "colors": {
+        "ink-900": "#1A1214",
+        "ink-700": "#2E2226",
+        "ink-500": "#4A3B3F",
+        "ink-300": "#7A6A6E",
+        "ink-100": "#B5A8A9"
+      }
+    },
+    "wood": {
+      "role": "Paneling, tables, counter, booth frames, floors.",
+      "colors": {
+        "wood-dark": "#4A2E1C",
+        "wood-mid": "#7A4A2A",
+        "wood-light": "#A9713F",
+        "wood-pale": "#C99A63"
+      }
+    },
+    "red": {
+      "role": "Checkered cloth, vinyl booths, sauce, signage.",
+      "colors": {
+        "red-dark": "#8C1F22",
+        "red-mid": "#C42B2B",
+        "red-light": "#E4534A"
+      }
+    },
+    "paper": {
+      "role": "Menus, newspaper, receipts, napkins, pizza-box print.",
+      "colors": {
+        "paper-white": "#F5EDDC",
+        "paper-mid": "#E0D2B8",
+        "paper-dark": "#BFAE8E"
+      }
+    },
+    "amber": {
+      "role": "Incandescent light, warm key, cheese, brass, lamp glow.",
+      "colors": {
+        "amber-glow": "#FFD98A",
+        "amber-mid": "#F2A94B",
+        "amber-deep": "#C97A22"
+      }
+    },
+    "blue": {
+      "role": "Night, cool ambient fill, Detroit-adjacent jerseys, cold neon.",
+      "colors": {
+        "blue-deep": "#14233D",
+        "blue-mid": "#2C5A8C",
+        "blue-light": "#5C9BD1",
+        "blue-neon": "#7FD4F0"
+      }
+    },
+    "green": {
+      "role": "Neon signage, felt, bottle glass.",
+      "colors": {
+        "green-deep": "#1E4A32",
+        "green-neon": "#5FD98A"
+      }
+    },
+    "yellow": {
+      "role": "Cheese, arcade marquees, legendary treatment.",
+      "colors": {
+        "yellow-cheese": "#F2C94C",
+        "yellow-neon": "#FFF07A"
+      }
+    },
+    "violet": {
+      "role": "Deep shadow in the underground, epic treatment, neon accent.",
+      "colors": {
+        "violet-deep": "#3B2050",
+        "magenta-neon": "#E060B0"
+      }
+    },
+    "skin": {
+      "role": "Avatar and character skin. Four steps spanning a usable range. Managers select a step; it is not tied to any other palette role.",
+      "colors": {
+        "skin-1": "#F2C9A0",
+        "skin-2": "#D9A173",
+        "skin-3": "#9C6640",
+        "skin-4": "#5E3A25"
+      }
+    }
+  },
+
+  "semantic": {
+    "$comment": "Semantic roles map to ramp entries. Never introduce a new hex for a semantic role.",
+    "outline": "ink-900",
+    "shadowRule": "one step darker within the same ramp — never ink-900, never pure black",
+    "keyLight": "amber-glow",
+    "ambientFill": "blue-mid",
+    "pageBackground": "paper-mid",
+    "bodyText": "ink-700",
+    "rarity": {
+      "$comment": "Rarity must never be communicated by color alone. These reinforce the frame geometry and label required by 06 §8.",
+      "common": "ink-300",
+      "rare": "blue-light",
+      "epic": "magenta-neon",
+      "legendary": "amber-glow"
+    }
+  },
+
+  "prohibited": {
+    "$comment": "Never sample or introduce these, regardless of what a generation returns.",
+    "pureBlack": "#000000",
+    "pureWhite": "#FFFFFF",
+    "note": "Pure black flattens the warm bias; pure white blows out against paper-white. Both are common image-model defaults and must be quantized away."
+  }
+}

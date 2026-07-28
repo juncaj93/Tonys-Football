@@ -1,0 +1,171 @@
+# ASSET_PIPELINE.md — Placeholder-First Asset Registry
+
+**Version:** 1.0
+**Purpose:** How art gets from a prompt into the application without ever blocking engineering.
+
+---
+
+## 1. The core mechanism
+
+**Every asset is referenced by slug, never by file path.**
+
+```
+Component  →  asset_slug  →  registry lookup  →  file path (or placeholder)
+```
+
+Application code asks for `collectible_bapple_tree`. It never knows, and never needs to know, whether that resolves to finished art or to a closed pizza box with a handwritten label.
+
+**Swapping a placeholder for final art is a registry row change.** No component edit. No refactor. No code review. No conditional branches, no `TODO` markers, no "art pending" states scattered through the codebase.
+
+This is the entire reason art and engineering can run in parallel.
+
+---
+
+## 2. Placeholder-first, in order
+
+1. **Inventory first — it is data, not art.** `assets.inventory.json` defines every slug, its family, canvas size, alt text, and placeholder fallback *before any image exists*.
+2. **The registry seeds every slug pointing at a placeholder.** Day one, `art_status: "placeholder"` across the board.
+3. **Engineering builds against slugs.** Every screen renders. Every flow is playable end to end — as handwritten signs and closed pizza boxes. Nothing is stubbed, nothing is disabled, nothing waits.
+4. **Batches get generated, processed, and registered.** Each registration is a data change plus a file.
+5. **`/admin/assets` shows the truth** — every slug, its current state, and a "still placeholder" filter, so progress is visible and nothing is quietly forgotten.
+
+### Why placeholders are in-world
+
+A grey box reads as broken software. A hand-torn cardboard sign taped to the wall reads as **a shop held together with tape** — which is exactly what Tony's is.
+
+The product can ship with most art unfinished and still look deliberate. That is not a compromise; for this world it is arguably funnier than the finished version.
+
+---
+
+## 3. Registry record
+
+Every asset carries this metadata, per `06 §16`:
+
+| Field | Purpose |
+|---|---|
+| `slug` | Stable identifier. **Never changes.** Code references this and only this. |
+| `family` | character · avatar · zone · collectible · surface · frame · ui |
+| `canvas` | Logical pixel dimensions |
+| `path` | Current file, or null while placeholder |
+| `placeholder_slug` | What renders while `art_status = placeholder` |
+| `art_status` | placeholder → generated → approved → retired |
+| `batch` | B0 … B5+ |
+| `version` | Increments on every replacement |
+| `source` | Which tool generated it |
+| `prompt_ref` | Which template and subject line produced it |
+| `rights_status` | original · derived · licensed. **No asset ships with this unclear.** |
+| `alt_text` | Required. Accessibility is not optional. |
+| `attachment_anchors` | Avatar layers only |
+| `safe_area` | Text-bearing surfaces only |
+| `created_at` / `updated_at` | Audit trail |
+
+**Retiring an asset never deletes its history.** A retired asset keeps its record so past Slice issues and archived seasons continue to render exactly as published.
+
+---
+
+## 4. Processing pipeline
+
+Run on every batch, without exception.
+
+### Step 1 — Downscale, nearest-neighbor
+
+Image models **cannot** produce true pixel art at 32px. They produce 1024px approximations *of the look*. Generate large, downscale hard, nearest-neighbor only. Never prompt for final dimensions directly.
+
+### Step 2 — Quantize to `palette.json`
+
+**The single most important step in the entire art plan.**
+
+Mechanical quantization is what makes fifty independently generated images look like one world. Without it every batch drifts a few degrees — individually fine, collectively wrong — and the seams become visible around batch four, by which point the earlier batches have to be redone.
+
+The prompt gets close. **The pipeline makes it exact.**
+
+Also strips `#000000` and `#FFFFFF`, which are common model defaults and are prohibited by the palette.
+
+### Step 3 — Alpha cleanup
+
+Remove background, harden edges, eliminate anti-aliasing fringe. Pixel art has no partial alpha except where deliberately authored.
+
+### Step 4 — Trim and anchor
+
+Trim to the declared canvas. For avatar layers, verify each attachment anchor and record the offset. **A layer that does not land on its anchor is regenerated — the renderer is never adjusted to compensate.**
+
+### Step 5 — Emit
+
+Sprite sheet plus JSON metadata into `/public/assets/<family>/`.
+
+### Step 6 — Register
+
+Write the registry row: source, prompt reference, rights status, version, alt text. Flip `art_status` to `generated`, then `approved` after review.
+
+---
+
+## 5. Batch order
+
+Ordered by visible return, so the product looks better earlier.
+
+| Batch | Contents | Effect |
+|---|---|---|
+| **B0** | Test set (7) | **Locks `ART_SPEC.md`.** Approved as one composite, not individually. |
+| **B1** | Tony (3) + zone tiles (6) | The shop becomes a place |
+| **B2** | Avatar layers + wearables (22) | Managers become themselves |
+| **B3** | Collectibles (12 priority of 24) | Pulls feel worth the tokens |
+| **B4** | Surfaces, frames, placeholders, UI | Dressings and rarity go live |
+| **B5+** | Additional dressings, seasonal, v1.1 | Continuous, forever |
+
+**B0 gates everything.** No other batch begins until the composite is approved and the spec locks.
+
+---
+
+## 6. Generation guidance
+
+- **Budget a 50–70% cull rate.** Roughly four candidates per needed asset — about 150 generations for twelve sheets. Generation is cheap; **reviewing is the real cost.** Cull hard and early rather than trying to rescue a near-miss.
+- **Reuse the style preamble verbatim.** Never paraphrase between batches. Paraphrasing is how drift starts, and it is invisible until assets sit side by side.
+- **Every prompt carries the negative block.** No team logos, no real player likenesses, no real signatures, no brand marks, no Mario, no existing game characters. This enforces `06 §17` and the publicity-rights concerns at the prompt level rather than at review.
+- **Never prompt for final pixel dimensions.** Always generate large and downscale.
+
+---
+
+## 7. What is never generated
+
+Fourteen visual effects require **zero assets** — they are CSS, SVG, or a few lines of canvas. Listed in `ART_SPEC.md §8` and flagged in `assets.inventory.json` under `notGenerated`.
+
+Auras · punishment flies · stink lines · ring sparkle · legendary rays · frame glow · snow · steam · CRT scanlines · screen shake · box wobble · confetti · newspaper landing · seasonal lighting.
+
+**Do not add these to a generation batch.** An asset with a baked-in glow cannot be animated, cannot respect `prefers-reduced-motion`, and cannot be reused across rarity tiers.
+
+---
+
+## 8. Storage
+
+**v1: static files in the repository**, served by the Vercel CDN. Pixel art is kilobytes. This removes object storage, signed URLs, MIME validation, and upload scanning from v1 entirely.
+
+Swapping an asset is a commit that auto-deploys in about a minute. Free, versioned, and diffable.
+
+**The slug indirection means a blob store can be added later without touching a single line of game code** — only the registry's `path` resolution changes. Defer it until the commissioner genuinely needs to upload art without a deploy.
+
+---
+
+## 9. Failure modes and their fixes
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| Batch 4 doesn't match batch 1 | Preamble was paraphrased | Regenerate batch 4 with the verbatim block |
+| Hat floats above the head | Layer not authored to anchors | **Regenerate the layer.** Never adjust the renderer. |
+| Collectible unreadable in inventory | Designed for 96px, not 16px | Regenerate with a simpler silhouette and lower detail budget |
+| Text illegible on a poster | Safe area has interior detail | Regenerate the surface with a flatter center |
+| Banding across a wall | Too many source colors for the palette | Re-quantize; if it persists, simplify the source |
+| Rarity indistinguishable in greyscale | Frames differ by color only | Regenerate with distinct geometry per tier |
+| Model bakes text into a blank surface | Most common surface failure | Regenerate. Strengthen the NO TEXT instruction. |
+
+---
+
+## 10. The irreversible decisions
+
+Everything can be regenerated cheaply **except**:
+
+1. **The pixel grid** (`ART_SPEC.md §2`)
+2. **The camera perspective** (`ART_SPEC.md §3`)
+
+Those two define how every asset relates to every other. Changing them means regenerating the entire environment and character library.
+
+**That is the whole reason test batch B0 exists, and why it is approved as a composite rather than as seven separate images.**
