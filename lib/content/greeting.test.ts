@@ -120,17 +120,16 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
    * they are eligible for, shows up here as a change rather than as a quiet
    * drift toward everybody hearing the same thing.
    *
-   * Six of the ten get a line nobody else in the room gets. The other four
-   * share in two pairs, and both pairs are honest ties in the data:
+   * Eight of the ten get a line nobody else in the room gets. The remaining
+   * pair is an honest tie in the data: SuggMyNick and cheeseking both made the
+   * 2025 playoffs without a title, and A21 is the only Group A line keyed to
+   * that. Both hear something true about themselves.
    *
-   *   - SuggMyNick and cheeseking both made the 2025 playoffs without a title,
-   *     and A21 is the only Group A line keyed to that
-   *   - NateyDee (5–9) and imbrickedup22 (4–10) finished 2025 without leading
-   *     or trailing the league in anything, so the title-drought line is all
-   *     Group A has for either
-   *
-   * That is a **content gap on the commissioner's track** (`17 §11`), not a
-   * selection bug: two more lines close it, and no code changes.
+   * Closing it is two more lines in `content/counter-greetings.md` and no code
+   * change — a **content decision on the commissioner's track** (`17 §11`).
+   * The verified material is there: cheeseking went 1–13 in 2024 and 9–5 with
+   * a third-place finish in 2025, and SuggMyNick had the second-best record in
+   * 2025 at 10–4.
    */
   it('gives most of the room a line nobody else gets, and never more than a pair the same', async () => {
     await db!.delete(contentUsageLog);
@@ -147,7 +146,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
     const unique = [...byKey.values()].filter((holders) => holders.length === 1);
     const largestGroup = Math.max(...[...byKey.values()].map((holders) => holders.length));
 
-    expect(unique.length).toBeGreaterThanOrEqual(6);
+    expect(unique.length).toBeGreaterThanOrEqual(8);
     // Nobody's greeting is the house line. Three managers hearing the same
     // sentence is the failure `17 §3` is guarding against.
     expect(largestGroup).toBeLessThanOrEqual(2);
@@ -163,15 +162,19 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
 
     const truths: Record<string, RegExp> = {
       // 7–7 and the ring. Champion of 2025.
-      MattyB2317: /Seven and seven|Defending champ|Trophy's yours/,
+      MattyB2317: /Seven and seven in 2025|2025 champion|2025 trophy/,
       // 11–3, 1868.70 points, no title.
-      RonJonathan: /Eighteen sixty-eight|Eleven and three|Two seasons on that wall/,
+      RonJonathan: /Eighteen sixty-eight points in 2025|Eleven and three in 2025|2024 and 2025 on that wall/,
       // 2024 champion, 9–5 with the second-most points in 2025.
-      BigJuncer: /Still the only reason|One ring, one year removed|Second most points/,
+      BigJuncer: /brings up 2024|One ring, 2024|Second most points in 2025/,
       // 1430.34 points, fewest in the league.
-      MattLee04: /Fewest points|Three and eleven|Two seasons on that wall/,
+      MattLee04: /Fewest points in the league in 2025|Three and eleven in 2025|2024 and 2025 on that wall/,
       // 1776.20 points against, most in the league; missed January both years.
-      jfletcher433: /Seventeen seventy-six|Two seasons, no January|Three and eleven/,
+      jfletcher433: /Seventeen seventy-six thrown at you in 2025|no January either time|Three and eleven in 2025/,
+      // Lost the 2024 championship game, then missed the 2025 playoffs.
+      NateyDee: /One game short of the title in 2024/,
+      // Third in 2024, then 4–10 in 2025.
+      imbrickedup22: /Third in 2024\. Four and ten in 2025/,
       // First season; roster 4, after Berardo and Topouzian.
       zackstephens54: /You're the new one|No record, no history|Fourth roster/,
     };
@@ -180,6 +183,51 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
       const greeting = await greet(find(name));
       expect(greeting?.text ?? '', `${name}: ${greeting?.text ?? 'no line'}`).toMatch(expected);
     }
+  });
+
+  /**
+   * The regression this exists for: NateyDee and imbrickedup22 hold identical
+   * 2025 tags — both missed the playoffs, neither led or trailed the league in
+   * anything — so before the 2024 podium was derivable, the only Group A line
+   * either qualified for was the shared title-drought line, and they saw the
+   * same sentence.
+   *
+   * What separates them is 2024: one lost the championship game, the other
+   * finished third. Both facts come from the winners bracket.
+   */
+  it('gives NateyDee and imbrickedup22 different, true lines', async () => {
+    await db!.delete(contentUsageLog);
+
+    const nate = await greet(find('NateyDee'));
+    const bricked = await greet(find('imbrickedup22'));
+
+    expect(nate?.entryKey).not.toBe(bricked?.entryKey);
+    expect(nate?.text).not.toBe(bricked?.text);
+
+    expect(nate?.text).toContain('One game short of the title in 2024');
+    expect(nate?.text).toContain('NateyDee');
+
+    expect(bricked?.text).toContain('Third in 2024');
+    expect(bricked?.text).toContain('Four and ten in 2025');
+  });
+
+  it('keeps them apart across a week of visits, not just the first', async () => {
+    await db!.delete(contentUsageLog);
+
+    for (let day = 0; day < 5; day++) {
+      clockAt(START + day * 24 * 60 * 60 * 1000);
+
+      const nate = await greet(find('NateyDee'));
+      const bricked = await greet(find('imbrickedup22'));
+
+      expect(nate, `day ${String(day)}`).not.toBeNull();
+      expect(bricked, `day ${String(day)}`).not.toBeNull();
+      // Neither may ever be handed the other's line: the tags are exclusive.
+      expect(nate?.text ?? '').not.toContain('Third in 2024');
+      expect(bricked?.text ?? '').not.toContain('One game short');
+    }
+
+    clockAt(START);
   });
 
   it('never tells the newcomer about a season he did not play', async () => {

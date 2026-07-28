@@ -40,8 +40,24 @@ All from the imported 2024/2025 chain. Nothing here is inferred.
 | One manager faced **1776.2 points against** — most in the league — and went 3–11 | Roster settings |
 | One manager scored **1430.3** — fewest in the league | Roster settings |
 | 2024 champion | Winners bracket |
+| The 2024 runner-up lost the championship game, then missed the 2025 playoffs | Winners bracket + roster settings |
+| The 2024 third-place finisher went **4–10** in 2025 | Winners bracket + roster settings |
 | Roster 4 has had three different occupants across 2024/2025/2026 | Chain import |
 | The 2026 newcomer has no prior season | Chain import |
+
+### Every claim names its season
+
+A line that says "last year" is true for one season and quietly false forever
+after. So every record, points total, and placement in Group A **names the year
+it belongs to**, and no line uses a relative time phrase. That is what keeps
+these safe to leave seeded when 2026 finishes: a dated claim about 2025 stays a
+claim about 2025.
+
+It does not make a line immortal — "one ring" stops being true if that manager
+wins another — but it removes the failure where a still-true sentence is read as
+being about the current season. `lib/content/parse.test.ts` enforces both halves:
+no relative time phrases, and a line keyed to a season-scoped tag must name that
+season.
 
 ---
 
@@ -52,44 +68,44 @@ Safe to seed as-is. Every factual claim traces to imported data.
 ### Champion lines
 
 **A1** · `champion_2025` + `title_at_500_or_worse` · *unimpressed*
-> Morning, {name}. Seven and seven. And a ring. Tony has reviewed the tape and has questions.
+> Morning, {name}. Seven and seven in 2025. And a ring. Tony has reviewed the tape and has questions.
 
 **A2** · `champion_2025` · *pleased*
-> {name}. Defending champ walks in and doesn't even hold the door. Fine.
+> {name}. The 2025 champion walks in and doesn't even hold the door. Fine.
 
 **A3** · `champion_2025` · *neutral*
-> {name}. Trophy's yours until September. Enjoy the quiet part.
+> {name}. The 2025 trophy is yours until September. Enjoy the quiet part.
 
 **A4** · `champion_2024` · *pleased*
 > Morning, {name}. Still the only reason anybody brings up 2024 in here.
 
 **A5** · `champion_2024` + `not_champion_2025` · *neutral*
-> {name}. One ring, one year removed. Tony's not calling it a drought. Tony's noting the date.
+> {name}. One ring, 2024. Tony's not calling it a drought. Tony's noting the date.
 
 ### The unlucky
 
 **A6** · `most_points_2025` + `never_champion` · *unimpressed*
-> {name}. Eighteen sixty-eight. Most points in the league. No ring. Tony's seen fairer ovens.
+> {name}. Eighteen sixty-eight points in 2025. Most in the league. No ring. Tony's seen fairer ovens.
 
 **A7** · `best_record_2025` + `never_champion` · *unimpressed*
-> Eleven and three, {name}. Best record in the building. Somebody else has the trophy. Tony won't bring it up again. Probably.
+> Eleven and three in 2025, {name}. Best record in the league. Somebody else took the trophy. Tony won't bring it up again. Probably.
 
 **A8** · `high_points_low_wins` · *neutral*
-> Morning, {name}. Second most points in the league. Nine and five. Somebody upstairs doesn't like you.
+> Morning, {name}. Second most points in 2025. Nine and five. Somebody upstairs doesn't like you.
 
 **A9** · `most_points_against_2025` · *neutral*
-> {name}. Seventeen seventy-six thrown at you last season. That's not a schedule. That's a grudge.
+> {name}. Seventeen seventy-six thrown at you in 2025. That's not a schedule. That's a grudge.
 
 ### The rough seasons
 
 **A10** · `fewest_points_2025` · *unimpressed*
-> Morning, {name}. Fewest points in the league last year. Tony isn't judging. Tony is aware.
+> Morning, {name}. Fewest points in the league in 2025. Tony isn't judging. Tony is aware.
 
 **A11** · `worst_record_2025` · *unimpressed*
-> {name}. Three and eleven. The oven's been through worse. Not much worse.
+> {name}. Three and eleven in 2025. The oven's been through worse. Not much worse.
 
 **A12** · `missed_playoffs_both_seasons` · *neutral*
-> {name}. Two seasons, no January. Tony's holding a booth for you anyway.
+> {name}. 2024 and 2025, no January either time. Tony's holding a booth for you anyway.
 
 ### Offseason — untagged fallbacks
 
@@ -123,10 +139,22 @@ These require no tags and are always eligible. They exist so the selector always
 ### Title drought
 
 **A20** · `never_champion` + `two_plus_seasons` · *neutral*
-> Morning, {name}. Two seasons on that wall. Neither of them yours. There's still time. Allegedly.
+> Morning, {name}. 2024 and 2025 on that wall. Neither of them yours. There's still time. Allegedly.
 
 **A21** · `made_playoffs_2025` + `never_champion` · *neutral*
-> {name}. You got in last year. Then you didn't. Tony remembers both parts.
+> {name}. Playoffs in 2025. No ring at the end of it. Tony remembers both parts.
+
+### The near miss
+
+Both draw on the 2024 bracket, where the placement games settle second and third
+as firmly as they settle first. Neither manager reached the 2025 playoffs, which
+is what makes the pairing land.
+
+**A22** · `runner_up_2024` + `missed_playoffs_2025` · *neutral*
+> {name}. One game short of the title in 2024. No January in 2025. Tony has both years on file.
+
+**A23** · `third_place_2024` + `missed_playoffs_2025` · *unimpressed*
+> Morning, {name}. Third in 2024. Four and ten in 2025. Tony noticed the order.
 
 ---
 
@@ -173,7 +201,7 @@ These draw on the approved character canon in `11`, not on imported data. The ca
 Computed from imported history. Booleans, recomputed on import and after each finalised week.
 
 **From season outcomes**
-`champion_2024` · `champion_2025` · `not_champion_2025` · `never_champion` · `two_plus_seasons` · `made_playoffs_2025` · `missed_playoffs_both_seasons`
+`champion_2024` · `champion_2025` · `not_champion_2025` · `never_champion` · `two_plus_seasons` · `made_playoffs_2025` · `missed_playoffs_2025` · `missed_playoffs_both_seasons` · `runner_up_2024` · `runner_up_2025` · `third_place_2024` · `third_place_2025`
 
 **From records and scoring**
 `best_record_2025` · `worst_record_2025` · `most_points_2025` · `fewest_points_2025` · `most_points_against_2025` · `high_points_low_wins` · `title_at_500_or_worse`

@@ -155,6 +155,39 @@ describe('records and scoring', () => {
   });
 });
 
+describe('the rest of the podium', () => {
+  /**
+   * These are what let a manager with no league-leading number be spoken to
+   * about something other than a title drought. Both 2024 podium finishers
+   * missed the 2025 playoffs, which is the pairing A22 and A23 are keyed to.
+   */
+  it('names the runner-up and the third-place finisher of each season', () => {
+    expect(of('nate').has('runner_up_2024')).toBe(true);
+    expect(of('bricked').has('third_place_2024')).toBe(true);
+
+    expect(of('ron').has('runner_up_2025')).toBe(true);
+    expect(of('cheese').has('third_place_2025')).toBe(true);
+  });
+
+  it('does not hand a podium place to the champion or to anyone below it', () => {
+    expect(of('alex').has('runner_up_2024')).toBe(false); // won it
+    expect(of('mattlee').has('third_place_2024')).toBe(false); // finished 4th
+    expect(of('nate').has('runner_up_2025')).toBe(false); // missed the bracket
+  });
+
+  it('separates the two managers who would otherwise share a line', () => {
+    // The whole point: NateyDee and imbrickedup22 hold the same 2025 tags, so
+    // 2024 is the only thing that tells them apart.
+    const nate = [...of('nate')].filter((tag) => tag.endsWith('_2024'));
+    const bricked = [...of('bricked')].filter((tag) => tag.endsWith('_2024'));
+
+    expect(nate).toContain('runner_up_2024');
+    expect(bricked).toContain('third_place_2024');
+    expect(nate).not.toContain('third_place_2024');
+    expect(bricked).not.toContain('runner_up_2024');
+  });
+});
+
 describe('playoffs', () => {
   it('marks the six who reached the bracket', () => {
     for (const userId of ['alex', 'tupaz', 'nick', 'ron', 'cheese', 'mattyb']) {
@@ -162,6 +195,21 @@ describe('playoffs', () => {
     }
     for (const userId of ['nate', 'fletch', 'bricked', 'mattlee']) {
       expect(of(userId).has('made_playoffs_2025'), userId).toBe(false);
+    }
+  });
+
+  it('states the absence as well, since a missing tag cannot be required', () => {
+    expect(of('nate').has('missed_playoffs_2025')).toBe(true);
+    expect(of('bricked').has('missed_playoffs_2025')).toBe(true);
+    expect(of('mattyb').has('missed_playoffs_2025')).toBe(false);
+
+    // Never both, for anybody.
+    for (const roster of SEASON_2025) {
+      const held = of(roster.userId);
+      expect(
+        held.has('made_playoffs_2025') && held.has('missed_playoffs_2025'),
+        roster.userId,
+      ).toBe(false);
     }
   });
 

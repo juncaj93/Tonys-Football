@@ -23,9 +23,9 @@ const byKey = new Map(entries.map((entry) => [entry.key, entry]));
 
 describe('the committed Counter Greetings', () => {
   it('reads every Group A line', () => {
-    expect(entries).toHaveLength(21);
+    expect(entries).toHaveLength(23);
     expect(entries.map((entry) => entry.key)).toEqual(
-      Array.from({ length: 21 }, (_, index) => `A${String(index + 1)}`),
+      Array.from({ length: 23 }, (_, index) => `A${String(index + 1)}`),
     );
   });
 
@@ -87,6 +87,45 @@ describe('the committed Counter Greetings', () => {
     const banned = /\b(fuck|shit|bastard|asshole)\b/i;
     for (const entry of entries) {
       expect(banned.test(entry.templateText), entry.key).toBe(false);
+    }
+  });
+
+  /**
+   * A line that says "last year" is true for one season and quietly false
+   * forever after — and nothing fails when it turns, because the sentence is
+   * still grammatical and the tag that selected it is still held. The greeting
+   * simply starts lying.
+   *
+   * So no Group A line may use a relative time phrase. Records, points totals
+   * and placements name their year instead, which keeps a claim about 2025 a
+   * claim about 2025 once 2026 has finished.
+   */
+  it('never says "last year"', () => {
+    const relative = /\b(last|this|next)\s+(season|year)\b|one year removed|a year ago|currently/i;
+
+    for (const entry of entries) {
+      expect(relative.test(entry.templateText), `${entry.key}: ${entry.templateText}`).toBe(
+        false,
+      );
+    }
+  });
+
+  /**
+   * The other half of the same rule: a line selected by a season-scoped tag is
+   * a claim about that season, so it has to say which one.
+   */
+  it('names the season whenever it is keyed to one', () => {
+    for (const entry of entries) {
+      const years = entry.requiredTags
+        .map((tag) => /_(\d{4})$/.exec(tag)?.[1])
+        .filter((year): year is string => year !== undefined);
+
+      if (years.length === 0) continue;
+
+      expect(
+        years.some((year) => entry.templateText.includes(year)),
+        `${entry.key} is keyed to ${years.join('/')} but names no season: ${entry.templateText}`,
+      ).toBe(true);
     }
   });
 

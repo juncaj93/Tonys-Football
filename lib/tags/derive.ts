@@ -63,6 +63,27 @@ export function championTag(year: number): string {
   return `champion_${String(year)}`;
 }
 
+/**
+ * The rest of the podium, per season.
+ *
+ * Second and third are settled by the placement games as firmly as first is
+ * (`lib/sleeper/chain.ts`), so they are derivable rather than entered — and
+ * they are what makes a manager with no league-leading number distinguishable.
+ * The 2024 runner-up and the 2024 third-place finisher both missed the 2025
+ * playoffs, and that pairing is the most pointed true thing Tony can say to
+ * either of them.
+ *
+ * Derived for **every** completed season, not just the latest, because the
+ * interesting claim spans two: what you were, and what happened next.
+ */
+export function runnerUpTag(year: number): string {
+  return `runner_up_${String(year)}`;
+}
+
+export function thirdPlaceTag(year: number): string {
+  return `third_place_${String(year)}`;
+}
+
 const complete = (history: LeagueHistory): readonly SeasonHistory[] =>
   [...history.seasons].filter((season) => season.isComplete).sort((a, b) => b.year - a.year);
 
@@ -118,6 +139,11 @@ export function deriveTags(history: LeagueHistory): ReadonlyMap<string, TagSet> 
       .map((seat) => seat.userId);
     championsByYear.set(season.year, champions);
     for (const userId of champions) add(userId, championTag(season.year));
+
+    for (const seat of season.seats) {
+      if (seat.finalRank === 2) add(seat.userId, runnerUpTag(season.year));
+      if (seat.finalRank === 3) add(seat.userId, thirdPlaceTag(season.year));
+    }
   }
 
   const everChampion = new Set([...championsByYear.values()].flat());
@@ -164,7 +190,9 @@ export function deriveTags(history: LeagueHistory): ReadonlyMap<string, TagSet> 
     const seats = latest.seats;
 
     for (const seat of seats) {
-      if (seat.madePlayoffs) add(seat.userId, `made_playoffs_${year}`);
+      // Both directions, because "you were not there" is a claim in its own
+      // right and the absence of a tag cannot be required by a content entry.
+      add(seat.userId, seat.madePlayoffs ? `made_playoffs_${year}` : `missed_playoffs_${year}`);
     }
 
     for (const userId of extremes(seats, (seat) => seat.wins, 'max')) {
