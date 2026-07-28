@@ -44,7 +44,7 @@ If that screen reads as a single coherent place, the whole library is unblocked 
 |---|---|---|
 | Character (Tony) | 32 × 48 | Tony occupies 46px of the 48px height, feet on the bottom edge |
 | Avatar layers | 32 × 48 | Identical canvas to Tony. Every layer uses the full canvas with fixed anchors (§5). |
-| Zone tile | 320 × 200 | Composed side by side on desktop, stacked full-width on mobile |
+| Zone tile | 320 × 200 ⚠️ **PROVISIONAL** | Composed side by side on desktop, stacked full-width on mobile. See §2.1. |
 | Collectible | 32 × 32 | One source asset serves thumbnail (16px), case (32px), and reveal (96px) |
 | Surface (text-driven) | 96 × 64 | Blank; text is rendered at runtime into the safe area (§7) |
 | Rarity frame | 40 × 40 | One geometry, four palette states |
@@ -55,24 +55,61 @@ If that screen reads as a single coherent place, the whole library is unblocked 
 
 **No mixed pixel density within a single scene.** A character at 32×48 never shares a frame with an asset authored at a different effective pixel size.
 
+### 2.1 Zone tile dimensions are provisional
+
+**320 × 200 is a starting point, not a locked number.** Two unresolved details:
+
+1. **Aspect ratio.** 320 × 200 is 8:5. Stacked full-width on a phone, a slightly different ratio may read better as a card, and the shallow stage box needs enough vertical room to carry both a floor band and a usable wall.
+2. **Integer scaling versus arbitrary phone widths.** A fixed 320px canvas does not divide evenly into every viewport. The likely resolution is to author tiles with **croppable side margins** — nothing load-bearing within roughly 16px of the left and right edges — so a tile can be scaled by an integer factor and cropped rather than fractionally resized.
+
+**Both settle during the B0 composite test on a real phone**, before any other zone tile is generated. Character, collectible, surface, and frame canvases are **not** provisional and do not depend on this.
+
 ---
 
-## 3. Camera perspective — **flat frontal elevation**
+## 3. Camera perspective — **shallow stage box**
 
-**The decision:** a straight-on side elevation, camera at character eye level, as if looking at a lit stage or a diorama. No vanishing point. No convergence. No isometric.
+> **Revised 2026-07-28.** This replaces an earlier flat-frontal elevation. Flat elevation gave nowhere to put arcade carpet, booths, or furniture, and a room with no floor reads as a wall you are facing rather than a place you have walked into — which fails the product's central premise.
 
-**Why this and not isometric:**
+**The decision:** a shallow stage box. Picture a shoebox diorama, or a theatre set seen from the front row. You are standing just inside the door of the parlor.
 
-- Modular avatar layering requires that a hat drawn once sits correctly on a body drawn once. Any perspective with rotation or foreshortening means every layer needs multiple variants per facing. Flat elevation means **one variant, forever.**
-- Zone tiles compose horizontally on desktop and stack vertically on mobile. Isometric tiles cannot do both without redrawing.
-- It is the cheapest perspective for an image model to hold consistently across independent generations.
+- The **floor is visible**, receding gently toward a back wall
+- Side walls may angle in **very slightly**, or not at all
+- The recession is **shallow, never dramatic** — a suggestion of depth, not a corridor
+- Camera stays at standing eye level, straight on, no tilt, no isometric projection
 
-**Rules:**
+### 3.1 Environments and characters use different rules
 
-- Floors are implied by a horizontal band, never by a receding plane
-- Props sit on the floor line or hang on the wall plane — nothing sits "in depth"
-- Depth is expressed by **overlap and value**, never by geometry: background elements step one value lighter and lose outline weight
+This is the load-bearing distinction, and it is what makes the change nearly free:
+
+| | Perspective |
+|---|---|
+| **Environments** (zone tiles) | Shallow stage box with a receding floor |
+| **Characters, avatars, collectibles, surfaces** | **Flat, front-facing, no perspective at all** |
+
+Flat sprite characters standing on a perspective background is exactly how a great many mid-to-late-1990s games worked. It is period-correct rather than a compromise.
+
+### 3.2 Why this preserves the avatar system
+
+The original reason for choosing flat elevation was modular avatar layering: a hat drawn once must sit correctly on a body drawn once, and any perspective involving rotation or foreshortening would require multiple variants per facing.
+
+**That reason is fully preserved**, because characters are not drawn in perspective at all. They remain flat, front-facing sprites. One variant per garment, forever.
+
+### 3.3 The fixed ground line — no depth scaling
+
+**Characters only ever stand at one depth: the front ground line**, at the near edge of the floor plane.
+
+Because character position never varies in depth, **character scale never varies either.** There is no depth-based scaling, no per-depth sprite variants, and no runtime size calculation. A manager avatar is the same 46px-family height in every scene, always.
+
+Props and furniture may sit deeper in the room. Characters may not.
+
+### 3.4 Rules
+
+- The floor occupies roughly the **lower quarter to third** of a zone tile, enough to carry arcade carpet pattern and to seat booths and furniture believably
+- Floor recession is suggested by a **gently angled floor/wall junction and pattern compression** toward the back — not by aggressive converging lines
+- Any convergence is shallow enough that a straight-on prop never looks distorted
+- Depth beyond the floor is expressed by **overlap and value**: background elements step one value lighter and lose outline weight
 - Characters always face the viewer, three-quarter at most. No profiles, no back views.
+- **Consistency across all six tiles is mandatory.** One horizon height, one floor angle, one ground line. A tile that disagrees is regenerated.
 
 ---
 
@@ -217,5 +254,20 @@ This document moves from PROVISIONAL to LOCKED when all of the following are tru
 - [ ] Rendered text on the test poster meets 4.5:1 and sits inside the safe area
 - [ ] All seven assets quantize to `palette.json` without visible banding or lost detail
 - [ ] The assembled composite reads as one place
+
+**Stage-box checks (§3):**
+
+- [ ] The floor is clearly visible and carries arcade carpet pattern
+- [ ] Recession reads as shallow — a room, not a corridor
+- [ ] Flat front-facing characters sit convincingly on the perspective floor, with no visual mismatch
+- [ ] The front ground line is unambiguous and characters plainly stand on it
+- [ ] There is believable room to seat a booth or a piece of furniture
+- [ ] Straight-on props show no distortion from the floor angle
+
+**Dimension checks (§2.1) — on a real phone:**
+
+- [ ] Tile aspect ratio reads well stacked full-width
+- [ ] Nothing load-bearing falls within ~16px of the left or right edge
+- [ ] The chosen integer scale plus crop produces no blurring
 
 Once locked, changes to §2 or §3 require regenerating the affected families.

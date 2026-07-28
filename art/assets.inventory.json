@@ -7,6 +7,12 @@
   "statusValues": ["placeholder", "generated", "approved", "retired"],
   "batchValues": ["B0", "B1", "B2", "B3", "B4", "B5+"],
 
+  "provisional": {
+    "$comment": "Zone tile canvas dimensions are PROVISIONAL pending the B0 composite test on a real phone. See ART_SPEC.md 2.1. All other canvas sizes are settled and do not depend on this.",
+    "zoneCanvas": "320x200",
+    "settlesAt": "B0"
+  },
+
   "placeholderMapping": {
     "$comment": "Which placeholder each family falls back to while art_status is 'placeholder'.",
     "character": "placeholder_sign",

@@ -21,10 +21,16 @@ faded football memorabilia, handwritten signs taped to things. Familiar, lived-i
 a little shady. Not a tourist-board Detroit, not a generic neon casino, not steampunk,
 not cyberpunk, not fantasy-medieval.
 
-CAMERA: Flat frontal elevation. Straight-on, camera at character eye level, like looking
-at a lit stage or a diorama. No vanishing point, no perspective convergence, no isometric
-projection, no foreshortening, no tilt. Floors read as horizontal bands. Props sit on the
-floor line or hang on the wall plane.
+CAMERA: Straight-on, at standing eye level, no tilt, no isometric projection, no dutch
+angle, no dramatic or wide-angle lens. Two rules apply depending on what is being drawn:
+
+  ENVIRONMENTS are a shallow stage box — like a shoebox diorama or a theatre set seen
+  from the front row. The floor is visible and recedes gently toward a back wall. Side
+  walls may angle in very slightly. The recession is shallow: a suggestion of depth, not
+  a corridor, never an aggressive vanishing point.
+
+  SUBJECTS — characters, objects, clothing layers, and surfaces — are drawn completely
+  flat and front-facing with no perspective, no foreshortening, and no rotation.
 
 LIGHT: One warm key light from the upper left, the color of an incandescent bulb. Cool
 low-influence ambient fill from the lower right. Shadows are one step darker in the same
