@@ -1,6 +1,7 @@
 import {
   boolean,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
   text,
@@ -8,6 +9,8 @@ import {
   unique,
   uuid,
 } from 'drizzle-orm/pg-core';
+
+import { type RosterMetadata } from '@/lib/sleeper/metadata';
 
 /**
  * Identity core.
@@ -91,7 +94,12 @@ export const seasons = pgTable('seasons', {
   /** One season per calendar year. */
   year: integer('year').notNull().unique(),
 
-  sleeperLeagueId: text('sleeper_league_id'),
+  /**
+   * Sleeper mints a new league ID each season, so this is unique across
+   * seasons. Without the constraint two `seasons` rows could claim the same
+   * Sleeper league and an import would have no way to tell which it meant.
+   */
+  sleeperLeagueId: text('sleeper_league_id').unique(),
 
   status: seasonStatus('status').notNull().default('DRAFT_PREP'),
 
@@ -146,6 +154,32 @@ export const seasonMemberships = pgTable(
     /** Sleeper's roster slot for this season only. Meaningless across seasons. */
     rosterId: integer('roster_id').notNull(),
 
+    /**
+     * A second person sharing this roster on Sleeper.
+     *
+     * Commissioner decision, 2026-07-28 (option (a)): a co-owner is a real
+     * person and gets a `users` row, but holds NO membership of their own.
+     * Recording them here keeps both unique constraints intact while keeping
+     * the person in league history.
+     *
+     * Deliberately a single column, not a list: this league has had exactly
+     * one co-owner ever. The importer raises a hard error if Sleeper ever
+     * reports more than one on a roster, so we find out and widen the model
+     * rather than silently dropping someone.
+     */
+    coOwnerUserId: uuid('co_owner_user_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+
+    /**
+     * League-authored text kept from Sleeper's roster metadata — chiefly the
+     * manager-written player nicknames, which are curated source material for
+     * Tony's dialogue and lore (`16 §10`). Sleeper overwrites a nickname when
+     * the manager changes it, so it is unrecoverable if not captured here.
+     * Personal notification settings are discarded at import.
+     */
+    sleeperMetadata: jsonb('sleeper_metadata').$type<RosterMetadata>(),
+
     /** False when a manager left mid-season and was replaced. */
     isActive: boolean('is_active').notNull().default(true),
 
@@ -159,9 +193,64 @@ export const seasonMemberships = pgTable(
   ],
 );
 
+/**
+ * What kind of job a sync run was.
+ *
+ * Only the historical import exists today. The two scheduled jobs from
+ * `16 §4.3` get their own values when they are built — adding an enum value is
+ * a one-line migration, and inventing them now would be scaffolding for code
+ * that does not exist.
+ */
+export const syncRunKind = pgEnum('sync_run_kind', ['HISTORICAL_IMPORT']);
+
+export const syncRunStatus = pgEnum('sync_run_status', [
+  'RUNNING',
+  'SUCCEEDED',
+  'FAILED',
+  /** Finished, but something needs a human — a conflict was left unresolved. */
+  'NEEDS_REVIEW',
+]);
+
+/**
+ * One execution of a sync job.
+ *
+ * `09 §14` requires admin visibility into the last successful sync, the last
+ * attempted sync, records changed, records skipped, and conflict warnings.
+ * This table is where all of that comes from, and it is written even when the
+ * run fails — a failed run that leaves no trace is the one you cannot debug.
+ *
+ * `source` records whether a run read the live API or recorded fixtures.
+ * Without it, "why does staging disagree with production" is unanswerable.
+ */
+export const syncRuns = pgTable('sync_runs', {
+  id: uuid('id').primaryKey().defaultRandom(),
+
+  kind: syncRunKind('kind').notNull(),
+  status: syncRunStatus('status').notNull().default('RUNNING'),
+
+  /** e.g. `fixtures(fixtures/sleeper)` or `live(https://api.sleeper.app/v1)`. */
+  source: text('source').notNull(),
+
+  startedAt: timestamp('started_at', { withTimezone: true }).notNull().defaultNow(),
+  finishedAt: timestamp('finished_at', { withTimezone: true }),
+
+  recordsChanged: integer('records_changed').notNull().default(0),
+  recordsSkipped: integer('records_skipped').notNull().default(0),
+
+  /** Conflicts and anomalies worth a commissioner's attention. */
+  warnings: jsonb('warnings').$type<string[]>().notNull().default([]),
+
+  /** Set when the run failed. Null on success. */
+  error: text('error'),
+
+  ...timestamps,
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Season = typeof seasons.$inferSelect;
 export type NewSeason = typeof seasons.$inferInsert;
 export type SeasonMembership = typeof seasonMemberships.$inferSelect;
 export type NewSeasonMembership = typeof seasonMemberships.$inferInsert;
+export type SyncRun = typeof syncRuns.$inferSelect;
+export type NewSyncRun = typeof syncRuns.$inferInsert;

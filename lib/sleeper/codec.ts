@@ -15,6 +15,7 @@
  * Warnings are returned, not logged, so the caller decides whether an odd
  * field is worth surfacing to the commissioner.
  */
+import { curateRosterMetadata } from './metadata';
 import {
   type Decoded,
   type FaabTransfer,
@@ -245,6 +246,7 @@ export function decodeRosters(
       potentialPoints: points(settings, 'ppts'),
       players: strArray(row, 'players'),
       starters: strArray(row, 'starters'),
+      metadata: curateRosterMetadata(row['metadata']),
     });
   });
 
