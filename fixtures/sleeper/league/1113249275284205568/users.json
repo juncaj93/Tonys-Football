@@ -1,0 +1,178 @@
+[
+  {
+    "avatar": "44041180f04c5d0d7121af71f2e67209",
+    "display_name": "BigJuncer",
+    "is_bot": false,
+    "is_owner": true,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "archived": "off",
+      "avatar": "https://sleepercdn.com/uploads/1dabdcd9478abf1e2cd1950d9df50827.jpg",
+      "league_report_pn": "on",
+      "mascot_message": "off",
+      "mention_pn": "on",
+      "player_like_pn": "on",
+      "player_nickname_update": "on",
+      "team_name": "Cadillac of Novi HR",
+      "team_name_update": "on",
+      "trade_block_pn": "on",
+      "transaction_commissioner": "on",
+      "transaction_free_agent": "on",
+      "transaction_trade": "on",
+      "transaction_waiver": "on",
+      "user_message_pn": "on"
+    },
+    "settings": null,
+    "user_id": "450049619838103552"
+  },
+  {
+    "avatar": "a211cfe1c68165130aefbb8ad672ca62",
+    "display_name": "Anthonyberardo",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "archived": "on",
+      "avatar": "https://sleepercdn.com/uploads/56a201380433d61d0a56d5f5938ff650.jpg",
+      "mention_pn": "on",
+      "team_name": "Injury Prone"
+    },
+    "settings": null,
+    "user_id": "690209715904417792"
+  },
+  {
+    "avatar": "8d91fa2c4ce323f5a11012e6a6dd4186",
+    "display_name": "RonJonathan",
+    "is_bot": false,
+    "is_owner": true,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "avatar": "https://sleepercdn.com/uploads/6392a1d707facc68b67787735ba940a1.jpg",
+      "mention_pn": "on",
+      "team_name": "Freddy’s Balls"
+    },
+    "settings": null,
+    "user_id": "705813167879553024"
+  },
+  {
+    "avatar": "05d5a267c4c8b6469dd9369d87098b97",
+    "display_name": "cheeseking",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "avatar": "https://sleepercdn.com/uploads/bd23bad075e0caba2ec937b71634e34c.jpg",
+      "mention_pn": "on",
+      "team_name": "Jimmy and the Crown Vics"
+    },
+    "settings": null,
+    "user_id": "729470601756037120"
+  },
+  {
+    "avatar": "f0edbf4278f53f9425db175073df6584",
+    "display_name": "jfletcher433",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "allow_sms": "on",
+      "avatar": "https://sleepercdn.com/uploads/2e2f35919ae5b86f204c68fa2917ef99.jpg",
+      "mention_pn": "on",
+      "team_name": "Damardiac Arrest"
+    },
+    "settings": null,
+    "user_id": "963870811994046464"
+  },
+  {
+    "avatar": "e7af4deab0289b4f5505646424895246",
+    "display_name": "MattyB2317",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "mention_pn": "on",
+      "team_name": "The Coop Kupp Klan"
+    },
+    "settings": null,
+    "user_id": "993992889480904704"
+  },
+  {
+    "avatar": "4f4090e5e9c3941414db40a871e3e909",
+    "display_name": "NateyDee",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "allow_sms": "on",
+      "avatar": "https://sleepercdn.com/uploads/e238af45aa01668a5d64c2db921cd62c.jpg",
+      "league_report_pn": "on",
+      "mascot_message": "on",
+      "mention_pn": "on",
+      "player_like_pn": "on",
+      "player_nickname_update": "on",
+      "team_name": "CTE Ambassador",
+      "team_name_update": "on",
+      "trade_block_pn": "on",
+      "transaction_commissioner": "on",
+      "transaction_free_agent": "on",
+      "transaction_trade": "on",
+      "transaction_waiver": "on",
+      "user_message_pn": "on"
+    },
+    "settings": null,
+    "user_id": "1113259910768238592"
+  },
+  {
+    "avatar": "8bb772b70686f1367da5e2394e2a5875",
+    "display_name": "SuggMyNick",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "allow_sms": "on",
+      "mention_pn": "on",
+      "team_name": " Corny and Horny"
+    },
+    "settings": null,
+    "user_id": "1113354275289223168"
+  },
+  {
+    "avatar": "f0edbf4278f53f9425db175073df6584",
+    "display_name": "imbrickedup22",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "avatar": "https://sleepercdn.com/uploads/e108eac3c1d979ab3364e7783fa86b2f.jpg",
+      "mention_pn": "on",
+      "team_name": "Freakbob"
+    },
+    "settings": null,
+    "user_id": "1113986962647654400"
+  },
+  {
+    "avatar": "15d7cf259bc30eab8f6120f45f652fb6",
+    "display_name": "MattLee04",
+    "is_bot": false,
+    "is_owner": false,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "allow_pn": "on",
+      "allow_sms": "on",
+      "avatar": "https://sleepercdn.com/uploads/3f9b04dbe0035e56a9f656b2d50ad0dd.jpg",
+      "mention_pn": "on",
+      "team_name": "Oil Money"
+    },
+    "settings": null,
+    "user_id": "1119321313341976576"
+  }
+]

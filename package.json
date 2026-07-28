@@ -18,7 +18,9 @@
     "db:up": "docker compose up -d --wait postgres",
     "db:down": "docker compose down -v",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "tsx scripts/migrate.ts"
+    "db:migrate": "tsx scripts/migrate.ts",
+    "sleeper:record": "tsx scripts/record-fixtures.ts",
+    "sleeper:check": "tsx scripts/record-fixtures.ts -- --check"
   },
   "overrides": {
     "brace-expansion": "^5.0.8",

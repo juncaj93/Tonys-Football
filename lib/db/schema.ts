@@ -14,12 +14,16 @@ import {
  *
  * The single most important rule in the data model (`16 §5.1`):
  *
- *   > Roster 7 in 2025 is not roster 7 in 2026.
+ *   > Roster 4 in 2025 is not roster 4 in 2026.
  *
  * Sleeper reuses `roster_id` across seasons and reassigns slots when managers
  * turn over. A person is therefore NOT identified by their roster slot.
  * Permanent things hang off `users`; seasonal things hang off
  * `season_memberships`.
+ *
+ * This is not hypothetical: in the recorded league, roster 4 is held by
+ * Berardo in 2024, Topouzian in 2025, and Zack in 2026 — three distinct
+ * Sleeper accounts in one slot. `lib/sleeper/chain.test.ts` asserts it.
  *
  * Getting this wrong is unrecoverable — a replacement manager would silently
  * inherit the previous occupant's championships, collectibles, and history.
@@ -118,6 +122,11 @@ export const seasons = pgTable('seasons', {
  *
  * Both are scoped to the season, never global — a global unique on `rosterId`
  * would be the exact bug this table exists to prevent.
+ *
+ * Co-ownership (commissioner decision, 2026-07-28) does not weaken either
+ * constraint: a co-owner becomes a `users` row and gets NO membership. The
+ * column recording them alongside the primary membership arrives with the
+ * persistence slice; `lib/sleeper/chain.ts` already imports them this way.
  */
 export const seasonMemberships = pgTable(
   'season_memberships',
