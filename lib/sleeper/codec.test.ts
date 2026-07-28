@@ -240,6 +240,72 @@ describe('decodeTransactions', () => {
     expect(value[0]?.week).toBe(9);
   });
 
+  it('captures FAAB moving between rosters in a trade', () => {
+    // 23 of the 41 recorded trades move budget. A trade summarized without it
+    // is wrong about what was exchanged.
+    const { value } = decodeTransactions(
+      [
+        {
+          transaction_id: 't1',
+          type: 'trade',
+          status: 'complete',
+          leg: 1,
+          roster_ids: [1, 2],
+          adds: { '8408': 2 },
+          drops: { '8408': 1 },
+          consenter_ids: [1, 2],
+          draft_picks: [],
+          waiver_budget: [{ amount: 20, receiver: 1, sender: 2 }],
+          settings: null,
+        },
+      ],
+      1,
+    );
+
+    expect(value[0]?.faabTransfers).toEqual([{ amount: 20, fromRosterId: 2, toRosterId: 1 }]);
+    expect(value[0]?.consenterRosterIds).toEqual([1, 2]);
+  });
+
+  it('captures traded draft picks, though this league trades none', () => {
+    const { value } = decodeTransactions(
+      [
+        {
+          transaction_id: 't2',
+          type: 'trade',
+          status: 'complete',
+          leg: 1,
+          roster_ids: [1, 2],
+          draft_picks: [
+            { season: '2027', round: 2, roster_id: 3, previous_owner_id: 2, owner_id: 1 },
+          ],
+        },
+      ],
+      1,
+    );
+
+    expect(value[0]?.draftPicks).toEqual([
+      { season: '2027', round: 2, originalRosterId: 3, fromRosterId: 2, toRosterId: 1 },
+    ]);
+  });
+
+  it('records when a waiver settled, not only when it was placed', () => {
+    const { value } = decodeTransactions([{ ...waiver, status_updated: 1758697589727 }], 3);
+
+    expect(value[0]?.createdMs).toBe(1758688683849);
+    expect(value[0]?.statusUpdatedMs).toBe(1758697589727);
+  });
+
+  it('leaves trade-only fields empty on an ordinary add', () => {
+    const { value } = decodeTransactions(
+      [{ transaction_id: 'fa', type: 'free_agent', status: 'complete', leg: 5 }],
+      5,
+    );
+
+    expect(value[0]?.faabTransfers).toEqual([]);
+    expect(value[0]?.draftPicks).toEqual([]);
+    expect(value[0]?.consenterRosterIds).toEqual([]);
+  });
+
   it('sorts by transaction id so re-imports do not reorder', () => {
     const { value } = decodeTransactions(
       [

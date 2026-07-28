@@ -17,6 +17,7 @@
  */
 import {
   type Decoded,
+  type FaabTransfer,
   SleeperDecodeError,
   type SleeperBracketMatch,
   type SleeperLeague,
@@ -25,6 +26,7 @@ import {
   type SleeperState,
   type SleeperTransaction,
   type SleeperUser,
+  type TradedDraftPick,
 } from './types';
 
 function isObject(value: unknown): value is Record<string, unknown> {
@@ -354,6 +356,43 @@ function playerRosterMap(source: Record<string, unknown>, key: string): Record<s
   return numberMap(source, key);
 }
 
+/** `waiver_budget: [{ amount, sender, receiver }]`, where sender/receiver are roster IDs. */
+function faabTransfers(source: Record<string, unknown>): FaabTransfer[] {
+  const value = source['waiver_budget'];
+  if (!Array.isArray(value)) return [];
+
+  const transfers: FaabTransfer[] = [];
+  for (const row of value) {
+    if (!isObject(row)) continue;
+    const amount = num(row, 'amount');
+    const from = num(row, 'sender');
+    const to = num(row, 'receiver');
+    if (amount === null || from === null || to === null) continue;
+    transfers.push({ amount, fromRosterId: from, toRosterId: to });
+  }
+  return transfers;
+}
+
+function draftPicks(source: Record<string, unknown>): TradedDraftPick[] {
+  const value = source['draft_picks'];
+  if (!Array.isArray(value)) return [];
+
+  const picks: TradedDraftPick[] = [];
+  for (const row of value) {
+    if (!isObject(row)) continue;
+    const round = num(row, 'round');
+    if (round === null) continue;
+    picks.push({
+      season: str(row, 'season') ?? '',
+      round,
+      originalRosterId: num(row, 'roster_id'),
+      fromRosterId: num(row, 'previous_owner_id'),
+      toRosterId: num(row, 'owner_id'),
+    });
+  }
+  return picks;
+}
+
 export function decodeTransactions(
   payload: unknown,
   week: number,
@@ -384,11 +423,15 @@ export function decodeTransactions(
       // Prefer Sleeper's own leg; fall back to the week we requested.
       week: num(row, 'leg') ?? week,
       createdMs: num(row, 'created'),
+      statusUpdatedMs: num(row, 'status_updated'),
       creatorUserId: str(row, 'creator'),
       rosterIds: numArray(row, 'roster_ids'),
       adds: playerRosterMap(row, 'adds'),
       drops: playerRosterMap(row, 'drops'),
       waiverBid: num(settings, 'waiver_bid'),
+      faabTransfers: faabTransfers(row),
+      draftPicks: draftPicks(row),
+      consenterRosterIds: numArray(row, 'consenter_ids'),
     });
   });
 

@@ -391,6 +391,80 @@ describe('weekly data', () => {
     expect(week3?.transactions.some((tx) => tx.status === 'failed')).toBe(true);
   });
 
+  describe('transaction coverage across the recorded seasons', () => {
+    async function allTransactions(leagueId: string) {
+      const season = await importSeason(fixtures(), leagueId);
+      return season.weeks.flatMap((week) => week.transactions);
+    }
+
+    it('imports every transaction in both completed seasons', async () => {
+      // Counted directly from the recorded payloads.
+      expect(await allTransactions(LEAGUE_2025)).toHaveLength(407);
+      expect(await allTransactions(LEAGUE_2024)).toHaveLength(554);
+    });
+
+    it('represents all four transaction types', async () => {
+      const types = new Set(
+        [...(await allTransactions(LEAGUE_2025)), ...(await allTransactions(LEAGUE_2024))].map(
+          (tx) => tx.type,
+        ),
+      );
+
+      expect(types).toEqual(new Set(['waiver', 'free_agent', 'trade', 'commissioner']));
+    });
+
+    it('keeps both failed and successful waivers, with bids on the winners', async () => {
+      const waivers = (await allTransactions(LEAGUE_2025)).filter((tx) => tx.type === 'waiver');
+
+      expect(waivers.filter((tx) => tx.status === 'failed')).toHaveLength(70);
+      expect(waivers.filter((tx) => tx.status === 'complete')).toHaveLength(98);
+      expect(waivers.every((tx) => tx.waiverBid !== null)).toBe(true);
+    });
+
+    it('records FAAB on the trades that moved it', async () => {
+      const trades = [
+        ...(await allTransactions(LEAGUE_2025)),
+        ...(await allTransactions(LEAGUE_2024)),
+      ].filter((tx) => tx.type === 'trade');
+
+      expect(trades).toHaveLength(41);
+      expect(trades.filter((tx) => tx.faabTransfers.length > 0)).toHaveLength(23);
+
+      for (const trade of trades) {
+        // Every trade names the rosters that agreed to it.
+        expect(trade.consenterRosterIds.length).toBeGreaterThan(0);
+        for (const transfer of trade.faabTransfers) {
+          expect(transfer.amount).toBeGreaterThan(0);
+          expect(transfer.fromRosterId).not.toBe(transfer.toRosterId);
+        }
+      }
+    });
+
+    it('gives every add and drop a destination roster', async () => {
+      for (const tx of await allTransactions(LEAGUE_2025)) {
+        for (const rosterId of Object.values(tx.adds)) {
+          expect(tx.rosterIds).toContain(rosterId);
+        }
+        for (const rosterId of Object.values(tx.drops)) {
+          expect(tx.rosterIds).toContain(rosterId);
+        }
+      }
+    });
+
+    it('trades every player it drops — both sides of the swap are present', async () => {
+      const trades = (await allTransactions(LEAGUE_2025)).filter((tx) => tx.type === 'trade');
+
+      for (const trade of trades) {
+        for (const [playerId, toRosterId] of Object.entries(trade.adds)) {
+          const fromRosterId = trade.drops[playerId];
+          // A traded player is dropped by one roster and added by the other.
+          expect(fromRosterId).toBeDefined();
+          expect(fromRosterId).not.toBe(toRosterId);
+        }
+      }
+    });
+  });
+
   it('reports no weekly data for a season that has not started', async () => {
     const season = await importSeason(fixtures(), LEAGUE_2026);
 

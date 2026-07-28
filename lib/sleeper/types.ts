@@ -98,6 +98,23 @@ export interface SleeperMatchupEntry {
   readonly playerPoints: Readonly<Record<string, number>>;
 }
 
+/** FAAB moving between rosters as part of a trade. */
+export interface FaabTransfer {
+  readonly amount: number;
+  readonly fromRosterId: number;
+  readonly toRosterId: number;
+}
+
+/** A draft pick changing hands in a trade. */
+export interface TradedDraftPick {
+  readonly season: string;
+  readonly round: number;
+  /** The roster whose original pick this is. */
+  readonly originalRosterId: number | null;
+  readonly fromRosterId: number | null;
+  readonly toRosterId: number | null;
+}
+
 /** One roster move. */
 export interface SleeperTransaction {
   readonly transactionId: string;
@@ -108,12 +125,31 @@ export interface SleeperTransaction {
   readonly week: number;
   /** Sleeper's creation time in epoch milliseconds. */
   readonly createdMs: number | null;
+  /** When the move settled — a waiver claim processes later than it is placed. */
+  readonly statusUpdatedMs: number | null;
   readonly creatorUserId: string | null;
   readonly rosterIds: readonly number[];
   /** Player ID → roster ID receiving them. */
   readonly adds: Readonly<Record<string, number>>;
   readonly drops: Readonly<Record<string, number>>;
+  /** Winning bid on a waiver claim. */
   readonly waiverBid: number | null;
+  /**
+   * FAAB sent between rosters in a trade.
+   *
+   * Not optional detail: 23 of the 41 trades in the recorded seasons move
+   * budget, and a trade summarized without it is simply wrong about what was
+   * exchanged.
+   */
+  readonly faabTransfers: readonly FaabTransfer[];
+  /**
+   * Draft picks traded. Always empty in the recorded seasons — this is a
+   * redraft league — but the field exists upstream and a keeper format would
+   * populate it, so it is captured rather than silently discarded.
+   */
+  readonly draftPicks: readonly TradedDraftPick[];
+  /** Rosters that agreed to a trade. Empty for non-trades. */
+  readonly consenterRosterIds: readonly number[];
 }
 
 /** The NFL's current position in the calendar. */
