@@ -24,6 +24,27 @@ jobs:
     name: Typecheck · Lint · Test · Build
     runs-on: ubuntu-latest
 
+    # Integration tests assert real database constraints, so they need a real
+    # database. `identity.test.ts` throws if DATABASE_URL is unset while CI is
+    # true, so a missing service fails loudly instead of silently skipping.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: tonys
+          POSTGRES_PASSWORD: local_dev_only
+          POSTGRES_DB: tonys_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tonys -d tonys_test"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgres://tonys:local_dev_only@localhost:5432/tonys_test
+
     steps:
       - uses: actions/checkout@v4
 
@@ -34,6 +55,9 @@ jobs:
 
       - name: Install
         run: npm ci
+
+      - name: Apply migrations
+        run: npm run db:migrate
 
       - name: Typecheck
         run: npm run typecheck
