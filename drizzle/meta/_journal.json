@@ -15,6 +15,13 @@
       "when": 1785266168963,
       "tag": "0001_import_provenance",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785273571336,
+      "tag": "0002_auth_content_records",
+      "breakpoints": true
     }
   ]
 }

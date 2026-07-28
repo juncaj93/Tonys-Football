@@ -67,8 +67,49 @@ export interface SeasonImportSummary {
   readonly seasonCreated: boolean;
   readonly membershipsCreated: number;
   readonly membershipsUnchanged: number;
+  /** Existing seats whose record moved — a live season, or a stat correction. */
+  readonly membershipsUpdated: number;
   readonly championUserId: string | null;
   readonly conflicts: readonly string[];
+}
+
+/**
+ * The season record Sleeper reports for one seat.
+ *
+ * Split out because these fields, unlike display names and season titles, are
+ * **not** seeded-once. Sleeper owns fantasy results, so a re-sync overwrites
+ * them. That does not weaken "never overwrite": what is protected there is who
+ * a seat belongs to, which this never touches.
+ */
+interface SeatRecord {
+  readonly wins: number;
+  readonly losses: number;
+  readonly ties: number;
+  readonly pointsFor: number;
+  readonly pointsAgainst: number;
+  readonly madePlayoffs: boolean;
+}
+
+function seatRecord(seat: ImportedSeason['seats'][number], playoffRosterIds: readonly number[]): SeatRecord {
+  return {
+    wins: seat.wins,
+    losses: seat.losses,
+    ties: seat.ties,
+    pointsFor: seat.pointsFor,
+    pointsAgainst: seat.pointsAgainst,
+    madePlayoffs: playoffRosterIds.includes(seat.rosterId),
+  };
+}
+
+function sameRecord(a: SeatRecord, b: SeatRecord): boolean {
+  return (
+    a.wins === b.wins &&
+    a.losses === b.losses &&
+    a.ties === b.ties &&
+    a.pointsFor === b.pointsFor &&
+    a.pointsAgainst === b.pointsAgainst &&
+    a.madePlayoffs === b.madePlayoffs
+  );
 }
 
 export interface ImportSummary {
@@ -240,6 +281,12 @@ export async function persistChain(
             id: seasonMemberships.id,
             rosterId: seasonMemberships.rosterId,
             userId: seasonMemberships.userId,
+            wins: seasonMemberships.wins,
+            losses: seasonMemberships.losses,
+            ties: seasonMemberships.ties,
+            pointsFor: seasonMemberships.pointsFor,
+            pointsAgainst: seasonMemberships.pointsAgainst,
+            madePlayoffs: seasonMemberships.madePlayoffs,
           })
           .from(seasonMemberships)
           .where(eq(seasonMemberships.seasonId, seasonId));
@@ -248,6 +295,7 @@ export async function persistChain(
 
         let membershipsCreated = 0;
         let membershipsUnchanged = 0;
+        let membershipsUpdated = 0;
 
         for (const seat of season.seats) {
           if (seat.primaryUserId === null) {
@@ -273,6 +321,7 @@ export async function persistChain(
           const coOwnerUserId =
             coOwnerSleeperId === undefined ? null : (userIdBySleeperId.get(coOwnerSleeperId) ?? null);
 
+          const record = seatRecord(seat, season.placements.playoffRosterIds);
           const already = membershipByRoster.get(seat.rosterId);
 
           if (already !== undefined) {
@@ -285,8 +334,20 @@ export async function persistChain(
                   `different manager than Sleeper now reports. Left unchanged — resolve manually.`,
               );
               recordsSkipped++;
-            } else {
+            } else if (sameRecord(already, record)) {
               membershipsUnchanged++;
+            } else {
+              // The seat is the same person; only the fantasy result moved.
+              // Sleeper owns that number, so it wins here — this is how a live
+              // season's record advances and how a stat correction lands. For
+              // the two completed seasons nothing ever differs, which is why
+              // re-importing history stays a no-op.
+              await tx
+                .update(seasonMemberships)
+                .set({ ...record, updatedAt: now() })
+                .where(eq(seasonMemberships.id, already.id));
+              membershipsUpdated++;
+              recordsChanged++;
             }
             continue;
           }
@@ -302,6 +363,7 @@ export async function persistChain(
             coOwnerUserId,
             sleeperMetadata: hasRosterMetadata(seat.metadata) ? seat.metadata : null,
             finalRank: finalRank === undefined ? null : Number(finalRank),
+            ...record,
           });
 
           membershipsCreated++;
@@ -316,6 +378,7 @@ export async function persistChain(
           seasonCreated,
           membershipsCreated,
           membershipsUnchanged,
+          membershipsUpdated,
           championUserId:
             championSleeperId === null ? null : (userIdBySleeperId.get(championSleeperId) ?? null),
           conflicts: conflicts.filter((c) => c.startsWith(String(season.year))),

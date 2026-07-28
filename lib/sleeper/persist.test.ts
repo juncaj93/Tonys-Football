@@ -2,6 +2,7 @@ import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { closePool, getDb } from '@/lib/db';
+import { resetDatabase } from '@/lib/db/test-helpers';
 import { seasonMemberships, seasons, syncRuns, users } from '@/lib/db/schema';
 
 import { traverseChain, type ChainResult, type ImportedSeason } from './chain';
@@ -31,10 +32,7 @@ describe.skipIf(!hasDatabase)('persistChain', () => {
   let chain: ChainResult;
 
   beforeEach(async () => {
-    await db!.delete(seasonMemberships);
-    await db!.delete(seasons);
-    await db!.delete(users);
-    await db!.delete(syncRuns);
+    await resetDatabase(db!);
 
     chain = await traverseChain(createFixtureSource(), LEAGUE_2026, { includeWeeks: false });
   });
