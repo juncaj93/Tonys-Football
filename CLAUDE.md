@@ -4,11 +4,14 @@ This repository contains the complete product specification for **Tony’s Pizza
 
 Before planning or implementing any feature, read:
 
-1. `README.md`
-2. Every numbered file inside `PROJECT_SPEC/`, in order
-3. `CLAUDE_FIRST_PROMPT.md`
+1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan. Start here.**
+2. `README.md`
+3. Every numbered file inside `PROJECT_SPEC/`, in order
+4. `CLAUDE_FIRST_PROMPT.md`
 
 The files inside `PROJECT_SPEC/` are the canonical product specification.
+
+`16_FINAL_RECONCILED_PLAN.md` is approved and sits at the top of the source-of-truth hierarchy. Documents `00`–`15` remain the foundation and govern wherever `16` is silent, but every conflict resolves in favour of `16`. Appendix A of that document lists each superseded requirement — do not re-litigate a decision recorded there.
 
 Do not begin implementation if any file listed in the manifest inside `README.md` is missing.
 
@@ -36,23 +39,49 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 - Loot boxes are purchased with tokens.
 - Token mutations must use an append-only ledger.
 - Token, loot-box, casino, auction, and reward actions must be server-authoritative, transactional, auditable, and idempotent.
-- Blackjack and slots are the planned launch casino games.
-- Roulette must remain disabled behind a feature flag until explicitly enabled.
+- Blackjack and slots are the casino games, deferred to Phase 10. **The casino is not in v1.**
+- Roulette is never built. A reserved feature-flag key is the entire required scaffolding.
 - Do not introduce achievements, levels, clout, prestige, unrestricted room drag-and-drop, Crash, or real-money custody.
 - The first season of Tony’s Tuesday Slice requires commissioner approval before publication.
 - Do not silently resolve material contradictions. Report them before implementation.
+
+## Approved Scope (from `16_FINAL_RECONCILED_PLAN.md`)
+
+**Removed from the product entirely:** real-money peer side bets · the prop-bet system (replaced by one weekly "Tony's Line" inside the Slice) · roulette · reward claiming · public guest mode · punishment mechanics that cost tokens or require chores · analytics vendors.
+
+**Deferred:** casino (P10) · manager basements (P6, v1.1) · silent auction · seasonal events (P8) · draft night · Season Story · vending machine (P7).
+
+**In v1:** the event spine · the six-zone Dynamic Pizza Shop · Tonight at Tony's · the Tuesday Slice with Tony's Line, bounties, and the chalkboard prediction · token ledger and weekly rewards · one loot box and a 24-item catalog · wearables and championship rings · the public Showcase · the Timeline · the content engine · historical seasons · persistent login.
+
+**Architecture invariants:**
+
+- One `league_events` spine. Shop state, Tonight, Timeline, Season Story, Slice candidates, and unread markers are all *views* over it — never stored state.
+- One content engine (`content_entries`) covers Tony lines, manager lines, NPC events, lore, and shop dressings. Do not add a parallel dialogue or NPC system.
+- All token movement goes through `apply_token_delta` with an idempotency key. Balance is trigger-maintained with `CHECK (balance >= 0)`. No feature gets its own balance-writing path.
+- No database client in the browser. Server-side access only; `anon` privileges revoked.
+- Two cron jobs, no more: Sunday pre-Monday snapshot, Tuesday finalize. **No live in-game score sync, ever.**
+- 6-digit PINs, 90-day rolling sessions.
+- The Slice must publish correctly with the AI API key unset.
+- Reward pacing and pricing are **simulation-gated** — no values are locked until the multi-season simulation runs in P3.
+
+**Art:** placeholder-first. Every asset is referenced by slug through the registry; swapping a placeholder for final art is a registry row, never a code change. See `art/ASSET_PIPELINE.md`.
+
+## Current Status
+
+The architecture review is complete and the plan is approved. Documentation and art planning are approved and done.
+
+**Not yet approved:** creating the Next.js application, installing packages, provisioning Neon or Vercel resources, or writing application code. Wait for explicit instruction to begin coding.
 
 ## Build Behavior
 
 Before writing implementation code:
 
 1. Confirm that the complete manifest from `README.md` is present.
-2. Read the complete specification.
-3. Follow `CLAUDE_FIRST_PROMPT.md`.
-4. Present an architecture review, identified risks, unresolved decisions, recommended MVP, and phased implementation plan.
-5. Wait for explicit approval.
+2. Read `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` first, then the rest of the specification.
+3. ~~Present an architecture review~~ — **complete.** Delivered across five review rounds and approved 2026-07-28. The result is `16_FINAL_RECONCILED_PLAN.md`.
+4. Build in the phase order of `16 §13`, honouring each phase's release gate.
 
-Do not initialize the application, create migrations, write components, create API routes, generate production assets, or begin implementation until the architecture and MVP scope are approved.
+Do not initialize the application, create migrations, write components, create API routes, generate production assets, or begin implementation until the commissioner explicitly says to start coding. Plan approval is not the same as instruction to build.
 
 ## Source of Truth
 

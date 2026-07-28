@@ -111,7 +111,26 @@ TONYS_PIZZA_PROJECT_SPEC/
     ├── 12_TONY_PERSONALITY_BIBLE.md
     ├── 13_INSIDE_JOKE_MANAGER_AND_DYNAMIC_LORE.md
     ├── 14_WORLD_LORE_AND_CANON.md
-    └── 15_MVP_DEVELOPMENT_ROADMAP.md
+    ├── 15_MVP_DEVELOPMENT_ROADMAP.md
+    └── 16_FINAL_RECONCILED_PLAN.md      ← APPROVED · CANONICAL
+```
+
+### Art framework
+
+```text
+art/
+├── ART_SPEC.md              frozen visual specification
+├── palette.json             the locked palette
+├── assets.inventory.json    every asset slug for v1
+├── ASSET_PIPELINE.md        placeholder-first registry process
+└── prompts/
+    ├── _style_preamble.md   shared, reused verbatim
+    ├── character_tony.md
+    ├── avatar_layer.md
+    ├── zone_tile.md
+    ├── collectible.md
+    ├── surface.md
+    └── frame.md
 ```
 
 Batch-specific README files are not part of the final package.
@@ -139,9 +158,12 @@ Read every file before implementation, in this order:
 15. `PROJECT_SPEC/13_INSIDE_JOKE_MANAGER_AND_DYNAMIC_LORE.md`
 16. `PROJECT_SPEC/14_WORLD_LORE_AND_CANON.md`
 17. `PROJECT_SPEC/15_MVP_DEVELOPMENT_ROADMAP.md`
-18. `CLAUDE_FIRST_PROMPT.md`
+18. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` ← **read last, obeyed first**
+19. `CLAUDE_FIRST_PROMPT.md`
 
 Do not skip character, lore, content, art, or operations files because they appear less technical. They contain product rules that materially affect architecture and implementation.
+
+`16_FINAL_RECONCILED_PLAN.md` is the approved plan. Documents `00`–`15` remain the foundation and stay authoritative wherever `16` is silent, but every conflict resolves in favour of `16`. Appendix A of that document lists each conflict explicitly.
 
 ---
 
@@ -221,11 +243,14 @@ Contains the exact first instruction to give Claude Code after the complete pack
 
 When requirements appear to conflict, use this order:
 
-1. `00_PROJECT_RULES.md`;
-2. this final `README.md`;
-3. the most specialized canonical file for the relevant system;
-4. the most recent explicitly versioned requirement;
-5. commissioner clarification.
+1. `16_FINAL_RECONCILED_PLAN.md` — **approved, canonical, highest authority**;
+2. `00_PROJECT_RULES.md`;
+3. this final `README.md`;
+4. the most specialized canonical file for the relevant system;
+5. the most recent explicitly versioned requirement;
+6. commissioner clarification.
+
+`16` supersedes anything below it in this list. Where `16` is silent, the older documents govern in the order shown.
 
 Examples are illustrative unless they are labeled as fixed requirements.
 
@@ -322,7 +347,9 @@ Before implementation:
 
 ## 9. Reconciled Decisions
 
-The following decisions supersede older or duplicated notes:
+The following decisions supersede older or duplicated notes.
+
+> **Several entries below have since been superseded by `16_FINAL_RECONCILED_PLAN.md`** — notably the casino launch scope, prop bets, real-money peer bets, PIN length, and basement timing. See Appendix A of that document for the full list. The entries retained here still describe the product's intent.
 
 - Runtime generative AI is reserved for Tony’s Tuesday Slice.
 - Ordinary dialogue is curated or template-driven.
@@ -387,6 +414,10 @@ A release with every casino, lore, and seasonal system risks never reaching poli
 ---
 
 ## 12. Before Writing Code
+
+> **Status: complete.** The architecture review and MVP scope were delivered across five review rounds and approved on 2026-07-28. The result is `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md`, which answers every item below.
+>
+> Implementation remains gated on explicit commissioner instruction to begin coding. Documentation and art planning are approved; the application, packages, database resources, and hosting configuration are not.
 
 Claude Code must first provide:
 

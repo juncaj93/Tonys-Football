@@ -1,0 +1,99 @@
+# Prompt Template — Collectibles
+
+**Family:** `collectible` · **Canvas:** 32 × 32
+
+One source asset serves three contexts: inventory thumbnail (16px), display case (32px), and reveal (96px). **Readability at 16px is the binding constraint** — design for the smallest, not the largest.
+
+Twenty-four items ship in the launch catalog. Twelve receive finished art at launch; the rest ship as `placeholder_pizza_box` — an item still in its box, which is thematically perfect rather than obviously unfinished — and upgrade on any Tuesday without a code change.
+
+---
+
+## Prompt structure
+
+1. `_style_preamble.md` → THE BLOCK, verbatim
+2. The FAMILY section below, verbatim
+3. One SUBJECT line
+
+---
+
+## FAMILY
+
+```
+SUBJECT TYPE: A single object, isolated, presented straight-on as if photographed for a
+catalogue. One object only. No scene, no setting, no hands holding it, no surface beneath it.
+
+COMPOSITION: Centered, filling most of the frame with a small even margin. The object's
+most identifiable angle. No dramatic foreshortening.
+
+SILHOUETTE: The object must be identifiable from its outline alone. If filled with a
+single flat color it should still be recognizable. This is the primary requirement —
+an object that fails the silhouette test fails regardless of how good the interior looks.
+
+DETAIL BUDGET: No more than ten distinct interior shapes, excluding the outline. Fewer
+is better. Texture is suggested by two or three value steps, never rendered.
+
+OUTLINE: Fully enclosed 1-pixel outline in a warm near-black.
+
+BACKGROUND: Fully transparent. No shadow, no ground plane, no frame, no rarity border —
+rarity framing is composited separately at runtime.
+```
+
+---
+
+## SUBJECT lines by rarity
+
+### Legendary — must be exceptional
+
+| Slug | Subject |
+|---|---|
+| `collectible_bapple_tree` | A small potted tree bearing fruit that is unmistakably half apple and half banana. Absurd, sincere, presented completely straight, as if it were an ordinary houseplant. Terracotta pot. |
+| `collectible_signed_jersey_legend` | A football jersey in a wooden display frame behind glass, blue and silver, **no numbers, no logos, no wordmarks**. A looping silver signature scrawled across the chest that is decorative and completely illegible — not any real person's signature. |
+
+### Epic
+
+| Slug | Subject |
+|---|---|
+| `collectible_portable_sauna` | A one-person portable fabric sauna tent, zipped, with a head-sized opening at the top and a small control box on a cord. Slightly ridiculous. |
+| `collectible_burn_barrel` | A rusted steel drum with flames rising from the open top and scorch marks up the sides. Charred paper visible at the rim. |
+| `collectible_neon_tony_sign` | A neon sign in the shape of a pizza slice with an abstract glowing outline, mounted on a small dark backing plate. No lettering. Emissive, unaffected by scene light. |
+| `collectible_arcade_cabinet` | An upright arcade cabinet with a dark CRT screen showing abstract colored shapes, a joystick and two buttons, and side art of abstract geometric patterns. No text, no recognizable game. |
+
+### Rare
+
+| Slug | Subject |
+|---|---|
+| `collectible_cookie_tote` | A small cardboard fast-food carry tote, unbranded, with cookies visible in the top. |
+| `collectible_reddiwip` | An aerosol whipped-cream can, unbranded, with a red cap and nozzle. |
+| `collectible_lava_lamp` | A lava lamp with a conical brass base and cap, glowing orange blobs suspended in amber liquid. |
+| `collectible_singing_fish` | A novelty plastic fish mounted on a wooden plaque, mouth open mid-song. |
+| `collectible_crt_tv` | A small boxy CRT television with a rounded screen, chunky dials on the right, and a rabbit-ear antenna. Screen showing abstract static. |
+| `collectible_pinball_machine` | A pinball machine seen from the front, backglass showing abstract colorful shapes with no text, legs visible. |
+| `collectible_revolution_poster` | A rolled-up propaganda-style poster, partly unfurled, showing a bold abstract graphic with a raised fist silhouette. Illegible lettering shapes only. |
+| `collectible_freddy_bowl` | A ceramic dog bowl with a decorative band around the rim, a few kibble pieces inside. No name on it. |
+
+### Common — keep these very simple
+
+`collectible_pizza_cutter` (rolling cutter, wooden handle) · `collectible_parmesan_shaker` (glass shaker, perforated metal top) · `collectible_napkin_dispenser` (chrome countertop dispenser with napkins showing) · `collectible_ketchup_bottle` (red plastic squeeze bottle, unbranded) · `collectible_paper_menu` (single folded paper menu, illegible text shapes) · `collectible_booth_cushion` (red vinyl booth cushion, buttoned, slightly split seam) · `collectible_arcade_token` (brass token with an abstract embossed design, no lettering) · `collectible_receipt_spike` (metal spike on a weighted base, blank receipts impaled) · `collectible_coffee_mug` (thick white diner mug with a colored stripe) · `collectible_checkered_cloth` (folded red-and-white checkered tablecloth)
+
+### System item
+
+| Slug | Subject |
+|---|---|
+| `item_championship_ring` | A chunky gold championship ring seen at a three-quarter angle, large faceted stone in the center, blank flat panels on both sides where an engraving would go. **No text, no numbers, no year** — the season is rendered at runtime, so one asset serves every championship forever. |
+
+---
+
+## Rights — read before generating
+
+- **No real player names, likenesses, or signatures.** Signed memorabilia uses decorative illegible scrawl.
+- **No team logos, marks, or wordmarks.** "Detroit football" is blue and silver only.
+- **No brand names** on any packaging or product.
+- Fast-food and consumer-product items are generic equivalents, never the real thing.
+
+## Acceptance
+
+- Identifiable at **16px** — test this before anything else
+- Silhouette test passes
+- Reads correctly at all three display sizes from one source
+- No rarity framing baked into the asset
+- Quantizes to `palette.json` without losing the identifying detail
