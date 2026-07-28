@@ -1,0 +1,95 @@
+@import 'tailwindcss';
+
+/*
+ * Palette tokens from `art/palette.json`.
+ *
+ * That file is the locked palette and the single source of truth; generated
+ * art is mechanically quantized to it. These tokens mirror it so CSS-drawn
+ * elements — placeholders, auras, effects — sit in the same world as the art.
+ *
+ * Keep the two in sync. If a value changes there, change it here.
+ */
+@theme {
+  --color-ink-900: #1a1214;
+  --color-ink-700: #2e2226;
+  --color-ink-500: #4a3b3f;
+  --color-ink-300: #7a6a6e;
+  --color-ink-100: #b5a8a9;
+
+  --color-wood-dark: #4a2e1c;
+  --color-wood-mid: #7a4a2a;
+  --color-wood-light: #a9713f;
+  --color-wood-pale: #c99a63;
+
+  --color-red-dark: #8c1f22;
+  --color-red-mid: #c42b2b;
+  --color-red-light: #e4534a;
+
+  --color-paper-white: #f5eddc;
+  --color-paper-mid: #e0d2b8;
+  --color-paper-dark: #bfae8e;
+
+  --color-amber-glow: #ffd98a;
+  --color-amber-mid: #f2a94b;
+  --color-amber-deep: #c97a22;
+
+  --color-blue-deep: #14233d;
+  --color-blue-mid: #2c5a8c;
+  --color-blue-light: #5c9bd1;
+  --color-blue-neon: #7fd4f0;
+
+  --color-green-deep: #1e4a32;
+  --color-green-neon: #5fd98a;
+
+  --color-yellow-cheese: #f2c94c;
+  --color-yellow-neon: #fff07a;
+
+  --color-violet-deep: #3b2050;
+  --color-magenta-neon: #e060b0;
+
+  /* Rarity reinforces frame geometry and a text label — never color alone. */
+  --color-rarity-common: var(--color-ink-300);
+  --color-rarity-rare: var(--color-blue-light);
+  --color-rarity-epic: var(--color-magenta-neon);
+  --color-rarity-legendary: var(--color-amber-glow);
+}
+
+/*
+ * iPhone Safari is the primary platform. These are the defaults that make a
+ * web app feel native one-handed rather than like a shrunken desktop page.
+ */
+html {
+  /* Safari inflates text in landscape without this. */
+  -webkit-text-size-adjust: 100%;
+  /* No grey flash on tap. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background-color: var(--color-ink-900);
+  color: var(--color-paper-mid);
+  /* Stop the whole page rubber-banding behind fixed chrome. */
+  overscroll-behavior-y: none;
+}
+
+/*
+ * Safari zooms the viewport when focusing an input whose text is under 16px.
+ * Setting the floor here removes an entire class of layout jump.
+ */
+input,
+select,
+textarea,
+button {
+  font-size: max(1rem, 16px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

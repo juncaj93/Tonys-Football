@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+# A newer push to the same branch supersedes an in-flight run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# `16 §12` removes analytics vendors from the product. Next's build telemetry
+# is anonymous, but opting out keeps that decision consistent.
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  check:
+    name: Typecheck · Lint · Test · Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
+
+      # The clock abstraction only holds if the rule enforcing it is active.
+      # A silently disabled rule would be invisible until the time machine
+      # failed months from now.
+      - name: Verify clock enforcement is active
+        run: |
+          set -e
+          echo 'export const leak = new Date();' > lib/__clock_rule_probe.ts
+          if npm run lint --silent; then
+            rm -f lib/__clock_rule_probe.ts
+            echo "::error::ESLint did not reject a bare new Date(). Clock enforcement is not working."
+            exit 1
+          fi
+          rm -f lib/__clock_rule_probe.ts
+          echo "Clock enforcement confirmed active."
