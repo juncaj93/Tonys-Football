@@ -340,7 +340,24 @@ Sleeper mints a **new league ID each season** when a league is renewed — which
 
 **Tier 3 — manual.** Anything still unavailable: a one-time commissioner screen for champion, runner-up, final standings, and known stories, stored as `league_memories` with `confidence = commissioner_approved`.
 
-**Never fabricate.** Thinner history for old seasons is acceptable **and must be visible** — Tony says "highest since we started recording," never pretends to know. The UI distinguishes detailed recorded history from thin manual history.
+**Never fabricate.** Where a fact is genuinely unavailable, it must stay visibly unavailable — Tony says "highest since we started recording," never pretends to know.
+
+### `is_historical` means provenance, not completeness
+
+**Corrected 2026-07-28.** An earlier draft of this section conflated two orthogonal things. They are separate:
+
+| Question | Answered by | Scope |
+|---|---|---|
+| Were we here to watch it happen? | `seasons.is_historical` | The season |
+| Is this specific claim solid? | `league_memories.confidence` | One fact |
+
+`is_historical` is **true for a completed season reconstructed after the website existed.** It says nothing about data quality. 2024 and 2025 imported cleanly through Tier 1 and are therefore **historical *and* complete** — full rosters, matchups, transactions, and brackets.
+
+Consequences:
+
+- **Do not add a season-level completeness flag.** Collapsing provenance and completeness into one boolean loses both answers.
+- **Tony hedges because a fact is unverified, never because a season is old.** He may speak about 2024 with full confidence.
+- The flag is set once, at import, from whether the season had already finished the first time we saw it. It is never recomputed — a season watched live stays non-historical forever, even after it closes.
 
 Historical championship rings for **Alex** and **Matty B** are granted once their seasons are verified through any tier.
 
@@ -350,10 +367,24 @@ Historical championship rings for **Alex** and **Matty B** are granted once thei
 
 ## 13. Roadmap
 
+> ### ⚠️ Superseded by `17_ACCELERATED_ROADMAP.md`
+>
+> **Approved 2026-07-28.** The phase table below is retained for its release
+> gates and its record of what each phase contains. **The ordering is no longer
+> current.**
+>
+> `17` reorders the same work to get a deployed, iPhone-first site in front of
+> the commissioner within a day, then deepens each system through live
+> iterations. **Nothing in `16` outside this section changes** — architecture,
+> invariants, scope decisions, and every gate below still hold.
+>
+> Where `16 §13` and `17` disagree about *order*, `17` wins. Where they disagree
+> about *anything else*, they do not — `17` introduces no new scope.
+
 | Phase | Goal | Includes | Excludes | Gate |
 |---|---|---|---|---|
 | **P0** Foundation | Nothing surprises us later | Repo, migrations, clock abstraction, flags, CI, fixtures, **art test set**, asset inventory | All features | Composite test approved; fixtures replay a fake week |
-| **P1** Identity + Sync + Spine | Truth exists, replayable | PIN auth, sessions, claim flow, Sleeper adapter, fantasy tables, **`league_events`**, sync runs, **historical import**, replay harness | All UI | 10 managers map; re-sync is a no-op; history imported or marked thin; security checklist passes |
+| **P1** Identity + Sync + Spine | Truth exists, replayable | PIN auth, sessions, claim flow, Sleeper adapter, fantasy tables, **`league_events`**, sync runs, **historical import**, replay harness | All UI | 10 managers map; re-sync is a no-op; history imported with unavailable facts left visibly unavailable; security checklist passes |
 | **P2** The Shop | It feels like a place | 6 zones, Tonight board, featured rotator, resolver, 12 dressings, receipt, seasonal mechanism, mobile tiles | Collectibles in the case | Five-second test passes on a phone; shop changes across 2 simulated weeks |
 | **P3** Economy | Money is trustworthy | Ledger, trigger balance, weekly rewards, **multi-season simulation** | Spending | Overdraft impossible; replayed key is a no-op; **simulation ranges approved** |
 | **P4** Collectibles | The reason to care | One box, 24-item catalog, 12 wearables, 5 slots, rings, server-authoritative pull, reveal, Collection, **Showcase** | Basements | Purchase atomic; Showcase live in case; rights review clean |

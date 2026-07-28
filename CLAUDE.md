@@ -5,9 +5,11 @@ This repository contains the complete product specification for **Tony’s Pizza
 Before planning or implementing any feature, read:
 
 1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan. Start here.**
-2. `README.md`
-3. Every numbered file inside `PROJECT_SPEC/`, in order
-4. `CLAUDE_FIRST_PROMPT.md`
+2. `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` — **the approved implementation ordering**
+3. `docs/IMPLEMENTATION_HANDOFF.md` — **the current assignment**
+4. `README.md`
+5. Every numbered file inside `PROJECT_SPEC/`, in order
+6. `CLAUDE_FIRST_PROMPT.md`
 
 The files inside `PROJECT_SPEC/` are the canonical product specification.
 
@@ -68,9 +70,21 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 
 ## Current Status
 
-The architecture review is complete and the plan is approved. Documentation and art planning are approved and done.
+**Implementation is underway on the accelerated roadmap (`17`).**
 
-**Not yet approved:** creating the Next.js application, installing packages, provisioning Neon or Vercel resources, or writing application code. Wait for explicit instruction to begin coding.
+Shipped: the Next.js foundation, the injected clock, the asset registry, the identity schema, the Sleeper adapter, and the idempotent historical import with recorded 2024–2026 fixtures.
+
+**Current assignment: V0 Pipeline + V1 Doors Open.** See `docs/IMPLEMENTATION_HANDOFF.md`.
+
+The engineer runs continuously inside a vertical slice and stops only at the conditions in `17 §8`. PR checkpoints are the six categories in `17 §7` — not every subtask.
+
+### Ordering versus scope
+
+`17` changes **only the order** in which work becomes visible. It introduces no new scope. Every invariant, gate, and scope decision in `16` still holds. Where the two disagree about order, `17` wins.
+
+### The offseason matters
+
+Today is late July; the season starts around 10 September. The site launches into a deliberate **offseason state** built on imported 2024/2025 history. Day one needs no live scoring, no economy, and no Slice pipeline.
 
 ## Build Behavior
 
@@ -79,9 +93,9 @@ Before writing implementation code:
 1. Confirm that the complete manifest from `README.md` is present.
 2. Read `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` first, then the rest of the specification.
 3. ~~Present an architecture review~~ — **complete.** Delivered across five review rounds and approved 2026-07-28. The result is `16_FINAL_RECONCILED_PLAN.md`.
-4. Build in the phase order of `16 §13`, honouring each phase's release gate.
+4. Build in the **vertical-slice order of `17 §4`**, honouring the release gates in `16`. The phase table in `16 §13` is superseded for ordering only.
 
-Do not initialize the application, create migrations, write components, create API routes, generate production assets, or begin implementation until the commissioner explicitly says to start coding. Plan approval is not the same as instruction to build.
+Work the assignment in `docs/IMPLEMENTATION_HANDOFF.md`. Do not begin a slice that has not been assigned, and do not absorb scope from a later slice — propose it instead.
 
 ## Source of Truth
 

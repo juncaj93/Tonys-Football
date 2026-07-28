@@ -104,10 +104,22 @@ export const seasons = pgTable('seasons', {
   status: seasonStatus('status').notNull().default('DRAFT_PREP'),
 
   /**
-   * True for seasons imported retroactively with thinner data.
+   * A completed season reconstructed after the website existed.
    *
-   * `16 §12` requires that thin history be *visible* rather than disguised —
-   * Tony says "highest since we started recording", never pretends to know.
+   * This is a statement about **provenance, not completeness**. A season
+   * imported cleanly from Sleeper's chain is historical *and* complete —
+   * 2024 and 2025 both are. The flag records that we were not here to watch
+   * it happen, nothing more.
+   *
+   * Completeness is tracked separately, at the level of individual facts:
+   * `league_memories.confidence` says whether a specific claim is solid.
+   * Tony hedges because a *fact* is unverified, never because a season is
+   * old. Do not add a season-level completeness flag — the two questions are
+   * orthogonal and collapsing them loses both answers.
+   *
+   * Set once, at import, from whether the season had already finished the
+   * first time we saw it. Never recomputed: a season we watched live stays
+   * non-historical forever, even after it closes.
    */
   isHistorical: boolean('is_historical').notNull().default(false),
 
