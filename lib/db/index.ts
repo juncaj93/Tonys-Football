@@ -55,6 +55,15 @@ export function getDb() {
   return drizzle(getPool(), { schema });
 }
 
+/**
+ * The database handle.
+ *
+ * Services take this as a parameter rather than reaching for `getDb()`
+ * themselves, so a test can hand them a connection pointed at a scratch
+ * database and no service can accidentally talk to production.
+ */
+export type Database = ReturnType<typeof getDb>;
+
 /** Close the pool. Tests and graceful shutdown only. */
 export async function closePool(): Promise<void> {
   if (globalThis.__tonysPool !== undefined) {

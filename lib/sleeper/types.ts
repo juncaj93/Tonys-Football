@@ -16,6 +16,9 @@
  * `04 §23` requires raw payloads be retained for debugging important syncs and
  * `10 §13` requires replay from stored payloads.
  */
+import { type RosterMetadata } from './metadata';
+
+export { type RosterMetadata };
 
 /** A person as Sleeper knows them. Not a Tony's Pizza `users` row. */
 export interface SleeperUser {
@@ -66,6 +69,12 @@ export interface SleeperRoster {
   readonly potentialPoints: number;
   readonly players: readonly string[];
   readonly starters: readonly string[];
+  /**
+   * League-authored text kept from Sleeper's roster metadata — manager-written
+   * player nicknames and the record/streak strings. Personal notification
+   * settings are discarded. See `metadata.ts`.
+   */
+  readonly metadata: RosterMetadata;
 }
 
 /**

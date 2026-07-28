@@ -29,6 +29,7 @@ import {
   decodeUsers,
 } from './codec';
 import { endpointKey, MAX_WEEK, type SleeperEndpoint } from './endpoints';
+import { type RosterMetadata } from './metadata';
 import { type SleeperSource } from './transport';
 import {
   SleeperDecodeError,
@@ -208,6 +209,8 @@ export interface RosterSeat {
   readonly pointsFor: number;
   readonly pointsAgainst: number;
   readonly potentialPoints: number;
+  /** League-authored text worth keeping. See `metadata.ts`. */
+  readonly metadata: RosterMetadata;
 }
 
 // --------------------------------------------------------------------------
@@ -426,6 +429,7 @@ export async function importSeason(
     pointsFor: roster.pointsFor,
     pointsAgainst: roster.pointsAgainst,
     potentialPoints: roster.potentialPoints,
+    metadata: roster.metadata,
   }));
 
   const seatedUserIds = new Set(

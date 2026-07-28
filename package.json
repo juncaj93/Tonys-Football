@@ -20,7 +20,8 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",
     "sleeper:record": "tsx scripts/record-fixtures.ts",
-    "sleeper:check": "tsx scripts/record-fixtures.ts -- --check"
+    "sleeper:check": "tsx scripts/record-fixtures.ts -- --check",
+    "sleeper:import": "tsx scripts/import-league.ts"
   },
   "overrides": {
     "brace-expansion": "^5.0.8",
