@@ -16,15 +16,33 @@ matching `art/incoming/zone_parlor_shell.png`.
 | Feature | Extent | Width | Centre |
 |---|---|---|---|
 | Rail rod — rows y 65, 68, 69 | **x 54–184** | 131 | 119.0 |
-| Board outer frame, current | x 49–178 | 130 | 113.5 |
-| Board outer frame, **after +6** | **x 55–184** | 130 | **119.5** |
-| Board cream field, after +6 | x 63–179 | 117 | 121.0 |
-| Board usable text, after +6 | x 66–176 | 111 | 121.0 |
+| Board outer frame, as painted | x 49–180 | 132 | 114.5 |
+| Board outer frame, **after +5** | **x 54–185** | 132 | **119.5** |
+| Board cream field, after +5 | x 62–178 | 117 | 120.0 |
+| Board usable text, after +5 | x 65–175 | 111 | 120.0 |
 | **Banner row — bodies** | **x 56–183** | **128** | **119.5** |
 | **Banner row — hit regions** | **x 54–185** | **132** | **119.5** |
 
-Board vertical is unchanged: outer frame y 79–177, cream field y 84–170, usable
+Board vertical is unchanged: outer frame y 79–179, cream field y 84–170, usable
 text y 88–166.
+
+### The shift is +5, and was recorded as +6 for one day
+
+The board is **132 units wide, not 130.** The measurement that produced 130 read
+the frame's outer edge as `x 49–178`: it stopped at the dark bevel on the right
+and missed the amber lip at `x 179–180` — the same lip it correctly kept at
+`x 49–50` on the left. The frame's colour profile is very nearly a mirror, so
+the asymmetry was the tell and it was there to be read.
+
+Re-measured by asking where each *wall material* stops rather than by one
+brightness threshold — dark panel to the left, lit `#F2A94B` to the right, both
+solid to within 5% — the frame is `x 49–180`, `y 79–179`.
+
+A 132-wide board centred at 119.5 starts at 54, so the shift is **`54 − 49 = 5`**.
+
+**Nothing else changes.** Every other figure here was derived from the rod, not
+from the board, so all six slots, the partition tiling, the gaps and the hit
+row are exactly as they were. Only the board moves one unit less far.
 
 **Slots: 56, 78, 100, 122, 144, 166.** Banner 18 × 15, gap 4, pitch 22.
 Row bottoms at y 83; board usable text begins y 88 — **4 units of clearance**.
@@ -33,6 +51,10 @@ Row bottoms at y 83; board usable text begins y 88 — **4 units of clearance**.
 within the rod with a 2 px left margin and 1 px right. All four attachment nubs —
 59 and 70 on slot 1, 169 and 180 on slot 6 — land on rod pixels. The *hit
 regions* extend 2 units past the bodies at each end, onto plain wall; see below.
+
+The board and the rod also share a **left edge at x 54**. They cannot share both
+edges: the board is 132 wide and the rod 131, so one end overhangs by exactly one
+unit whichever way it is placed. The right end is where that unit goes.
 
 ### Rail anatomy, and three earlier errors
 
@@ -144,9 +166,38 @@ gap narrows partitions below the criterion.
 - At season seven the six-season window **shifts left once** and shows the six most
   recent seasons.
 
+## The shift is baked — how, and how to undo it
+
+`zone_parlor_shell.png` is the only asset in the product that is **not** a pure
+function of its source file. The board's +5 lives in `scripts/derive-art.ts`,
+which runs automatically at the end of `npm run art:process` and can be run alone
+with `npm run art:derive`.
+
+**Why not move the board in the source.** 5 logical units is 14.7 source pixels
+at the shell's 2.9406:1 ratio. Moving a painted board by a fractional pixel and
+then downsampling resamples the frame's one-pixel bevel into mush. The shift has
+to happen after quantization, on the 320 × 569 grid, where a unit is a unit.
+
+**Why it cannot double-apply.** The transform measures before it acts. It finds
+the board's right edge by walking in from the lit wall — the only side that moves
+with the board, since the dark panel on the left is architecture that stays put —
+confirms the frame's own colour profile is there, and then decides. Right edge at
+180 means shift; at 185 means already done; anything else is an error rather than
+a second shift. `scripts/derive-art.test.ts` asserts all three.
+
+**The vacated strip becomes wall, not panel.** The panel's edge at x 48/49 is one
+straight vertical line from y 60 to y 182, and the board's amber lip sits flush
+against it in the same colour as the wall above and below. Filling the five
+vacated columns with panel would cut a dark notch into that line for exactly the
+board's height — the one visible way to get this wrong. The fill continues each
+column downward from the wall row above the board instead.
+
+**To undo it:** delete the derivation entry and re-run `npm run art:process`.
+
 ## Remaining implementation work
 
-The asset is registered; **the homepage behaviour is not wired**. Still to build:
+The asset is registered and the board is aligned; **the homepage behaviour is not
+wired**. Still to build:
 
 1. Six banner buttons over the shell at the placements above, rendered only for
    completed seasons, oldest first.

@@ -171,6 +171,26 @@ Sprite sheet plus JSON metadata into `/public/assets/<family>/`.
 
 Write the registry row: source, prompt reference, rights status, version, alt text. Flip `art_status` to `generated`, then `approved` after review.
 
+### Step 7 — Derived stages
+
+**Almost every asset ends at Step 6, and an asset that ends there is a pure function of its source file.** Keep it that way wherever possible: one source, one command, one output, and a regeneration that cannot drift.
+
+**One asset is not**, and the exception is deliberate rather than accidental. `zone_parlor_shell` needs its Tonight board moved **five logical units right** so the board, the championship rail and the banner row share a centre. That cannot be done in the source: 5 logical units is 14.7 source pixels at the shell's 2.9406:1 ratio, and moving a painted board by a fractional pixel then downsampling resamples the frame's one-pixel bevel into mush. It has to happen **after quantization**, on the 320 × 569 grid, where a unit is a unit.
+
+`scripts/derive-art.ts` holds every derived stage. Today it holds one.
+
+**Three rules, and the third is the load-bearing one.**
+
+1. **The output stays reproducible from the source** — in two commands instead of one, both committed, both deterministic.
+2. **`art/incoming/` is never touched.** The approved painting stays approved.
+3. **Every transform measures the asset and decides from what it finds.** Running twice is a no-op; running against an asset in an unrecognised state is an **error**, never a second application.
+
+Rule 3 is why this is safe. A blind "copy the block right by 5" run twice slides the board ten units into the wall, and nothing downstream would notice — no exception, no failed check, just a room that is wrong. So the shell's transform locates the board's right edge by walking in from the lit wall, confirms the frame's own colour profile is there, and only then acts.
+
+**Derived stages run inside `art:process`, not beside it.** A stage somebody has to remember to run is a stage that silently reverts the next time the batch is reprocessed. `npm run art:derive` exists for running them alone; it is not the normal path.
+
+If a derived stage is ever needed for a second asset, ask first whether the source can carry the change. Usually it can, and then it should.
+
 ---
 
 ## 5. Batch order

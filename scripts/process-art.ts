@@ -12,6 +12,7 @@
  *   3. alpha cleanup — no partial alpha
  *   4. trim to the declared canvas
  *   5. emit to public/assets/<family>/
+ *   6. derived stages — `scripts/derive-art.ts`, run automatically
  *
  * **Step 2 is the important one.** Quantization is what makes fifty
  * independently generated images look like one world. Without it every batch
@@ -29,6 +30,8 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 import { assetRegistry } from '@/lib/assets/registry';
+
+import { deriveAll } from './derive-art';
 
 const INCOMING = path.join(process.cwd(), 'art', 'incoming');
 const OUTPUT_ROOT = path.join(process.cwd(), 'public', 'assets');
@@ -262,6 +265,14 @@ async function main(): Promise<void> {
   for (const file of files.sort()) {
     await processOne(file, palette);
   }
+
+  // Stage two, always. One asset needs a deterministic post-process that cannot
+  // be expressed in the source (`scripts/derive-art.ts`), and a derived stage
+  // somebody has to remember to run is a stage that silently reverts the next
+  // time the batch is reprocessed. It is idempotent, so running it after a
+  // single-slug run costs nothing.
+  console.log('');
+  await deriveAll();
 }
 
 // Only when run as a command. `nearest` is asserted directly by
