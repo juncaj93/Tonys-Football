@@ -1,8 +1,7 @@
-import { isNotNull } from 'drizzle-orm';
+import { sql } from 'drizzle-orm';
 import { expect } from 'vitest';
 
 import { type Database } from './index';
-import { seasonMemberships, seasons, syncRuns, users } from './schema';
 
 /**
  * Assert that a query failed with a specific Postgres error.
@@ -17,19 +16,43 @@ import { seasonMemberships, seasons, syncRuns, users } from './schema';
  */
 
 /**
- * Truncate the league tables between tests.
+ * Empty every application table.
  *
- * Un-finalizes first. A finalized season's memberships cannot be deleted — a
- * trigger refuses it, which is the behaviour under test — so a teardown that
- * went straight to DELETE would fail for the right reason at the wrong moment.
- * Children before parents, because the foreign keys are RESTRICT by design.
+ * One statement, listing the tables by name, rather than each test file
+ * deleting the handful it happens to know about. The foreign keys are
+ * `RESTRICT` by design — a person is never deleted out from under their own
+ * history — so a file that truncates `users` while another table still
+ * references a row fails, and it fails in whichever test file happens to run
+ * first rather than in the one that added the table.
+ *
+ * `CASCADE` here follows the constraint graph within the truncation itself; it
+ * cannot reach anything outside this list.
+ *
+ * **Add new tables to this list.** A missing table means a test starting from
+ * a state some earlier file left behind.
+ *
+ * On finalized seasons: `TRUNCATE` does not fire the row-level triggers that
+ * make a finalized season's memberships immutable, so this works without
+ * un-finalizing anything first. That is not a hole in the guarantee —
+ * `TRUNCATE` needs table ownership, which no application code path holds, and
+ * the guard exists to stop an UPDATE or DELETE that an importer, a script, or a
+ * hand-run statement could plausibly issue. A test harness that owns the
+ * database is outside that threat model by construction.
  */
-export async function resetLeagueTables(db: Database): Promise<void> {
-  await db.update(seasons).set({ finalizedAt: null }).where(isNotNull(seasons.finalizedAt));
-  await db.delete(seasonMemberships);
-  await db.delete(seasons);
-  await db.delete(users);
-  await db.delete(syncRuns);
+export async function resetDatabase(db: Database): Promise<void> {
+  await db.execute(
+    sql`truncate table
+      content_usage_log,
+      content_entries,
+      admin_audit_logs,
+      auth_attempts,
+      sessions,
+      season_memberships,
+      seasons,
+      sync_runs,
+      users
+    restart identity cascade`,
+  );
 }
 
 /** https://www.postgresql.org/docs/current/errcodes-appendix.html */

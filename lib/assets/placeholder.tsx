@@ -81,12 +81,36 @@ export function AssetView({
     );
   }
 
-  // `kind === 'art'` — real art arrives with batch B1.
+  // Real art.
+  //
+  // `image-rendering: pixelated` is not decoration — it is the whole contract.
+  // Every file here is authored at its display size in CSS pixels and then
+  // rendered two or three times larger by the device's own pixel ratio, so the
+  // browser's default smoothing would blur exactly the hard edges the pipeline
+  // spent its quantization step guaranteeing.
+  //
+  // A plain `<img>` rather than `next/image`: the assets are static, tiny, and
+  // already at their final dimensions, so there is nothing to optimize and a
+  // resizing proxy would only reintroduce interpolation.
   return (
-    <PlaceholderSign
-      label={resolution.record.alt}
-      slug={resolution.slug}
-      className={className}
+    // eslint-disable-next-line @next/next/no-img-element -- see above
+    <img
+      src={resolution.path}
+      alt={resolution.record.alt}
+      width={pixelWidth(resolution.record.canvas)}
+      height={pixelHeight(resolution.record.canvas)}
+      className={`block h-auto w-full ${className}`}
+      style={{ imageRendering: 'pixelated' }}
+      draggable={false}
     />
   );
+}
+
+/** `"320x228"` → `320`. */
+function pixelWidth(canvas: string): number {
+  return Number(canvas.split('x')[0] ?? 0);
+}
+
+function pixelHeight(canvas: string): number {
+  return Number(canvas.split('x')[1] ?? 0);
 }

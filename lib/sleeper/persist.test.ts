@@ -3,11 +3,10 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { closePool, getDb } from '@/lib/db';
 import { seasonMemberships, seasons, syncRuns, users } from '@/lib/db/schema';
-import { PG_ERROR, expectPgError, resetLeagueTables } from '@/lib/db/test-helpers';
-
-import { traverseChain, type ChainResult, type ImportedSeason } from './chain';
+import { PG_ERROR, expectPgError, resetDatabase } from '@/lib/db/test-helpers';
 import { loadManagerMappings } from '@/lib/identity/mappings';
 
+import { traverseChain, type ChainResult, type ImportedSeason } from './chain';
 import { createFixtureSource } from './fixtures';
 import {
   finalizeSeason,
@@ -40,7 +39,7 @@ describe.skipIf(!hasDatabase)('persistChain', () => {
   let chain: ChainResult;
 
   beforeEach(async () => {
-    await resetLeagueTables(db!);
+    await resetDatabase(db!);
 
     // Weeks are needed for reconciliation. They are read and compared here,
     // never persisted — the weekly tables are Phase B.

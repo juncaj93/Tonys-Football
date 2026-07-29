@@ -19,8 +19,15 @@
     {
       "idx": 2,
       "version": "7",
-      "when": 1785328817755,
-      "tag": "0002_phase_a_correctness",
+      "when": 1785273571336,
+      "tag": "0002_auth_content_records",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1785360640755,
+      "tag": "0003_phase_a_correctness",
       "breakpoints": true
     }
   ]

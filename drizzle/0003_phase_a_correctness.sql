@@ -1,10 +1,4 @@
 ALTER TABLE "season_memberships" ADD COLUMN "team_name" text;--> statement-breakpoint
-ALTER TABLE "season_memberships" ADD COLUMN "wins" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "season_memberships" ADD COLUMN "losses" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "season_memberships" ADD COLUMN "ties" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "season_memberships" ADD COLUMN "points_for" double precision DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "season_memberships" ADD COLUMN "points_against" double precision DEFAULT 0 NOT NULL;--> statement-breakpoint
-ALTER TABLE "season_memberships" ADD COLUMN "made_playoffs" boolean DEFAULT false NOT NULL;--> statement-breakpoint
 ALTER TABLE "seasons" ADD COLUMN "finalized_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "seasons" ADD COLUMN "snapshot_captured_at" timestamp with time zone;--> statement-breakpoint
 ALTER TABLE "users" ADD COLUMN "sleeper_username" text;--> statement-breakpoint
@@ -25,6 +19,13 @@ ALTER TABLE "users" ADD COLUMN "sleeper_username" text;--> statement-breakpoint
 -- Un-finalizing is left possible on purpose: clearing `seasons.finalized_at`
 -- is a deliberate, visible admin act, and the alternative is a season nobody
 -- can ever repair.
+--
+-- Scope: these are row-level triggers, so `TRUNCATE` does not fire them. That
+-- is deliberate rather than overlooked. `TRUNCATE` requires table ownership,
+-- which no application role holds, while UPDATE and DELETE are what an
+-- importer, a migration, a script, or a hand-run statement could plausibly
+-- issue. The test harness owns its database and relies on `TRUNCATE` to reset
+-- between files; guarding it would break that for no security gain.
 --
 CREATE FUNCTION reject_finalized_membership_change() RETURNS trigger AS $$
 BEGIN

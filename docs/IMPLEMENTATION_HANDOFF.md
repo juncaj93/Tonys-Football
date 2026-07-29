@@ -1,8 +1,12 @@
 # Implementation Handoff
 
 **For:** the engineer picking up the next assignment
-**Current assignment:** V0 Pipeline + V1 Doors Open
+**Last completed:** V0 Pipeline + V1 Doors Open
 **Authority:** `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` for ordering · `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` for everything else
+
+> **V0 and V1 are shipped.** What follows is kept as the record of that
+> assignment; §"Where V1 landed" at the bottom is what a reader needs now.
+> The next slice is **V2 Memory** (`17 §4`) and has not been assigned.
 
 ---
 
@@ -117,3 +121,36 @@ On a real iPhone:
 1. **Sleeper username → manager mapping** — four 2025 accounts unmapped. Group A greetings do not depend on it; Group B does. Listed in `content/counter-greetings.md`.
 2. **Group B greeting lines** await commissioner approval. Seed Group A only.
 3. **Art** — everything resolves to placeholders until B0/B1. Expected, not a bug.
+
+---
+
+# Where V1 landed
+
+## The map
+
+| | Where |
+|---|---|
+| Deploy pipeline, health check, runbook | `docs/DEPLOYMENT.md` · `app/api/health` · `vercel-build` |
+| PIN, sessions, rate limiting, claim, reset | `lib/auth/` |
+| Derived tags, pure over imported history | `lib/tags/` |
+| Content engine v0 — parse, select, seed, greet | `lib/content/` |
+| Season clock, receipt, Tonight board | `lib/parlor/` |
+| Parlor, door, closed doors, profile, admin | `app/` · `components/` |
+| Idempotent provisioning: history + content + admin | `scripts/seed.ts` |
+
+## Decisions a later slice should know about
+
+- **Distinctiveness beats tag count.** The selector ranks eligible lines by how many managers they are true of, not by how many tags they carry. Ranked by tag count, the two-tag title-drought line beat the one-tag "most points against" line and five managers saw the same greeting. Any new surface using `selectContent` should pass `audienceSize`.
+- **Records live on `season_memberships`.** Wins, losses, points for and against, and `made_playoffs` are columns on the membership row. Unlike display names they are *not* seeded-once — Sleeper owns fantasy results, so a re-sync updates them.
+- **A drawn bracket is not a played bracket.** Sleeper publishes the 2026 bracket in the preseason with six rosters named. Playoff participation counts only once a bracket match has been decided.
+- **Lockout counts failures over 24 hours**, not the 15 minutes in `16 §11`. Counting over the same window that forms the first penalty makes every later penalty unreachable. Reasoning in `lib/auth/rate-limit.ts`.
+- **Tonight at Tony's is a view, computed on every load.** The spine does not exist yet, so it reads imported history and the season clock. When `league_events` lands the source changes and the surface does not. Do not add a table for it.
+- **`CLAIM_CODE` is optional and set in the environment only.** The code itself is never committed. With it unset, anyone holding the URL can claim an unclaimed name; setting it closes that window without touching sign-in.
+- **Second and third place are derived, not just first.** `runner_up_{year}` and `third_place_{year}` come from the bracket's placement games for every completed season, and they are what distinguish a manager who never led or trailed the league in anything.
+
+## Open, and for the commissioner
+
+1. **One pair still shares a greeting.** SuggMyNick and cheeseking both made the 2025 playoffs without a title, and A21 is the only Group A line keyed to that. Both hear something true. Closing it is two lines in the markdown and no code change; the verified material exists — cheeseking went 1–13 in 2024 and 9–5 with a third-place finish in 2025, SuggMyNick had the second-best record in 2025 at 10–4. Asserted in `lib/content/greeting.test.ts` so adding a line shows up as a change.
+2. **Group A's figures are pinned to 2025, and say so.** Every record, points total and placement names its season, and no line uses a relative time phrase — both enforced by `lib/content/parse.test.ts`. That keeps a claim about 2025 a claim about 2025 once 2026 finishes. It does not make a line immortal: "one ring" stops being true if that manager wins another, so the set still wants a read-through when a season completes.
+3. **Kickoff is a constant.** `KICKOFF_2026` in `lib/parlor/season.ts`. Sleeper exposes no reliable preseason start date, so it is configuration rather than a derived fact.
+4. **No PIN-change flow.** A manager can sign out everywhere; changing a PIN needs the commissioner to clear it first. It belongs with the auth work it would extend rather than bolted onto the profile page.
