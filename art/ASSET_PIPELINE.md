@@ -93,6 +93,15 @@ Trim to the declared canvas. For avatar layers, verify each attachment anchor an
 
 Sprite sheet plus JSON metadata into `/public/assets/<family>/`.
 
+**Objects flagged `needsSilhouette`** additionally emit an SVG polygon tracing the object's
+outline, in the tile's coordinate space, stored beside the art. Both the tap target and the
+affordance glow read from that path.
+
+A rectangle around an irregular pixel object swallows the empty wall beside it, so taps land
+on nothing and the highlight covers scenery — that is the failure
+`PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` exists to prevent. Roughly 10–20 points is
+enough; this is tracing, not drawing. Genuinely rectangular objects need no path.
+
 ### Step 6 — Register
 
 Write the registry row: source, prompt reference, rights status, version, alt text. Flip `art_status` to `generated`, then `approved` after review.

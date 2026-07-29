@@ -8,6 +8,26 @@ Six zones make up the parlor. They are authored as **discrete tiles, never as on
 
 Tile dimensions are provisional pending the B0 phone composite test. Keep the outer ~16px of the left and right edges free of anything load-bearing so tiles can be cropped rather than fractionally resized.
 
+### Interaction roles (`PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md`)
+
+Each zone's interactive object is exactly one role, and this changes how it must be drawn:
+
+| Zone | Role | Drawing consequence |
+|---|---|---|
+| `zone_newspaper_rack` | **Door** | Must read as a rack of papers at a glance; ships a silhouette path |
+| `zone_display_case` | **Door** | Must read as a glass case; ships a silhouette path |
+| `zone_trophy_wall` | **Door** | Must carry hanging banners; ships a silhouette path over the banner group |
+| `zone_tonight_board` | **Display** | Large, legible board with a generous safe area |
+| `zone_chalkboard` | **Display** | Clean writing surface, smudges at the edges only |
+| `zone_front_counter` | **Display** + **Toy** | A loose receipt on the counter; clear standing room for Tony |
+
+**Doors need a distinct, guessable silhouette.** A manager must be able to name where an
+object leads before tapping it. If the drawn object is ambiguous at phone size, the art has
+failed the ruling regardless of how good it looks — redraw rather than adding a label.
+
+**Everything else in a tile is scenery** and must not read as interactive: no glowing
+edges, no isolated highlighted props, no objects that look like buttons.
+
 ---
 
 ## Prompt structure
@@ -74,10 +94,15 @@ SUBJECT: The front service counter of a 1990s neighborhood pizza parlor, seen fr
 inside the door. A worn laminate counter running across the middle distance, with a chunky
 beige cash register on it. Behind the counter, a pizza oven with a dark mouth and warm glow.
 A corkboard on the wall with blank papers pinned to it. A spike holding blank receipts.
-Patterned arcade carpet on the floor, running from the bottom edge back to the base of the
-counter. Warm amber overhead light. The front strip of floor is clear and open where a
-character will stand.
+**One blank receipt lies flat on the counter, face up, slightly askew** — leave its face
+completely clean, as the manager's record is printed onto it at runtime. Patterned arcade
+carpet on the floor, running from the bottom edge back to the base of the counter. Warm
+amber overhead light. The front strip of floor is clear and open where a character will
+stand.
 ```
+
+The loose receipt is the manager's own record (`18 §3.3`) and replaces the clipboard
+entirely. It is a **Display** — it expands in place and never navigates.
 
 ### `zone_tonight_board`
 
@@ -89,14 +114,20 @@ border runs along the top of the wall. Patterned arcade carpet covers the floor,
 gently to the wall. Warm light from the left. The front strip of floor is clear.
 ```
 
-### `zone_menu_board`
+### `zone_chalkboard`
+
+Carries Tony's weekly prediction. A **Display**, not a Door — it is read in place and
+never navigates (`18 §3.3`). Renamed from `zone_menu_board`: the separate menu board was
+merged into the board by the door, because two boards both answering "what's happening"
+was the redundancy driving the navigation confusion.
 
 ```
-SUBJECT: A service area with a large blank menu board mounted high on the back wall,
-backlit with a warm glow, divided into empty panels by thin dark dividers. No text, no
-prices, no lettering of any kind. A blank chalkboard hangs beneath it in a wooden frame.
-Faint grease marks on the wall. A low counter or ledge below. Patterned arcade carpet on
-the floor receding to the wall. The front strip of floor is clear.
+SUBJECT: A large blank chalkboard in a worn wooden frame, mounted on the back wall behind
+a service counter, with a narrow ledge along the bottom holding a stub of chalk and a felt
+eraser. Dark slate surface with faint ghost smudges of previous erasing near the edges
+only — the writing surface itself is completely clean, with no letters, words, numbers or
+marks of any kind. Faint grease marks on the wall around the frame. Patterned arcade
+carpet on the floor receding to the wall. The front strip of floor is clear.
 ```
 
 ### `zone_newspaper_rack`
@@ -120,16 +151,26 @@ light spilling from inside the case down onto the patterned arcade carpet, which
 gently from the bottom edge to the base of the case. The front strip of floor is clear.
 ```
 
-### `zone_wall`
+### `zone_trophy_wall`
+
+**A Door** → History (`18 §3.1`). Renamed from `zone_wall`, and the content changed with
+it: empty poster patches gave managers nothing to read, so the wall now carries hanging
+championship banners. The banners are the live text and the reason the wall is tappable —
+you look up at banners without being told to.
+
+Ships with a **silhouette path** covering the banner group, not the whole wall.
 
 ```
 SUBJECT: A stretch of pizza parlor wall — wood paneling on the lower half, faded painted
-plaster above, with a checkered border strip between them. Three empty rectangular light
-patches where posters have hung and been removed, slightly less faded than the surrounding
-wall. A neon sign shape mounted high in one corner, unlit and abstract with no lettering.
-A single wooden chair against the wall. Patterned arcade carpet covering the floor and
-receding gently to the base of the wall. The front strip of floor is clear.
+plaster above, with a checkered border strip between them. Two felt championship banners
+hang from a rail high on the wall, side by side, with scalloped bottom edges and a
+contrasting border stripe. Both banners are completely blank — no letters, no numerals, no
+emblem — as the years and names are rendered at runtime. A small brass wall lamp angled up
+at them. Patterned arcade carpet covering the floor and receding gently to the base of the
+wall. The front strip of floor is clear.
 ```
+
+Leave room on the rail for more banners. One is added every season, permanently.
 
 ---
 

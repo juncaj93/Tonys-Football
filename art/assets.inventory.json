@@ -7,6 +7,28 @@
   "statusValues": ["placeholder", "generated", "approved", "retired"],
   "batchValues": ["B0", "B1", "B2", "B3", "B4", "B5+"],
 
+  "interaction": {
+    "$comment": "Per PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md. Every room object is exactly one role. ONLY 'door' receives persistent affordance — that is what makes the highlight mean 'somewhere you can go right now'. Objects without a role are scenery and are not interactive.",
+    "roles": {
+      "door": "Navigates. Highlighted. Ships with a silhouette path.",
+      "door_locked": "Visible and tappable, NEVER highlighted. Answers with a Tony line, not a route.",
+      "display": "Shows live content in place. Not highlighted — the content is the affordance.",
+      "toy": "Reacts. No information, no navigation.",
+      "scenery": "Not interactive. The default, and most of the room."
+    },
+    "silhouettes": {
+      "$comment": "A rectangle around an irregular pixel object swallows empty wall beside it, so taps land on nothing and the highlight covers scenery. Assets flagged needsSilhouette ship an SVG polygon in the tile's coordinate space, stored beside the art. Both the hit area and the glow use it. Genuinely rectangular objects — posters, boards, plaques — need no path.",
+      "required": [
+        "zone_newspaper_rack",
+        "zone_display_case",
+        "zone_trophy_wall",
+        "dressing_door_basement",
+        "dressing_door_boarded"
+      ],
+      "minimumTouchTarget": "44px effective — expand the hit path, never the glow"
+    }
+  },
+
   "provisional": {
     "$comment": "Zone tile canvas dimensions are PROVISIONAL pending the B0 composite test on a real phone. See ART_SPEC.md 2.1. All other canvas sizes are settled and do not depend on this.",
     "zoneCanvas": "320x200",
@@ -38,11 +60,11 @@
     },
 
     "_zones_B1": {
-      "zone_tonight_board":          { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "alt": "Tonight at Tony's board" },
-      "zone_menu_board":             { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "alt": "Menu board above the counter" },
-      "zone_newspaper_rack":         { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "alt": "Newspaper rack" },
-      "zone_display_case":           { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "alt": "Glass collectible display case" },
-      "zone_wall":                   { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "alt": "Parlor wall with poster slots" }
+      "zone_tonight_board":          { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "display", "alt": "Tonight at Tony's board" },
+      "zone_chalkboard":             { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "display", "alt": "Chalkboard behind the counter" },
+      "zone_newspaper_rack":         { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "door", "needsSilhouette": true, "alt": "Newspaper rack" },
+      "zone_display_case":           { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "door", "needsSilhouette": true, "alt": "Glass collectible display case" },
+      "zone_trophy_wall":            { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "door", "needsSilhouette": true, "alt": "Trophy wall with championship banners" }
     },
 
     "_tony_B1": {
@@ -137,8 +159,8 @@
       "dressing_broken_chair":       { "family": "zone", "canvas": "64x64", "batch": "B5+", "art_status": "placeholder", "alt": "Broken chair" },
       "dressing_papers_fresh":       { "family": "zone", "canvas": "64x64", "batch": "B5+", "art_status": "placeholder", "alt": "Fresh stack of newspapers" },
       "dressing_tally_marks":        { "family": "zone", "canvas": "32x64", "batch": "B5+", "art_status": "placeholder", "alt": "Tally marks on the door frame" },
-      "dressing_door_boarded":       { "family": "zone", "canvas": "64x96", "batch": "B5+", "art_status": "placeholder", "alt": "Boarded-up back door" },
-      "dressing_door_basement":      { "family": "zone", "canvas": "64x96", "batch": "B5+", "art_status": "placeholder", "alt": "Closed basement door" },
+      "dressing_door_boarded":       { "family": "zone", "canvas": "64x96", "batch": "B1", "art_status": "placeholder", "role": "door_locked", "needsSilhouette": true, "alt": "Boarded-up back door" },
+      "dressing_door_basement":      { "family": "zone", "canvas": "64x96", "batch": "B1", "art_status": "placeholder", "role": "door_locked", "needsSilhouette": true, "alt": "Closed basement door" },
       "dressing_receipts_stapled":   { "family": "zone", "canvas": "32x32", "batch": "B5+", "art_status": "placeholder", "alt": "Two receipts stapled together" }
     },
 
