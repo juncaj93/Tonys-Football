@@ -2,7 +2,7 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 90,
+  "totalSlugs": 91,
   "statusValues": [
     "placeholder",
     "generated",
@@ -122,6 +122,17 @@
         "rights_status": "original",
         "alt": "Newspaper rack",
         "$comment": "The /slice Door. A transparent overlay composited over zone_parlor_shell at logical (10, 224), standing on the left nook's lower shelf. Approved at 38x38 on 2026-07-29: 35 renders a 43css tap target and fails the 44 minimum, 40 crowds the nook's left frame. Source aspect 809x805 is preserved -- never stretched. Family is zone because there is no object family; it sits with the other room dressings. Supersedes the unbuilt zone_newspaper_rack (320x228) from the six-zone plan."
+      },
+      "object_champion_banner": {
+        "family": "zone",
+        "canvas": "18x15",
+        "batch": "B2",
+        "art_status": "generated",
+        "path": "/assets/zone/object_champion_banner.png",
+        "source": "ChatGPT image generation, approved split-tail banner candidate",
+        "rights_status": "original",
+        "alt": "Championship banner",
+        "$comment": "One reusable pennant for every championship. Composited over zone_parlor_shell hanging from the shared rail at y 69, at x 52/74/96/118/140/162 -- oldest first, six most recent seasons on overflow. The two-digit year is rendered at runtime onto the red field; the asset carries no year, name, logo, emblem or glow. Canvas is 18x15 rather than 18x19: the source is 567x458 and the aspect is preserved. See art/B2_CHAMPION_BANNER.md."
       },
       "zone_tonight_board": {
         "family": "zone",

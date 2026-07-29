@@ -130,6 +130,7 @@ describe('the processed batch', () => {
     'public/assets/zone/zone_front_counter.png',
     'public/assets/zone/zone_counter_front.png',
     'public/assets/zone/object_newspaper_rack.png',
+    'public/assets/zone/object_champion_banner.png',
     'public/assets/character/character_tony_neutral.png',
   ];
 
