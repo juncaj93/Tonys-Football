@@ -194,7 +194,8 @@ Ordered by visible return, so the product looks better earlier.
 
 - **Budget a 50–70% cull rate.** Roughly four candidates per needed asset — about 150 generations for twelve sheets. Generation is cheap; **reviewing is the real cost.** Cull hard and early rather than trying to rescue a near-miss.
 - **Reuse the style preamble verbatim.** Never paraphrase between batches. Paraphrasing is how drift starts, and it is invisible until assets sit side by side.
-- **Every prompt carries the negative block.** No team logos, no real player likenesses, no real signatures, no brand marks, no Mario, no existing game characters. This enforces `06 §17` and the publicity-rights concerns at the prompt level rather than at review.
+- **Every prompt carries the negative block.** No third-party trademarks, no team logos, no real player likenesses, no real signatures, no copied restaurant branding, no unapproved brand marks, no Mario, no existing game characters. This enforces `06 §17` and the publicity-rights concerns at the prompt level rather than at review.
+  - **Tony's Pizza's own marks are exempt on first-party assets** (`ART_SPEC.md §10`, ruled 2026-07-29) — the house wordmark and logo treatment, no TM symbol, and nothing beyond Tony's own branding. `zone_parlor_shell.png` stays excluded: shop signage is an overlay, never baked into the room.
 - **Never prompt for final pixel dimensions.** Always generate large and downscale.
 
 ---

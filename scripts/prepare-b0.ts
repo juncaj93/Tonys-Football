@@ -33,6 +33,11 @@
  *   blue-and-silver jersey moves toward an identifiable real team, which is
  *   the publicity-rights concern in `06 §17`. The cuff stripes and collar stay
  *   — a blue-and-silver jersey is what the spec asks for.
+ *
+ *   This rule survived the 2026-07-29 branding ruling unchanged. That ruling
+ *   permits **Tony's Pizza's own marks on first-party assets** — the apron
+ *   wordmark — and the exemption turns on ownership. The apron is Tony's shop;
+ *   the jersey is not Tony's to put a number on. See `art/ART_SPEC.md §10`.
  * - **The background comes out.** It was generated opaque on a grey vignette.
  *   A sprite has to be a cutout or it cannot stand in a room.
  */

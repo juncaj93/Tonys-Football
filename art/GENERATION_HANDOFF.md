@@ -313,8 +313,9 @@ named in the subject line.
 
 SUBJECT: Tony, the middle-aged owner of the pizza parlor. Slightly balding with dark
 hair at the sides. A thick dark mustache — his strongest facial identifier. A white
-pizza apron, stained with use, worn over a plain blue-and-silver football jersey with
-NO markings, NO numbers, NO logos, and NO wordmarks of any kind. A single cigarette
+pizza apron, stained with use, carrying the simplified Tony's Pizza wordmark on the
+chest in the house red. Worn over a plain blue-and-silver football jersey with NO
+markings, NO numbers, NO logos, and NO wordmarks of any kind. A single cigarette
 tucked behind his right ear. Practical dark work shoes. Expression: confident and
 mildly exhausted, like a man who has seen every bad beat and claims he predicted all
 of them. Arms relaxed at his sides. Neutral standing pose.

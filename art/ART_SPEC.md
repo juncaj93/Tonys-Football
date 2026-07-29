@@ -250,9 +250,11 @@ Fourteen effects require **zero generated assets**. They are CSS, SVG, or a few 
 
 ## 10. Rights
 
-- **No team logos, no real player likenesses, no real signatures, no brand marks, no existing game characters.**
+- **No third-party trademarks, no team logos, no real player likenesses, no real signatures, no copied restaurant branding, no unapproved brand marks, no existing game characters.**
+- **Tony's Pizza's own marks are permitted on first-party Tony's Pizza assets.** The house wordmark and logo treatment are the project's own property, and a pizza parlor with no name on anything reads as a stock asset rather than as somewhere. Ruled 2026-07-29. Specifically approved: the simplified `Tony's` wordmark on the apron in `character_tony_neutral.png`. **No TM symbol**, and the exception covers Tony's Pizza branding only — it does not open the door to any other mark.
+  - **`zone_parlor_shell.png` is excluded.** No logo is baked into the shell: the shop's signage is a separate overlay so it can change without regenerating the room. The shell keeps the absolute no-brand-marks rule.
 - Tony evokes classic platform-game energy without copying Mario's design, proportions, clothing, face, or iconography (`06 §5`).
-- "Detroit football" is expressed through **color and silhouette only** — a blue-and-silver jersey with no mark, no wordmark, no logo.
+- "Detroit football" is expressed through **color and silhouette only** — a blue-and-silver jersey with no mark, no wordmark, no logo. **This one stays absolute.** The apron exemption is about ownership, and the jersey is the one garment the project does not own: a number or mark on blue-and-silver moves it toward an identifiable real team, which is the concern in `PROJECT_SPEC/06 §7`.
 - Signed memorabilia uses invented names or first-name nicknames. Never a real player's name on a collectible.
 - Every asset records source, prompt, creator, rights status, and version in the registry. **No asset ships with unclear rights.**
 

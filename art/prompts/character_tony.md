@@ -45,12 +45,27 @@ named in the subject line.
 ```
 SUBJECT: Tony, the middle-aged owner of the pizza parlor. Slightly balding with dark
 hair at the sides. A thick dark mustache — his strongest facial identifier. A white
-pizza apron, stained with use, worn over a plain blue-and-silver football jersey with
-NO markings, NO numbers, NO logos, and NO wordmarks of any kind. A single cigarette
+pizza apron, stained with use, carrying the simplified Tony's Pizza wordmark on the
+chest in the house red. Worn over a plain blue-and-silver football jersey with NO
+markings, NO numbers, NO logos, and NO wordmarks of any kind. A single cigarette
 tucked behind his right ear. Practical dark work shoes. Expression: confident and
 mildly exhausted, like a man who has seen every bad beat and claims he predicted all
 of them. Arms relaxed at his sides. Neutral standing pose.
 ```
+
+**The apron carries the house wordmark. The jersey carries nothing.** The two rules
+point in opposite directions on purpose, and the line between them is ownership:
+
+- **The apron is Tony's own shop.** A pizzaiolo in a branded apron is the most
+  ordinary thing in the world, and the mark is the project's own. Approved
+  2026-07-29 — see `art/ART_SPEC.md §Rights`.
+- **The jersey is a football jersey.** A blue-and-silver jersey carrying a number
+  moves toward an identifiable real team, which is the publicity-rights concern in
+  `PROJECT_SPEC/06 §7`. The stripes and collar are what make it read as a jersey;
+  a number adds nothing and costs the exemption.
+
+Do not add a TM symbol, and do not extend the exception to any mark that is not
+Tony's Pizza's own.
 
 ### `character_tony_pleased`
 
