@@ -1,4 +1,8 @@
+import { isNotNull } from 'drizzle-orm';
 import { expect } from 'vitest';
+
+import { type Database } from './index';
+import { seasonMemberships, seasons, syncRuns, users } from './schema';
 
 /**
  * Assert that a query failed with a specific Postgres error.
@@ -11,6 +15,22 @@ import { expect } from 'vitest';
  * matching the message text: it proves *which* constraint fired, not merely
  * that something went wrong.
  */
+
+/**
+ * Truncate the league tables between tests.
+ *
+ * Un-finalizes first. A finalized season's memberships cannot be deleted — a
+ * trigger refuses it, which is the behaviour under test — so a teardown that
+ * went straight to DELETE would fail for the right reason at the wrong moment.
+ * Children before parents, because the foreign keys are RESTRICT by design.
+ */
+export async function resetLeagueTables(db: Database): Promise<void> {
+  await db.update(seasons).set({ finalizedAt: null }).where(isNotNull(seasons.finalizedAt));
+  await db.delete(seasonMemberships);
+  await db.delete(seasons);
+  await db.delete(users);
+  await db.delete(syncRuns);
+}
 
 /** https://www.postgresql.org/docs/current/errcodes-appendix.html */
 export const PG_ERROR = {

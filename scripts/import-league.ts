@@ -24,14 +24,30 @@ import { createLiveSource, type SleeperSource } from '@/lib/sleeper/transport';
 
 const DEFAULT_LEAGUE_ID = '1385016656425668608';
 
-function parseArgs(): { leagueId: string; live: boolean } {
+function parseArgs(): { leagueId: string; live: boolean; finalizeYears: readonly number[] } {
   const argv = process.argv.slice(2);
   const live = argv.includes('--live');
-  const positional = argv.filter((arg) => !arg.startsWith('-'));
+
+  // `--finalize 2024,2025` freezes those seasons' official records. Explicit
+  // by design: Sleeper's `complete` status arrives before stat corrections
+  // stop, so it is not a signal to close the books on.
+  const flagIndex = argv.indexOf('--finalize');
+  const finalizeValue = flagIndex === -1 ? '' : (argv[flagIndex + 1] ?? '');
+  const finalizeYears = finalizeValue
+    .split(',')
+    .map((part) => Number(part.trim()))
+    .filter((year) => Number.isInteger(year) && year > 2000);
+
+  // The flag's value is not a league ID, so it must not fall through to the
+  // positional argument — that reads "2024,2025" as a league to import.
+  const positional = argv.filter(
+    (arg, index) => !arg.startsWith('-') && index !== flagIndex + 1,
+  );
 
   return {
     leagueId: positional[0] ?? process.env['SLEEPER_LEAGUE_ID'] ?? DEFAULT_LEAGUE_ID,
     live,
+    finalizeYears,
   };
 }
 
@@ -40,7 +56,7 @@ function pad(value: string, width: number): string {
 }
 
 async function main(): Promise<void> {
-  const { leagueId, live } = parseArgs();
+  const { leagueId, live, finalizeYears } = parseArgs();
 
   if (process.env['DATABASE_URL'] === undefined || process.env['DATABASE_URL'] === '') {
     console.error(
@@ -55,7 +71,10 @@ async function main(): Promise<void> {
   const source: SleeperSource = live ? createLiveSource() : createFixtureSource();
   console.log(`Reading from ${source.label}\n`);
 
-  const chain = await traverseChain(source, leagueId, { includeWeeks: false });
+  // Weeks are needed to reconcile the finalized standings against the weekly
+  // scoring snapshot. They are read and compared, not persisted — the weekly
+  // tables are Phase B.
+  const chain = await traverseChain(source, leagueId, { includeWeeks: true });
 
   if (chain.errors.length > 0) {
     console.error('Chain traversal reported errors:');
@@ -67,16 +86,50 @@ async function main(): Promise<void> {
   const db = getDb();
 
   try {
-    const summary = await persistChain(db, chain, { sourceLabel: source.label });
+    const summary = await persistChain(db, chain, { sourceLabel: source.label, finalizeYears });
 
     console.log('Seasons');
-    console.log(`  ${pad('YEAR', 6)}${pad('LEAGUE', 21)}${pad('NEW', 5)}${pad('SEATS+', 8)}SEATS=`);
+    console.log(
+      `  ${pad('YEAR', 6)}${pad('LEAGUE', 21)}${pad('NEW', 5)}${pad('SEATS+', 8)}` +
+        `${pad('SEATS~', 8)}${pad('SEATS=', 8)}FROZEN`,
+    );
     for (const season of summary.seasons) {
       console.log(
         `  ${pad(String(season.year), 6)}${pad(season.leagueId, 21)}` +
           `${pad(season.seasonCreated ? 'yes' : 'no', 5)}` +
-          `${pad(String(season.membershipsCreated), 8)}${String(season.membershipsUnchanged)}`,
+          `${pad(String(season.membershipsCreated), 8)}` +
+          `${pad(String(season.membershipsUpdated), 8)}` +
+          `${pad(String(season.membershipsUnchanged), 8)}` +
+          `${season.finalized ? 'yes' : '—'}`,
       );
+    }
+
+    // The reconciliation is commissioner-facing diagnostics. Ordinary manager
+    // surfaces never show it — they show the finalized record and nothing else.
+    console.log('\nFinalized standings vs weekly scoring snapshot');
+    for (const season of [...chain.seasons].sort((a, b) => a.year - b.year)) {
+      const check = season.reconciliation;
+      if (check === null) {
+        console.log(`  ${String(season.year)}  no weekly data imported`);
+        continue;
+      }
+      const captured = check.capturedAt === null ? 'unknown' : check.capturedAt.toISOString();
+      console.log(
+        `  ${String(season.year)}  ` +
+          (check.isClean
+            ? 'clean'
+            : `${String(check.recordConflicts.length)} record · ` +
+              `${String(check.pointsConflicts.length)} points · ` +
+              `${String(check.disputedGames.length)} disputed game(s)`) +
+          `   snapshot captured ${captured}`,
+      );
+      for (const game of check.disputedGames) {
+        console.log(
+          `      week ${String(game.week)}: roster ${String(game.finalizedWinnerRosterId ?? 0)} ` +
+            `is the official winner; current scoring says roster ` +
+            `${String(game.snapshotWinnerRosterId ?? 0)}`,
+        );
+      }
     }
 
     console.log('\nManagers');
@@ -88,9 +141,15 @@ async function main(): Promise<void> {
         rosterId: seasonMemberships.rosterId,
         userId: users.id,
         manager: users.displayName,
+        sleeperUsername: users.sleeperUsername,
+        retired: users.isRetired,
         coOwner: coOwners.displayName,
+        teamName: seasonMemberships.teamName,
+        wins: seasonMemberships.wins,
+        losses: seasonMemberships.losses,
+        ties: seasonMemberships.ties,
+        pointsFor: seasonMemberships.pointsFor,
         finalRank: seasonMemberships.finalRank,
-        metadata: seasonMemberships.sleeperMetadata,
       })
       .from(seasonMemberships)
       .innerJoin(seasons, eq(seasonMemberships.seasonId, seasons.id))
@@ -99,17 +158,22 @@ async function main(): Promise<void> {
       .orderBy(desc(seasons.year), seasonMemberships.rosterId);
 
     console.log(
-      `  ${pad('YEAR', 6)}${pad('SLOT', 6)}${pad('MANAGER', 20)}${pad('CO-OWNER', 14)}` +
-        `${pad('RANK', 6)}NICKNAMES`,
+      `  ${pad('YEAR', 6)}${pad('SLOT', 6)}${pad('MANAGER', 12)}${pad('SLEEPER', 16)}` +
+        `${pad('TEAM THAT SEASON', 28)}${pad('CO-OWNER', 10)}${pad('RECORD', 9)}` +
+        `${pad('PF', 10)}RANK`,
     );
     for (const row of rows) {
-      const nicknames = Object.keys(row.metadata?.playerNicknames ?? {}).length;
       console.log(
         `  ${pad(String(row.year), 6)}${pad(String(row.rosterId), 6)}` +
-          `${pad(row.manager, 20)}${pad(row.coOwner ?? '—', 14)}` +
-          `${pad(row.finalRank === null ? '—' : String(row.finalRank), 6)}${String(nicknames)}`,
+          `${pad(row.manager + (row.retired ? '*' : ''), 12)}` +
+          `${pad(row.sleeperUsername ?? '—', 16)}` +
+          `${pad(row.teamName ?? '—', 28)}${pad(row.coOwner ?? '—', 10)}` +
+          `${pad(`${String(row.wins)}-${String(row.losses)}-${String(row.ties)}`, 9)}` +
+          `${pad(row.pointsFor.toFixed(2), 10)}` +
+          `${row.finalRank === null ? '—' : String(row.finalRank)}`,
       );
     }
+    console.log('  * retired — history preserved in full');
 
     console.log('\nChampions');
     for (const season of summary.seasons) {

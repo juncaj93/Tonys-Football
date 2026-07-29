@@ -3,7 +3,7 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { closePool, getDb } from './index';
 import { seasonMemberships, seasons, users } from './schema';
-import { PG_ERROR, expectPgError } from './test-helpers';
+import { PG_ERROR, expectPgError, resetLeagueTables } from './test-helpers';
 
 /**
  * Integration tests for the identity model against a real Postgres.
@@ -29,10 +29,9 @@ const db = hasDatabase ? getDb() : null;
 
 describe.skipIf(!hasDatabase)('identity model', () => {
   beforeEach(async () => {
-    // Children first — the FKs are RESTRICT, by design.
-    await db!.delete(seasonMemberships);
-    await db!.delete(seasons);
-    await db!.delete(users);
+    // Un-finalizes, then children before parents — the FKs are RESTRICT and a
+    // finalized season refuses deletion, both by design.
+    await resetLeagueTables(db!);
   });
 
   afterAll(async () => {

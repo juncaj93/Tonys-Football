@@ -1,5 +1,6 @@
 import {
   boolean,
+  doublePrecision,
   integer,
   jsonb,
   pgEnum,
@@ -62,6 +63,14 @@ export const seasonStatus = pgEnum('season_status', [
 export const users = pgTable('users', {
   id: uuid('id').primaryKey().defaultRandom(),
 
+  /**
+   * The canonical league name — what Tony calls this person.
+   *
+   * A league decision, not a Sleeper fact. It comes from
+   * `content/manager-mappings.json`, so a rename is a reviewable file edit
+   * rather than a hand-run UPDATE nobody can account for later. An account
+   * with no mapping keeps its Sleeper display name and is reported at import.
+   */
   displayName: text('display_name').notNull(),
 
   /**
@@ -70,6 +79,16 @@ export const users = pgTable('users', {
    * and a person exists here before they authenticate.
    */
   sleeperUserId: text('sleeper_user_id').unique(),
+
+  /**
+   * The handle Sleeper shows for this account.
+   *
+   * Provenance, kept separate from the canonical name so "who is this on
+   * Sleeper" and "what do we call them" never have to be the same string.
+   * Re-seeded from Sleeper on every import — unlike `display_name`, this one
+   * genuinely is Sleeper's to own.
+   */
+  sleeperUsername: text('sleeper_username'),
 
   /** argon2id. Null until the manager sets a PIN at claim time. */
   pinHash: text('pin_hash'),
@@ -122,6 +141,33 @@ export const seasons = pgTable('seasons', {
    * non-historical forever, even after it closes.
    */
   isHistorical: boolean('is_historical').notNull().default(false),
+
+  /**
+   * When this season's official record was frozen.
+   *
+   * **Explicit, never inferred from Sleeper's `complete` status.** Sleeper
+   * marks a season complete the moment the final game ends, but NFL stat
+   * corrections keep landing for weeks afterwards — 2024's standings and its
+   * weekly points still disagree because of exactly that. Finalizing on
+   * Sleeper's word would freeze a record that was still moving.
+   *
+   * Once set, the official historical fields on this season's memberships
+   * become immutable, enforced by a database trigger rather than by
+   * application discipline. A re-sync that disagrees with a finalized season
+   * raises an auditable conflict and writes nothing.
+   */
+  finalizedAt: timestamp('finalized_at', { withTimezone: true }),
+
+  /**
+   * When the weekly scoring snapshot behind this season was captured.
+   *
+   * The weekly payloads are mutable upstream — stat corrections keep landing
+   * on old weeks — so "what the players scored" is only meaningful alongside
+   * when we looked. Season-level because Phase A does not persist weekly rows;
+   * `ImportedWeek.capturedAt` already carries the per-week value in memory,
+   * and Phase B's `fantasy_matchups` is where it lands per week.
+   */
+  snapshotCapturedAt: timestamp('snapshot_captured_at', { withTimezone: true }),
 
   /** Algorithmically suggested, commissioner selected (`16 §3`). Set at close. */
   title: text('title'),
@@ -192,9 +238,57 @@ export const seasonMemberships = pgTable(
      */
     sleeperMetadata: jsonb('sleeper_metadata').$type<RosterMetadata>(),
 
+    /**
+     * The team name this manager ran under in this season.
+     *
+     * From `users[].metadata.team_name` — Sleeper keeps it on the user, not
+     * the roster. It is overwritten upstream the moment a manager renames, so
+     * a season's name is only recoverable if it was captured at import.
+     * Nullable: a manager who never set one has none, and inventing one would
+     * be fabrication.
+     */
+    teamName: text('team_name'),
+
+    /**
+     * The official finalized season record.
+     *
+     * These come from `rosters[].settings`, which is the league's authoritative
+     * standing — the playoff field and its seeding follow from it. They are
+     * deliberately NOT recomputed from weekly matchup points: those are a
+     * separate, upstream-mutable scoring snapshot that in 2024 disagrees with
+     * this record for four rosters. Reconciliation reports the disagreement
+     * and never resolves it (`lib/sleeper/reconcile.ts`).
+     *
+     * Stored as double precision to match the two-decimal values Sleeper
+     * publishes. Every *comparison* is done in integer cents, so a float
+     * representation can never manufacture a phantom conflict.
+     */
+    wins: integer('wins').notNull().default(0),
+    losses: integer('losses').notNull().default(0),
+    ties: integer('ties').notNull().default(0),
+    pointsFor: doublePrecision('points_for').notNull().default(0),
+    pointsAgainst: doublePrecision('points_against').notNull().default(0),
+
+    /**
+     * Reached the winners bracket.
+     *
+     * Only true once the bracket has decided something. Sleeper publishes a
+     * drawn bracket during the preseason with slots already filled, and
+     * reading that as participation would congratulate managers on a January
+     * they have not reached.
+     */
+    madePlayoffs: boolean('made_playoffs').notNull().default(false),
+
     /** False when a manager left mid-season and was replaced. */
     isActive: boolean('is_active').notNull().default(true),
 
+    /**
+     * Final league placement, 1..N.
+     *
+     * Covers the whole league, not just the playoff field: the winners bracket
+     * settles 1–6 and the consolation bracket settles 7–10. Null only where a
+     * season genuinely has not produced a finish.
+     */
     finalRank: integer('final_rank'),
 
     ...timestamps,
