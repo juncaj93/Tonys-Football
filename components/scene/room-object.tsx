@@ -164,10 +164,10 @@ function Glint({ spot, index }: { spot: Hotspot; index: number }) {
   return (
     <span
       aria-hidden="true"
-      className="room-glint pointer-events-none absolute h-[2px] w-[2px]"
+      className="room-glint pointer-events-none absolute"
       style={{
-        right: `calc(${right.toFixed(3)}% - 1px)`,
-        top: `calc(${top.toFixed(3)}% - 1px)`,
+        right: `calc(${right.toFixed(3)}% - 3px)`,
+        top: `calc(${top.toFixed(3)}% - 3px)`,
         // Staggered by object, so the room shimmers rather than flashing.
         animationDelay: `${String(index * 760)}ms`,
       }}
@@ -191,7 +191,7 @@ function FocusLabel({ spot }: { spot: Hotspot }) {
 
   return (
     <span
-      className={`pointer-events-none absolute top-full mt-1.5 rounded-[2px] border border-amber-mid/30 bg-ink-900/95 px-1.5 py-1 font-mono text-[9px] tracking-[0.08em] whitespace-nowrap text-paper-mid opacity-0 group-focus-visible:opacity-100 ${
+      className={`pointer-events-none absolute top-full mt-1.5 rounded-[2px] border border-amber-mid/30 bg-ink-900/95 px-1.5 py-1 font-display text-[9px] leading-[1.5] whitespace-nowrap text-paper-mid opacity-0 group-focus-visible:opacity-100 ${
         nearRight ? 'right-0' : 'left-0'
       }`}
     >
@@ -328,14 +328,14 @@ function Sheet({
         <div className="sticky top-[2px] z-10 flex items-center justify-between gap-3 border-b-2 border-wood-dark/30 bg-paper-mid px-4 pt-3 pb-2.5">
           <h2
             id={headingId}
-            className="font-mono text-[11px] font-bold tracking-[0.22em] text-ink-900/80 uppercase"
+            className="font-display text-[10px] leading-[1.6] text-ink-900/80 uppercase"
           >
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="pixel-edge flex min-h-[44px] shrink-0 items-center justify-center border-2 border-wood-dark/50 bg-paper-dark/50 px-3.5 font-mono text-[11px] tracking-[0.12em] text-ink-700 uppercase active:translate-y-px"
+            className="pixel-edge flex min-h-[44px] shrink-0 items-center justify-center border-2 border-wood-dark/50 bg-paper-dark/50 px-3.5 font-display text-[10px] leading-[1.6] text-ink-700 uppercase active:translate-y-px"
           >
             Close
           </button>

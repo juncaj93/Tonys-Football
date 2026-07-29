@@ -43,10 +43,10 @@ export default async function AdminPage() {
 
             <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
               <div className="mb-2 flex items-baseline justify-between gap-3">
-                <span className="font-mono text-[10px] font-bold tracking-[0.18em] text-ink-900 uppercase">
+                <span className="font-display text-[9px] text-ink-900 uppercase">
                   Key board
                 </span>
-                <span className="font-mono text-[10px] tracking-[0.1em] text-ink-500">
+                <span className="font-display text-[9px] text-ink-500">
                   {managers.length} managers
                 </span>
               </div>
@@ -54,10 +54,10 @@ export default async function AdminPage() {
                   {managers.map((manager) => (
                     <li key={manager.id} className="flex items-center justify-between gap-3 py-2.5">
                       <div className="min-w-0">
-                        <p className="truncate text-[15px] font-semibold text-ink-900">
+                        <p className="truncate text-[19px] text-ink-900">
                           {manager.displayName}
                         </p>
-                        <p className="font-mono text-[11px] text-ink-500">
+                        <p className="text-[17px] text-ink-500">
                           {manager.claimed ? 'key taken' : 'still on the hook'}
                         </p>
                       </div>
@@ -67,7 +67,7 @@ export default async function AdminPage() {
                           <input type="hidden" name="userId" value={manager.id} />
                           <button
                             type="submit"
-                            className={`pixel-edge ${TAP_TARGET} border-2 border-red-dark bg-red-dark/15 px-3 font-mono text-[11px] tracking-[0.1em] text-red-dark uppercase active:translate-y-px`}
+                            className={`pixel-edge ${TAP_TARGET} border-2 border-red-dark bg-red-dark/15 px-3 font-display text-[9px] text-red-dark uppercase active:translate-y-px`}
                           >
                             Clear PIN
                           </button>
@@ -77,7 +77,7 @@ export default async function AdminPage() {
                   ))}
                 </ul>
 
-              <p className="mt-4 border-t-2 border-dashed border-ink-300 pt-3 text-[13px] leading-relaxed text-ink-500">
+              <p className="mt-4 border-t-2 border-dashed border-ink-300 pt-3 text-[17px] leading-[1.5] text-ink-500">
                   Clearing a PIN signs that manager out everywhere and puts their key back on the
                   hook, ready for a new one. You cannot see anyone&rsquo;s PIN, including your
                   own — and you cannot clear your own from here, because it would sign you out

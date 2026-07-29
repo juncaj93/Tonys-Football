@@ -83,7 +83,7 @@ export default async function ParlorPage() {
           * stolen a slice of the room, and the room is the point.
           */}
         <header className="flex h-11 shrink-0 items-center justify-between gap-1 overflow-hidden bg-ink-900 pr-1 pl-3">
-          <span className="shrink-0 font-mono text-[10px] tracking-[0.12em] whitespace-nowrap text-ink-100/55 uppercase">
+          <span className="shrink-0 font-display text-[9px] whitespace-nowrap text-ink-100/55 uppercase">
             {clock.daysUntilKickoff === null
               ? 'Week one'
               : `${String(clock.daysUntilKickoff)} days out`}
@@ -92,7 +92,7 @@ export default async function ParlorPage() {
             <ShowInteractables />
             <Link
               href="/profile"
-              className="flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-mono text-[11px] whitespace-nowrap text-paper-mid/75"
+              className="flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-display text-[9px] whitespace-nowrap text-paper-mid/75"
             >
               {user.displayName}
             </Link>
@@ -136,7 +136,7 @@ export default async function ParlorPage() {
 
             {/* Tony. He greets you, and hands over your slip. */}
             <RoomObject spot={hotspot('tony')} index={0} title="Tony">
-              <p className="text-[17px] leading-relaxed">{line}</p>
+              <p className="text-[20px] leading-[1.4]">{line}</p>
               <div className="mt-5 border-t border-dashed border-ink-300/70 pt-5 pb-2">
                 <ReceiptSlip receipt={receipt} name={user.displayName} />
               </div>
@@ -145,11 +145,11 @@ export default async function ParlorPage() {
             {/* The empty frame screwed to the wall on the left. */}
             <RoomObject spot={hotspot('tonight')} index={1} title="Tonight at Tony's">
               {tonight.length === 0 ? (
-                <p className="pb-3 text-[15px] text-ink-500">Nothing on the board.</p>
+                <p className="pb-3 text-[19px] text-ink-500">Nothing on the board.</p>
               ) : (
                 <ul className="space-y-3.5 pb-3">
                   {tonight.map((entry) => (
-                    <li key={entry.key} className="flex gap-3 text-[15px] leading-relaxed">
+                    <li key={entry.key} className="flex gap-3 text-[19px] leading-[1.45]">
                       <span aria-hidden="true" className="pt-0.5 text-red-dark">
                         —
                       </span>
@@ -189,12 +189,12 @@ export default async function ParlorPage() {
                 <span className="ml-[8px] h-[4px] w-[8px] bg-amber-mid/45" />
                 <span className="ml-[4px] h-[4px] w-[16px] bg-[#1c1113]" />
               </span>
-              <p className="pixel-edge relative border-2 border-wood-dark bg-[#1c1113] px-3 py-2.5 text-[15px] leading-snug text-paper-white">
+              <p className="pixel-edge relative border-2 border-wood-dark bg-[#1c1113] px-3 py-2.5 text-[19px] leading-[1.4] text-paper-white">
                 <span
                   aria-hidden="true"
                   className="absolute inset-x-0 top-0 h-[2px] bg-amber-mid/45"
                 />
-                <span className="mr-2 font-mono text-[10px] tracking-[0.18em] text-amber-mid/85 uppercase">
+                <span className="mr-2 font-display text-[9px] text-amber-mid/85 uppercase">
                   Tony
                 </span>
                 <SpokenLine>{line}</SpokenLine>

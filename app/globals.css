@@ -10,6 +10,22 @@
  * Keep the two in sync. If a value changes there, change it here.
  */
 @theme {
+  /*
+   * Two faces, and no system stack.
+   *
+   * `--font-sans` is what unstyled text lands in, so pointing it at VT323 is
+   * what removes San Francisco from the product. `--font-mono` is the same
+   * face on purpose: VT323 *is* monospaced, so everything that relied on mono
+   * for column alignment — the receipt above all — keeps it.
+   *
+   * The fallbacks are the generic families rather than a hand-written stack.
+   * If the woff2 fails, a phone should reach for its own monospace and stay
+   * legible; that is a degraded room, not a broken one.
+   */
+  --font-display: 'Silkscreen', ui-monospace, monospace;
+  --font-sans: 'VT323', ui-monospace, monospace;
+  --font-mono: 'VT323', ui-monospace, monospace;
+
   --color-ink-900: #1a1214;
   --color-ink-700: #2e2226;
   --color-ink-500: #4a3b3f;
@@ -541,62 +557,89 @@ button {
  * Most of the cycle is spent nearly invisible. Each object is offset from the
  * next, so the room shimmers rather than flashing in unison.
  */
-/*
- * The glint: a mark that says "this is a thing", in the grammar the genre
- * already uses.
+/* --- Knowing what you can touch ------------------------------------------ *
  *
- * Two parts, because one was not enough. A **resting pixel** sits on every
- * interactive object all the time, so a room left alone for a minute still
- * shows where its verbs are. Over the top, a **sparkle** — a two-pixel cross
- * that opens and closes in about half a second — catches the eye the way a
- * static dot at low opacity never did against a wall of pizza boxes.
+ * Three layers, and the reason there are three is that one was never enough.
  *
- * It is deliberately most of the way through its cycle doing nothing. Each
- * object is offset from the next, so what you notice out of the corner of an
- * eye is one thing at a time rather than five things blinking together.
+ *   1. **Always** — a bracket of warm light on the object's top-right corner,
+ *      two short arms meeting at a point. Present from the moment the room
+ *      paints and never removed, so nobody is ever guessing. It is a corner
+ *      mark rather than an outline: enough to say "this is a thing", not
+ *      enough to trace the thing.
+ *
+ *   2. **Periodically** — that bracket brightens and a small cross opens over
+ *      it for about half a second, then closes. Staggered per object, so what
+ *      catches your eye is one thing at a time rather than the whole wall
+ *      blinking.
+ *
+ *   3. **On demand** — the arrival, `look around`, touch and keyboard focus
+ *      all bring up the full outline on the object's own shape. That is the
+ *      loud layer, and it is the only one that ever goes away.
+ *
+ * The failure this replaces: a brief reveal followed by almost nothing, which
+ * left the room looking decorative rather than playable thirty seconds in.
  */
 .room-glint {
-  background-color: rgba(255, 217, 138, 0.55);
-  box-shadow: 0 0 4px rgba(255, 217, 138, 0.5);
+  width: 9px;
+  height: 9px;
+  /* Two arms meeting at the corner — a bracket, not a box. */
+  border-top: 2px solid rgba(255, 217, 138, 0.75);
+  border-right: 2px solid rgba(255, 217, 138, 0.75);
+  animation: glint-breathe 4200ms ease-in-out infinite;
+  animation-delay: inherit;
 }
 
+@keyframes glint-breathe {
+  0%,
+  52%,
+  100% {
+    border-color: rgba(255, 217, 138, 0.7);
+    box-shadow: none;
+  }
+  66%,
+  80% {
+    border-color: var(--color-amber-glow);
+    box-shadow: 0 0 6px rgba(255, 217, 138, 0.65);
+  }
+}
+
+/* The cross that opens over the bracket at the top of each cycle. */
 .room-glint::before,
 .room-glint::after {
   content: '';
   position: absolute;
-  top: 50%;
-  left: 50%;
+  top: -1px;
+  right: -1px;
   background-color: var(--color-amber-glow);
   animation: sparkle 4200ms ease-in-out infinite;
   animation-delay: inherit;
 }
 
-/* The arms of the cross. */
 .room-glint::before {
   width: 16px;
   height: 2px;
-  margin: -1px 0 0 -8px;
+  margin: 0 -7px 0 0;
 }
 
 .room-glint::after {
   width: 2px;
   height: 16px;
-  margin: -8px 0 0 -1px;
+  margin: -7px 0 0 0;
 }
 
 @keyframes sparkle {
   0%,
-  62%,
+  58%,
   100% {
     opacity: 0;
     transform: scale(0.2);
   }
-  72%,
-  80% {
+  70%,
+  78% {
     opacity: 1;
     transform: scale(1);
   }
-  90% {
+  88% {
     opacity: 0;
     transform: scale(0.4);
   }
@@ -604,18 +647,21 @@ button {
 
 @media (prefers-reduced-motion: reduce) {
   /*
-   * The information stays; only the movement goes. The resting pixel is
-   * brightened to carry the whole job on its own.
+   * The information stays; only the movement goes. The bracket brightens to
+   * carry the whole job, and the cross holds at a fixed size instead of
+   * opening and closing.
    */
   .room-glint {
-    background-color: rgba(255, 217, 138, 0.95);
+    animation: none;
+    border-color: var(--color-amber-glow);
+    box-shadow: 0 0 5px rgba(255, 217, 138, 0.5);
   }
 
   .room-glint::before,
   .room-glint::after {
     animation: none;
-    opacity: 0.55;
-    transform: scale(0.7);
+    opacity: 0.45;
+    transform: scale(0.55);
   }
 }
 

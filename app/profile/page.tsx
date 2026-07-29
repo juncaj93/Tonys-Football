@@ -24,7 +24,7 @@ export const dynamic = 'force-dynamic';
 
 /** Every control on this page is the same slab of painted board. */
 const ACTION =
-  'pixel-edge flex w-full min-h-[52px] items-center justify-center border-2 px-4 text-center font-mono text-[12px] tracking-[0.12em] uppercase active:translate-y-px';
+  'pixel-edge flex w-full min-h-[52px] items-center justify-center border-2 px-4 text-center font-display text-[10px] uppercase active:translate-y-px';
 
 export default async function ProfilePage() {
   const { user, session } = await requireUser();
@@ -55,10 +55,10 @@ export default async function ProfilePage() {
               */}
             <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="font-mono text-[10px] font-bold tracking-[0.18em] text-ink-900 uppercase">
+                <span className="font-display text-[9px] text-ink-900 uppercase">
                   Cut for
                 </span>
-                <span className="font-mono text-[10px] tracking-[0.1em] text-ink-500">
+                <span className="font-display text-[9px] text-ink-500">
                   {devices.length} device{devices.length === 1 ? '' : 's'}
                 </span>
               </div>
@@ -67,17 +67,17 @@ export default async function ProfilePage() {
                 {devices.map((device) => (
                   <li
                     key={device.id}
-                    className="flex items-baseline justify-between gap-3 text-[15px]"
+                    className="flex items-baseline justify-between gap-3 text-[19px]"
                   >
                     <span className="text-ink-900">{device.label}</span>
-                    <span className="shrink-0 font-mono text-[11px] text-ink-500">
+                    <span className="shrink-0 text-[17px] text-ink-500">
                       {device.current ? 'this one' : formatLastSeen(device.lastSeenAt)}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              <p className="mt-4 border-t-2 border-dashed border-ink-300 pt-3 text-[13px] leading-relaxed text-ink-500">
+              <p className="mt-4 border-t-2 border-dashed border-ink-300 pt-3 text-[17px] leading-[1.5] text-ink-500">
                 Tony leaves the door unlocked for 90 days from your last visit. Come by weekly and
                 he will never ask again.
               </p>

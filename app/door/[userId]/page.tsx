@@ -56,10 +56,10 @@ export default async function DoorManagerPage({
           <SignPlate tone={claiming ? 'red' : 'blue'}>
             {claiming ? 'New key' : 'Welcome back'}
           </SignPlate>
-          <h1 className="mt-3 font-mono text-[19px] leading-tight font-bold tracking-[0.04em] text-paper-white uppercase">
+          <h1 className="mt-3 font-display text-[16px] leading-[1.5] text-paper-white uppercase">
             {manager.displayName}
           </h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink-100">
+          <p className="mt-2 text-[19px] leading-[1.45] text-ink-100">
             {claiming
               ? 'Pick six digits you will remember. Tony never sees them — not even the commissioner can look them up.'
               : 'Six digits and the door opens.'}
@@ -74,7 +74,7 @@ export default async function DoorManagerPage({
           />
 
           {claiming && (
-            <p className="mt-6 pb-6 text-[13px] leading-relaxed text-ink-300">
+            <p className="mt-6 pb-6 text-[17px] leading-[1.5] text-ink-300">
               Six digits, not four. Ten names on a door and four digits is ten thousand guesses —
               Tony would rather not find out who tries.
             </p>

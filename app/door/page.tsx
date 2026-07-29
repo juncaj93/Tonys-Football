@@ -43,10 +43,10 @@ export default async function DoorPage() {
 
         <main className="mx-auto w-full max-w-md flex-1 px-5 pt-7">
           <SignPlate tone="red">Keys</SignPlate>
-          <h1 className="mt-3 font-mono text-[19px] leading-tight font-bold tracking-[0.04em] text-paper-white uppercase">
+          <h1 className="mt-3 font-display text-[16px] leading-[1.5] text-paper-white uppercase">
             Who&rsquo;s asking?
           </h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-ink-100">
+          <p className="mt-2 text-[19px] leading-[1.45] text-ink-100">
             Ten hooks behind the counter. Take yours down, set six digits, and the door stays
             open for you.
           </p>
@@ -75,11 +75,11 @@ export default async function DoorPage() {
                           aria-hidden="true"
                           className="h-2.5 w-2.5 shrink-0 rounded-full border border-ink-500/60 bg-ink-100/40"
                         />
-                        <span className="truncate text-[17px] font-semibold">
+                        <span className="truncate text-[21px]">
                           {manager.displayName}
                         </span>
                       </span>
-                      <span className="shrink-0 font-mono text-[10px] tracking-[0.14em] text-ink-500 uppercase">
+                      <span className="shrink-0 font-display text-[9px] text-ink-500 uppercase">
                         {manager.claimed ? 'taken' : 'on the hook'}
                       </span>
                     </Link>
@@ -89,7 +89,7 @@ export default async function DoorPage() {
             </div>
           )}
 
-          <p className="mt-8 pb-6 text-[13px] leading-relaxed text-ink-300">
+          <p className="mt-8 pb-6 text-[17px] leading-[1.5] text-ink-300">
             Lost your PIN? The commissioner can put your key back on the hook, and you set a new
             one from this same screen.
           </p>
