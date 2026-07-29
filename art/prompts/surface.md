@@ -98,6 +98,38 @@ completely blank and unengraved.
 
 Carries: first-owner plaques · name plates
 
+### `surface_clipboard_blank` — **regenerate** · 192 × 288 · safe area (34, 50, 128, 176)
+
+> **This slug already had a B0 file and it has been withdrawn.** It was authored at
+> 96 × 144 and displayed at roughly three times that, which turns crisp pixel art into
+> mush — art below its display size is worse than no art. The canvas below is the size
+> it is actually shown at. Nothing else about it changes.
+
+```
+SUBJECT: A blank clipboard hanging on a nail, portrait orientation. Dark hardboard
+backing with rounded corners, a wide steel spring clip across the top with a visible
+hinge and a thumb lever, and one sheet of slightly yellowed photocopier paper held under
+it. The paper is a little crooked on the board and its bottom corner has curled. The
+entire paper is clean flat stock with no ruling, no margin line, no printing and no
+marks of any kind.
+```
+
+Carries: your key ring · the commissioner's key board
+
+### `surface_paper_note` · 320 × 200 · safe area (28, 30, 264, 140)
+
+```
+SUBJECT: A blank sheet of note paper stuck to a wall, landscape orientation, cream
+stock gone slightly warm with age. A strip of masking tape across each of the top two
+corners, both a little crooked, and one bottom corner lifting away from the wall. A
+faint horizontal fold line across the middle where it was carried folded. Very slight
+foxing and a faint ring stain at one edge where a cup once stood on it. The whole
+central field is clean flat paper with no ruling, no lettering and no marks.
+```
+
+Carries: every closed room in the shop — the case, downstairs, the rack — and any
+future screen that is one short explanation on a wall
+
 ### `surface_menu_board_blank` · 128 × 80 · safe area (10, 14, 108, 52)
 
 ```

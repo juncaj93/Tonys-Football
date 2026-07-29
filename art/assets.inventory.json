@@ -2,7 +2,7 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 87,
+  "totalSlugs": 88,
   "statusValues": [
     "placeholder",
     "generated",
@@ -623,19 +623,31 @@
       },
       "surface_clipboard_blank": {
         "family": "surface",
-        "canvas": "96x144",
+        "canvas": "192x288",
         "batch": "B0",
-        "art_status": "generated",
+        "art_status": "placeholder",
         "alt": "Clipboard with a blank sheet",
         "safeArea": [
-          17,
-          25,
-          64,
-          88
+          34,
+          50,
+          128,
+          176
         ],
-        "path": "/assets/surface/surface_clipboard_blank.png",
-        "source": "ChatGPT image generation, batch B0",
-        "rights_status": "original"
+        "$comment": "Regenerate at 192x288. The B0 file was authored at 96x144 and shown at roughly 3x, which turned a crisp asset into mush; the path is withdrawn until a correctly sized board lands. See art/prompts/surface.md."
+      },
+      "surface_paper_note": {
+        "family": "surface",
+        "canvas": "320x200",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "safeArea": [
+          28,
+          30,
+          264,
+          140
+        ],
+        "alt": "A note taped to the wall",
+        "$comment": "The paper every closed interior is written on. Text is rendered at runtime."
       }
     },
     "_frames_B4": {
