@@ -46,26 +46,28 @@ named in the subject line.
 SUBJECT: Tony, the middle-aged owner of the pizza parlor. Slightly balding with dark
 hair at the sides. A thick dark mustache — his strongest facial identifier. A white
 pizza apron, stained with use, carrying the simplified Tony's Pizza wordmark on the
-chest in the house red. Worn over a plain blue-and-silver football jersey with NO
-markings, NO numbers, NO logos, and NO wordmarks of any kind. A single cigarette
+chest in the house red. Worn over a blue-and-silver football jersey carrying a plain
+number 16 and nothing else — NO team logo, NO league mark, NO player name, NO
+signature, NO sponsor mark, NO wordmark of any kind. A single cigarette
 tucked behind his right ear. Practical dark work shoes. Expression: confident and
 mildly exhausted, like a man who has seen every bad beat and claims he predicted all
 of them. Arms relaxed at his sides. Neutral standing pose.
 ```
 
-**The apron carries the house wordmark. The jersey carries nothing.** The two rules
-point in opposite directions on purpose, and the line between them is ownership:
+**The apron carries the house wordmark. The jersey carries a number and nothing
+else.** Both were ruled on 2026-07-29 (`art/ART_SPEC.md §10`), and they are two
+different tests:
 
 - **The apron is Tony's own shop.** A pizzaiolo in a branded apron is the most
-  ordinary thing in the world, and the mark is the project's own. Approved
-  2026-07-29 — see `art/ART_SPEC.md §Rights`.
-- **The jersey is a football jersey.** A blue-and-silver jersey carrying a number
-  moves toward an identifiable real team, which is the publicity-rights concern in
-  `PROJECT_SPEC/06 §7`. The stripes and collar are what make it read as a jersey;
-  a number adds nothing and costs the exemption.
+  ordinary thing in the world, and the mark is the project's own. No TM symbol,
+  and the exemption does not extend to any mark that is not Tony's Pizza's own.
+- **The jersey is fictional character styling.** The `16` is approved: a number on
+  its own identifies nobody, and a football character in a blank jersey reads as an
+  unfinished asset. What stays prohibited is anything that names something real —
+  team logos, league marks, player names, signatures, helmet marks, sponsor marks.
 
-Do not add a TM symbol, and do not extend the exception to any mark that is not
-Tony's Pizza's own.
+The test is **identifiability, not decoration.** Do not add detail that moves the
+jersey toward a specific professional team or player.
 
 ### `character_tony_pleased`
 
