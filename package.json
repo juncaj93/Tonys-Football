@@ -23,7 +23,8 @@
     "db:seed": "tsx scripts/seed.ts",
     "sleeper:record": "tsx scripts/record-fixtures.ts",
     "sleeper:check": "tsx scripts/record-fixtures.ts -- --check",
-    "sleeper:import": "tsx scripts/import-league.ts"
+    "sleeper:import": "tsx scripts/import-league.ts",
+    "art:process": "tsx scripts/process-art.ts"
   },
   "overrides": {
     "brace-expansion": "^5.0.8",
@@ -51,6 +52,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9.35.0",
     "eslint-config-next": "^15.5.4",
+    "sharp": "^0.35.3",
     "tailwindcss": "^4.1.13",
     "tsx": "^4.23.1",
     "typescript": "^5.9.2",
