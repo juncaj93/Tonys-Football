@@ -12,7 +12,6 @@
  *   3. alpha cleanup — no partial alpha
  *   4. trim to the declared canvas
  *   5. emit to public/assets/<family>/
- *   6. derived stages — `scripts/derive-art.ts`, run automatically
  *
  * **Step 2 is the important one.** Quantization is what makes fifty
  * independently generated images look like one world. Without it every batch
@@ -30,8 +29,6 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 import { assetRegistry } from '@/lib/assets/registry';
-
-import { deriveAll } from './derive-art';
 
 const INCOMING = path.join(process.cwd(), 'art', 'incoming');
 const OUTPUT_ROOT = path.join(process.cwd(), 'public', 'assets');
@@ -266,13 +263,23 @@ async function main(): Promise<void> {
     await processOne(file, palette);
   }
 
-  // Stage two, always. One asset needs a deterministic post-process that cannot
-  // be expressed in the source (`scripts/derive-art.ts`), and a derived stage
-  // somebody has to remember to run is a stage that silently reverts the next
-  // time the batch is reprocessed. It is idempotent, so running it after a
-  // single-slug run costs nothing.
-  console.log('');
-  await deriveAll();
+  // A signpost, not a stage.
+  //
+  // `zone_parlor_shell` carries a one-time correction that was applied to its
+  // output and cannot be expressed in its source — the Tonight board sits five
+  // logical units left of where the championship rail needs it, and five units
+  // is 14.7 source pixels. Reprocessing reverts it.
+  //
+  // Running the correction from here would make it a pipeline stage, and the
+  // one-source-one-output property is worth more than the convenience. So this
+  // says what happened instead, and the test says it again, louder, if the
+  // reverted asset is ever committed.
+  if (files.some((file) => slugFromFilename(file) === 'zone_parlor_shell')) {
+    console.log(
+      `\nzone_parlor_shell was rewritten from source, which reverts the Tonight board.\n` +
+        `  Re-apply the correction:  npx tsx scripts/shift-tonight-board.ts`,
+    );
+  }
 }
 
 // Only when run as a command. `nearest` is asserted directly by

@@ -217,7 +217,7 @@ The earlier reading stopped at the frame's dark bevel on the right and missed th
 at `x 179–180` — the same lip it kept correctly at `x 49–50` on the left. The frame's colour
 profile is very nearly a mirror, so the asymmetry was the tell.
 
-The reliable method, and the one now in `scripts/derive-art.ts`: the board sits between
+The reliable method, and the one now in `scripts/shift-tonight-board.ts`: the board sits between
 **two different materials** — a dark panel (`#4A2E1C`) on the left and lit wall (`#F2A94B`)
 on the right — and the frame's own bevel contains both. So each side is found by asking
 where *its own* wall material stops, not by one brightness threshold across the whole band.
@@ -226,8 +226,14 @@ produced the three conflicting rail figures above.
 
 **The shipped shell has the board at `x 54–185`**, five units right of where it is painted,
 so the board and the banner row co-centre at `119.5` exactly and the board shares its left
-edge with the rod. The shift is a committed, idempotent post-process — `ASSET_PIPELINE.md`
-Step 7 — not an edit to the approved source, which is untouched.
+edge with the rod.
+
+The correction was applied to the **output**, not the source: `art/incoming/` is untouched
+and the approved painting stays approved. `scripts/shift-tonight-board.ts` records what was
+done and can re-apply it, and `ASSET_PIPELINE.md §4a` records why that script is deliberately
+**not** wired into `art:process` — reprocessing the shell reverts the board, and the revert is
+caught by a printed notice and a failing test rather than prevented by making a one-off into
+a pipeline stage.
 
 ---
 

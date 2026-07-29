@@ -1,43 +1,46 @@
 /**
- * Derived assets — the pipeline's second stage.
+ * A one-time correction to `zone_parlor_shell`, kept for provenance.
  *
- *   npm run art:derive
+ *   npx tsx scripts/shift-tonight-board.ts
  *
- * `art:process` turns a generated painting into a palette-closed sprite. That
- * is a pure function of the source file, and every asset in the product is
- * exactly that and nothing more.
+ * **This is not a pipeline stage and must not become one.** `art:process` turns
+ * a generated painting into a palette-closed sprite, and every asset in the
+ * product is a pure function of its source file. That property is worth more
+ * than any convenience, so this file deliberately does not generalise: it moves
+ * one named board on one named asset, it is not imported by the processor, and
+ * there is no registry here for a second entry to be added to.
  *
- * **One asset is not.** `zone_parlor_shell` needs its Tonight board moved five
- * logical units right so the board, the championship rail and the banner row
- * share a centre. The shift cannot happen in the source: 5 logical units is
- * 14.7 source pixels at the shell's 2.9406:1 ratio, and moving a painted board
- * by a fractional pixel then downsampling it resamples the frame's one-pixel
- * bevel into mush. It has to happen after quantization, on the 320 x 569 grid,
- * where a unit is a unit.
+ * ## What it does, and why it could not be done in the source
  *
- * So this exists, and it runs **as part of `art:process`** rather than beside
- * it. A derived stage that a person has to remember to run is a stage that
- * silently reverts the next time somebody reprocesses the batch.
+ * The Tonight board sits five logical units left of where the championship rail
+ * needs it. Five logical units is **14.7 source pixels** at the shell's
+ * 2.9406:1 ratio, and moving a painted board by a fractional pixel then
+ * downsampling resamples the frame's one-pixel bevel into mush. The correction
+ * has to happen after quantization, on the 320 x 569 grid, where a unit is a
+ * unit. `art/incoming/zone_parlor_shell.png` is never touched — the approved
+ * painting stays approved, and this records what was done to its output.
  *
- * ## The rules this stage plays by
+ * ## The correction is already applied and committed
  *
- * 1. **The registered output is still reproducible from the source**, in two
- *    commands instead of one, both committed and both deterministic.
- * 2. **`art/incoming/` is never touched.** The approved painting stays approved.
- * 3. **Idempotent, and it proves it rather than assuming it.** Every transform
- *    measures the asset first and decides from what it finds. Running twice is
- *    a no-op; running against an asset in an unrecognised state is an error,
- *    never a second shift.
+ * You should not normally need to run this. The one case where you do:
+ * reprocessing the shell from source rewrites the output and reverts the board.
+ * `art:process` prints a notice when that happens, and
+ * `scripts/shift-tonight-board.test.ts` fails, naming this file.
  *
- * Rule 3 is the whole design. A blind `copy the block right by 5` run twice
- * smears the board across the wall, and nothing downstream would notice.
+ * ## Why it cannot double-apply
+ *
+ * It measures before it acts. A blind "copy the block right by five" run twice
+ * slides the board ten units into the wall, with no exception and no failed
+ * check — just a room that is quietly wrong. So the board's position is a
+ * question asked of the file: at 180 it shifts, at 185 it is already done, and
+ * anything else is an error rather than a second shift.
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
 import sharp from 'sharp';
 
-const OUTPUT_ROOT = path.join(process.cwd(), 'public', 'assets');
+export const SHELL_PATH = 'public/assets/zone/zone_parlor_shell.png';
 
 /** `#RRGGBB`, uppercase, for the wall comparisons below. */
 function hexAt(pixels: Buffer, width: number, x: number, y: number): string {
@@ -155,7 +158,7 @@ const SHIFT = 5;
  */
 const WALL_SOURCE_ROW = BOARD.top - 1;
 
-export type DeriveAction = 'applied' | 'already-derived';
+export type CorrectionAction = 'applied' | 'already-corrected';
 
 /**
  * Move the Tonight board right by `SHIFT`, in place, on a raw RGBA buffer.
@@ -164,25 +167,25 @@ export type DeriveAction = 'applied' | 'already-derived';
  * recognised state puts it, because at that point the file is not what this
  * transform was written against and guessing would corrupt it.
  */
-export function shiftBoard(pixels: Buffer, width: number): DeriveAction {
+export function shiftBoard(pixels: Buffer, width: number): CorrectionAction {
   const right = locateBoardRightEdge(pixels, width);
   const left = right - BOARD_WIDTH + 1;
 
   if (!looksLikeTheBoard(pixels, width, right)) {
     throw new Error(
       `zone_parlor_shell: found a wall edge at x ${String(right)}, but the frame colours ` +
-        `there are not the Tonight board's. Refusing to shift — see scripts/derive-art.ts.`,
+        `there are not the Tonight board's. Refusing to shift — see scripts/shift-tonight-board.ts.`,
     );
   }
 
-  if (right === BOARD.right + SHIFT) return 'already-derived';
+  if (right === BOARD.right + SHIFT) return 'already-corrected';
 
   if (right !== BOARD.right) {
     throw new Error(
       `zone_parlor_shell: the Tonight board is at x ${String(left)}-${String(right)}, ` +
         `which is neither the painted position (${String(BOARD.left)}-${String(BOARD.right)}) ` +
         `nor the derived one (${String(BOARD.left + SHIFT)}-${String(BOARD.right + SHIFT)}). ` +
-        `Refusing to shift — see scripts/derive-art.ts.`,
+        `Refusing to shift — see scripts/shift-tonight-board.ts.`,
     );
   }
 
@@ -207,44 +210,28 @@ export function shiftBoard(pixels: Buffer, width: number): DeriveAction {
   return 'applied';
 }
 
-/** Every derived stage in the product. There is one. */
-const DERIVATIONS = [
-  {
-    slug: 'zone_parlor_shell',
-    family: 'zone',
-    what: 'Tonight board shifted +5 to co-centre with the championship rail',
-    transform: shiftBoard,
-  },
-] as const;
+/** Apply the correction to the committed shell, in place. */
+async function main(): Promise<void> {
+  const file = path.join(process.cwd(), SHELL_PATH);
+  if (!existsSync(file)) throw new Error(`${SHELL_PATH} does not exist — run art:process first.`);
 
-export async function deriveAll(): Promise<void> {
-  for (const derivation of DERIVATIONS) {
-    const file = path.join(OUTPUT_ROOT, derivation.family, `${derivation.slug}.png`);
-    if (!existsSync(file)) continue;
+  const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const pixels = Buffer.from(data);
+  const action = shiftBoard(pixels, info.width);
 
-    const { data, info } = await sharp(file)
-      .ensureAlpha()
-      .raw()
-      .toBuffer({ resolveWithObject: true });
-
-    const pixels = Buffer.from(data);
-    const action = derivation.transform(pixels, info.width);
-
-    if (action === 'applied') {
-      await sharp(pixels, { raw: { width: info.width, height: info.height, channels: 4 } })
-        .png({ compressionLevel: 9, palette: true })
-        .toFile(file);
-    }
-
-    console.log(
-      `${derivation.slug.padEnd(28)} ${action === 'applied' ? 'derived  ' : 'unchanged'} · ${derivation.what}`,
-    );
+  if (action === 'applied') {
+    await sharp(pixels, { raw: { width: info.width, height: info.height, channels: 4 } })
+      .png({ compressionLevel: 9, palette: true })
+      .toFile(file);
+    console.log(`${SHELL_PATH}\n  Tonight board shifted +${String(SHIFT)} to x 54-185.`);
+  } else {
+    console.log(`${SHELL_PATH}\n  already corrected — the board is at x 54-185. Nothing to do.`);
   }
 }
 
 if (require.main === module) {
-  deriveAll().catch((error: unknown) => {
-    console.error(`\nDerive failed: ${error instanceof Error ? error.message : String(error)}`);
+  main().catch((error: unknown) => {
+    console.error(`\nFailed: ${error instanceof Error ? error.message : String(error)}`);
     process.exit(1);
   });
 }

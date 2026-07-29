@@ -171,25 +171,26 @@ Sprite sheet plus JSON metadata into `/public/assets/<family>/`.
 
 Write the registry row: source, prompt reference, rights status, version, alt text. Flip `art_status` to `generated`, then `approved` after review.
 
-### Step 7 — Derived stages
+---
 
-**Almost every asset ends at Step 6, and an asset that ends there is a pure function of its source file.** Keep it that way wherever possible: one source, one command, one output, and a regeneration that cannot drift.
+## 4a. The one recorded correction — and why there is no Step 7
 
-**One asset is not**, and the exception is deliberate rather than accidental. `zone_parlor_shell` needs its Tonight board moved **five logical units right** so the board, the championship rail and the banner row share a centre. That cannot be done in the source: 5 logical units is 14.7 source pixels at the shell's 2.9406:1 ratio, and moving a painted board by a fractional pixel then downsampling resamples the frame's one-pixel bevel into mush. It has to happen **after quantization**, on the 320 × 569 grid, where a unit is a unit.
+**The pipeline has six steps. Every asset is a pure function of its source file, and that property is not negotiable** — one source, one command, one output, a regeneration that cannot drift.
 
-`scripts/derive-art.ts` holds every derived stage. Today it holds one.
+**`zone_parlor_shell` carries one exception, applied once and recorded.** Its Tonight board sits five logical units left of where the championship rail needs it. The correction could not be made in the source: 5 logical units is **14.7 source pixels** at the shell's 2.9406:1 ratio, and moving a painted board by a fractional pixel then downsampling resamples the frame's one-pixel bevel into mush. It had to happen after quantization, on the 320 × 569 grid, where a unit is a unit. `art/incoming/` was not touched.
 
-**Three rules, and the third is the load-bearing one.**
+`scripts/shift-tonight-board.ts` is the record of what was done. **It is not a pipeline stage and must not become one.**
 
-1. **The output stays reproducible from the source** — in two commands instead of one, both committed, both deterministic.
-2. **`art/incoming/` is never touched.** The approved painting stays approved.
-3. **Every transform measures the asset and decides from what it finds.** Running twice is a no-op; running against an asset in an unrecognised state is an **error**, never a second application.
+That is a deliberate choice with a cost, and the cost is stated plainly: **reprocessing the shell from source reverts the board.** Wiring the correction into `art:process` would fix that and would also turn a one-off into architecture — a registry, a concept, and an invitation to add a second entry rather than fix the second asset's source. The trade taken is the other one.
 
-Rule 3 is why this is safe. A blind "copy the block right by 5" run twice slides the board ten units into the wall, and nothing downstream would notice — no exception, no failed check, just a room that is wrong. So the shell's transform locates the board's right edge by walking in from the lit wall, confirms the frame's own colour profile is there, and only then acts.
+So the revert is caught rather than prevented, in two places:
 
-**Derived stages run inside `art:process`, not beside it.** A stage somebody has to remember to run is a stage that silently reverts the next time the batch is reprocessed. `npm run art:derive` exists for running them alone; it is not the normal path.
+- `art:process` **prints a notice** naming the script whenever it rewrites that slug.
+- `scripts/shift-tonight-board.test.ts` **fails**, with the command in the failure message, if a reverted shell is ever committed.
 
-If a derived stage is ever needed for a second asset, ask first whether the source can carry the change. Usually it can, and then it should.
+The correction also **cannot double-apply**, which matters more than it sounds: a blind "copy the block right by 5" run twice slides the board ten units into the wall with no exception and no failed check — just a room that is quietly wrong. It measures instead. It finds the board's right edge by walking in from the lit wall (the only side that moves with the board — the dark panel on the left is architecture that stays put), confirms the frame's own colour profile is there, then decides: **180 shifts, 185 is already done, anything else is an error.**
+
+**If a second asset ever seems to need this, fix its source instead.** Almost always it can be fixed there, and then it should be.
 
 ---
 

@@ -3,22 +3,25 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
-import { locateBoardRightEdge, shiftBoard } from './derive-art';
+import { locateBoardRightEdge, shiftBoard } from './shift-tonight-board';
 
 /**
- * The derived stage, asserted.
+ * The Tonight board's one-time correction, asserted.
  *
- * `art:derive` is the one place in the art pipeline where an output is not a
- * pure function of its source file, so it carries a risk nothing else does: run
- * it twice and the board slides ten units instead of five, with no error, no
- * visible failure in the console, and a room that is simply wrong. The guard
- * against that is a measurement, and a measurement deserves a test.
+ * The correction is deliberately **not** wired into `art:process` — keeping
+ * every asset a pure function of its source is worth more than the convenience,
+ * and a registry of derived stages would be an invitation to add a second one. The
+ * cost of that choice is that reprocessing the shell silently reverts the
+ * board, so this file is the thing that stops a reverted asset from shipping.
  *
- * There are two things to prove and they are different. **That the committed
- * asset is in the derived state** — otherwise the shipped room is misaligned.
- * And **that the transform refuses to run twice** — otherwise the next person
- * to reprocess the batch breaks it.
+ * Two separate things to prove. **That the committed asset is corrected** —
+ * otherwise the shipped room is misaligned and nothing else would say so. And
+ * **that the correction refuses to run twice** — otherwise re-applying it after
+ * a reprocess slides the board ten units into the wall, with no error at all.
  */
+
+/** What to do when the first test in this file fails. */
+const REAPPLY = 'the shell was reprocessed — run: npx tsx scripts/shift-tonight-board.ts';
 
 const ROOT = path.join(__dirname, '..');
 const SHELL = path.join(ROOT, 'public/assets/zone/zone_parlor_shell.png');
@@ -26,7 +29,7 @@ const SHELL = path.join(ROOT, 'public/assets/zone/zone_parlor_shell.png');
 /** Inclusive, measured on the registered shell. */
 const ROD = { left: 54, right: 184 } as const;
 const BOARD_WIDTH = 132;
-const DERIVED_RIGHT = 185;
+const CORRECTED_RIGHT = 185;
 /** From `art/B2_CHAMPION_BANNER.md`. Six banners, width 18, gap 4. */
 const SLOTS = [56, 78, 100, 122, 144, 166] as const;
 const BANNER_WIDTH = 18;
@@ -37,12 +40,12 @@ async function shellPixels(): Promise<{ pixels: Buffer; width: number }> {
 }
 
 describe('the committed shell', () => {
-  it('is in the derived state, with the board at x 54-185', async () => {
+  it('is corrected, with the board at x 54-185', async () => {
     const { pixels, width } = await shellPixels();
     const right = locateBoardRightEdge(pixels, width);
 
-    expect(right, 'board right edge').toBe(DERIVED_RIGHT);
-    expect(right - BOARD_WIDTH + 1, 'board left edge').toBe(54);
+    expect(right, REAPPLY).toBe(CORRECTED_RIGHT);
+    expect(right - BOARD_WIDTH + 1, REAPPLY).toBe(54);
   });
 
   it('co-centres the board with the banner row, exactly', async () => {
@@ -72,7 +75,7 @@ describe('the committed shell', () => {
     const { pixels, width } = await shellPixels();
     const before = Buffer.from(pixels);
 
-    expect(shiftBoard(pixels, width)).toBe('already-derived');
+    expect(shiftBoard(pixels, width), REAPPLY).toBe('already-corrected');
     expect(pixels.equals(before), 'the buffer was mutated by a no-op').toBe(true);
   });
 });
@@ -80,7 +83,7 @@ describe('the committed shell', () => {
 /**
  * The apply path, on a canvas built to the real coordinates.
  *
- * The committed shell cannot exercise this — it is already derived, which is
+ * The committed shell cannot exercise this — it is already corrected, which is
  * the point. So the layout is reconstructed: lit wall everywhere, the dark
  * panel where the panel is, and a frame whose colour profile is the one the
  * integrity check looks for.
@@ -131,7 +134,7 @@ describe('shiftBoard', () => {
 
     expect(shiftBoard(pixels, WIDTH)).toBe('applied');
 
-    expect(locateBoardRightEdge(pixels, WIDTH)).toBe(DERIVED_RIGHT);
+    expect(locateBoardRightEdge(pixels, WIDTH)).toBe(CORRECTED_RIGHT);
     expect(colour(pixels, 185, 128), 'the amber lip landed on the new right edge')
       .toBe(PROFILE[0]!.join(','));
     expect(colour(pixels, 54, 128), 'and on the new left edge').toBe(PROFILE[0]!.join(','));
@@ -155,7 +158,7 @@ describe('shiftBoard', () => {
     shiftBoard(pixels, WIDTH);
     const once = Buffer.from(pixels);
 
-    expect(shiftBoard(pixels, WIDTH)).toBe('already-derived');
+    expect(shiftBoard(pixels, WIDTH)).toBe('already-corrected');
     expect(pixels.equals(once)).toBe(true);
   });
 

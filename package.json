@@ -25,7 +25,6 @@
     "sleeper:check": "tsx scripts/record-fixtures.ts -- --check",
     "sleeper:import": "tsx scripts/import-league.ts",
     "art:process": "tsx scripts/process-art.ts",
-    "art:derive": "tsx scripts/derive-art.ts",
     "art:prepare": "tsx scripts/prepare-b0.ts"
   },
   "overrides": {

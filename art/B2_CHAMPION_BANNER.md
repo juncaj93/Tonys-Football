@@ -168,10 +168,18 @@ gap narrows partitions below the criterion.
 
 ## The shift is baked — how, and how to undo it
 
-`zone_parlor_shell.png` is the only asset in the product that is **not** a pure
-function of its source file. The board's +5 lives in `scripts/derive-art.ts`,
-which runs automatically at the end of `npm run art:process` and can be run alone
-with `npm run art:derive`.
+`zone_parlor_shell.png` carries **one recorded correction**, applied once to its
+output. `scripts/shift-tonight-board.ts` is the record of it and can re-apply it.
+
+**It is deliberately not part of the pipeline.** Wiring it into `art:process`
+would prevent the revert and would also turn a one-off into architecture — a
+registry, a concept, and an invitation to add a second entry instead of fixing
+the second asset's source. So every other asset stays a pure function of its
+source, and the cost is stated openly: **reprocessing the shell reverts the
+board.** That revert is caught, not prevented — `art:process` prints a notice
+naming the script, and `scripts/shift-tonight-board.test.ts` fails with the
+command in its message if a reverted shell is ever committed.
+See `ASSET_PIPELINE.md §4a`.
 
 **Why not move the board in the source.** 5 logical units is 14.7 source pixels
 at the shell's 2.9406:1 ratio. Moving a painted board by a fractional pixel and
@@ -183,7 +191,7 @@ the board's right edge by walking in from the lit wall — the only side that mo
 with the board, since the dark panel on the left is architecture that stays put —
 confirms the frame's own colour profile is there, and then decides. Right edge at
 180 means shift; at 185 means already done; anything else is an error rather than
-a second shift. `scripts/derive-art.test.ts` asserts all three.
+a second shift. `scripts/shift-tonight-board.test.ts` asserts all three.
 
 **The vacated strip becomes wall, not panel.** The panel's edge at x 48/49 is one
 straight vertical line from y 60 to y 182, and the board's amber lip sits flush
@@ -192,7 +200,9 @@ vacated columns with panel would cut a dark notch into that line for exactly the
 board's height — the one visible way to get this wrong. The fill continues each
 column downward from the wall row above the board instead.
 
-**To undo it:** delete the derivation entry and re-run `npm run art:process`.
+**To undo it:** re-run `npm run art:process -- zone_parlor_shell`, which rewrites
+the shell from source and puts the board back at x 49–180. Delete the script and
+its test in the same commit, or the suite will fail asking for the correction.
 
 ## Remaining implementation work
 
