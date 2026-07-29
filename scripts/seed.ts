@@ -3,11 +3,12 @@
  *
  *   npm run db:seed
  *
- * Three idempotent steps, safe to run on every deploy and safe to run twice:
+ * Four idempotent steps, safe to run on every deploy and safe to run twice:
  *
  *   1. import the league chain from recorded fixtures
- *   2. seed the Counter Greetings from `content/counter-greetings.md`
- *   3. grant admin to the commissioner named in the environment
+ *   2. apply the names Tony uses, from `content/managers.md`
+ *   3. seed the Counter Greetings from `content/counter-greetings.md`
+ *   4. grant admin to the commissioner named in the environment
  *
  * Fixtures rather than the live API, deliberately (`16 §12`): the import is
  * then offline, repeatable, and identical in every environment, and a Sleeper
@@ -18,6 +19,7 @@
 import { eq } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
+import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import {
   assertOnlyApprovedGroups,
   readCounterGreetings,
@@ -57,7 +59,21 @@ async function main(): Promise<void> {
         `${String(imported.recordsChanged)} records changed · status ${imported.status}`,
     );
 
-    // --- 2. Content -------------------------------------------------------
+    // --- 2. The names Tony uses -------------------------------------------
+    //
+    // Straight after the import and before anything reads a name: the import
+    // seeds a display name from Sleeper once and never touches it again, and
+    // this is what turns that username into the person's name (`16 §4`).
+    const roster = await seedManagerNames(db, readManagerNames());
+    console.log(
+      `Names    ${String(roster.renamed.length)} renamed` +
+        (roster.renamed.length > 0 ? ` — ${roster.renamed.join(', ')}` : ''),
+    );
+    if (roster.unmatched.length > 0) {
+      console.warn(`Names    not in the database yet: ${roster.unmatched.join(', ')}`);
+    }
+
+    // --- 3. Content -------------------------------------------------------
     const parsed = readCounterGreetings();
     const seeded = await seedCounterGreetings(db, parsed);
     console.log(
@@ -68,7 +84,7 @@ async function main(): Promise<void> {
 
     await assertOnlyApprovedGroups(db);
 
-    // --- 3. The commissioner ----------------------------------------------
+    // --- 4. The commissioner ----------------------------------------------
     const commissioner = process.env['COMMISSIONER_SLEEPER_USER_ID'] ?? '';
 
     if (commissioner === '') {

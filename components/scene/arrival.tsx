@@ -42,23 +42,38 @@ import { createContext, useContext, useEffect, useRef, useState } from 'react';
  */
 
 const ENTRANCE_MS = 900;
-const REVEAL_AT_MS = 1300;
+const REVEAL_AT_MS = 1600;
 const REVEAL_FOR_MS = 3300;
 const PLAYED_KEY = 'tonys:arrived';
 
 interface Arrival {
+  /**
+   * This is the first view of the parlor this session.
+   *
+   * Latches true and stays true, unlike `entering`, which is a window that
+   * closes. Anything scheduled *from* the arrival has to hang off this one —
+   * a `useEffect` keyed to `entering` is torn down the moment the entrance
+   * ends, which silently cancelled Tony's typing before it began.
+   */
+  readonly arrived: boolean;
   /** Tony is stepping up. Drives his transform and his line's delay. */
   readonly entering: boolean;
   /** The interactive objects are showing their edges. */
   readonly revealed: boolean;
   /** Show them again, on request. */
   readonly reveal: () => void;
+  /** Tony is mid-sentence. Drives the small motion that says who is talking. */
+  readonly speaking: boolean;
+  readonly setSpeaking: (value: boolean) => void;
 }
 
 const ArrivalContext = createContext<Arrival>({
+  arrived: false,
   entering: false,
   revealed: false,
   reveal: () => undefined,
+  speaking: false,
+  setSpeaking: () => undefined,
 });
 
 export function useArrival(): Arrival {
@@ -66,8 +81,10 @@ export function useArrival(): Arrival {
 }
 
 export function Arriving({ children }: { children: React.ReactNode }) {
+  const [arrived, setArrived] = useState(false);
   const [entering, setEntering] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  const [speaking, setSpeaking] = useState(false);
   const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   const clear = (): void => {
@@ -85,20 +102,22 @@ export function Arriving({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    let arrived = false;
+    let alreadyBeenHere = false;
     try {
-      arrived = window.sessionStorage.getItem(PLAYED_KEY) === '1';
+      alreadyBeenHere = window.sessionStorage.getItem(PLAYED_KEY) === '1';
     } catch {
       // Private browsing can refuse storage. Replaying the entrance is a far
       // better failure than throwing on the first screen.
     }
-    if (arrived) return;
+    if (alreadyBeenHere) return;
 
     try {
       window.sessionStorage.setItem(PLAYED_KEY, '1');
     } catch {
       // As above.
     }
+
+    setArrived(true);
 
     const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -131,14 +150,20 @@ export function Arriving({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <ArrivalContext.Provider value={{ entering, revealed, reveal }}>
+    <ArrivalContext.Provider
+      value={{ arrived, entering, revealed, reveal, speaking, setSpeaking }}
+    >
       {/*
         * One class on one wrapper drives the whole sequence. The alternative —
         * every animated part checking a hook — would make each of them a client
         * component, which would drag the greeting, the receipt and the board
         * across the boundary with them for no benefit.
         */}
-      <div className={`contents ${entering ? 'arriving' : ''} ${revealed ? 'showing-taps' : ''}`}>
+      <div
+        className={`contents ${entering ? 'arriving' : ''} ${revealed ? 'showing-taps' : ''} ${
+          speaking ? 'speaking' : ''
+        }`}
+      >
         {children}
       </div>
     </ArrivalContext.Provider>

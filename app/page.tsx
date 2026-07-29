@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ReceiptSlip } from '@/components/receipt';
 import { Arriving, ShowInteractables } from '@/components/scene/arrival';
 import { RoomLink, RoomObject } from '@/components/scene/room-object';
+import { SpokenLine } from '@/components/scene/spoken-line';
 import { Page } from '@/components/shell';
 import { TonyAtTheCounter } from '@/components/tony';
 import { AssetView } from '@/lib/assets/placeholder';
@@ -191,7 +192,7 @@ export default async function ParlorPage() {
                 <span className="mr-2 font-mono text-[10px] tracking-[0.18em] text-amber-mid/85 uppercase">
                   Tony
                 </span>
-                {line}
+                <SpokenLine>{line}</SpokenLine>
               </p>
             </div>
           </div>

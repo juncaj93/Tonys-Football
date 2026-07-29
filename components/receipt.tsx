@@ -45,7 +45,13 @@ export function ReceiptSlip({
           <Row label="Record" value={receipt.record} />
           <Row label="Points for" value={receipt.pointsFor.toFixed(2)} />
           <Row label="Points against" value={receipt.pointsAgainst.toFixed(2)} />
-          <Row label="Roster" value={`#${String(receipt.rosterId)}`} />
+          {/*
+            * The roster number is not on the receipt. It is Sleeper's internal
+            * seat number, it means nothing to the person holding the slip, and
+            * `16 §4` keeps seasonal roster identity out of the manager's own
+            * view of themselves. It is still carried on `receipt` — the
+            * commissioner's screens and the inherited-slot tag both need it.
+            */}
         </>
       )}
 

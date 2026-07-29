@@ -129,7 +129,7 @@ These require no tags and are always eligible. They exist so the selector always
 > You're the new one. Tony's collecting evidence.
 
 **A18** · `inherited_slot` · *neutral*
-> {name}. Fourth roster. Two guys had that seat before you. Neither left a note.
+> {name}. Two guys had that seat before you. Neither left a note.
 
 **A19** · `newest_manager` · *neutral*
 > {name}. No record, no history, no opinions yet. Tony finds that restful.

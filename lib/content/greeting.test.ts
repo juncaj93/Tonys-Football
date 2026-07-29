@@ -12,6 +12,7 @@ import { persistChain } from '@/lib/sleeper/persist';
 import { loadTags } from '@/lib/tags/repository';
 
 import { greetingFor } from './greeting';
+import { readManagerNames, seedManagerNames } from './managers';
 import { readCounterGreetings, seedCounterGreetings } from './seed';
 
 /**
@@ -59,6 +60,10 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
     const source = createFixtureSource();
     const chain = await traverseChain(source, '1385016656425668608', { includeWeeks: false });
     await persistChain(db!, chain, { sourceLabel: source.label });
+    // The real seed order. Names are applied before anything reads one, so the
+    // greetings render what Tony actually calls people rather than the Sleeper
+    // handles the import happened to arrive with (`content/managers.md`).
+    await seedManagerNames(db!, readManagerNames());
     await seedCounterGreetings(db!, readCounterGreetings());
 
     managers = await listDoorManagers(db!);
@@ -107,8 +112,8 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
   it('gives two managers side by side visibly different greetings', async () => {
     await db!.delete(contentUsageLog);
 
-    const champion = await greet(find('MattyB2317'));
-    const bestRecord = await greet(find('RonJonathan'));
+    const champion = await greet(find('Matty B'));
+    const bestRecord = await greet(find('Ryan'));
 
     expect(champion?.text).not.toBe(bestRecord?.text);
     expect(champion?.entryKey).not.toBe(bestRecord?.entryKey);
@@ -121,14 +126,14 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
    * drift toward everybody hearing the same thing.
    *
    * Eight of the ten get a line nobody else in the room gets. The remaining
-   * pair is an honest tie in the data: SuggMyNick and cheeseking both made the
+   * pair is an honest tie in the data: Nick and Cheese both made the
    * 2025 playoffs without a title, and A21 is the only Group A line keyed to
    * that. Both hear something true about themselves.
    *
    * Closing it is two more lines in `content/counter-greetings.md` and no code
    * change — a **content decision on the commissioner's track** (`17 §11`).
-   * The verified material is there: cheeseking went 1–13 in 2024 and 9–5 with
-   * a third-place finish in 2025, and SuggMyNick had the second-best record in
+   * The verified material is there: Cheese went 1–13 in 2024 and 9–5 with
+   * a third-place finish in 2025, and Nick had the second-best record in
    * 2025 at 10–4.
    */
   it('gives most of the room a line nobody else gets, and never more than a pair the same', async () => {
@@ -162,21 +167,22 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
 
     const truths: Record<string, RegExp> = {
       // 7–7 and the ring. Champion of 2025.
-      MattyB2317: /Seven and seven in 2025|2025 champion|2025 trophy/,
+      'Matty B': /Seven and seven in 2025|2025 champion|2025 trophy/,
       // 11–3, 1868.70 points, no title.
-      RonJonathan: /Eighteen sixty-eight points in 2025|Eleven and three in 2025|2024 and 2025 on that wall/,
+      'Ryan': /Eighteen sixty-eight points in 2025|Eleven and three in 2025|2024 and 2025 on that wall/,
       // 2024 champion, 9–5 with the second-most points in 2025.
-      BigJuncer: /brings up 2024|One ring, 2024|Second most points in 2025/,
+      'Alex': /brings up 2024|One ring, 2024|Second most points in 2025/,
       // 1430.34 points, fewest in the league.
-      MattLee04: /Fewest points in the league in 2025|Three and eleven in 2025|2024 and 2025 on that wall/,
+      'Matt Lee': /Fewest points in the league in 2025|Three and eleven in 2025|2024 and 2025 on that wall/,
       // 1776.20 points against, most in the league; missed January both years.
-      jfletcher433: /Seventeen seventy-six thrown at you in 2025|no January either time|Three and eleven in 2025/,
+      'Joe': /Seventeen seventy-six thrown at you in 2025|no January either time|Three and eleven in 2025/,
       // Lost the 2024 championship game, then missed the 2025 playoffs.
-      NateyDee: /One game short of the title in 2024/,
+      'Nathan': /One game short of the title in 2024/,
       // Third in 2024, then 4–10 in 2025.
-      imbrickedup22: /Third in 2024\. Four and ten in 2025/,
-      // First season; roster 4, after Berardo and Topouzian.
-      zackstephens54: /You're the new one|No record, no history|Fourth roster/,
+      'Brandon': /Third in 2024\. Four and ten in 2025/,
+      // First season, in a seat Berardo and Topouzian held before him. The
+      // roster number itself is Sleeper's bookkeeping and is never said aloud.
+      'Zack': /You're the new one|No record, no history|Two guys had that seat/,
     };
 
     for (const [name, expected] of Object.entries(truths)) {
@@ -186,7 +192,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
   });
 
   /**
-   * The regression this exists for: NateyDee and imbrickedup22 hold identical
+   * The regression this exists for: Nathan and Brandon hold identical
    * 2025 tags — both missed the playoffs, neither led or trailed the league in
    * anything — so before the 2024 podium was derivable, the only Group A line
    * either qualified for was the shared title-drought line, and they saw the
@@ -195,17 +201,17 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
    * What separates them is 2024: one lost the championship game, the other
    * finished third. Both facts come from the winners bracket.
    */
-  it('gives NateyDee and imbrickedup22 different, true lines', async () => {
+  it('gives Nathan and Brandon different, true lines', async () => {
     await db!.delete(contentUsageLog);
 
-    const nate = await greet(find('NateyDee'));
-    const bricked = await greet(find('imbrickedup22'));
+    const nate = await greet(find('Nathan'));
+    const bricked = await greet(find('Brandon'));
 
     expect(nate?.entryKey).not.toBe(bricked?.entryKey);
     expect(nate?.text).not.toBe(bricked?.text);
 
     expect(nate?.text).toContain('One game short of the title in 2024');
-    expect(nate?.text).toContain('NateyDee');
+    expect(nate?.text).toContain('Nathan');
 
     expect(bricked?.text).toContain('Third in 2024');
     expect(bricked?.text).toContain('Four and ten in 2025');
@@ -217,8 +223,8 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
     for (let day = 0; day < 5; day++) {
       clockAt(START + day * 24 * 60 * 60 * 1000);
 
-      const nate = await greet(find('NateyDee'));
-      const bricked = await greet(find('imbrickedup22'));
+      const nate = await greet(find('Nathan'));
+      const bricked = await greet(find('Brandon'));
 
       expect(nate, `day ${String(day)}`).not.toBeNull();
       expect(bricked, `day ${String(day)}`).not.toBeNull();
@@ -232,7 +238,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
 
   it('never tells the newcomer about a season he did not play', async () => {
     await db!.delete(contentUsageLog);
-    const zack = find('zackstephens54');
+    const zack = find('Zack');
 
     // Ten draws: no record, no placement, no points may ever appear.
     for (let visit = 0; visit < 10; visit++) {
@@ -244,7 +250,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
   /** `17 §3`'s secondary criterion. */
   it('gives the same manager three different lines on three consecutive days', async () => {
     await db!.delete(contentUsageLog);
-    const matty = find('MattyB2317');
+    const matty = find('Matty B');
     const seen: string[] = [];
 
     for (let day = 0; day < 3; day++) {
@@ -264,7 +270,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
    */
   it('says the same thing all day, however many times you walk in', async () => {
     await db!.delete(contentUsageLog);
-    const ron = find('RonJonathan');
+    const ron = find('Ryan');
 
     const first = await greet(ron);
     const second = await greet(ron);
@@ -278,7 +284,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
 
   it('draws again the next day', async () => {
     await db!.delete(contentUsageLog);
-    const ron = find('RonJonathan');
+    const ron = find('Ryan');
 
     const today = await greet(ron);
     clockAt(START + 24 * 60 * 60 * 1000);
@@ -291,7 +297,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
 
   it('logs each day it shows a line, and only once a day', async () => {
     await db!.delete(contentUsageLog);
-    const alex = find('BigJuncer');
+    const alex = find('Alex');
 
     await greet(alex);
     await greet(alex);
@@ -319,13 +325,13 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
    */
   it('never leaves a manager standing at a silent counter', async () => {
     await db!.delete(contentUsageLog);
-    const nate = find('NateyDee');
+    const nate = find('Nathan');
 
     for (let day = 0; day < 14; day++) {
       clockAt(START + day * 24 * 60 * 60 * 1000);
       const greeting = await greet(nate);
       expect(greeting, `day ${String(day)}`).not.toBeNull();
-      expect(greeting?.text).toContain('NateyDee');
+      expect(greeting?.text).toContain('Nathan');
     }
 
     clockAt(START);
@@ -338,7 +344,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
    */
   it('drops the countdown line once the season has started', async () => {
     await db!.delete(contentUsageLog);
-    const nate = find('NateyDee');
+    const nate = find('Nathan');
 
     for (let day = 0; day < 6; day++) {
       clockAt(START + day * 24 * 60 * 60 * 1000);

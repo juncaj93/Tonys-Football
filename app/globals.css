@@ -402,7 +402,52 @@ button {
 }
 
 .arriving .tony-line {
-  animation: line-arrives 260ms ease-out 900ms both;
+  animation: line-arrives 260ms ease-out 980ms both;
+}
+
+/* --- Talking ------------------------------------------------------------- *
+ *
+ * A line of text near a man is not obviously coming out of him. While he is
+ * mid-sentence he shifts his weight, one pixel at a time, on a rhythm close to
+ * speech — and a block caret runs along the end of the words. Between them
+ * there is no ambiguity about who is talking.
+ *
+ * One pixel, and only vertically. Anything larger reads as a bounce, and
+ * anything horizontal reads as him sliding along behind the counter.
+ */
+@keyframes tony-talks {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -1px, 0);
+  }
+}
+
+.speaking .tony-mark {
+  animation: tony-talks 300ms steps(2, end) infinite;
+}
+
+@keyframes caret-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0.15;
+  }
+}
+
+.caret {
+  display: inline-block;
+  width: 0.42em;
+  height: 0.95em;
+  margin-left: 0.1em;
+  vertical-align: -0.1em;
+  background-color: var(--color-amber-mid);
+  animation: caret-blink 620ms steps(1, end) infinite;
 }
 
 /*
