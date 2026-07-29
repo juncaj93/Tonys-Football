@@ -107,8 +107,8 @@ Logical 320 × 569, derived from edge detection on the real file. Source px in b
 |---|---|---|---|
 | Nook → `/slice` | `6, 180, 45, 112` | 18–151, 529–858 | ✅ |
 | Board → Tonight | `49, 79, 132, 97` | 143–531, 233–518 | ✅ |
-| Rail → `/timeline` | `58, 66, 122, 3` | 170–530, 193–203 | ❌ **3 tall** |
-| Rail incl. brackets | `58, 58, 122, 13` | 170–530, 171–210 | ❌ 13 tall |
+| Rail rod → `/timeline` | `54, 65, 131, 5` | 159–543, 191–206 | ❌ **5 tall** |
+| Rail incl. brackets | `54, 58, 131, 16` | 159–543, 171–218 | ❌ 16 tall |
 | Sign → prediction | `154, 184, 37, 59` | 454–563, 542–714 | pad → `151, 184, 44, 59` |
 | Receipt | `86, 292, 23, 18` | 253–320, 858–910 | pad → `75, 279, 44, 44` |
 | Tray → `/counter` | `156, 284, 94, 25` | 458–733, 833–906 | pad → `156, 275, 94, 44` |
@@ -167,14 +167,45 @@ Neither trigger-only surface is a defect. Both are legible objects at room scale
 too small to *carry* text, which is a different thing — and the panel was always the better
 place to read a record anyway.
 
-### The rail
+**Accepted 2026-07-29.** The classification table above is ratified as written, and that
+**closes the prediction-sign gate** — the small sign was the last surface still flagged
+unmeasured, with a standing instruction not to build the prediction until it was
+classified. It is classified. The prediction may be built against a panel.
 
-Measured at **3 logical units tall** — thinner than the ±3 estimate suggested, and not
-paddable in place: reaching 44 means growing it 14× and swallowing the board below.
+### The rail — reconciled 2026-07-29
 
-It solves itself when the banners exist, because banners hang *below* the rod and the Door's
-polygon should trace the banners. **Recommendation unchanged: no `/timeline` Door until the
-banner overlay ships.** Not a shell defect.
+**The rod is `x 54–184`. Inclusive indices, 131 units wide, centre 119.0.**
+
+That is the single figure. It is stable across three darkness thresholds, agrees with
+`art/incoming/zone_parlor_shell.png` sampled to 320 × 569, and is the only feature in the
+band running more than 100 columns continuously.
+
+| Part | Extent | Note |
+|---|---|---|
+| Rod | **x 54–184**, rows y 65, 68, 69 | the load-bearing figure |
+| Brackets | x 58–62, 118–122, 176–180 | descend to y 73 |
+| End caps | x 54–57, 180–184 | row y 66 |
+| **Not rail** | left pillar x 30–48 · right wall corner x 197–220 | architecture — dark on *every* row in the band, which is what identifies them |
+
+**Three figures previously on record are superseded, and all three were wrong.** Each
+measured a different feature and none measured the rod:
+
+| Superseded | Was | Actually measured |
+|---|---|---|
+| `55–185` / 130 | banner geometry study, PR #11 | the rod ±1 — an off-by-one at both ends |
+| `58–180` / 122 | this document, §4 "production figures" | bracket to bracket, not the rod |
+| `58–185` / 127 | independent gradient detection | first bracket to rod +1 |
+
+**Neither escalation trigger fires.** Six banners at width 18 and gap 4 need 128 units; the
+rod carries 131, so the slot count is unchanged at six. Gap 4 is preserved, and every hit
+partition clears WCAG 2.5.8 AA on every supported viewport — see
+`B2_CHAMPION_BANNER.md`, which records the partition table and the one correction the
+reconciliation forced.
+
+The rod is still **5 logical units tall** and still not paddable in place: reaching 44 means
+growing it 9× and swallowing the board below. That solves itself when the banners exist,
+because banners hang *below* the rod and the hit regions trace the banners rather than the
+rail. **No `/timeline` target on the rod itself.** Not a shell defect.
 
 ---
 
@@ -279,3 +310,20 @@ defective was ever committed. Resolved by the Euclidean ruling.
   The shell is not going back, so the sub-pixel sampling drift is accepted rather than
   overlooked.
 - Six inventory rows still carry the retired 320 × 228 / 64 × 96 sizings.
+
+---
+
+## 7. Queued for the next specification pass
+
+Ruled and in force now; the specification text has not caught up yet. Nothing here is a
+question — each is recorded so the next authorized spec pass transcribes rather than
+rediscovers.
+
+| Ruling | Effect on the specification |
+|---|---|
+| **`zone_parlor_counter_front` is removed** | **Supersedes `18 §9.1`**, which lists it as a homepage overlay. That row is **withdrawn**. The foreground counter is a *render step over the shell* — the shell cut at logical y 292 with rows 292–568 redrawn over Tony — **not an asset**. One image instead of two also removes a whole class of defect: two independently generated images that must stay pixel-aligned across every future regeneration. |
+| **Champion banners** | Six fixed slots on the rail, `object_champion_banner` at 18 × 15. Geometry and interaction in `B2_CHAMPION_BANNER.md`. |
+| **The receipt is a panel trigger** | Nothing is printed onto the paper; tapping opens the expanded manager record. |
+| **The banner rail is a Display, not a Door** | The homepage object map becomes **3 Doors · 4 Displays · 1 Toy** — still eight objects. |
+
+The last three land on the parlor-navigation branch before it merges, not after.

@@ -20,7 +20,8 @@ matching `art/incoming/zone_parlor_shell.png`.
 | Board outer frame, **after +6** | **x 55–184** | 130 | **119.5** |
 | Board cream field, after +6 | x 63–179 | 117 | 121.0 |
 | Board usable text, after +6 | x 66–176 | 111 | 121.0 |
-| **Banner row** | **x 56–183** | **128** | **119.5** |
+| **Banner row — bodies** | **x 56–183** | **128** | **119.5** |
+| **Banner row — hit regions** | **x 54–185** | **132** | **119.5** |
 
 Board vertical is unchanged: outer frame y 79–177, cream field y 84–170, usable
 text y 88–166.
@@ -28,9 +29,10 @@ text y 88–166.
 **Slots: 56, 78, 100, 122, 144, 166.** Banner 18 × 15, gap 4, pitch 22.
 Row bottoms at y 83; board usable text begins y 88 — **4 units of clearance**.
 
-**Board and row co-centre at 119.5 — delta 0.0.** The row sits wholly within the
-rod with a 2 px left margin and 1 px right. All four attachment nubs — 59 and 70
-on slot 1, 169 and 180 on slot 6 — land on rod pixels.
+**Board and row co-centre at 119.5 — delta 0.0.** The banner *bodies* sit wholly
+within the rod with a 2 px left margin and 1 px right. All four attachment nubs —
+59 and 70 on slot 1, 169 and 180 on slot 6 — land on rod pixels. The *hit
+regions* extend 2 units past the bodies at each end, onto plain wall; see below.
 
 ### Rail anatomy, and three earlier errors
 
@@ -69,33 +71,64 @@ partition keeps its size.
 
 ### Hit regions
 
-Row bounds **y 58–88**. Six partitions tiled at the gap midpoints: contiguous,
-non-overlapping, no dead zones.
+Hit row **x 54–185, y 58–87** — inclusive, so 132 × 30 logical units. Six
+partitions tiled at the gap midpoints: contiguous, non-overlapping, no dead
+zones, **uniform 22-unit pitch**.
 
-| # | x range | Logical | CSS @ iPhone 14 |
+| # | x range | Logical | @360 | @375 | @390 |
+|---|---|---|---|---|---|
+| 1 | 54–75 | 22 × 30 | 24.75 | 25.78 | 26.81 |
+| 2 | 76–97 | 22 × 30 | 24.75 | 25.78 | 26.81 |
+| 3 | 98–119 | 22 × 30 | 24.75 | 25.78 | 26.81 |
+| 4 | 120–141 | 22 × 30 | 24.75 | 25.78 | 26.81 |
+| 5 | 142–163 | 22 × 30 | 24.75 | 25.78 | 26.81 |
+| 6 | 164–185 | 22 × 30 | 24.75 | 25.78 | 26.81 |
+
+CSS px, width only; the height is 33.75 at the narrowest viewport. Every banner
+body sits **exactly centred** in its own partition — offset 0.0 on all six.
+
+The Tonight board's hit region begins at **y 88** — the row's last row is 87, so
+they abut without sharing a pixel. Audited clear against Tony's lane, the
+newspaper rack, the prediction sign, the tray, the receipt and the doorway.
+
+#### The correction the reconciliation forced
+
+The partitions were first recorded as **20/22/22/22/22/20**, with the two end
+partitions clipped to the outermost banner bodies at x 56 and 183. Those two
+pass at 390 px and **fail everywhere below it**:
+
+| | @360 | @375 | @390 |
 |---|---|---|---|
-| 1 | 56–75 | 20 × 30 | 24.4 × 36.6 |
-| 2 | 76–97 | 22 × 30 | 26.8 × 36.6 |
-| 3 | 98–119 | 22 × 30 | 26.8 × 36.6 |
-| 4 | 120–141 | 22 × 30 | 26.8 × 36.6 |
-| 5 | 142–163 | 22 × 30 | 26.8 × 36.6 |
-| 6 | 164–183 | 20 × 30 | 24.4 × 36.6 |
+| 20-unit end partition | **22.50** ❌ | **23.44** ❌ | 24.38 ✅ |
+| 22-unit partition | 24.75 ✅ | 25.78 ✅ | 26.81 ✅ |
 
-The Tonight board's hit region begins at y 88 — no overlap. Audited clear against
-Tony's lane, the newspaper rack, the prediction sign, the tray, the receipt and
-the doorway.
+The original figure was checked at iPhone 14's 390 px only. iPhone SE and iPhone
+12 mini are both 375 and are both supported, so as recorded the row failed AA on
+two of the three devices this room is tested on.
+
+**The fix costs nothing.** Each end partition is extended outward by `gap / 2`
+= 2 units into plain wall, which is where the tiling would have put the boundary
+anyway had there been a seventh slot. **No banner moves**; the bodies stay at
+56, 78, 100, 122, 144, 166. Only the invisible boundary moves, and the result is
+the uniform 22-unit pitch the rail geometry was designed around.
+
+x 54 is flush with the rod's first pixel; x 185 overhangs its last by one unit of
+plain wall, which is wall the rail does not use and no other target claims.
 
 ### Accessibility framing — stated accurately
 
-- **All banner partitions pass WCAG 2.5.8 (Target Size Minimum, AA).** The
-  criterion requires 24 × 24 CSS px; the narrowest partition is 24.4 × 36.6.
+- **All six banner partitions pass WCAG 2.5.8 (Target Size Minimum, AA)** on every
+  supported viewport. The criterion requires 24 × 24 CSS px; the narrowest
+  partition anywhere is 24.75 × 33.75, at 360 px.
 - **No WCAG AA exception is claimed or required.**
 - The row is a documented departure **only** from the room's preferred **44 × 44
   (WCAG 2.5.5, AAA)** convention, which every other object in the parlor meets.
 
-The 0.4 px margin on partitions 1 and 6 is why the row may be **translated** but never
-re-anchored against a fixed edge: a uniform shift preserves every partition width,
-whereas re-anchoring narrows partition 1 below the criterion.
+The 0.75 px margin at 360 px is why the row may be **translated** but never
+re-anchored against a fixed edge, and why **gap 4 is load-bearing rather than
+cosmetic**: at gap 3 the pitch drops to 21 units and 23.63 CSS px, which fails.
+A uniform shift preserves every partition width; re-anchoring or tightening the
+gap narrows partitions below the criterion.
 
 ---
 
