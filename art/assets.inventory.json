@@ -105,9 +105,12 @@
         "family": "zone",
         "canvas": "320x569",
         "batch": "B1",
-        "art_status": "placeholder",
+        "art_status": "generated",
+        "path": "/assets/zone/zone_parlor_shell.png",
+        "source": "ChatGPT image generation, approved shell candidate",
+        "rights_status": "original",
         "alt": "Tony's Pizza",
-        "$comment": "The prepared parlor shell. Doors arrive as transparent overlays; Displays are baked into it. Nothing references this slug yet -- registered so the pipeline can read its canvas."
+        "$comment": "The prepared parlor shell. Doors arrive as transparent overlays; Displays are baked into it. B0 re-approved 2026-07-29 under the Euclidean quantizer. Cut at logical y 292 -- rows 0-291 render behind Tony, rows 292-568 in front of him; there is no separate foreground-counter asset. Role, interaction and silhouette metadata arrive with the parlor ruling's inventory shape at reconciliation. See art/SHELL_AUDIT_zone_parlor_shell.md."
       },
       "zone_tonight_board": {
         "family": "zone",
