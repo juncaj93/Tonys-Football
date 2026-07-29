@@ -43,10 +43,10 @@ export default async function AdminPage() {
 
             <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
               <div className="mb-2 flex items-baseline justify-between gap-3">
-                <span className="font-display text-[9px] text-ink-900 uppercase">
+                <span className="font-display text-[12px] text-ink-900 uppercase">
                   Key board
                 </span>
-                <span className="font-display text-[9px] text-ink-500">
+                <span className="font-display text-[11px] text-ink-500">
                   {managers.length} managers
                 </span>
               </div>
@@ -67,7 +67,7 @@ export default async function AdminPage() {
                           <input type="hidden" name="userId" value={manager.id} />
                           <button
                             type="submit"
-                            className={`pixel-edge ${TAP_TARGET} border-2 border-red-dark bg-red-dark/15 px-3 font-display text-[9px] text-red-dark uppercase active:translate-y-px`}
+                            className={`pixel-edge ${TAP_TARGET} border-2 border-red-dark bg-red-dark/15 px-3 font-display text-[11px] text-red-dark uppercase active:translate-y-px`}
                           >
                             Clear PIN
                           </button>

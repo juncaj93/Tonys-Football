@@ -56,7 +56,7 @@ export default async function DoorManagerPage({
           <SignPlate tone={claiming ? 'red' : 'blue'}>
             {claiming ? 'New key' : 'Welcome back'}
           </SignPlate>
-          <h1 className="mt-3 font-display text-[16px] leading-[1.5] text-paper-white uppercase">
+          <h1 className="mt-4 font-display text-[20px] leading-[1.35] text-paper-white uppercase">
             {manager.displayName}
           </h1>
           <p className="mt-2 text-[19px] leading-[1.45] text-ink-100">

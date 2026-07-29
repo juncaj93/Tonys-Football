@@ -43,7 +43,7 @@ export default async function DoorPage() {
 
         <main className="mx-auto w-full max-w-md flex-1 px-5 pt-7">
           <SignPlate tone="red">Keys</SignPlate>
-          <h1 className="mt-3 font-display text-[16px] leading-[1.5] text-paper-white uppercase">
+          <h1 className="mt-4 font-display text-[20px] leading-[1.35] text-paper-white uppercase">
             Who&rsquo;s asking?
           </h1>
           <p className="mt-2 text-[19px] leading-[1.45] text-ink-100">
@@ -79,7 +79,7 @@ export default async function DoorPage() {
                           {manager.displayName}
                         </span>
                       </span>
-                      <span className="shrink-0 font-display text-[9px] text-ink-500 uppercase">
+                      <span className="shrink-0 font-display text-[11px] text-ink-500 uppercase">
                         {manager.claimed ? 'taken' : 'on the hook'}
                       </span>
                     </Link>

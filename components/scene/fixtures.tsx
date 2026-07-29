@@ -104,10 +104,10 @@ export function HangingSign({ top, bottom }: { top: string; bottom: string }) {
     <div className="anim-sway absolute top-0 right-4 z-10 origin-top">
       <div aria-hidden="true" className="mx-auto h-4 w-px bg-ink-300" />
       <div className="pixel-edge border-2 border-red-dark bg-paper-white px-2.5 py-1 text-center">
-        <span className="block font-display text-[9px] leading-[1.5] text-red-dark">
+        <span className="block font-display text-[11px] leading-[1.4] text-red-dark">
           {top}
         </span>
-        <span className="mt-0.5 block font-display text-[7px] leading-[1.6] text-ink-500">
+        <span className="mt-0.5 block font-display text-[8px] leading-[1.5] text-ink-500">
           {bottom}
         </span>
       </div>

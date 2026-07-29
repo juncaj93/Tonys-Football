@@ -55,7 +55,7 @@ function Outline({ shape }: { shape: Shape }) {
       <>
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-[6%] bottom-0 h-[9%] translate-y-1/2 rounded-[50%]"
+          className="room-mark absolute inset-x-[6%] bottom-0 h-[9%] translate-y-1/2 rounded-[50%]"
           style={{
             background:
               'radial-gradient(closest-side, rgba(255,231,180,0.8), rgba(255,217,138,0.32) 55%, transparent)',
@@ -63,7 +63,7 @@ function Outline({ shape }: { shape: Shape }) {
         />
         <span
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-[14%] bottom-0 h-[26%]"
+          className="room-mark absolute inset-x-[14%] bottom-0 h-[26%]"
           style={{
             background: 'linear-gradient(to top, rgba(255,217,138,0.22), transparent)',
           }}
@@ -78,20 +78,11 @@ function Outline({ shape }: { shape: Shape }) {
     opening: 'rounded-[7px]',
   }[shape];
 
-  return (
-    <span
-      aria-hidden="true"
-      className={`pointer-events-none absolute inset-0 ${radius}`}
-      style={{
-        // A line of warm light sitting on the object's own edge, a breath of it
-        // falling outside, and the faintest wash within so that a dark object
-        // still reads as picked out rather than merely bordered.
-        boxShadow:
-          'inset 0 0 0 1.5px rgba(255,217,138,0.85), inset 0 0 7px rgba(255,217,138,0.22), 0 0 6px rgba(255,217,138,0.28)',
-        backgroundColor: 'rgba(255,217,138,0.10)',
-      }}
-    />
-  );
+  // A line of warm light sitting on the object's own edge and a breath of it
+  // falling outside. Deliberately **no fill at rest** — this outline is on all
+  // the time now, and a wash sitting permanently over the case would dull the
+  // art it is pointing at. The fill only arrives in the strong state.
+  return <span aria-hidden="true" className={`room-mark room-mark-edge absolute inset-0 ${radius}`} />;
 }
 
 /**
@@ -116,9 +107,7 @@ function Marker({ spot }: { spot: Hotspot }) {
   return (
     <span
       aria-hidden="true"
-      className={`absolute opacity-0 transition-opacity duration-300 group-active:opacity-100 group-focus-visible:opacity-100 ${
-        revealed ? 'room-reveal opacity-100' : ''
-      }`}
+      className={`absolute ${revealed ? 'room-mark-strong' : ''}`}
       style={{
         left: `${(((spot.rect.x - box.x) / box.width) * 100).toFixed(3)}%`,
         top: `${(((spot.rect.y - box.y) / box.height) * 100).toFixed(3)}%`,
@@ -129,49 +118,6 @@ function Marker({ spot }: { spot: Hotspot }) {
       <Outline shape={spot.shape} />
       <FocusLabel spot={spot} />
     </span>
-  );
-}
-
-/**
- * The glint.
- *
- * The room's edges only appear on arrival, on touch, on focus, or on request —
- * which is restrained, and was too restrained: half a minute after walking in,
- * the parlor gave no sign at all of which parts of it were things. This is what
- * a point-and-click game does instead: a few pixels of light that catch on
- * anything you can pick up, slowly, forever.
- *
- * Four pixels, in the object's top-right corner, drifting between barely there
- * and clearly there on a long cycle. Each object is offset from the next so
- * they never blink in unison, which is what would turn a quiet room into an
- * attract screen. Under `prefers-reduced-motion` it holds still at a legible
- * opacity rather than pulsing — the information stays, the movement goes.
- *
- * It sits *outside* the reveal marker on purpose: the marker is a state the
- * room enters and leaves, and this is simply true the whole time.
- */
-function Glint({ spot, index }: { spot: Hotspot; index: number }) {
-  // Anchored to the *object*, not to the tap box around it. The two differ by
-  // up to 10px on the small wall frames, which is enough for the glint to float
-  // in the middle of the wallpaper beside the thing it is pointing at.
-  const box = reachable(spot.rect);
-  const right = ((box.x + box.width - (spot.rect.x + spot.rect.width)) / box.width) * 100;
-  // A person's mark sits at the shoulder. On everything else it sits on the
-  // top corner, the way a highlight catches the edge of an object.
-  const down = spot.shape === 'figure' ? spot.rect.height * 0.34 : 0;
-  const top = ((spot.rect.y + down - box.y) / box.height) * 100;
-
-  return (
-    <span
-      aria-hidden="true"
-      className="room-glint pointer-events-none absolute"
-      style={{
-        right: `calc(${right.toFixed(3)}% - 3px)`,
-        top: `calc(${top.toFixed(3)}% - 3px)`,
-        // Staggered by object, so the room shimmers rather than flashing.
-        animationDelay: `${String(index * 760)}ms`,
-      }}
-    />
   );
 }
 
@@ -191,7 +137,7 @@ function FocusLabel({ spot }: { spot: Hotspot }) {
 
   return (
     <span
-      className={`pointer-events-none absolute top-full mt-1.5 rounded-[2px] border border-amber-mid/30 bg-ink-900/95 px-1.5 py-1 font-display text-[9px] leading-[1.5] whitespace-nowrap text-paper-mid opacity-0 group-focus-visible:opacity-100 ${
+      className={`pointer-events-none absolute top-full mt-1.5 rounded-[2px] border border-amber-mid/30 bg-ink-900/95 px-1.5 py-1 font-display text-[11px] leading-[1.4] whitespace-nowrap text-paper-mid opacity-0 group-focus-visible:opacity-100 ${
         nearRight ? 'right-0' : 'left-0'
       }`}
     >
@@ -202,13 +148,10 @@ function FocusLabel({ spot }: { spot: Hotspot }) {
 
 export function RoomObject({
   spot,
-  index,
   title,
   children,
 }: {
   spot: Hotspot;
-  /** Position in the room, used only to stagger the glint. */
-  index: number;
   /** Heading inside the opened sheet. */
   title: string;
   children: React.ReactNode;
@@ -230,7 +173,6 @@ export function RoomObject({
         style={place(reachable(spot.rect))}
       >
         <Marker spot={spot} />
-        <Glint spot={spot} index={index} />
       </button>
 
       {open && (
@@ -250,7 +192,7 @@ export function RoomObject({
 }
 
 /** A part of the room that leads somewhere rather than opening in place. */
-export function RoomLink({ spot, index }: { spot: Hotspot; index: number }) {
+export function RoomLink({ spot }: { spot: Hotspot }) {
   if (spot.href === undefined) throw new Error(`${spot.id} leads nowhere`);
 
   return (
@@ -261,7 +203,6 @@ export function RoomLink({ spot, index }: { spot: Hotspot; index: number }) {
       style={place(reachable(spot.rect))}
     >
       <Marker spot={spot} />
-      <Glint spot={spot} index={index} />
     </Link>
   );
 }
@@ -325,23 +266,23 @@ function Sheet({
         {/* The strip of light the counter throws onto whatever you pick up. */}
         <div aria-hidden="true" className="sticky top-0 z-20 h-[2px] bg-amber-mid/45" />
 
-        <div className="sticky top-[2px] z-10 flex items-center justify-between gap-3 border-b-2 border-wood-dark/30 bg-paper-mid px-4 pt-3 pb-2.5">
+        <div className="sticky top-[2px] z-10 flex items-center justify-between gap-3 border-b-2 border-wood-dark/30 bg-paper-mid px-4 pt-4 pb-3.5">
           <h2
             id={headingId}
-            className="font-display text-[10px] leading-[1.6] text-ink-900/80 uppercase"
+            className="font-display text-[15px] leading-[1.4] text-ink-900 uppercase"
           >
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="pixel-edge flex min-h-[44px] shrink-0 items-center justify-center border-2 border-wood-dark/50 bg-paper-dark/50 px-3.5 font-display text-[10px] leading-[1.6] text-ink-700 uppercase active:translate-y-px"
+            className="pixel-edge flex min-h-[44px] shrink-0 items-center justify-center border-2 border-wood-dark/50 bg-paper-dark/50 px-3.5 font-display text-[11px] leading-[1.5] text-ink-700 uppercase active:translate-y-px"
           >
             Close
           </button>
         </div>
 
-        <div className="px-4 pt-4">{children}</div>
+        <div className="px-4 pt-5">{children}</div>
       </div>
     </div>
   );

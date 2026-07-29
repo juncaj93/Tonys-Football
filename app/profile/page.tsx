@@ -24,7 +24,7 @@ export const dynamic = 'force-dynamic';
 
 /** Every control on this page is the same slab of painted board. */
 const ACTION =
-  'pixel-edge flex w-full min-h-[52px] items-center justify-center border-2 px-4 text-center font-display text-[10px] uppercase active:translate-y-px';
+  'pixel-edge flex w-full min-h-[52px] items-center justify-center border-2 px-4 text-center font-display text-[12px] uppercase active:translate-y-px';
 
 export default async function ProfilePage() {
   const { user, session } = await requireUser();
@@ -55,10 +55,10 @@ export default async function ProfilePage() {
               */}
             <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="font-display text-[9px] text-ink-900 uppercase">
+                <span className="font-display text-[12px] text-ink-900 uppercase">
                   Cut for
                 </span>
-                <span className="font-display text-[9px] text-ink-500">
+                <span className="font-display text-[11px] text-ink-500">
                   {devices.length} device{devices.length === 1 ? '' : 's'}
                 </span>
               </div>

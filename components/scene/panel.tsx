@@ -84,7 +84,7 @@ export function SignPlate({
 
   return (
     <span
-      className={`relative inline-flex items-center border-2 px-2.5 py-1 font-display text-[9px] leading-[1.6] uppercase shadow-[2px_2px_0_rgba(0,0,0,0.4)] ${tones[tone]} ${className}`}
+      className={`relative inline-flex items-center border-2 px-2.5 py-1 font-display text-[11px] leading-[1.5] uppercase shadow-[2px_2px_0_rgba(0,0,0,0.4)] ${tones[tone]} ${className}`}
     >
       <span aria-hidden="true" className="absolute top-[3px] left-[3px] h-[3px] w-[3px] bg-black/40" />
       <span
@@ -106,7 +106,7 @@ export function SignPlate({
  */
 export function PanelHeading({ children }: { children: React.ReactNode }) {
   return (
-    <h1 className="font-display text-[13px] leading-[1.5] text-ink-900 uppercase">
+    <h1 className="font-display text-[17px] leading-[1.35] text-ink-900 uppercase">
       {children}
     </h1>
   );
@@ -141,10 +141,10 @@ export function ClosedRoom({
     <main className="mx-auto w-full max-w-md flex-1 px-4 pt-3 pb-8">
       <PixelPanel tone="paper" className="px-4 pt-4 pb-5">
         <SignPlate tone="red">{sign}</SignPlate>
-        <div className="mt-3">
+        <div className="mt-4">
           <PanelHeading>{title}</PanelHeading>
         </div>
-        <div className="mt-3 space-y-3 text-[19px] leading-[1.45] text-ink-700">{children}</div>
+        <div className="mt-4 space-y-3 text-[19px] leading-[1.45] text-ink-700">{children}</div>
       </PixelPanel>
 
       {/*
@@ -170,7 +170,7 @@ export function ReturnPlate() {
   return (
     <Link
       href="/"
-      className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-[#1c1113] font-display text-[10px] leading-[1.6] text-paper-mid uppercase active:translate-y-px"
+      className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-[#1c1113] font-display text-[12px] leading-[1.5] text-paper-mid uppercase active:translate-y-px"
     >
       &larr;&nbsp;&nbsp;Back to the counter
     </Link>

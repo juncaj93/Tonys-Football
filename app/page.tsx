@@ -135,7 +135,7 @@ export default async function ParlorPage() {
             {/* ---- Things in the room you can touch --------------------- */}
 
             {/* Tony. He greets you, and hands over your slip. */}
-            <RoomObject spot={hotspot('tony')} index={0} title="Tony">
+            <RoomObject spot={hotspot('tony')} title="Tony">
               <p className="text-[20px] leading-[1.4]">{line}</p>
               <div className="mt-5 border-t border-dashed border-ink-300/70 pt-5 pb-2">
                 <ReceiptSlip receipt={receipt} name={user.displayName} />
@@ -143,7 +143,7 @@ export default async function ParlorPage() {
             </RoomObject>
 
             {/* The empty frame screwed to the wall on the left. */}
-            <RoomObject spot={hotspot('tonight')} index={1} title="Tonight at Tony's">
+            <RoomObject spot={hotspot('tonight')} title="Tonight at Tony's">
               {tonight.length === 0 ? (
                 <p className="pb-3 text-[19px] text-ink-500">Nothing on the board.</p>
               ) : (
@@ -161,13 +161,13 @@ export default async function ParlorPage() {
             </RoomObject>
 
             {/* The poster frame by the window, where the paper goes up on a Tuesday. */}
-            <RoomLink spot={hotspot('slice')} index={2} />
+            <RoomLink spot={hotspot('slice')} />
 
             {/* The lit case on the counter. */}
-            <RoomLink spot={hotspot('collection')} index={3} />
+            <RoomLink spot={hotspot('collection')} />
 
             {/* The booths at the back, and the rooms beyond them. */}
-            <RoomLink spot={hotspot('rooms')} index={4} />
+            <RoomLink spot={hotspot('rooms')} />
           </div>
 
           {/*
@@ -189,16 +189,32 @@ export default async function ParlorPage() {
                 <span className="ml-[8px] h-[4px] w-[8px] bg-amber-mid/45" />
                 <span className="ml-[4px] h-[4px] w-[16px] bg-[#1c1113]" />
               </span>
-              <p className="pixel-edge relative border-2 border-wood-dark bg-[#1c1113] px-3 py-2.5 text-[19px] leading-[1.4] text-paper-white">
+              {/*
+                * Speaker on its own line, not as a prefix.
+                *
+                * Inline, "TONY" was a nine-pixel label that the sentence
+                * immediately swallowed — you could not tell at a glance who was
+                * talking, which is the one thing a dialogue box exists to say.
+                * It now sits above the line, in the display face, at a size
+                * that reads as a name, with a rule under it doing the
+                * separating so the two never crowd each other.
+                */}
+              <div className="pixel-edge relative border-2 border-wood-dark bg-[#1c1113] px-3.5 pt-2.5 pb-3">
                 <span
                   aria-hidden="true"
                   className="absolute inset-x-0 top-0 h-[2px] bg-amber-mid/45"
                 />
-                <span className="mr-2 font-display text-[9px] text-amber-mid/85 uppercase">
+                <p className="font-display text-[13px] leading-none text-amber-mid uppercase">
                   Tony
-                </span>
-                <SpokenLine>{line}</SpokenLine>
-              </p>
+                </p>
+                <div
+                  aria-hidden="true"
+                  className="mt-2 mb-2 h-px bg-gradient-to-r from-amber-mid/35 to-transparent"
+                />
+                <p className="text-[20px] leading-[1.35] text-paper-white">
+                  <SpokenLine>{line}</SpokenLine>
+                </p>
+              </div>
             </div>
           </div>
         </main>

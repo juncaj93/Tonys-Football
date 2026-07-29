@@ -526,142 +526,75 @@ button {
   transition: none;
 }
 
-/*
- * The introduction: interactive objects take their warm edge and breathe twice,
- * then the room goes quiet. Two cycles, not infinite — a room that pulses
- * forever is an arcade attract screen.
- */
-@keyframes object-breathes {
-  0%,
-  100% {
-    opacity: 0.55;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-.room-reveal {
-  animation: object-breathes 1500ms ease-in-out 2;
-}
-
-/*
- * The glint: four pixels of light that catch on anything you can pick up.
- *
- * The edges only appear on arrival, on touch, on focus or on request, which
- * turned out to be too quiet — half a minute into the room there was no sign
- * at all of which parts of it were things. This is what a point-and-click game
- * does instead, and it runs forever because "you can touch this" is true
- * forever.
- *
- * Most of the cycle is spent nearly invisible. Each object is offset from the
- * next, so the room shimmers rather than flashing in unison.
- */
 /* --- Knowing what you can touch ------------------------------------------ *
  *
- * Three layers, and the reason there are three is that one was never enough.
+ * One idea, not three: **every object you can touch is outlined, all the
+ * time.** The outline sits on the object's own shape — the frame gets a frame,
+ * the case gets the case, and Tony gets the pool of light he is standing in,
+ * because a rectangle drawn around a person is a button with a man inside it.
  *
- *   1. **Always** — a bracket of warm light on the object's top-right corner,
- *      two short arms meeting at a point. Present from the moment the room
- *      paints and never removed, so nobody is ever guessing. It is a corner
- *      mark rather than an outline: enough to say "this is a thing", not
- *      enough to trace the thing.
+ * It breathes, slowly, between about four-tenths and three-quarters opacity on
+ * a three-and-a-half second cycle. Slow enough to read as light rather than as
+ * a blinking indicator, present enough that nobody ever has to wonder which
+ * parts of the room are things.
  *
- *   2. **Periodically** — that bracket brightens and a small cross opens over
- *      it for about half a second, then closes. Staggered per object, so what
- *      catches your eye is one thing at a time rather than the whole wall
- *      blinking.
+ * At rest it is **an edge only, with no fill.** A wash sitting permanently over
+ * the display case would dull the art the outline exists to point at. The fill
+ * arrives with the strong state and leaves with it.
  *
- *   3. **On demand** — the arrival, `look around`, touch and keyboard focus
- *      all bring up the full outline on the object's own shape. That is the
- *      loud layer, and it is the only one that ever goes away.
- *
- * The failure this replaces: a brief reveal followed by almost nothing, which
- * left the room looking decorative rather than playable thirty seconds in.
+ * This replaces a corner bracket and a periodic sparkle, which were subtle to
+ * the point of being a puzzle: you had to already know the objects were there
+ * to notice the marks telling you they were.
  */
-.room-glint {
-  width: 9px;
-  height: 9px;
-  /* Two arms meeting at the corner — a bracket, not a box. */
-  border-top: 2px solid rgba(255, 217, 138, 0.75);
-  border-right: 2px solid rgba(255, 217, 138, 0.75);
-  animation: glint-breathe 4200ms ease-in-out infinite;
-  animation-delay: inherit;
+/* The rhythm. Everything that marks an object shares it. */
+.room-mark {
+  pointer-events: none;
+  opacity: 0.45;
+  animation: mark-breathes 3400ms ease-in-out infinite;
+  transition:
+    opacity 220ms ease-out,
+    background-color 220ms ease-out;
 }
 
-@keyframes glint-breathe {
+/*
+ * The edge, for objects that have one. Tony does not: he gets the pool of
+ * light he is standing in, which carries its own gradient and would be ruined
+ * by a rectangle drawn round it.
+ */
+.room-mark-edge {
+  box-shadow:
+    inset 0 0 0 1.5px rgba(255, 217, 138, 0.9),
+    0 0 5px rgba(255, 217, 138, 0.35);
+}
+
+@keyframes mark-breathes {
   0%,
-  52%,
   100% {
-    border-color: rgba(255, 217, 138, 0.7);
-    box-shadow: none;
+    opacity: 0.4;
   }
-  66%,
-  80% {
-    border-color: var(--color-amber-glow);
-    box-shadow: 0 0 6px rgba(255, 217, 138, 0.65);
+  50% {
+    opacity: 0.75;
   }
 }
 
-/* The cross that opens over the bracket at the top of each cycle. */
-.room-glint::before,
-.room-glint::after {
-  content: '';
-  position: absolute;
-  top: -1px;
-  right: -1px;
-  background-color: var(--color-amber-glow);
-  animation: sparkle 4200ms ease-in-out infinite;
-  animation-delay: inherit;
-}
-
-.room-glint::before {
-  width: 16px;
-  height: 2px;
-  margin: 0 -7px 0 0;
-}
-
-.room-glint::after {
-  width: 2px;
-  height: 16px;
-  margin: -7px 0 0 0;
-}
-
-@keyframes sparkle {
-  0%,
-  58%,
-  100% {
-    opacity: 0;
-    transform: scale(0.2);
-  }
-  70%,
-  78% {
-    opacity: 1;
-    transform: scale(1);
-  }
-  88% {
-    opacity: 0;
-    transform: scale(0.4);
-  }
+/*
+ * Stronger, briefly: on arrival, on `look around`, while a finger is down, and
+ * on keyboard focus. The pulse stops so the object holds still while you are
+ * looking straight at it, and the fill arrives to separate it from the wall.
+ */
+.room-mark-strong .room-mark,
+.group:active .room-mark,
+.group:focus-visible .room-mark {
+  animation: none;
+  opacity: 1;
+  background-color: rgba(255, 217, 138, 0.12);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /*
-   * The information stays; only the movement goes. The bracket brightens to
-   * carry the whole job, and the cross holds at a fixed size instead of
-   * opening and closing.
-   */
-  .room-glint {
+  /* The outline stays; the breathing stops. */
+  .room-mark {
     animation: none;
-    border-color: var(--color-amber-glow);
-    box-shadow: 0 0 5px rgba(255, 217, 138, 0.5);
-  }
-
-  .room-glint::before,
-  .room-glint::after {
-    animation: none;
-    opacity: 0.45;
-    transform: scale(0.55);
+    opacity: 0.65;
   }
 }
 
