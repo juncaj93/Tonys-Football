@@ -1,6 +1,6 @@
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
-import { COUNTER_EDGE, ROOM } from '@/lib/parlor/hotspots';
+import { COUNTER_EDGE, ROOM } from '@/lib/parlor/objects';
 
 /**
  * The parlor, dimmed, behind an interior screen.

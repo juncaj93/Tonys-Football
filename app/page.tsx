@@ -1,9 +1,8 @@
 import Link from 'next/link';
 
-import { ReceiptSlip } from '@/components/receipt';
 import { Arriving, ShowInteractables } from '@/components/scene/arrival';
-import { RoomLink, RoomObject } from '@/components/scene/room-object';
-import { SpokenLine } from '@/components/scene/spoken-line';
+import { RoomDisplay, RoomDoor } from '@/components/scene/room-object';
+import { TonyToy } from '@/components/scene/tony-toy';
 import { Page } from '@/components/shell';
 import { TonyAtTheCounter } from '@/components/tony';
 import { AssetView } from '@/lib/assets/placeholder';
@@ -12,8 +11,7 @@ import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
 import { getDb } from '@/lib/db';
-import { COUNTER_EDGE, ROOM, TONY, hotspot, place } from '@/lib/parlor/hotspots';
-import { receiptFor } from '@/lib/parlor/receipt';
+import { COUNTER_EDGE, ROOM, TONY, roomObject } from '@/lib/parlor/objects';
 import { seasonClock } from '@/lib/parlor/season';
 import { tonightBoard } from '@/lib/parlor/tonight';
 import { loadTags } from '@/lib/tags/repository';
@@ -24,10 +22,9 @@ import { loadTags } from '@/lib/tags/repository';
  * You are standing at the counter, and that is the whole page. The room fills
  * the viewport, Tony is behind it, and **the shop is the navigation** — there is
  * no tab bar, because a restaurant with a tab bar screwed along the bottom of it
- * is an app with a themed background. You get to the Slice by looking at the
- * poster frame by the window and to your collection by looking in the case on
- * the counter. Nothing here scrolls; what you pick up opens over the room and
- * scrolls on its own.
+ * is an app with a themed background. You get to your collection by looking in
+ * the case on the counter. Nothing here scrolls; what you pick up opens over the
+ * room and scrolls on its own.
  *
  * ## The room is three layers
  *
@@ -42,9 +39,14 @@ import { loadTags } from '@/lib/tags/repository';
  *
  * ## The measurements
  *
- * Every rectangle lives in `lib/parlor/hotspots.ts`, read off the art in the
- * units it was drawn in, with the arithmetic under test. Nothing here is a
- * guess and nothing is a pixel.
+ * ## What is interactive, and why
+ *
+ * `lib/parlor/objects.ts` is the map, and the rule is the ruling's: an object
+ * is interactive because it has an understandable purpose, not because it is
+ * painted well. Doors go somewhere and are the only kind that advertise;
+ * Displays are read in place; Toys answer; scenery is scenery and is not in the
+ * markup at all. Every shape is a polygon traced on the art, which is both the
+ * outline that glows and the region that takes the tap.
  */
 
 // The greeting is chosen per manager and logged on the first visit of each day,
@@ -56,10 +58,9 @@ export default async function ParlorPage() {
   const db = getDb();
   const clock = seasonClock();
 
-  const [tags, managers, receipt, tonight] = await Promise.all([
+  const [tags, managers, tonight] = await Promise.all([
     loadTags(db),
     listDoorManagers(db),
-    receiptFor(db, user.id),
     tonightBoard(db),
   ]);
 
@@ -117,7 +118,15 @@ export default async function ParlorPage() {
             <AmbientLife />
 
             {/* 2. Tony, standing in the room. */}
-            <div className="tony-mark absolute z-10" style={place(TONY)}>
+            <div
+              className="tony-mark absolute z-10"
+              style={{
+                left: `${((TONY.x / ROOM.width) * 100).toFixed(3)}%`,
+                top: `${((TONY.y / ROOM.height) * 100).toFixed(3)}%`,
+                width: `${((TONY.width / ROOM.width) * 100).toFixed(3)}%`,
+                height: `${((TONY.height / ROOM.height) * 100).toFixed(3)}%`,
+              }}
+            >
               <TonyAtTheCounter
                 slug={greeting?.tonySlug ?? 'character_tony_neutral'}
                 mood={greeting?.expression ?? 'neutral'}
@@ -132,18 +141,20 @@ export default async function ParlorPage() {
               <AssetView resolution={resolveAsset('zone_counter_front')} />
             </div>
 
-            {/* ---- Things in the room you can touch --------------------- */}
+            {/* ---- What is interactive, and why ------------------------- */}
 
-            {/* Tony. He greets you, and hands over your slip. */}
-            <RoomObject spot={hotspot('tony')} title="Tony">
-              <p className="text-[20px] leading-[1.4]">{line}</p>
-              <div className="mt-5 border-t border-dashed border-ink-300/70 pt-5 pb-2">
-                <ReceiptSlip receipt={receipt} name={user.displayName} />
-              </div>
-            </RoomObject>
+            {/*
+              * The display case: the one available Door the artwork contains.
+              * Doors are the only kind that advertise, so this is the only
+              * thing in the room carrying a persistent outline.
+              */}
+            <RoomDoor spec={roomObject('collection')} />
 
-            {/* The empty frame screwed to the wall on the left. */}
-            <RoomObject spot={hotspot('tonight')} title="Tonight at Tony's">
+            {/*
+              * The blank board on the wall. A Display: read in place, no route,
+              * no highlight.
+              */}
+            <RoomDisplay spec={roomObject('tonight')} title="Tonight at Tony's">
               {tonight.length === 0 ? (
                 <p className="pb-3 text-[19px] text-ink-500">Nothing on the board.</p>
               ) : (
@@ -158,69 +169,30 @@ export default async function ParlorPage() {
                   ))}
                 </ul>
               )}
-            </RoomObject>
+            </RoomDisplay>
 
-            {/* The poster frame by the window, where the paper goes up on a Tuesday. */}
-            <RoomLink spot={hotspot('slice')} />
+            {/*
+              * Tony. A Toy: he answers and leads nowhere, so no outline. His
+              * line and its box live in the component with him.
+              */}
+            <TonyToy spec={roomObject('tony')} greeting={line} />
 
-            {/* The lit case on the counter. */}
-            <RoomLink spot={hotspot('collection')} />
-
-            {/* The booths at the back, and the rooms beyond them. */}
-            <RoomLink spot={hotspot('rooms')} />
           </div>
 
-          {/*
-            * What Tony is saying.
-            *
-            * Pinned to the bottom of the *screen* rather than to the room, so it
-            * survives whatever the floor does on a short phone and stays clear
-            * of the home indicator. The notch on its top edge points back at
-            * him: without it this is a dark card floating over a restaurant, and
-            * with it it is the man behind the counter talking to you.
-            */}
-          <div
-            className="tony-line pointer-events-none absolute inset-x-3 z-40"
-            style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
-          >
-            <div className="relative">
-              {/* A stepped tail, drawn in pixels rather than rotated. */}
-              <span aria-hidden="true" className="absolute -top-[8px] left-[36%] flex flex-col">
-                <span className="ml-[8px] h-[4px] w-[8px] bg-amber-mid/45" />
-                <span className="ml-[4px] h-[4px] w-[16px] bg-[#1c1113]" />
-              </span>
-              {/*
-                * Speaker on its own line, not as a prefix.
-                *
-                * Inline, "TONY" was a nine-pixel label that the sentence
-                * immediately swallowed — you could not tell at a glance who was
-                * talking, which is the one thing a dialogue box exists to say.
-                * It now sits above the line, in the display face, at a size
-                * that reads as a name, with a rule under it doing the
-                * separating so the two never crowd each other.
-                */}
-              <div className="pixel-edge relative border-2 border-wood-dark bg-[#1c1113] px-3.5 pt-2.5 pb-3">
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-x-0 top-0 h-[2px] bg-amber-mid/45"
-                />
-                <p className="font-display text-[13px] leading-none text-amber-mid uppercase">
-                  Tony
-                </p>
-                <div
-                  aria-hidden="true"
-                  className="mt-2 mb-2 h-px bg-gradient-to-r from-amber-mid/35 to-transparent"
-                />
-                <p className="text-[20px] leading-[1.35] text-paper-white">
-                  <SpokenLine>{line}</SpokenLine>
-                </p>
-              </div>
-            </div>
-          </div>
         </main>
       </Arriving>
     </Page>
   );
+}
+
+/** A rectangle on the drawing, as the percentages the browser wants. */
+function at(x: number, y: number, width: number, height: number) {
+  return {
+    left: `${((x / ROOM.width) * 100).toFixed(3)}%`,
+    top: `${((y / ROOM.height) * 100).toFixed(3)}%`,
+    width: `${((width / ROOM.width) * 100).toFixed(3)}%`,
+    height: `${((height / ROOM.height) * 100).toFixed(3)}%`,
+  };
 }
 
 /**
@@ -239,7 +211,7 @@ function AmbientLife() {
       <span
         className="anim-fountain absolute rounded-[1px]"
         style={{
-          ...place({ x: 36, y: 231, width: 30, height: 9 }),
+          ...at(36, 231, 30, 9),
           background:
             'linear-gradient(90deg, rgba(216,244,255,0.5), rgba(255,217,138,0.45), rgba(255,138,120,0.45))',
           mixBlendMode: 'screen',
@@ -247,7 +219,7 @@ function AmbientLife() {
       />
 
       {/* A highlight travelling across the warmer's glass. */}
-      <span className="absolute overflow-hidden" style={place({ x: 186, y: 241, width: 68, height: 24 })}>
+      <span className="absolute overflow-hidden" style={at(186, 241, 68, 24)}>
         <span
           className="anim-sheen absolute inset-y-0 w-1/3 -skew-x-12"
           style={{
@@ -261,7 +233,7 @@ function AmbientLife() {
       <span
         className="anim-flicker absolute rounded-full"
         style={{
-          ...place({ x: 196, y: 20, width: 26, height: 12 }),
+          ...at(196, 20, 26, 12),
           background: 'radial-gradient(closest-side, rgba(255,217,138,0.75), transparent)',
         }}
       />

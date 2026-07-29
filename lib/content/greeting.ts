@@ -220,3 +220,61 @@ function alreadyShownToday(
   const entryId = latest.entryId;
   return candidates.find((entry) => entry.id === entryId) ?? null;
 }
+
+/**
+ * Another true thing, on demand.
+ *
+ * Tapping Tony is a **Toy** interaction: he answers, and answering must not
+ * spend the day's greeting. So this runs the same eligibility pipeline over the
+ * same verified tags with **no usage history and no logging** — every line that
+ * is true of this manager is eligible, and nothing about the draw is recorded.
+ *
+ * The result is a line that is as true as the greeting and has no bearing on
+ * it. Returns null when the manager has no eligible line at all, which the
+ * parlor renders as Tony simply not having anything to add.
+ */
+export async function anotherLineFor(
+  db: Database,
+  request: GreetingRequest,
+): Promise<string | null> {
+  const candidates = await db
+    .select({
+      id: contentEntries.id,
+      key: contentEntries.key,
+      requiredTags: contentEntries.requiredTags,
+      excludedTags: contentEntries.excludedTags,
+      templateText: contentEntries.templateText,
+      weight: contentEntries.weight,
+      cooldownDays: contentEntries.cooldownDays,
+      maxUsesPerSeason: contentEntries.maxUsesPerSeason,
+      sensitivity: contentEntries.sensitivity,
+      expression: contentEntries.expression,
+    })
+    .from(contentEntries)
+    .where(
+      and(
+        eq(contentEntries.surface, GREETING_SURFACE),
+        eq(contentEntries.kind, 'tony_line'),
+        eq(contentEntries.active, true),
+      ),
+    );
+
+  if (candidates.length === 0) return null;
+
+  const selection = selectContent<GreetingEntry>({
+    candidates,
+    tags: request.tags,
+    variables: {
+      name: request.displayName,
+      days: request.daysUntilKickoff === null ? null : String(request.daysUntilKickoff),
+    },
+    // No history, and nothing written back. This draw is not the day's line.
+    usage: [],
+    now: now(),
+    audienceSize: (entry) =>
+      request.leagueTags.filter((held) => entry.requiredTags.every((tag) => held.has(tag))).length,
+    ...(request.random !== undefined ? { random: request.random } : {}),
+  });
+
+  return selection?.text ?? null;
+}

@@ -528,73 +528,117 @@ button {
 
 /* --- Knowing what you can touch ------------------------------------------ *
  *
- * One idea, not three: **every object you can touch is outlined, all the
- * time.** The outline sits on the object's own shape — the frame gets a frame,
- * the case gets the case, and Tony gets the pool of light he is standing in,
- * because a rectangle drawn around a person is a button with a man inside it.
+ * **Only available Doors glow, and they glow all the time.**
  *
- * It breathes, slowly, between about four-tenths and three-quarters opacity on
- * a three-and-a-half second cycle. Slow enough to read as light rather than as
- * a blinking indicator, present enough that nobody ever has to wonder which
- * parts of the room are things.
+ * A Door goes somewhere; that is a promise the room should keep making. A
+ * Display is read where it hangs and a Toy answers back — neither is a way out,
+ * so neither advertises. Scenery does not appear in the markup at all.
  *
- * At rest it is **an edge only, with no fill.** A wash sitting permanently over
- * the display case would dull the art the outline exists to point at. The fill
- * arrives with the strong state and leaves with it.
+ * The glow is drawn on the object's own polygon rather than on a box around it,
+ * so it follows the glass of the display case instead of fencing it.
+ * `vector-effect: non-scaling-stroke` keeps every stroke at its authored width
+ * however far the room is scaled, which is what stops a 3px line becoming a
+ * 3.6px line on one phone and 4px on another.
  *
- * This replaces a corner bracket and a periodic sparkle, which were subtle to
- * the point of being a puzzle: you had to already know the objects were there
- * to notice the marks telling you they were.
+ * ## Why it is a lit object and not an outlined one
+ *
+ * The first attempt was a thin warm line, and on a phone it disappeared: the
+ * display case is lit glass over a red counter, so a pale 2px stroke reads as
+ * one more highlight in artwork that is already full of them. Three things fix
+ * that, and all three are needed.
+ *
+ *   1. **The object fills.** A wash inside the polygon lights the case itself
+ *      rather than fencing it, and area survives being looked at sideways in a
+ *      way a hairline never does.
+ *   2. **The dark contour is constant.** It does not pulse. A light line needs
+ *      something to sit against at every point of the cycle, and against this
+ *      art the dark pass is doing most of the separating.
+ *   3. **The light edge is 3px and nearly white at its peak.** Warm-on-warm was
+ *      the whole problem; #fff4d8 is outside the drawing's range.
  */
-/* The rhythm. Everything that marks an object shares it. */
-.room-mark {
-  pointer-events: none;
-  opacity: 0.45;
-  animation: mark-breathes 3400ms ease-in-out infinite;
-  transition:
-    opacity 220ms ease-out,
-    background-color 220ms ease-out;
+.door-wash {
+  stroke: none;
+  fill: rgba(255, 219, 148, 0.16);
+  animation: door-breathes 3400ms ease-in-out infinite;
+  transition: opacity 200ms ease-out;
 }
 
-/*
- * The edge, for objects that have one. Tony does not: he gets the pool of
- * light he is standing in, which carries its own gradient and would be ruined
- * by a rectangle drawn round it.
- */
-.room-mark-edge {
-  box-shadow:
-    inset 0 0 0 1.5px rgba(255, 217, 138, 0.9),
-    0 0 5px rgba(255, 217, 138, 0.35);
+/* Constant, not breathing — see (2) above. */
+.door-shadow {
+  fill: none;
+  stroke: rgba(22, 13, 15, 0.85);
+  stroke-width: 7;
+  stroke-linejoin: round;
+  opacity: 0.9;
+  transition: opacity 200ms ease-out;
 }
 
-@keyframes mark-breathes {
+.door-edge {
+  fill: none;
+  stroke: #fff4d8;
+  stroke-width: 3;
+  stroke-linejoin: round;
+  animation: door-breathes 3400ms ease-in-out infinite;
+  transition: opacity 200ms ease-out;
+}
+
+@keyframes door-breathes {
   0%,
   100% {
-    opacity: 0.4;
+    opacity: 0.62;
   }
   50% {
-    opacity: 0.75;
+    opacity: 1;
   }
 }
 
 /*
- * Stronger, briefly: on arrival, on `look around`, while a finger is down, and
- * on keyboard focus. The pulse stops so the object holds still while you are
- * looking straight at it, and the fill arrives to separate it from the wall.
+ * The same outline, on the things that do not advertise.
+ *
+ * A Display is read where it hangs and a Toy answers back; neither is a way out
+ * of the room, so neither claims your attention unasked. But "what can I touch"
+ * is a fair question, and the honest answer is the same outline the Doors wear —
+ * a *different* treatment for the same meaning would be the room contradicting
+ * itself. So it is drawn, and simply hidden until asked for.
  */
-.room-mark-strong .room-mark,
-.group:active .room-mark,
-.group:focus-visible .room-mark {
+.affordance-on-request {
+  opacity: 0;
+  transition: opacity 260ms ease-out;
+}
+
+.showing-taps .affordance-on-request,
+/* And while it is being pressed, so a Display confirms the tap it just took. */
+.room-shape:active .affordance-on-request,
+.room-shape:focus-visible .affordance-on-request {
+  opacity: 1;
+}
+
+/*
+ * Stronger, briefly: while a finger is down and on keyboard focus. The pulse
+ * stops so the object holds still while somebody is looking straight at it, and
+ * a wash arrives inside the outline to lift it off the counter.
+ */
+.room-shape:active .door-edge,
+.room-shape:focus-visible .door-edge,
+.room-shape:active .door-shadow,
+.room-shape:focus-visible .door-shadow,
+.room-shape:active .door-wash,
+.room-shape:focus-visible .door-wash {
   animation: none;
   opacity: 1;
-  background-color: rgba(255, 217, 138, 0.12);
+}
+
+.room-shape:active .door-wash,
+.room-shape:focus-visible .door-wash {
+  fill: rgba(255, 231, 180, 0.3);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  /* The outline stays; the breathing stops. */
-  .room-mark {
+  /* A static, lit object. The information stays; the movement goes. */
+  .door-edge,
+  .door-wash {
     animation: none;
-    opacity: 0.65;
+    opacity: 0.92;
   }
 }
 

@@ -3,156 +3,106 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 
-import { useArrival } from '@/components/scene/arrival';
-import { ROOM, place, reachable, type Hotspot, type Shape } from '@/lib/parlor/hotspots';
+import { ROOM, points, type RoomObjectSpec } from '@/lib/parlor/objects';
 
 /**
- * Things in the room you can touch.
+ * The things in the room, and the shape of each one.
  *
- * The parlor has no tab bar. You get to the Slice by looking at the poster
- * frame by the window and to your collection by looking in the case on the
- * counter, which only works if a first-time visitor can tell those are things
- * rather than scenery.
+ * ## The hit region is the object, not a box around it
  *
- * ## How they announce themselves
+ * Every interactive object is an SVG polygon traced along the thing itself,
+ * drawn in the room's own 320 x 569 coordinates over the art. The polygon takes
+ * the taps (`pointer-events: fill`) and the element wrapping it does not
+ * (`pointer-events: none`), so a tap lands only inside the outline. Tapping the
+ * wall an inch from the display case does nothing, which the old rectangles
+ * could not manage.
  *
- * Three ways, in descending order of how much of the room they cost:
+ * That one decision covers three of the ruling's requirements at once: the glow
+ * follows the silhouette because it *is* the silhouette, the hit region matches
+ * what a person believes they are tapping, and neighbours cannot overlap
+ * because polygons do not.
  *
- *   1. **On arrival**, once per session, every interactive object takes a thin
- *      warm edge and breathes twice, then goes quiet. This is the introduction;
- *      it is not a state the room lives in.
- *   2. **On touch or focus**, the same edge appears for as long as the contact
- *      lasts — the answer to "is this a thing?" arrives when the question is
- *      asked.
- *   3. **On request**, a small control by the counter brings the edges back for
- *      a few seconds.
+ * No tracing infrastructure was added. The outlines are four to six points each,
+ * read off the drawing by eye and checked by `lib/parlor/objects.test.ts` for
+ * size, containment and separation — which is simpler than any automated path
+ * extraction and, at this number of objects, more accurate.
  *
- * Nothing glows, nothing pulses forever, and the edge follows the object: a
- * frame gets a frame, the case gets the case, Tony gets a soft pool of light
- * because a rectangle drawn around a person is a button with a man inside it.
+ * ## Only Doors glow
  *
- * ## Underneath, they are ordinary controls
- *
- * Every one is a real `<button>` or `<a>` carrying a real label, in the tab
- * order, with a visible focus treatment. The environmental styling is on top of
- * that, never instead of it.
+ * A Door goes somewhere and says so, permanently. A Display is read in place
+ * and a Toy answers back; neither advertises, because neither is a way out of
+ * the room. Scenery is not here at all.
  */
 
-/** The edge itself. Drawn to the object's shape, never as a web button. */
-function Outline({ shape }: { shape: Shape }) {
-  if (shape === 'figure') {
-    // Tony gets light on the counter in front of him, not an outline around
-    // him. Two reasons. A rectangle drawn around a person is a button with a
-    // man inside it — and any closed shape big enough to contain him is also
-    // big enough to sit over his face, the wall logo, and half the back bar,
-    // which is exactly the "large ring obscuring the art" the room is trying to
-    // avoid. A pool of light where somebody is standing says the same thing and
-    // covers nothing that matters.
-    //
-    // He also lifts two pixels while this is showing; that is on `.tony-mark`
-    // in the stylesheet, because it moves the sprite rather than the hotspot.
-    return (
-      <>
-        <span
-          aria-hidden="true"
-          className="room-mark absolute inset-x-[6%] bottom-0 h-[9%] translate-y-1/2 rounded-[50%]"
-          style={{
-            background:
-              'radial-gradient(closest-side, rgba(255,231,180,0.8), rgba(255,217,138,0.32) 55%, transparent)',
-          }}
-        />
-        <span
-          aria-hidden="true"
-          className="room-mark absolute inset-x-[14%] bottom-0 h-[26%]"
-          style={{
-            background: 'linear-gradient(to top, rgba(255,217,138,0.22), transparent)',
-          }}
-        />
-      </>
-    );
-  }
+const VIEW_BOX = `0 0 ${String(ROOM.width)} ${String(ROOM.height)}`;
 
-  const radius = {
-    frame: 'rounded-[2px]',
-    case: 'rounded-[3px]',
-    opening: 'rounded-[7px]',
-  }[shape];
-
-  // A line of warm light sitting on the object's own edge and a breath of it
-  // falling outside. Deliberately **no fill at rest** — this outline is on all
-  // the time now, and a wash sitting permanently over the case would dull the
-  // art it is pointing at. The fill only arrives in the strong state.
-  return <span aria-hidden="true" className={`room-mark room-mark-edge absolute inset-0 ${radius}`} />;
-}
-
-/**
- * The shared body of every interactive object.
- *
- * ## The outline is on the object, not on the tap area
- *
- * The two are different rectangles on purpose. A picture frame on a wall is
- * about 25px across and a thumb is not, so the region that *responds* is grown
- * to 46px while the region that is *drawn* stays exactly the size of the frame.
- * Lighting the grown box instead would put a glowing rectangle of wall around
- * every small object — which is precisely the "oversized hotspot" look the room
- * is trying not to have.
- *
- * `revealed` is the room-wide introduction; `:focus-visible` and `:active` are
- * the per-object answer. Both use the same edge, so learning it once is enough.
+/*
+ * The affordance is a wash inside the shape, a hard dark contour, and a bright
+ * edge over both. No blur — a blurred glow beside quantized pixel art is exactly
+ * the seam this style exists to avoid. `non-scaling-stroke` keeps the strokes at
+ * their authored pixel width however far the room is scaled.
  */
-function Marker({ spot }: { spot: Hotspot }) {
-  const { revealed } = useArrival();
-  const box = reachable(spot.rect);
+
+/** An interactive shape: the tap region, and optionally the glow on it. */
+function Shape({ spec, glow }: { spec: RoomObjectSpec; glow: boolean }) {
+  const d = points(spec);
 
   return (
-    <span
+    <svg
       aria-hidden="true"
-      className={`absolute ${revealed ? 'room-mark-strong' : ''}`}
-      style={{
-        left: `${(((spot.rect.x - box.x) / box.width) * 100).toFixed(3)}%`,
-        top: `${(((spot.rect.y - box.y) / box.height) * 100).toFixed(3)}%`,
-        width: `${((spot.rect.width / box.width) * 100).toFixed(3)}%`,
-        height: `${((spot.rect.height / box.height) * 100).toFixed(3)}%`,
-      }}
+      viewBox={VIEW_BOX}
+      preserveAspectRatio="none"
+      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
     >
-      <Outline shape={spot.shape} />
-      <FocusLabel spot={spot} />
-    </span>
+      {/*
+        * Three passes: the object lights, then a constant dark contour, then the
+        * bright edge on top. A warm hairline on its own vanished against the lit
+        * glass of the display case — see `globals.css`.
+        *
+        * A Door carries this permanently. A Display or a Toy carries the same
+        * treatment but hidden, and "look around" fades it in for a few seconds —
+        * the outlines are identical because they mean the same thing ("this
+        * responds"); what differs is whether the room says it unprompted.
+        */}
+      <g className={glow ? undefined : 'affordance-on-request'}>
+        <polygon className="door-wash" points={d} />
+        <polygon className="door-shadow" points={d} vectorEffect="non-scaling-stroke" />
+        <polygon className="door-edge" points={d} vectorEffect="non-scaling-stroke" />
+      </g>
+      {/* The hit region. Invisible, exactly the object's shape. */}
+      <polygon points={d} fill="transparent" className="pointer-events-auto cursor-pointer" />
+    </svg>
   );
 }
 
 /**
- * What this object is, for somebody arriving by keyboard.
+ * A Door: it goes somewhere, and it is the only kind that advertises.
  *
- * A pointing device gets to hover and tap and find out; a keyboard gets a ring
- * of light and no idea what is inside it. The name is already on the control
- * for a screen reader, so this is the same information made visible — and only
- * on `:focus-visible`, which means it appears for the keyboard and never for a
- * thumb. Nothing is permanently labelled; the room stays a room.
+ * The anchor covers the room but takes no pointer events; the polygon inside it
+ * does, and the click bubbles up. Keyboard focus still lands on the anchor —
+ * `pointer-events` has no bearing on the tab order — and lights the same glow.
  */
-function FocusLabel({ spot }: { spot: Hotspot }) {
-  // Objects on the right of the room hang their label off their right edge, or
-  // it would be cut off by the wall.
-  const nearRight = spot.rect.x + spot.rect.width / 2 > ROOM.width * 0.7;
+export function RoomDoor({ spec }: { spec: RoomObjectSpec }) {
+  if (spec.href === undefined) throw new Error(`${spec.id} is a Door with nowhere to go`);
 
   return (
-    <span
-      className={`pointer-events-none absolute top-full mt-1.5 rounded-[2px] border border-amber-mid/30 bg-ink-900/95 px-1.5 py-1 font-display text-[11px] leading-[1.4] whitespace-nowrap text-paper-mid opacity-0 group-focus-visible:opacity-100 ${
-        nearRight ? 'right-0' : 'left-0'
-      }`}
+    <Link
+      href={spec.href}
+      aria-label={`${spec.label} — ${spec.destination ?? ''}`.trim()}
+      className="room-shape pointer-events-none absolute inset-0 z-30 outline-none"
     >
-      {spot.label}
-    </span>
+      <Shape spec={spec} glow />
+    </Link>
   );
 }
 
-export function RoomObject({
-  spot,
+/** A Display: read in place, over the room. No route, no glow. */
+export function RoomDisplay({
+  spec,
   title,
   children,
 }: {
-  spot: Hotspot;
-  /** Heading inside the opened sheet. */
+  spec: RoomObjectSpec;
   title: string;
   children: React.ReactNode;
 }) {
@@ -164,15 +114,14 @@ export function RoomObject({
       <button
         ref={trigger}
         type="button"
+        aria-label={spec.label}
+        aria-haspopup="dialog"
         onClick={() => {
           setOpen(true);
         }}
-        aria-label={spot.label}
-        aria-haspopup="dialog"
-        className="group absolute z-30 cursor-pointer outline-none"
-        style={place(reachable(spot.rect))}
+        className="room-shape pointer-events-none absolute inset-0 z-30 outline-none"
       >
-        <Marker spot={spot} />
+        <Shape spec={spec} glow={false} />
       </button>
 
       {open && (
@@ -180,7 +129,6 @@ export function RoomObject({
           title={title}
           onClose={() => {
             setOpen(false);
-            // Back to the object you picked up, not to the top of the room.
             trigger.current?.focus();
           }}
         >
@@ -191,28 +139,25 @@ export function RoomObject({
   );
 }
 
-/** A part of the room that leads somewhere rather than opening in place. */
-export function RoomLink({ spot }: { spot: Hotspot }) {
-  if (spot.href === undefined) throw new Error(`${spot.id} leads nowhere`);
-
+/** A Toy: it answers. No route, no glow, and it is not a way out of the room. */
+export function RoomToy({ spec, onTap }: { spec: RoomObjectSpec; onTap: () => void }) {
   return (
-    <Link
-      href={spot.href}
-      aria-label={spot.label}
-      className="group absolute z-30 outline-none"
-      style={place(reachable(spot.rect))}
+    <button
+      type="button"
+      aria-label={spec.label}
+      onClick={onTap}
+      className="room-shape pointer-events-none absolute inset-0 z-30 outline-none"
     >
-      <Marker spot={spot} />
-    </Link>
+      <Shape spec={spec} glow={false} />
+    </button>
   );
 }
 
 /**
- * What an object opens into.
+ * What a Display opens into.
  *
- * A sheet rather than a page: the room does not go away, it sits behind the
- * thing you picked up. Its contents scroll on their own, which is how a full
- * receipt can exist without the restaurant becoming a scrolling document.
+ * The room does not go away; it sits behind the thing you picked up, and the
+ * contents scroll on their own.
  */
 function Sheet({
   title,
@@ -242,18 +187,10 @@ function Sheet({
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       {/*
         * Putting the thing down again. Deliberately not a button and not in the
-        * tab order: the sheet already has a real Close control and Escape, and a
-        * second thing announcing itself as "Close" only makes the dialog noisier
-        * to hear.
+        * tab order: the sheet already has a real Close control and Escape.
         */}
       <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink-900/55" />
 
-      {/*
-        * The sheet itself, built from the house surfaces rather than from a
-        * rounded card with a 30px blurred shadow. Hard top edge, square
-        * corners, a stepped bevel — the same material as every panel in the
-        * shop, so opening something does not feel like leaving it.
-        */}
       <div
         ref={panel}
         role="dialog"
@@ -263,14 +200,10 @@ function Sheet({
         className="sheet-rise relative max-h-[76dvh] overflow-y-auto border-t-2 border-wood-dark bg-paper-mid text-ink-900 shadow-[0_-4px_0_rgba(0,0,0,0.45)] outline-none"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
       >
-        {/* The strip of light the counter throws onto whatever you pick up. */}
         <div aria-hidden="true" className="sticky top-0 z-20 h-[2px] bg-amber-mid/45" />
 
         <div className="sticky top-[2px] z-10 flex items-center justify-between gap-3 border-b-2 border-wood-dark/30 bg-paper-mid px-4 pt-4 pb-3.5">
-          <h2
-            id={headingId}
-            className="font-display text-[15px] leading-[1.4] text-ink-900 uppercase"
-          >
+          <h2 id={headingId} className="font-display text-[15px] leading-[1.4] text-ink-900 uppercase">
             {title}
           </h2>
           <button

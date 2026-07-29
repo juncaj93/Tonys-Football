@@ -36,17 +36,34 @@ const STARTS_AT_MS = 1150;
 const MS_PER_CHARACTER = 22;
 const LONGEST_MS = 1700;
 
-export function SpokenLine({ children }: { children: string }) {
+export function SpokenLine({
+  children,
+  retypeOnChange = false,
+}: {
+  children: string;
+  /**
+   * Type this line even though the arrival is over.
+   *
+   * The greeting types once, on arrival. A line Tony says *because you poked
+   * him* has to type too — it is new information, and watching it appear is how
+   * you know he answered — so the Toy passes this and remounts the component
+   * with a `key`, which restarts the effect.
+   */
+  retypeOnChange?: boolean;
+}) {
   const { arrived, setSpeaking } = useArrival();
   const [typed, setTyped] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!arrived) return;
+    if (!arrived && !retypeOnChange) return;
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
     const step = Math.min(MS_PER_CHARACTER, LONGEST_MS / Math.max(children.length, 1));
     let index = 0;
     let ticker: ReturnType<typeof setInterval> | null = null;
+
+    // A poked line answers immediately; the greeting waits for him to settle.
+    const startsAt = retypeOnChange && !arrived ? 0 : STARTS_AT_MS;
 
     const begin = setTimeout(() => {
       setTyped('');
@@ -62,7 +79,7 @@ export function SpokenLine({ children }: { children: string }) {
           setTyped(null);
         }
       }, step);
-    }, STARTS_AT_MS);
+    }, startsAt);
 
     return () => {
       clearTimeout(begin);
@@ -70,7 +87,7 @@ export function SpokenLine({ children }: { children: string }) {
       setSpeaking(false);
       setTyped(null);
     };
-  }, [arrived, children, setSpeaking]);
+  }, [arrived, children, retypeOnChange, setSpeaking]);
 
   // `typed === null` is the resting state: the finished line, exactly as the
   // server rendered it. Every path that is not actively typing lands here.
