@@ -132,7 +132,7 @@
         "source": "ChatGPT image generation, approved split-tail banner candidate",
         "rights_status": "original",
         "alt": "Championship banner",
-        "$comment": "One reusable pennant for every championship. Composited over zone_parlor_shell hanging from the shared rail at y 69, at x 52/74/96/118/140/162 -- oldest first, six most recent seasons on overflow. The two-digit year is rendered at runtime onto the red field; the asset carries no year, name, logo, emblem or glow. Canvas is 18x15 rather than 18x19: the source is 567x458 and the aspect is preserved. See art/B2_CHAMPION_BANNER.md."
+        "$comment": "One reusable pennant for every championship. Composited over zone_parlor_shell hanging from the shared rail at y 69, at x 56/78/100/122/144/166 -- reconciled 2026-07-29 so the row co-centres with the shifted board at 119.5 and sits wholly on the rod (x 54-184). Fills from the left, oldest first; completed seasons plus the current one, no future placeholders; six most recent on overflow. The two-digit year is rendered at runtime onto the red field; the asset carries no year, name, logo, emblem or glow. Canvas is 18x15 rather than 18x19: the source is 567x458 and the aspect is preserved. See art/B2_CHAMPION_BANNER.md."
       },
       "zone_tonight_board": {
         "family": "zone",

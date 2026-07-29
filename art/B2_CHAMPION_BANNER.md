@@ -7,66 +7,51 @@ runtime; the asset carries no year, name, logo, emblem, trophy or glow.
 
 ---
 
-## Geometry
+## Geometry — reconciled 2026-07-29
 
-| | Logical |
-|---|---|
-| Canvas | **18 × 15** |
-| Opaque silhouette | x 0–17, y 0–14 — fills the canvas |
-| Runtime year field | two 5 × 7 digits, x 4–14, y 4–10, centred on the red field |
-| Placements | **(52, 69) (74, 69) (96, 69) (118, 69) (140, 69) (162, 69)** |
-| Row extent | x 52–180 |
-| Lowest occupied row | **y 83** |
-| Board usable text begins | y 88 — **4 units of clearance, no obstruction** |
-| Attachment points | inset 3 from each edge; leftmost lands on x 55, the rail's first pixel |
+Measured on the registered production shell, **inclusive** 0-based indices
+(`width = last − first + 1`), stable across three darkness thresholds and
+matching `art/incoming/zone_parlor_shell.png`.
 
-Order is **oldest first, left-aligned**. Six positions; on overflow the six most
-recent completed seasons are shown.
+| Feature | Extent | Width | Centre |
+|---|---|---|---|
+| Rail rod — rows y 65, 68, 69 | **x 54–184** | 131 | 119.0 |
+| Board outer frame, current | x 49–178 | 130 | 113.5 |
+| Board outer frame, **after +6** | **x 55–184** | 130 | **119.5** |
+| Board cream field, after +6 | x 63–179 | 117 | 121.0 |
+| Board usable text, after +6 | x 66–176 | 111 | 121.0 |
+| **Banner row** | **x 56–183** | **128** | **119.5** |
 
-### The right-side overhang is deliberate
+Board vertical is unchanged: outer frame y 79–177, cream field y 84–170, usable
+text y 88–166.
 
-The row ends at x 180; the board's outer frame ends at x 179. **The one-unit
-overhang is accepted and must not be "fixed".**
+**Slots: 56, 78, 100, 122, 144, 166.** Banner 18 × 15, gap 4, pitch 22.
+Row bottoms at y 83; board usable text begins y 88 — **4 units of clearance**.
 
-Shifting the row one unit left would narrow the first interaction partition from
-20 to 19 logical units — 23.2 CSS px on an iPhone 14 — which drops it below the
-WCAG 2.5.8 minimum of 24 × 24. **A one-pixel visual nicety is not worth failing an
-accessibility criterion.** Do not adjust the spacing to remove it either.
+**Board and row co-centre at 119.5 — delta 0.0.** The row sits wholly within the
+rod with a 2 px left margin and 1 px right. All four attachment nubs — 59 and 70
+on slot 1, 169 and 180 on slot 6 — land on rod pixels.
 
----
+### Rail anatomy, and three earlier errors
 
-## Why 18 × 15 and not 18 × 19
+- **Rod** x 54–184, the only feature spanning >100 px continuously.
+- **Brackets** x 58–62, 118–122, 176–180, descending to y 73.
+- **End caps** x 54–57 and 180–184 on row y 66.
+- **Not rail:** the left pillar (x 30–48) and the right wall corner (x 197–220).
+  Both are dark on *every* row in the band, which is what identifies them as
+  architecture.
 
-The source is 567 × 458 — wider than tall, aspect 1.238. The slot was specified as
-18 × 19 (0.947). Forcing it would squash the banner 24% horizontally, so the
-aspect is preserved and the canvas is 15 tall.
+Three figures previously on record were all wrong, each by measuring a different
+feature: `55–185` (rod ±1), `58–180` (bracket-to-bracket, not the rod), and
+`58–185` (first bracket to rod +1). **The rod is 54–184.**
 
-### What the reduction costs, and why it was accepted
+### Why the row is 56 and not 58
 
-The source's gold trim is **14 pixels on a 567-wide canvas**. At 18 logical that is
-a 31.5 : 1 reduction, rendering the trim at **0.44 logical px** — below one pixel,
-so it cannot survive. A size sweep found the design needs **≥ 30 logical px wide**
-before the split tail and trim read as drawn.
-
-30 wide does not fit. At the source aspect a 30-wide banner is 24 tall and bottoms
-at y 93 — five units inside the board's protected text region. The vertical budget
-(rail 69 → board text 88) caps the banner at 23 wide. **Readability needs ≥ 30;
-clearance allows ≤ 23. The ranges do not overlap.** Six 30-wide banners would also
-need 180 units of rail against the 130 available.
-
-The commissioner ruled on the room view rather than on fidelity to the source: at
-final size the banner reads as a compact red championship pennant with a
-recognisable lower silhouette and legible years, and stays visually secondary to
-the board. **The simplification is accepted.**
-
-**Do not** enlarge the banners, modify the board, expand the rail, or commission
-another art pass to recover high-resolution detail.
-
-### Top hardware
-
-At production size the source's top element reduces to two small gold nubs at the
-upper corners. It does **not** read as a repeated miniature rod, so the
-rod-removal correction was never required and none was applied.
+At 58 the row runs x 58–185, and the rod's last pixel is 184 — the sixth
+banner's rightmost column would hang off the end of the rail with nothing
+supporting it. At 56 the row ends at 183, inside the rod, **and** co-centres
+with the shifted board exactly. Widths and gaps are unchanged, so every hit
+partition keeps its size.
 
 ---
 
@@ -89,9 +74,12 @@ non-overlapping, no dead zones.
 
 | # | x range | Logical | CSS @ iPhone 14 |
 |---|---|---|---|
-| 1 | 52–72 | 20 × 30 | 24.4 × 36.6 |
-| 2–5 | 72–160 | 22 × 30 | 26.8 × 36.6 |
-| 6 | 160–180 | 20 × 30 | 24.4 × 36.6 |
+| 1 | 56–75 | 20 × 30 | 24.4 × 36.6 |
+| 2 | 76–97 | 22 × 30 | 26.8 × 36.6 |
+| 3 | 98–119 | 22 × 30 | 26.8 × 36.6 |
+| 4 | 120–141 | 22 × 30 | 26.8 × 36.6 |
+| 5 | 142–163 | 22 × 30 | 26.8 × 36.6 |
+| 6 | 164–183 | 20 × 30 | 24.4 × 36.6 |
 
 The Tonight board's hit region begins at y 88 — no overlap. Audited clear against
 Tony's lane, the newspaper rack, the prediction sign, the tray, the receipt and
@@ -105,9 +93,23 @@ the doorway.
 - The row is a documented departure **only** from the room's preferred **44 × 44
   (WCAG 2.5.5, AAA)** convention, which every other object in the parlor meets.
 
-The 0.4 px margin on partitions 1 and 6 is what makes the overhang non-negotiable.
+The 0.4 px margin on partitions 1 and 6 is why the row may be **translated** but never
+re-anchored against a fixed edge: a uniform shift preserves every partition width,
+whereas re-anchoring narrows partition 1 below the criterion.
 
 ---
+
+## Population behaviour
+
+- Banners fill **fixed slots from the left, oldest to newest**. A banner never moves
+  between visits.
+- **Completed seasons plus the current season** appear. Today: `24`, `25`, `26` in
+  slots 1–3.
+- The **current season reveals `TBD`** in its panel until the season is finalised.
+- **No future placeholders.** Slots 4–6 render nothing and are not interactive —
+  there is no empty button to tab into.
+- At season seven the six-season window **shifts left once** and shows the six most
+  recent seasons.
 
 ## Remaining implementation work
 
