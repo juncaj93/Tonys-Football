@@ -1,68 +1,148 @@
 'use client';
 
+import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { useArrival } from '@/components/scene/arrival';
+import { place, reachable, type Hotspot, type Shape } from '@/lib/parlor/hotspots';
+
 /**
- * Things in the room you can tap.
+ * Things in the room you can touch.
  *
- * The parlor is one screen, so it cannot also be a page of stacked cards. What
- * would have been a section is now an **object**: the case, the notice on the
- * wall, the docket on the counter. Tapping one opens its contents over the
- * room, and the room stays where it was.
+ * The parlor has no tab bar. You get to the Slice by looking at the poster
+ * frame by the window and to your collection by looking in the case on the
+ * counter, which only works if a first-time visitor can tell those are things
+ * rather than scenery.
  *
- * ## Not app chrome
+ * ## How they announce themselves
  *
- * A hotspot gets two faint corner ticks and nothing else — no glow, no ring, no
- * floating circle. They read as a mark on a photograph rather than a button
- * pasted over one. The full outline only appears while the object is being
- * pressed or is keyboard-focused, which is when a person is asking "is this a
- * thing?" rather than looking at the room.
+ * Three ways, in descending order of how much of the room they cost:
  *
- * Every hotspot is a real `<button>` with a real label, so the scene is
- * navigable by keyboard and readable by a screen reader even though its visual
- * affordance is deliberately quiet.
+ *   1. **On arrival**, once per session, every interactive object takes a thin
+ *      warm edge and breathes twice, then goes quiet. This is the introduction;
+ *      it is not a state the room lives in.
+ *   2. **On touch or focus**, the same edge appears for as long as the contact
+ *      lasts — the answer to "is this a thing?" arrives when the question is
+ *      asked.
+ *   3. **On request**, a small control by the counter brings the edges back for
+ *      a few seconds.
+ *
+ * Nothing glows, nothing pulses forever, and the edge follows the object: a
+ * frame gets a frame, the case gets the case, Tony gets a soft pool of light
+ * because a rectangle drawn around a person is a button with a man inside it.
+ *
+ * ## Underneath, they are ordinary controls
+ *
+ * Every one is a real `<button>` or `<a>` carrying a real label, in the tab
+ * order, with a visible focus treatment. The environmental styling is on top of
+ * that, never instead of it.
  */
 
-export interface Placement {
-  /** Percentages of the room, so the object stays put at every width. */
-  readonly left: string;
-  readonly top: string;
-  readonly width: string;
-  readonly height: string;
+/** The edge itself. Drawn to the object's shape, never as a web button. */
+function Outline({ shape }: { shape: Shape }) {
+  if (shape === 'figure') {
+    // Tony gets a ring rather than a box: a rectangle drawn around a person is
+    // a button with a man inside it. An ellipse hugging his head and shoulders
+    // is the shape of the person, and it survives the wall behind him — which a
+    // soft warm wash does not, because the wall is already warm.
+    return (
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute -inset-x-1.5 -inset-y-1 rounded-[50%]"
+        style={{
+          border: '1.5px solid rgba(255,231,180,0.9)',
+          boxShadow: '0 0 9px rgba(255,217,138,0.5), inset 0 0 16px rgba(255,217,138,0.22)',
+        }}
+      />
+    );
+  }
+
+  const radius = {
+    frame: 'rounded-[2px]',
+    case: 'rounded-[3px]',
+    opening: 'rounded-[7px]',
+  }[shape];
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`pointer-events-none absolute inset-0 ${radius}`}
+      style={{
+        // A line of warm light sitting on the object's own edge, a breath of it
+        // falling outside, and the faintest wash within so that a dark object
+        // still reads as picked out rather than merely bordered.
+        boxShadow:
+          'inset 0 0 0 1.5px rgba(255,217,138,0.85), inset 0 0 7px rgba(255,217,138,0.22), 0 0 6px rgba(255,217,138,0.28)',
+        backgroundColor: 'rgba(255,217,138,0.10)',
+      }}
+    />
+  );
+}
+
+/**
+ * The shared body of every interactive object.
+ *
+ * ## The outline is on the object, not on the tap area
+ *
+ * The two are different rectangles on purpose. A picture frame on a wall is
+ * about 25px across and a thumb is not, so the region that *responds* is grown
+ * to 46px while the region that is *drawn* stays exactly the size of the frame.
+ * Lighting the grown box instead would put a glowing rectangle of wall around
+ * every small object — which is precisely the "oversized hotspot" look the room
+ * is trying not to have.
+ *
+ * `revealed` is the room-wide introduction; `:focus-visible` and `:active` are
+ * the per-object answer. Both use the same edge, so learning it once is enough.
+ */
+function Marker({ spot }: { spot: Hotspot }) {
+  const { revealed } = useArrival();
+  const box = reachable(spot.rect);
+
+  return (
+    <span
+      aria-hidden="true"
+      className={`absolute opacity-0 transition-opacity duration-300 group-active:opacity-100 group-focus-visible:opacity-100 ${
+        revealed ? 'room-reveal opacity-100' : ''
+      }`}
+      style={{
+        left: `${(((spot.rect.x - box.x) / box.width) * 100).toFixed(3)}%`,
+        top: `${(((spot.rect.y - box.y) / box.height) * 100).toFixed(3)}%`,
+        width: `${((spot.rect.width / box.width) * 100).toFixed(3)}%`,
+        height: `${((spot.rect.height / box.height) * 100).toFixed(3)}%`,
+      }}
+    >
+      <Outline shape={spot.shape} />
+    </span>
+  );
 }
 
 export function RoomObject({
-  label,
-  placement,
+  spot,
   title,
   children,
-  face,
 }: {
-  /** What tapping it does, for assistive technology. */
-  label: string;
-  placement: Placement;
+  spot: Hotspot;
   /** Heading inside the opened sheet. */
   title: string;
   children: React.ReactNode;
-  /** Optional visible thing sitting in the room, e.g. a docket on the counter. */
-  face?: React.ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  const trigger = useRef<HTMLButtonElement>(null);
 
   return (
     <>
       <button
+        ref={trigger}
         type="button"
         onClick={() => {
           setOpen(true);
         }}
-        aria-label={label}
+        aria-label={spot.label}
         aria-haspopup="dialog"
-        className="group absolute z-30 cursor-pointer"
-        style={placement}
+        className="group absolute z-30 cursor-pointer outline-none"
+        style={place(reachable(spot.rect))}
       >
-        {face}
-        <Ticks />
+        <Marker spot={spot} />
       </button>
 
       {open && (
@@ -70,6 +150,8 @@ export function RoomObject({
           title={title}
           onClose={() => {
             setOpen(false);
+            // Back to the object you picked up, not to the top of the room.
+            trigger.current?.focus();
           }}
         >
           {children}
@@ -79,30 +161,28 @@ export function RoomObject({
   );
 }
 
-/** Four faint corner ticks. Enough to notice, not enough to be a button. */
-export function Ticks() {
-  const edge = 'absolute h-2 w-2 border-paper-white/25 transition-colors';
+/** A part of the room that leads somewhere rather than opening in place. */
+export function RoomLink({ spot }: { spot: Hotspot }) {
+  if (spot.href === undefined) throw new Error(`${spot.id} leads nowhere`);
+
   return (
-    <span aria-hidden="true" className="absolute inset-0 group-active:border-amber-glow/60">
-      <span className={`${edge} top-0 left-0 border-t border-l group-active:border-amber-glow/70`} />
-      <span className={`${edge} top-0 right-0 border-t border-r group-active:border-amber-glow/70`} />
-      <span
-        className={`${edge} bottom-0 left-0 border-b border-l group-active:border-amber-glow/70`}
-      />
-      <span
-        className={`${edge} right-0 bottom-0 border-r border-b group-active:border-amber-glow/70`}
-      />
-    </span>
+    <Link
+      href={spot.href}
+      aria-label={spot.label}
+      className="group absolute z-30 outline-none"
+      style={place(reachable(spot.rect))}
+    >
+      <Marker spot={spot} />
+    </Link>
   );
 }
 
 /**
  * What an object opens into.
  *
- * A sheet rather than a page: the room does not go away, it slides down behind
- * the thing you picked up. Its contents scroll on their own, which is how a
- * long list of managers or a full receipt can exist without the restaurant
- * itself becoming a scrolling document.
+ * A sheet rather than a page: the room does not go away, it sits behind the
+ * thing you picked up. Its contents scroll on their own, which is how a full
+ * receipt can exist without the restaurant becoming a scrolling document.
  */
 function Sheet({
   title,
@@ -131,12 +211,12 @@ function Sheet({
   return (
     <div className="fixed inset-0 z-50 flex flex-col justify-end">
       {/*
-        * Tapping the room behind puts the thing down again. Deliberately not a
-        * button and not in the tab order: the sheet already has a real Close
-        * control and Escape, and a second thing announcing itself as "Close"
-        * only makes the dialog noisier to hear.
+        * Putting the thing down again. Deliberately not a button and not in the
+        * tab order: the sheet already has a real Close control and Escape, and a
+        * second thing announcing itself as "Close" only makes the dialog noisier
+        * to hear.
         */}
-      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink-900/60" />
+      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink-900/55" />
 
       <div
         ref={panel}
@@ -144,27 +224,26 @@ function Sheet({
         aria-modal="true"
         aria-labelledby={headingId}
         tabIndex={-1}
-        className="sheet-rise relative max-h-[74dvh] overflow-y-auto rounded-t-xl border-t-2 border-wood-dark bg-paper-mid text-ink-900 shadow-[0_-8px_28px_rgba(0,0,0,0.55)] outline-none"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
+        className="sheet-rise relative max-h-[76dvh] overflow-y-auto rounded-t-[10px] border-t-2 border-wood-dark bg-paper-mid text-ink-900 shadow-[0_-10px_30px_rgba(0,0,0,0.55)] outline-none"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
       >
-        {/* The grab handle, and the only close affordance that needs to be obvious. */}
-        <div className="sticky top-0 flex items-center justify-between gap-3 border-b border-wood-dark/30 bg-paper-mid px-4 pt-3 pb-2">
+        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-wood-dark/25 bg-paper-mid px-5 pt-3.5 pb-2.5">
           <h2
             id={headingId}
-            className="font-mono text-[11px] font-bold tracking-[0.2em] text-ink-900 uppercase"
+            className="font-mono text-[11px] font-bold tracking-[0.22em] text-ink-900/80 uppercase"
           >
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="-mr-2 flex min-h-[44px] min-w-[44px] items-center justify-center text-[13px] font-semibold text-ink-500"
+            className="-mr-2 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[3px] px-1 text-[13px] font-semibold text-ink-500 active:bg-paper-dark"
           >
             Close
           </button>
         </div>
 
-        <div className="px-4 pt-3">{children}</div>
+        <div className="px-5 pt-4">{children}</div>
       </div>
     </div>
   );

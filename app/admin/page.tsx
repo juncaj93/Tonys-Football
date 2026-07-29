@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { resetPinAction } from '@/app/actions/auth';
 import { Clipboard, EnamelSign } from '@/components/scene/fixtures';
 import { ParlorAir, Wall } from '@/components/scene/backdrop';
-import { BottomNav, Page, TAP_TARGET } from '@/components/shell';
+import { BackToTheCounter, Page, TAP_TARGET } from '@/components/shell';
 import { requireAdmin } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { getDb } from '@/lib/db';
@@ -37,6 +37,10 @@ export default async function AdminPage() {
       <Page>
         <Wall className="px-4 pt-6 pb-8" wainscot={false}>
           <div className="relative z-10">
+            <div className="mb-3">
+              <BackToTheCounter />
+            </div>
+
             <Link
               href="/profile"
               className={`inline-flex ${TAP_TARGET} items-center text-sm text-ink-100 underline underline-offset-4`}
@@ -93,7 +97,6 @@ export default async function AdminPage() {
         </Wall>
       </Page>
 
-      <BottomNav current="/" />
     </>
   );
 }

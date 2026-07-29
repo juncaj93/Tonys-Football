@@ -1,6 +1,6 @@
 import { ClosedFixture, EnamelSign } from '@/components/scene/fixtures';
 import { ParlorAir, Pendant, Wall } from '@/components/scene/backdrop';
-import { BottomNav, Page } from '@/components/shell';
+import { BackToTheCounter, Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
 import { seasonClock } from '@/lib/parlor/season';
 
@@ -28,6 +28,10 @@ export default async function SlicePage() {
           <Pendant className="top-0 left-[24%] z-0" height="h-32" />
 
           <div className="relative z-10">
+            <div className="mb-3">
+              <BackToTheCounter />
+            </div>
+
             <EnamelSign tone="red">Tony&rsquo;s Tuesday Slice</EnamelSign>
             <h1 className="mt-3 text-2xl leading-tight font-bold text-paper-white">
               Nothing on the rack
@@ -56,7 +60,6 @@ export default async function SlicePage() {
         </Wall>
       </Page>
 
-      <BottomNav current="/slice" />
     </>
   );
 }

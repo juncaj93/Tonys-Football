@@ -1,6 +1,6 @@
 import { ClosedFixture, EnamelSign } from '@/components/scene/fixtures';
 import { Floor, ParlorAir, Wall } from '@/components/scene/backdrop';
-import { BottomNav, Page } from '@/components/shell';
+import { BackToTheCounter, Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
 
 /**
@@ -24,6 +24,10 @@ export default async function RoomsPage() {
       <Page>
         <Wall className="px-4 pt-6 pb-4" wainscot={false}>
           <div className="relative z-10">
+            <div className="mb-3">
+              <BackToTheCounter />
+            </div>
+
             <EnamelSign tone="cream">Downstairs</EnamelSign>
             <h1 className="mt-3 text-2xl leading-tight font-bold text-paper-white">
               The door is chained
@@ -56,7 +60,6 @@ export default async function RoomsPage() {
         </div>
       </Page>
 
-      <BottomNav current="/rooms" />
     </>
   );
 }

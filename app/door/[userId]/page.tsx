@@ -45,7 +45,7 @@ export default async function DoorManagerPage({
     <>
       <ParlorAir tone="cold" />
 
-      <Page withNav={false}>
+      <Page>
         <header className="relative h-24 overflow-hidden border-b-2 border-wood-dark">
           <ShopWindow />
           <HangingSign top="Closed" bottom="back in september" />

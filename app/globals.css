@@ -340,27 +340,43 @@ button {
   animation: sheet-rise 180ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 
-/*
- * Tony's entrance (`17 §3`): he leans in and wipes his hands, about 600ms.
+/* --- Walking in ---------------------------------------------------------- *
+ *
+ * `17 §3`: Tony is at the counter, and he says one true thing. The room is
+ * already there when the door opens — nothing about the shop assembles itself
+ * while you watch — and then one man steps up behind the counter.
+ *
+ * The whole sequence is driven by a single `.arriving` class that
+ * `components/scene/arrival.tsx` adds after mount and removes when it is over,
+ * so the server-rendered page is the *finished* state and a browser that never
+ * runs the script still shows Tony in place with his line under him.
  *
  * CSS keyframes rather than an animation library — `16 §A.4` replaced Framer
- * Motion with keyframes and sprite sheets precisely so effects like this cost
- * no dependency and no bundle.
- *
- * The element is fully visible at rest, so a browser that never applies this
- * class shows the finished state rather than a blank counter.
+ * Motion with keyframes precisely so effects like this cost no dependency.
  */
-@keyframes tony-lean-in {
+
+/*
+ * He steps up.
+ *
+ * The counter front is drawn over him, so starting 26% lower puts him almost
+ * entirely behind it: he genuinely rises from below the counter rather than
+ * sliding in from off-screen. One movement out to his mark, then a single small
+ * settle — a shift of weight, not a bounce. No rotation, no scaling, no blur,
+ * and it ends on exactly `none` so the pixel art lands on whole pixels.
+ */
+@keyframes tony-steps-up {
   0% {
-    transform: translateX(-14%) translateY(6%) rotate(-3deg);
-    opacity: 0.2;
+    transform: translate3d(0, 26%, 0);
+    opacity: 0.55;
   }
-  55% {
-    transform: translateX(2%) translateY(-2%) rotate(1.5deg);
+  12% {
     opacity: 1;
   }
-  80% {
-    transform: translateX(-1%) translateY(0) rotate(-0.5deg);
+  62% {
+    transform: translate3d(0, -1.5%, 0);
+  }
+  82% {
+    transform: translate3d(0, 0.8%, 0);
   }
   100% {
     transform: none;
@@ -368,8 +384,111 @@ button {
   }
 }
 
-.tony-entrance {
-  animation: tony-lean-in 600ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+.arriving .tony-mark {
+  animation: tony-steps-up 900ms cubic-bezier(0.22, 0.72, 0.24, 1) 80ms both;
+  will-change: transform;
+}
+
+/* His line arrives once he is standing there, not while he is still moving. */
+@keyframes line-arrives {
+  from {
+    transform: translate3d(0, 5px, 0);
+    opacity: 0;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.arriving .tony-line {
+  animation: line-arrives 260ms ease-out 900ms both;
+}
+
+/*
+ * The introduction: interactive objects take their warm edge and breathe twice,
+ * then the room goes quiet. Two cycles, not infinite — a room that pulses
+ * forever is an arcade attract screen.
+ */
+@keyframes object-breathes {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+.room-reveal {
+  animation: object-breathes 1500ms ease-in-out 2;
+}
+
+/* --- Small signs of life ------------------------------------------------- *
+ *
+ * Three, and only three. The soda machine's buttons, a highlight crossing the
+ * warmer's glass, and one ceiling light that has never been quite right. All
+ * opacity, all slow, all resting at their normal state at 100%.
+ */
+
+@keyframes fountain-buttons {
+  0%,
+  46%,
+  100% {
+    opacity: 0.5;
+  }
+  50%,
+  92% {
+    opacity: 0.85;
+  }
+}
+
+.anim-fountain {
+  animation: fountain-buttons 9s ease-in-out infinite;
+}
+
+@keyframes case-sheen {
+  0%,
+  100% {
+    opacity: 0;
+    transform: translate3d(-40%, 0, 0);
+  }
+  42% {
+    opacity: 0.5;
+  }
+  70%,
+  100% {
+    opacity: 0;
+    transform: translate3d(120%, 0, 0);
+  }
+}
+
+.anim-sheen {
+  animation: case-sheen 13s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* The one tube in the ceiling that never warmed up properly. */
+@keyframes ceiling-flicker {
+  0%,
+  88%,
+  100% {
+    opacity: 0;
+  }
+  89%,
+  91% {
+    opacity: 0.42;
+  }
+  90% {
+    opacity: 0.06;
+  }
+  93% {
+    opacity: 0.3;
+  }
+}
+
+.anim-flicker {
+  animation: ceiling-flicker 17s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {

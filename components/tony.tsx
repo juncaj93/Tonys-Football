@@ -1,101 +1,34 @@
-'use client';
-
-import { useEffect, useRef, useState } from 'react';
-
 import { SceneSurface } from '@/components/scene/fixtures';
 import { resolveAsset } from '@/lib/assets/registry';
 
 /**
  * Tony, behind his counter.
  *
- * `17 §3` describes what the manager should experience:
- *
- *   1. Tony is at the counter as the page paints
- *   2. a short entrance — leans in, wipes his hands — ~600ms, **skippable**,
- *      absent under `prefers-reduced-motion`
- *   3. two short lines: a greeting using their name, then one verified fact
- *   4. his expression matches the line's mood
+ * Just the figure. `17 §3`'s arrival — he steps up, settles, then speaks — is
+ * orchestrated one level out in `components/scene/arrival.tsx`, because the
+ * order of those three events is a property of the room rather than of the man:
+ * his line lives at the bottom of the screen, the interactive objects are
+ * scattered across the wall, and one component has to know when each of them is
+ * due. Tony's own job is to be drawn correctly.
  *
  * ## He is a figure, not a portrait in a frame
  *
- * Until the B1 sprite exists he is drawn here in CSS: a silhouette lit from the
- * pendant above him, rim-lit down one side, cropped at the waist by the counter
- * front. That is what puts him *in* the room. A framed placeholder card would
- * have made him an illustration of Tony hanging on the wall, which is exactly
- * the difference the parlor is being rebuilt to fix.
+ * `character_tony_neutral` is 88 x 240 and rendered at its own size in CSS
+ * pixels, so the only scaling is the device's, which is always a whole number.
+ * No filter, no blur, no drop-shadow, no smoothing: everything the pipeline's
+ * quantization step guaranteed survives to the glass.
  *
- * The expression drives the sprite slug, so the drawn stand-in and the eventual
- * art are selected the same way (`SceneSurface`).
- *
- * ## Why the animation is added after mount rather than rendered with it
- *
- * The server renders the **finished** state — Tony present, line readable. The
- * animation class is added on the client, only when it should play:
- *
- *   - nothing is ever hidden behind an animation that might not run
- *   - `prefers-reduced-motion` gets a genuine absence, not a zero-duration
- *     animation of something that started invisible
- *   - it plays once per session; `02 §12` bans repeated onboarding sequences,
- *     and seeing Tony wipe his hands on every navigation is exactly that
+ * Until a mood's sprite exists he is drawn here in CSS instead — a silhouette
+ * lit from the pendant above him, cropped at the waist by the counter front.
  */
-
-const ENTRANCE_MS = 600;
-const PLAYED_KEY = 'tonys:entrance-played';
 
 export type TonyMood = 'neutral' | 'pleased' | 'unimpressed';
 
-export function TonyAtTheCounter({
-  slug,
-  mood,
-}: {
-  slug: string;
-  mood: TonyMood;
-}) {
-  const [playing, setPlaying] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  useEffect(() => {
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-    let played = false;
-    try {
-      played = window.sessionStorage.getItem(PLAYED_KEY) === '1';
-    } catch {
-      // Private browsing can refuse storage. Replaying the entrance is a far
-      // better failure than throwing on the first screen.
-    }
-    if (played) return;
-
-    setPlaying(true);
-    try {
-      window.sessionStorage.setItem(PLAYED_KEY, '1');
-    } catch {
-      // As above.
-    }
-
-    timer.current = setTimeout(() => {
-      setPlaying(false);
-    }, ENTRANCE_MS);
-
-    return () => {
-      if (timer.current !== null) clearTimeout(timer.current);
-    };
-  }, []);
-
-  const skip = (): void => {
-    if (!playing) return;
-    if (timer.current !== null) clearTimeout(timer.current);
-    setPlaying(false);
-  };
-
+export function TonyAtTheCounter({ slug, mood }: { slug: string; mood: TonyMood }) {
   return (
-    // Any tap during the entrance ends it. Not a button: there is nothing to
-    // do here once the 600ms has passed, so it must not sit in the tab order.
-    <div onPointerDown={skip} className={playing ? 'tony-entrance' : undefined}>
-      <SceneSurface slug={drawnAs(slug)} className="relative">
-        <TonyFigure mood={mood} />
-      </SceneSurface>
-    </div>
+    <SceneSurface slug={drawnAs(slug)} className="relative">
+      <TonyFigure mood={mood} />
+    </SceneSurface>
   );
 }
 
