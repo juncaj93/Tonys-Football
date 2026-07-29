@@ -2,13 +2,38 @@
 
 **Source:** `art/incoming/zone_parlor_shell.png` — **941 × 1672, PNG, sRGB, 8-bit, 3 channels, no alpha**
 **Production canvas:** 320 × 569 · **Registered** (canvas only; no path, nothing resolves it)
-**Revision 4** — measured against the real file. Object map untouched, nothing integrated.
+**Revision 5** — B0 gate passed. Object map untouched, nothing integrated.
+
+---
+
+## B0 re-approval — approved 2026-07-29
+
+The quantizer change invalidated the earlier B0 palette approval, so the composite was
+rebuilt from the corrected outputs and re-approved: **corrected Euclidean quantizer,
+canonical branded Tony, shell layering, cream board, shadow separation, and foreground
+counter integration all accepted.**
+
+The composite is the shell cut at **logical y 292**, Tony at **`64, 180`** sized 72 × 197,
+and the shell's own rows 292–568 drawn back over him. There is no separate
+`zone_parlor_counter_front` asset — the shell is one image and its lower half *is* the
+foreground layer. `zone_counter_front.png` belongs to the superseded two-tile room.
+
+Measured on the rendered composite: palette **closed** across every pixel, 28 of 32 colours
+used, **0 violet**, no partial alpha, no unfilled pixels. Tony's visible band 112 units,
+13 clear of the nook and 18 of the prediction sign.
+
+**One limitation accepted rather than fixed.** The alcove backsplash reads brown where the
+source is dark maroon: the palette has nothing between `red-dark #8C1F22` and near-black, so
+dark reds land on wood. Accepted for B0. **It does not justify a palette change** — see
+`ASSET_PIPELINE.md §4`, which says not to add palette colours to rescue a single asset.
+
+**B1 requires separate explicit authorization.**
 
 ---
 
 ## Verdict
 
-# The shell passes. The pipeline does not.
+# The shell passes. The pipeline did not, and now does.
 
 The art is approved from my side: all eight assignments are present, every text surface is
 clean, Tony fits to within one logical unit, and every coordinate below is now **measured,
@@ -127,9 +152,20 @@ Inset from the measured inner field to clear the frame bevel and the quantizer's
 | Sign — prediction | `158, 188, 30, 51` | **`161, 191, 24, 45`** | 72 × 135 px | ⚠️ Narrow. A short stacked prediction only. Tony's Line will need a panel. |
 | Receipt — manager record | `86, 292, 23, 18` | **`88, 294, 19, 14`** | 57 × 42 px | ❌ Not usable for baked text. |
 
-**The receipt is fine as a tap target that opens a panel** — which is what it did in PR #8.
-It is a defect only if the intent was to print the record onto the paper itself. Needs a
-stated intent.
+### Surface classifications — ruled
+
+Both open questions above are settled. Recorded 2026-07-29.
+
+| Surface | Classification | Basis |
+|---|---|---|
+| Tonight board | **surface-rendered** | `60, 88, 111, 79` — 333 × 237 device px at 3×, comfortable for four board lines |
+| Champion banner | **surface-rendered** | text rendered onto the banner overlay when it ships |
+| **Prediction sign** | **trigger-only** | usable text area 24–36 units wide against a ~40 × 20 threshold — below it on the width axis under every reading. Tapping opens a panel; nothing is baked onto the slate. |
+| Receipt | **trigger-only** | `88, 294, 19, 14` = 57 × 42 device px. Tapping opens the expanded manager-record panel; nothing is printed onto the paper. This is what it already did in PR #8. |
+
+Neither trigger-only surface is a defect. Both are legible objects at room scale that are
+too small to *carry* text, which is a different thing — and the panel was always the better
+place to read a record anyway.
 
 ### The rail
 
@@ -217,16 +253,22 @@ to shipped behaviour, and the shell audit is not the place to make it unilateral
 usable; the two sizing constraints (rail, receipt) are sequencing and intent questions, not
 art defects.
 
-**Pipeline output: NO-GO**, pending the metric decision. Nothing defective was committed.
+**Pipeline output: ~~NO-GO~~ → GO.** It was no-go pending the metric decision; nothing
+defective was ever committed. Resolved by the Euclidean ruling.
 
-### To ship the shell
+### To ship the shell — all five closed
 
-1. Decide on the `nearest()` metric. Recommendation: plain Euclidean.
-2. Re-run `npm run art:process` for the **whole** incoming batch, not just the shell, and
-   compare Tony before and after.
-3. Optionally add a mid-cream palette entry for the board.
-4. Set `path` and `art_status: "generated"` on the inventory row — a second reviewed edit.
-5. State the receipt's intent: panel (fine as drawn) or baked text (needs a bigger receipt).
+1. ~~Decide on the `nearest()` metric.~~ **Ruled: plain Euclidean.** `ASSET_PIPELINE.md §4`.
+2. ~~Re-run the whole batch and compare Tony.~~ **Done.** Five assets, all palette-closed at
+   0% violet. The comparison found a second defect the metric had been causing: Tony's blue
+   jersey was quantizing to a tan.
+3. ~~Optionally add a mid-cream palette entry for the board.~~ **Not needed.** The board's
+   failure was a hue flip between yellow and pink; under Euclidean it is a three-step warm
+   vignette that reads as aged paper. Palette unchanged.
+4. Set `path` and `art_status: "generated"` on the inventory row — **still open**, a
+   separate reviewed edit.
+5. ~~State the receipt's intent.~~ **Ruled: trigger-only**, opening a panel. So is the
+   prediction sign.
 
 ### Recorded, not acted on
 
