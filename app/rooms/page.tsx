@@ -1,6 +1,6 @@
-import { ClosedFixture, EnamelSign } from '@/components/scene/fixtures';
-import { Floor, ParlorAir, Wall } from '@/components/scene/backdrop';
-import { BackToTheCounter, Page } from '@/components/shell';
+import { ClosedRoom } from '@/components/scene/panel';
+import { RoomBehind } from '@/components/scene/room-behind';
+import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
 
 /**
@@ -19,47 +19,23 @@ export default async function RoomsPage() {
 
   return (
     <>
-      <ParlorAir tone="cold" />
+      <RoomBehind />
 
       <Page>
-        <Wall className="px-4 pt-6 pb-4" wainscot={false}>
-          <div className="relative z-10">
-            <div className="mb-3">
-              <BackToTheCounter />
-            </div>
-
-            <EnamelSign tone="cream">Downstairs</EnamelSign>
-            <h1 className="mt-3 text-2xl leading-tight font-bold text-paper-white">
-              The door is chained
-            </h1>
-            <p className="mt-2 max-w-md text-[15px] leading-relaxed text-ink-100">
-              There is a light on down there and the sound of somebody moving boxes. Tony has
-              not said what is in them.
-            </p>
-
-            <div className="mt-6">
-              <ClosedFixture
-                slug="dressing_door_basement"
-                label="Basement"
-                note="A chain, a padlock, and a strip of light along the bottom of the door."
-                variant="door"
-                artHeight="h-56"
-              />
-            </div>
-          </div>
-        </Wall>
-
-        {/* The stairs, falling away into the dark. */}
-        <Floor className="h-20 opacity-60" />
-
-        <div className="px-4 pb-8">
-          <p className="text-[13px] leading-relaxed text-ink-300">
-            Every manager gets a room down here eventually — shelves, a wall, a chair, and
-            whatever they have collected. Visitors will be able to come down and look.
+        <ClosedRoom
+          sign="Downstairs"
+          title="The door is chained"
+          footnote="Every manager gets a room down here eventually — shelves, a wall, a chair, and whatever they have collected. Visitors will be able to come down and look."
+        >
+          <p>
+            There is a light on down there and the sound of somebody moving boxes. Tony has not
+            said what is in them.
           </p>
-        </div>
+          <p className="text-ink-500">
+            A chain, a padlock, and a strip of light along the bottom of the door.
+          </p>
+        </ClosedRoom>
       </Page>
-
     </>
   );
 }

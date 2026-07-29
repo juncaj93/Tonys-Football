@@ -1,9 +1,9 @@
 import Link from 'next/link';
 
 import { signOutAction, signOutEverywhereAction } from '@/app/actions/auth';
-import { Clipboard, EnamelSign } from '@/components/scene/fixtures';
-import { ParlorAir, Wall } from '@/components/scene/backdrop';
-import { BackToTheCounter, Page, TAP_TARGET } from '@/components/shell';
+import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
+import { RoomBehind } from '@/components/scene/room-behind';
+import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
 import { listDevices } from '@/lib/auth/service';
 import { getDb } from '@/lib/db';
@@ -22,94 +22,101 @@ import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
+/** Every control on this page is the same slab of painted board. */
+const ACTION =
+  'pixel-edge flex w-full min-h-[52px] items-center justify-center border-2 px-4 text-center font-mono text-[12px] tracking-[0.12em] uppercase active:translate-y-px';
+
 export default async function ProfilePage() {
   const { user, session } = await requireUser();
   const devices = await listDevices(getDb(), user.id, session.id);
 
   return (
     <>
-      <ParlorAir />
+      <RoomBehind />
 
       <Page>
-        <Wall className="px-4 pt-6 pb-8" wainscot={false}>
-          <div className="relative z-10">
-            <div className="mb-3">
-              <BackToTheCounter />
+        <main className="mx-auto w-full max-w-md flex-1 px-4 pt-3 pb-8">
+          <PixelPanel tone="paper" className="px-4 pt-4 pb-5">
+            <div className="flex flex-wrap items-center gap-2">
+              <SignPlate tone="cream">Your keys</SignPlate>
+              {user.isAdmin && <SignPlate tone="red">Commissioner</SignPlate>}
             </div>
 
-            <Link
-              href="/"
-              className={`inline-flex ${TAP_TARGET} items-center text-sm text-ink-100 underline underline-offset-4`}
-            >
-              ← Back to the counter
-            </Link>
-
-            <div className="mt-4 flex items-center gap-2">
-              <EnamelSign tone="cream">Your keys</EnamelSign>
-              {user.isAdmin && <EnamelSign tone="red">Commissioner</EnamelSign>}
+            <div className="mt-3">
+              <PanelHeading>{user.displayName}</PanelHeading>
             </div>
 
-            <h1 className="mt-3 text-2xl leading-tight font-bold text-paper-white">
-              {user.displayName}
-            </h1>
+            {/*
+              * The device list, ruled like a docket rather than mounted on the
+              * drawn clipboard. `surface_clipboard_blank` is authored at 96×144
+              * and was being shown at roughly three times that, which turns a
+              * crisp asset into mush — art below its display size is worse than
+              * no art. The request for a properly sized board is in the report.
+              */}
+            <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="font-mono text-[10px] font-bold tracking-[0.18em] text-ink-900 uppercase">
+                  Cut for
+                </span>
+                <span className="font-mono text-[10px] tracking-[0.1em] text-ink-500">
+                  {devices.length} device{devices.length === 1 ? '' : 's'}
+                </span>
+              </div>
 
-            <div className="mt-6">
-              <Clipboard title="Cut for" aside={`${String(devices.length)} device${devices.length === 1 ? '' : 's'}`}>
-                <ul className="space-y-2">
-                  {devices.map((device) => (
-                    <li
-                      key={device.id}
-                      className="flex items-baseline justify-between gap-3 text-[15px]"
-                    >
-                      <span className="text-ink-900">{device.label}</span>
-                      <span className="shrink-0 font-mono text-[11px] text-ink-500">
-                        {device.current ? 'this one' : formatLastSeen(device.lastSeenAt)}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+              <ul className="mt-2.5 space-y-2">
+                {devices.map((device) => (
+                  <li
+                    key={device.id}
+                    className="flex items-baseline justify-between gap-3 text-[15px]"
+                  >
+                    <span className="text-ink-900">{device.label}</span>
+                    <span className="shrink-0 font-mono text-[11px] text-ink-500">
+                      {device.current ? 'this one' : formatLastSeen(device.lastSeenAt)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
 
-                <p className="mt-4 border-t border-dashed border-ink-300 pt-3 text-[13px] leading-relaxed text-ink-500">
-                  Tony leaves the door unlocked for 90 days from your last visit. Come by weekly
-                  and he will never ask again.
-                </p>
-              </Clipboard>
+              <p className="mt-4 border-t-2 border-dashed border-ink-300 pt-3 text-[13px] leading-relaxed text-ink-500">
+                Tony leaves the door unlocked for 90 days from your last visit. Come by weekly and
+                he will never ask again.
+              </p>
             </div>
+          </PixelPanel>
 
-            <div className="mt-6 space-y-3">
-              {user.isAdmin && (
-                <Link
-                  href="/admin"
-                  className={`flex ${TAP_TARGET} min-h-[3.25rem] items-center justify-center rounded-[3px] border border-wood-dark bg-paper-mid px-5 font-semibold text-ink-900 shadow-[0_2px_6px_rgba(0,0,0,0.5)] active:translate-y-px active:bg-paper-dark`}
-                >
-                  Commissioner&rsquo;s office
-                </Link>
-              )}
+          <div className="mt-5 space-y-3">
+            {user.isAdmin && (
+              <Link
+                href="/admin"
+                className={`${ACTION} border-wood-dark bg-paper-mid text-ink-900`}
+              >
+                Commissioner&rsquo;s office
+              </Link>
+            )}
 
-              <form action={signOutAction}>
+            <form action={signOutAction}>
+              <button type="submit" className={`${ACTION} border-wood-dark bg-[#1c1113] text-paper-mid`}>
+                Hang the key back up
+              </button>
+            </form>
+
+            {devices.length > 1 && (
+              <form action={signOutEverywhereAction}>
                 <button
                   type="submit"
-                  className={`flex w-full ${TAP_TARGET} min-h-[3.25rem] items-center justify-center rounded-[3px] border border-wood-mid bg-ink-900/70 px-5 font-semibold text-paper-mid active:translate-y-px active:bg-wood-dark/40`}
+                  className={`${ACTION} border-red-mid bg-red-dark text-paper-white`}
                 >
-                  Hang the key back up
+                  Change the locks everywhere
                 </button>
               </form>
-
-              {devices.length > 1 && (
-                <form action={signOutEverywhereAction}>
-                  <button
-                    type="submit"
-                    className={`flex w-full ${TAP_TARGET} min-h-[3.25rem] items-center justify-center rounded-[3px] border border-red-dark bg-red-dark/15 px-5 font-semibold text-red-light active:translate-y-px active:bg-red-dark/30`}
-                  >
-                    Change the locks everywhere
-                  </button>
-                </form>
-              )}
-            </div>
+            )}
           </div>
-        </Wall>
-      </Page>
 
+          <div className="mt-6">
+            <ReturnPlate />
+          </div>
+        </main>
+      </Page>
     </>
   );
 }

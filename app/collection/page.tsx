@@ -1,6 +1,6 @@
-import { ClosedFixture, EnamelSign } from '@/components/scene/fixtures';
-import { ParlorAir, Pendant, Wall } from '@/components/scene/backdrop';
-import { BackToTheCounter, Page } from '@/components/shell';
+import { ClosedRoom } from '@/components/scene/panel';
+import { RoomBehind } from '@/components/scene/room-behind';
+import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
 
 /**
@@ -9,6 +9,11 @@ import { requireUser } from '@/lib/auth/current-user';
  * Collectibles, tokens and the loot box are V4 (`17 §4`). Nothing here shows a
  * number or a balance: `16 §8` keeps every economy figure simulation-gated, and
  * a "0 tokens" counter would be a number the product has not earned yet.
+ *
+ * The screen used to draw its own glass case out of gradients. It no longer
+ * does. The real parlor sits behind, dimmed, and a note explains the case —
+ * because a drawn case competing with a *drawn* case one screen away is a
+ * comparison this side was always going to lose.
  */
 
 export const dynamic = 'force-dynamic';
@@ -18,44 +23,20 @@ export default async function CollectionPage() {
 
   return (
     <>
-      <ParlorAir />
+      <RoomBehind />
 
       <Page>
-        <Wall className="px-4 pt-6 pb-8" wainscot={false}>
-          <Pendant className="top-0 right-[26%] z-0" height="h-32" />
-
-          <div className="relative z-10">
-            <div className="mb-3">
-              <BackToTheCounter />
-            </div>
-
-            <EnamelSign tone="blue">The case</EnamelSign>
-            <h1 className="mt-3 text-2xl leading-tight font-bold text-paper-white">
-              Shelves are bare
-            </h1>
-            <p className="mt-2 max-w-md text-[15px] leading-relaxed text-ink-100">
-              The strip light is on and the glass has been wiped. Tony has not put anything in
-              it yet.
-            </p>
-
-            <div className="mt-6">
-              <ClosedFixture
-                slug="zone_display_case"
-                label="Display case"
-                note="Two shelves, a light along the top, and a smear where somebody leaned on the glass."
-                variant="case"
-                artHeight="h-56"
-              />
-            </div>
-
-            <p className="mt-6 text-[13px] leading-relaxed text-ink-300">
-              Collectibles, championship rings, and the tokens to open a box with all arrive
-              together — once there is a season to earn them in.
-            </p>
-          </div>
-        </Wall>
+        <ClosedRoom
+          sign="The case"
+          title="Shelves are bare"
+          footnote="Collectibles, championship rings, and the tokens to open a box all arrive together — once there is a season to earn them in."
+        >
+          <p>The strip light is on and the glass has been wiped. Tony has not put anything in it yet.</p>
+          <p className="text-ink-500">
+            Two shelves, a light along the top, and a smear where somebody leaned on the glass.
+          </p>
+        </ClosedRoom>
       </Page>
-
     </>
   );
 }

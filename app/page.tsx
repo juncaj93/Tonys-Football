@@ -135,7 +135,7 @@ export default async function ParlorPage() {
             {/* ---- Things in the room you can touch --------------------- */}
 
             {/* Tony. He greets you, and hands over your slip. */}
-            <RoomObject spot={hotspot('tony')} title="Tony">
+            <RoomObject spot={hotspot('tony')} index={0} title="Tony">
               <p className="text-[17px] leading-relaxed">{line}</p>
               <div className="mt-5 border-t border-dashed border-ink-300/70 pt-5 pb-2">
                 <ReceiptSlip receipt={receipt} name={user.displayName} />
@@ -143,7 +143,7 @@ export default async function ParlorPage() {
             </RoomObject>
 
             {/* The empty frame screwed to the wall on the left. */}
-            <RoomObject spot={hotspot('tonight')} title="Tonight at Tony's">
+            <RoomObject spot={hotspot('tonight')} index={1} title="Tonight at Tony's">
               {tonight.length === 0 ? (
                 <p className="pb-3 text-[15px] text-ink-500">Nothing on the board.</p>
               ) : (
@@ -161,13 +161,13 @@ export default async function ParlorPage() {
             </RoomObject>
 
             {/* The poster frame by the window, where the paper goes up on a Tuesday. */}
-            <RoomLink spot={hotspot('slice')} />
+            <RoomLink spot={hotspot('slice')} index={2} />
 
             {/* The lit case on the counter. */}
-            <RoomLink spot={hotspot('collection')} />
+            <RoomLink spot={hotspot('collection')} index={3} />
 
             {/* The booths at the back, and the rooms beyond them. */}
-            <RoomLink spot={hotspot('rooms')} />
+            <RoomLink spot={hotspot('rooms')} index={4} />
           </div>
 
           {/*
@@ -184,11 +184,16 @@ export default async function ParlorPage() {
             style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
           >
             <div className="relative">
-              <span
-                aria-hidden="true"
-                className="absolute -top-[7px] left-[38%] h-3.5 w-3.5 rotate-45 border-t border-l border-amber-mid/35 bg-[#1c1113]"
-              />
-              <p className="relative rounded-[4px] border border-wood-dark/80 border-t-amber-mid/35 bg-[#1c1113]/95 px-3.5 py-2.5 text-[15px] leading-snug text-paper-white shadow-[0_8px_22px_rgba(0,0,0,0.6)]">
+              {/* A stepped tail, drawn in pixels rather than rotated. */}
+              <span aria-hidden="true" className="absolute -top-[8px] left-[36%] flex flex-col">
+                <span className="ml-[8px] h-[4px] w-[8px] bg-amber-mid/45" />
+                <span className="ml-[4px] h-[4px] w-[16px] bg-[#1c1113]" />
+              </span>
+              <p className="pixel-edge relative border-2 border-wood-dark bg-[#1c1113] px-3 py-2.5 text-[15px] leading-snug text-paper-white">
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 top-0 h-[2px] bg-amber-mid/45"
+                />
                 <span className="mr-2 font-mono text-[10px] tracking-[0.18em] text-amber-mid/85 uppercase">
                   Tony
                 </span>

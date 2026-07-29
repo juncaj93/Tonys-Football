@@ -340,6 +340,44 @@ button {
   animation: sheet-rise 180ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 
+/* --- The house edge ------------------------------------------------------ *
+ *
+ * How every panel, sign and sheet in the product gets its depth.
+ *
+ * Three flat layers, the way a sprite fakes a bevel: light along the top and
+ * left, dark along the bottom and right, and one hard offset drop underneath.
+ * No `blur`, no `backdrop-filter`, no gradient across an edge — those are the
+ * things that made the interiors read as a different product from the room the
+ * moment the room became real pixel art.
+ */
+.pixel-edge {
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.16),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.3),
+    4px 4px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* The same idea inverted, for something set *into* a surface. */
+.pixel-inset {
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 0, 0, 0.4),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.1);
+}
+
+/*
+ * The parlor, behind an interior.
+ *
+ * You did not leave the shop to look at the case; you turned round inside it.
+ * So the real art sits behind every interior screen, dimmed and desaturated
+ * enough to read as background but still unmistakably the room you were
+ * standing in a moment ago. This is what makes the interiors part of the same
+ * world — they are literally made of it — where four hand-drawn CSS dioramas
+ * never could be.
+ */
+.room-behind {
+  filter: saturate(0.7) brightness(0.42);
+}
+
 /* --- Walking in ---------------------------------------------------------- *
  *
  * `17 §3`: Tony is at the counter, and he says one true thing. The room is
@@ -489,6 +527,96 @@ button {
 
 .room-reveal {
   animation: object-breathes 1500ms ease-in-out 2;
+}
+
+/*
+ * The glint: four pixels of light that catch on anything you can pick up.
+ *
+ * The edges only appear on arrival, on touch, on focus or on request, which
+ * turned out to be too quiet — half a minute into the room there was no sign
+ * at all of which parts of it were things. This is what a point-and-click game
+ * does instead, and it runs forever because "you can touch this" is true
+ * forever.
+ *
+ * Most of the cycle is spent nearly invisible. Each object is offset from the
+ * next, so the room shimmers rather than flashing in unison.
+ */
+/*
+ * The glint: a mark that says "this is a thing", in the grammar the genre
+ * already uses.
+ *
+ * Two parts, because one was not enough. A **resting pixel** sits on every
+ * interactive object all the time, so a room left alone for a minute still
+ * shows where its verbs are. Over the top, a **sparkle** — a two-pixel cross
+ * that opens and closes in about half a second — catches the eye the way a
+ * static dot at low opacity never did against a wall of pizza boxes.
+ *
+ * It is deliberately most of the way through its cycle doing nothing. Each
+ * object is offset from the next, so what you notice out of the corner of an
+ * eye is one thing at a time rather than five things blinking together.
+ */
+.room-glint {
+  background-color: rgba(255, 217, 138, 0.55);
+  box-shadow: 0 0 4px rgba(255, 217, 138, 0.5);
+}
+
+.room-glint::before,
+.room-glint::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  background-color: var(--color-amber-glow);
+  animation: sparkle 4200ms ease-in-out infinite;
+  animation-delay: inherit;
+}
+
+/* The arms of the cross. */
+.room-glint::before {
+  width: 16px;
+  height: 2px;
+  margin: -1px 0 0 -8px;
+}
+
+.room-glint::after {
+  width: 2px;
+  height: 16px;
+  margin: -8px 0 0 -1px;
+}
+
+@keyframes sparkle {
+  0%,
+  62%,
+  100% {
+    opacity: 0;
+    transform: scale(0.2);
+  }
+  72%,
+  80% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  90% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * The information stays; only the movement goes. The resting pixel is
+   * brightened to carry the whole job on its own.
+   */
+  .room-glint {
+    background-color: rgba(255, 217, 138, 0.95);
+  }
+
+  .room-glint::before,
+  .room-glint::after {
+    animation: none;
+    opacity: 0.55;
+    transform: scale(0.7);
+  }
 }
 
 /* --- Small signs of life ------------------------------------------------- *

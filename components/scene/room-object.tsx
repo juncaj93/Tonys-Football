@@ -133,6 +133,49 @@ function Marker({ spot }: { spot: Hotspot }) {
 }
 
 /**
+ * The glint.
+ *
+ * The room's edges only appear on arrival, on touch, on focus, or on request —
+ * which is restrained, and was too restrained: half a minute after walking in,
+ * the parlor gave no sign at all of which parts of it were things. This is what
+ * a point-and-click game does instead: a few pixels of light that catch on
+ * anything you can pick up, slowly, forever.
+ *
+ * Four pixels, in the object's top-right corner, drifting between barely there
+ * and clearly there on a long cycle. Each object is offset from the next so
+ * they never blink in unison, which is what would turn a quiet room into an
+ * attract screen. Under `prefers-reduced-motion` it holds still at a legible
+ * opacity rather than pulsing — the information stays, the movement goes.
+ *
+ * It sits *outside* the reveal marker on purpose: the marker is a state the
+ * room enters and leaves, and this is simply true the whole time.
+ */
+function Glint({ spot, index }: { spot: Hotspot; index: number }) {
+  // Anchored to the *object*, not to the tap box around it. The two differ by
+  // up to 10px on the small wall frames, which is enough for the glint to float
+  // in the middle of the wallpaper beside the thing it is pointing at.
+  const box = reachable(spot.rect);
+  const right = ((box.x + box.width - (spot.rect.x + spot.rect.width)) / box.width) * 100;
+  // A person's mark sits at the shoulder. On everything else it sits on the
+  // top corner, the way a highlight catches the edge of an object.
+  const down = spot.shape === 'figure' ? spot.rect.height * 0.34 : 0;
+  const top = ((spot.rect.y + down - box.y) / box.height) * 100;
+
+  return (
+    <span
+      aria-hidden="true"
+      className="room-glint pointer-events-none absolute h-[2px] w-[2px]"
+      style={{
+        right: `calc(${right.toFixed(3)}% - 1px)`,
+        top: `calc(${top.toFixed(3)}% - 1px)`,
+        // Staggered by object, so the room shimmers rather than flashing.
+        animationDelay: `${String(index * 760)}ms`,
+      }}
+    />
+  );
+}
+
+/**
  * What this object is, for somebody arriving by keyboard.
  *
  * A pointing device gets to hover and tap and find out; a keyboard gets a ring
@@ -159,10 +202,13 @@ function FocusLabel({ spot }: { spot: Hotspot }) {
 
 export function RoomObject({
   spot,
+  index,
   title,
   children,
 }: {
   spot: Hotspot;
+  /** Position in the room, used only to stagger the glint. */
+  index: number;
   /** Heading inside the opened sheet. */
   title: string;
   children: React.ReactNode;
@@ -184,6 +230,7 @@ export function RoomObject({
         style={place(reachable(spot.rect))}
       >
         <Marker spot={spot} />
+        <Glint spot={spot} index={index} />
       </button>
 
       {open && (
@@ -203,7 +250,7 @@ export function RoomObject({
 }
 
 /** A part of the room that leads somewhere rather than opening in place. */
-export function RoomLink({ spot }: { spot: Hotspot }) {
+export function RoomLink({ spot, index }: { spot: Hotspot; index: number }) {
   if (spot.href === undefined) throw new Error(`${spot.id} leads nowhere`);
 
   return (
@@ -214,6 +261,7 @@ export function RoomLink({ spot }: { spot: Hotspot }) {
       style={place(reachable(spot.rect))}
     >
       <Marker spot={spot} />
+      <Glint spot={spot} index={index} />
     </Link>
   );
 }
@@ -259,16 +307,25 @@ function Sheet({
         */}
       <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink-900/55" />
 
+      {/*
+        * The sheet itself, built from the house surfaces rather than from a
+        * rounded card with a 30px blurred shadow. Hard top edge, square
+        * corners, a stepped bevel — the same material as every panel in the
+        * shop, so opening something does not feel like leaving it.
+        */}
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-labelledby={headingId}
         tabIndex={-1}
-        className="sheet-rise relative max-h-[76dvh] overflow-y-auto rounded-t-[10px] border-t-2 border-wood-dark bg-paper-mid text-ink-900 shadow-[0_-10px_30px_rgba(0,0,0,0.55)] outline-none"
+        className="sheet-rise relative max-h-[76dvh] overflow-y-auto border-t-2 border-wood-dark bg-paper-mid text-ink-900 shadow-[0_-4px_0_rgba(0,0,0,0.45)] outline-none"
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
       >
-        <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-wood-dark/25 bg-paper-mid px-5 pt-3.5 pb-2.5">
+        {/* The strip of light the counter throws onto whatever you pick up. */}
+        <div aria-hidden="true" className="sticky top-0 z-20 h-[2px] bg-amber-mid/45" />
+
+        <div className="sticky top-[2px] z-10 flex items-center justify-between gap-3 border-b-2 border-wood-dark/30 bg-paper-mid px-4 pt-3 pb-2.5">
           <h2
             id={headingId}
             className="font-mono text-[11px] font-bold tracking-[0.22em] text-ink-900/80 uppercase"
@@ -278,13 +335,13 @@ function Sheet({
           <button
             type="button"
             onClick={onClose}
-            className="-mr-2 flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[3px] px-1 text-[13px] font-semibold text-ink-500 active:bg-paper-dark"
+            className="pixel-edge flex min-h-[44px] shrink-0 items-center justify-center border-2 border-wood-dark/50 bg-paper-dark/50 px-3.5 font-mono text-[11px] tracking-[0.12em] text-ink-700 uppercase active:translate-y-px"
           >
             Close
           </button>
         </div>
 
-        <div className="px-5 pt-4">{children}</div>
+        <div className="px-4 pt-4">{children}</div>
       </div>
     </div>
   );

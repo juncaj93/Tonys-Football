@@ -1,9 +1,8 @@
-import Link from 'next/link';
 
 import { resetPinAction } from '@/app/actions/auth';
-import { Clipboard, EnamelSign } from '@/components/scene/fixtures';
-import { ParlorAir, Wall } from '@/components/scene/backdrop';
-import { BackToTheCounter, Page, TAP_TARGET } from '@/components/shell';
+import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
+import { RoomBehind } from '@/components/scene/room-behind';
+import { Page, TAP_TARGET } from '@/components/shell';
 import { requireAdmin } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { getDb } from '@/lib/db';
@@ -32,31 +31,25 @@ export default async function AdminPage() {
 
   return (
     <>
-      <ParlorAir tone="cold" />
+      <RoomBehind />
 
       <Page>
-        <Wall className="px-4 pt-6 pb-8" wainscot={false}>
-          <div className="relative z-10">
-            <div className="mb-3">
-              <BackToTheCounter />
+        <main className="mx-auto w-full max-w-md flex-1 px-4 pt-3 pb-8">
+          <PixelPanel tone="paper" className="px-4 pt-4 pb-5">
+            <SignPlate tone="red">Staff only</SignPlate>
+            <div className="mt-3">
+              <PanelHeading>The office</PanelHeading>
             </div>
 
-            <Link
-              href="/profile"
-              className={`inline-flex ${TAP_TARGET} items-center text-sm text-ink-100 underline underline-offset-4`}
-            >
-              ← Back
-            </Link>
-
-            <div className="mt-4">
-              <EnamelSign tone="red">Staff only</EnamelSign>
-            </div>
-            <h1 className="mt-3 text-2xl leading-tight font-bold text-paper-white">
-              The office
-            </h1>
-
-            <div className="mt-6">
-              <Clipboard title="Key board" aside={`${String(managers.length)} managers`}>
+            <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
+              <div className="mb-2 flex items-baseline justify-between gap-3">
+                <span className="font-mono text-[10px] font-bold tracking-[0.18em] text-ink-900 uppercase">
+                  Key board
+                </span>
+                <span className="font-mono text-[10px] tracking-[0.1em] text-ink-500">
+                  {managers.length} managers
+                </span>
+              </div>
                 <ul className="divide-y divide-ink-300/60">
                   {managers.map((manager) => (
                     <li key={manager.id} className="flex items-center justify-between gap-3 py-2.5">
@@ -65,7 +58,6 @@ export default async function AdminPage() {
                           {manager.displayName}
                         </p>
                         <p className="font-mono text-[11px] text-ink-500">
-                          roster {manager.rosterId} ·{' '}
                           {manager.claimed ? 'key taken' : 'still on the hook'}
                         </p>
                       </div>
@@ -75,7 +67,7 @@ export default async function AdminPage() {
                           <input type="hidden" name="userId" value={manager.id} />
                           <button
                             type="submit"
-                            className={`${TAP_TARGET} rounded-[2px] border border-red-dark bg-red-dark/10 px-3 text-[13px] font-semibold text-red-dark active:translate-y-px active:bg-red-dark/20`}
+                            className={`pixel-edge ${TAP_TARGET} border-2 border-red-dark bg-red-dark/15 px-3 font-mono text-[11px] tracking-[0.1em] text-red-dark uppercase active:translate-y-px`}
                           >
                             Clear PIN
                           </button>
@@ -85,16 +77,19 @@ export default async function AdminPage() {
                   ))}
                 </ul>
 
-                <p className="mt-4 border-t border-dashed border-ink-300 pt-3 text-[13px] leading-relaxed text-ink-500">
+              <p className="mt-4 border-t-2 border-dashed border-ink-300 pt-3 text-[13px] leading-relaxed text-ink-500">
                   Clearing a PIN signs that manager out everywhere and puts their key back on the
                   hook, ready for a new one. You cannot see anyone&rsquo;s PIN, including your
                   own — and you cannot clear your own from here, because it would sign you out
                   mid-action.
-                </p>
-              </Clipboard>
+              </p>
             </div>
+          </PixelPanel>
+
+          <div className="mt-6">
+            <ReturnPlate />
           </div>
-        </Wall>
+        </main>
       </Page>
 
     </>
