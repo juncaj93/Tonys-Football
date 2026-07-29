@@ -138,7 +138,9 @@ export function Arriving({ children }: { children: React.ReactNode }) {
         * component, which would drag the greeting, the receipt and the board
         * across the boundary with them for no benefit.
         */}
-      <div className={`contents ${entering ? 'arriving' : ''}`}>{children}</div>
+      <div className={`contents ${entering ? 'arriving' : ''} ${revealed ? 'showing-taps' : ''}`}>
+        {children}
+      </div>
     </ArrivalContext.Provider>
   );
 }

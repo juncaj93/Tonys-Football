@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 
 import { useArrival } from '@/components/scene/arrival';
-import { place, reachable, type Hotspot, type Shape } from '@/lib/parlor/hotspots';
+import { ROOM, place, reachable, type Hotspot, type Shape } from '@/lib/parlor/hotspots';
 
 /**
  * Things in the room you can touch.
@@ -41,19 +41,34 @@ import { place, reachable, type Hotspot, type Shape } from '@/lib/parlor/hotspot
 /** The edge itself. Drawn to the object's shape, never as a web button. */
 function Outline({ shape }: { shape: Shape }) {
   if (shape === 'figure') {
-    // Tony gets a ring rather than a box: a rectangle drawn around a person is
-    // a button with a man inside it. An ellipse hugging his head and shoulders
-    // is the shape of the person, and it survives the wall behind him — which a
-    // soft warm wash does not, because the wall is already warm.
+    // Tony gets light on the counter in front of him, not an outline around
+    // him. Two reasons. A rectangle drawn around a person is a button with a
+    // man inside it — and any closed shape big enough to contain him is also
+    // big enough to sit over his face, the wall logo, and half the back bar,
+    // which is exactly the "large ring obscuring the art" the room is trying to
+    // avoid. A pool of light where somebody is standing says the same thing and
+    // covers nothing that matters.
+    //
+    // He also lifts two pixels while this is showing; that is on `.tony-mark`
+    // in the stylesheet, because it moves the sprite rather than the hotspot.
     return (
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute -inset-x-1.5 -inset-y-1 rounded-[50%]"
-        style={{
-          border: '1.5px solid rgba(255,231,180,0.9)',
-          boxShadow: '0 0 9px rgba(255,217,138,0.5), inset 0 0 16px rgba(255,217,138,0.22)',
-        }}
-      />
+      <>
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-[6%] bottom-0 h-[9%] translate-y-1/2 rounded-[50%]"
+          style={{
+            background:
+              'radial-gradient(closest-side, rgba(255,231,180,0.8), rgba(255,217,138,0.32) 55%, transparent)',
+          }}
+        />
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-[14%] bottom-0 h-[26%]"
+          style={{
+            background: 'linear-gradient(to top, rgba(255,217,138,0.22), transparent)',
+          }}
+        />
+      </>
     );
   }
 
@@ -112,6 +127,32 @@ function Marker({ spot }: { spot: Hotspot }) {
       }}
     >
       <Outline shape={spot.shape} />
+      <FocusLabel spot={spot} />
+    </span>
+  );
+}
+
+/**
+ * What this object is, for somebody arriving by keyboard.
+ *
+ * A pointing device gets to hover and tap and find out; a keyboard gets a ring
+ * of light and no idea what is inside it. The name is already on the control
+ * for a screen reader, so this is the same information made visible — and only
+ * on `:focus-visible`, which means it appears for the keyboard and never for a
+ * thumb. Nothing is permanently labelled; the room stays a room.
+ */
+function FocusLabel({ spot }: { spot: Hotspot }) {
+  // Objects on the right of the room hang their label off their right edge, or
+  // it would be cut off by the wall.
+  const nearRight = spot.rect.x + spot.rect.width / 2 > ROOM.width * 0.7;
+
+  return (
+    <span
+      className={`pointer-events-none absolute top-full mt-1.5 rounded-[2px] border border-amber-mid/30 bg-ink-900/95 px-1.5 py-1 font-mono text-[9px] tracking-[0.08em] whitespace-nowrap text-paper-mid opacity-0 group-focus-visible:opacity-100 ${
+        nearRight ? 'right-0' : 'left-0'
+      }`}
+    >
+      {spot.label}
     </span>
   );
 }

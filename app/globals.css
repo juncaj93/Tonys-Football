@@ -406,6 +406,28 @@ button {
 }
 
 /*
+ * Tony's own cue while the room is showing what can be touched: he lifts two
+ * pixels, as though shifting his weight because somebody is looking at him.
+ *
+ * Two pixels rather than an outline. Anything drawn *around* a person reads as
+ * a button with a man inside it, and anything large enough to contain him also
+ * covers his face and half the back bar. This is on the sprite's wrapper rather
+ * than inside the hotspot because it moves Tony, not the target.
+ */
+.tony-mark {
+  transition: transform 260ms ease-out;
+}
+
+.showing-taps .tony-mark {
+  transform: translate3d(0, -2px, 0);
+}
+
+/* The entrance owns the transform while it is running. */
+.arriving .tony-mark {
+  transition: none;
+}
+
+/*
  * The introduction: interactive objects take their warm edge and breathe twice,
  * then the room goes quiet. Two cycles, not infinite — a room that pulses
  * forever is an arcade attract screen.
@@ -499,5 +521,14 @@ button {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+
+  /*
+   * Zeroing the duration turns Tony's two-pixel lift from a movement into a
+   * jump, which is not what somebody asking for less motion wants. They keep
+   * the warm edges, which carry the same information without moving anything.
+   */
+  .showing-taps .tony-mark {
+    transform: none;
   }
 }

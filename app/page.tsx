@@ -170,20 +170,30 @@ export default async function ParlorPage() {
           </div>
 
           {/*
-            * What Tony is saying, pinned to the bottom of the screen rather than
-            * to the room — so it survives whatever the floor does on a short
-            * phone and stays clear of the home indicator.
+            * What Tony is saying.
+            *
+            * Pinned to the bottom of the *screen* rather than to the room, so it
+            * survives whatever the floor does on a short phone and stays clear
+            * of the home indicator. The notch on its top edge points back at
+            * him: without it this is a dark card floating over a restaurant, and
+            * with it it is the man behind the counter talking to you.
             */}
           <div
             className="tony-line pointer-events-none absolute inset-x-3 z-40"
             style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
           >
-            <p className="rounded-[3px] border border-wood-dark/70 bg-ink-900/90 px-3.5 py-2.5 text-[15px] leading-snug text-paper-white shadow-[0_6px_18px_rgba(0,0,0,0.55)]">
-              <span className="mr-2 font-mono text-[10px] tracking-[0.18em] text-amber-mid/80 uppercase">
-                Tony
-              </span>
-              {line}
-            </p>
+            <div className="relative">
+              <span
+                aria-hidden="true"
+                className="absolute -top-[7px] left-[38%] h-3.5 w-3.5 rotate-45 border-t border-l border-amber-mid/35 bg-[#1c1113]"
+              />
+              <p className="relative rounded-[4px] border border-wood-dark/80 border-t-amber-mid/35 bg-[#1c1113]/95 px-3.5 py-2.5 text-[15px] leading-snug text-paper-white shadow-[0_8px_22px_rgba(0,0,0,0.6)]">
+                <span className="mr-2 font-mono text-[10px] tracking-[0.18em] text-amber-mid/85 uppercase">
+                  Tony
+                </span>
+                {line}
+              </p>
+            </div>
           </div>
         </main>
       </Arriving>
