@@ -24,7 +24,8 @@
     "sleeper:record": "tsx scripts/record-fixtures.ts",
     "sleeper:check": "tsx scripts/record-fixtures.ts -- --check",
     "sleeper:import": "tsx scripts/import-league.ts",
-    "art:process": "tsx scripts/process-art.ts"
+    "art:process": "tsx scripts/process-art.ts",
+    "art:prepare": "tsx scripts/prepare-b0.ts"
   },
   "overrides": {
     "brace-expansion": "^5.0.8",

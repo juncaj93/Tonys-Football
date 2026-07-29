@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 import inventoryJson from '@/art/assets.inventory.json';
 
 import { assetRegistry, buildRegistry, resolveAsset } from './registry';
@@ -172,14 +175,35 @@ describe('the committed inventory', () => {
     expect(assetRegistry.size).toBe(inventoryJson.totalSlugs);
   });
 
-  it('declares every asset as a placeholder — no art exists yet', () => {
-    expect(assetRegistry.byStatus('placeholder')).toHaveLength(assetRegistry.size);
+  /**
+   * The point of the registry is that a slug always resolves to *something*.
+   * `missing` is the only failure — it means a component asks for art nobody
+   * ever declared, and it renders as a red box rather than as the shop.
+   */
+  it('resolves every slug to art or a placeholder, never missing', () => {
+    for (const record of assetRegistry.all()) {
+      expect(resolveAsset(record.slug).kind, record.slug).not.toBe('missing');
+    }
   });
 
-  it('resolves every slug to a placeholder, never missing', () => {
-    for (const record of assetRegistry.all()) {
-      expect(resolveAsset(record.slug).kind).toBe('placeholder');
+  /**
+   * An asset claiming to have art must actually have the file. Registering a
+   * path before the image lands is the one way the placeholder-first contract
+   * can break: the fallback stops rendering and nothing replaces it.
+   */
+  it('has a real file behind every asset that claims to have art', () => {
+    for (const record of assetRegistry.byStatus('generated')) {
+      expect(record.path, record.slug).not.toBeNull();
+      expect(
+        existsSync(path.join(process.cwd(), 'public', record.path ?? '')),
+        `${record.slug} declares ${record.path ?? 'null'}, which does not exist`,
+      ).toBe(true);
     }
+  });
+
+  it('leaves everything without art on the placeholder tier', () => {
+    const withArt = assetRegistry.byStatus('generated').length;
+    expect(assetRegistry.byStatus('placeholder')).toHaveLength(assetRegistry.size - withArt);
   });
 
   it('uses only known families', () => {
@@ -197,7 +221,8 @@ describe('the committed inventory', () => {
   it('contains the seven B0 test-set slugs that lock ART_SPEC', () => {
     const b0 = assetRegistry.byBatch('B0').map((r) => r.slug);
 
-    expect(b0).toHaveLength(7);
+    // Contains, not equals: the batch has since taken on the counter foreground
+    // and the clipboard, both cut or generated alongside the original seven.
     expect(b0).toEqual(
       expect.arrayContaining([
         'character_tony_neutral',
@@ -212,10 +237,31 @@ describe('the committed inventory', () => {
   });
 
   it('contains the six shop zones', () => {
-    expect(assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'))).toHaveLength(6);
+    const zones = assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'));
+
+    expect(zones.map((r) => r.slug)).toEqual(
+      expect.arrayContaining([
+        'zone_front_counter',
+        'zone_tonight_board',
+        'zone_menu_board',
+        'zone_newspaper_rack',
+        'zone_display_case',
+        'zone_wall',
+      ]),
+    );
   });
 
-  it('flags the zone canvas as provisional pending B0', () => {
-    expect(assetRegistry.provisional).toEqual({ zoneCanvas: '320x200', settlesAt: 'B0' });
+  /**
+   * `ART_SPEC §2.1` left the zone canvas provisional until the B0 composite ran
+   * on a real phone. It has now run: the approved room art is 941 x 670, so the
+   * canvas is 320 x 228 and every zone tile shares it.
+   */
+  it('holds one canvas across every zone tile', () => {
+    const zones = assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'));
+    const canvases = new Set(
+      zones.filter((r) => r.slug !== 'zone_counter_front').map((r) => r.canvas),
+    );
+
+    expect([...canvases]).toEqual(['320x228']);
   });
 });

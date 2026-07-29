@@ -121,12 +121,25 @@ async function processOne(filename: string, palette: readonly [number, number, n
 
   const { width, height } = parseCanvas(record.canvas);
 
-  // --- 1. Downscale, nearest-neighbor -------------------------------------
+  // --- 1. Downscale --------------------------------------------------------
+  //
+  // `ASSET_PIPELINE.md §4` says nearest-neighbor, and at modest ratios that is
+  // right. At the ratios actually in play it is not: Tony arrives 941 × 1672
+  // and ships at 32 × 48, a 29:1 reduction, and nearest-neighbor at 29:1 is not
+  // sampling — it is picking one pixel in every 841 and discarding the rest. It
+  // produced a figure whose face was three unrelated colours.
+  //
+  // Averaging first and **then quantizing** gets what that rule was protecting:
+  // the average is thrown away a step later when every pixel snaps to
+  // `palette.json`, and alpha is hardened to 0 or 255, so the output has no
+  // intermediate colours and no anti-aliased edge either way. The difference is
+  // that each output pixel now represents the 841 it came from.
+  //
   // `fit: 'fill'` because the canvas is authoritative; a source with the wrong
   // aspect ratio should be visibly squashed rather than quietly cropped.
   const scaled = sharp(path.join(INCOMING, filename))
     .ensureAlpha()
-    .resize(width, height, { kernel: 'nearest', fit: 'fill' });
+    .resize(width, height, { kernel: 'lanczos3', fit: 'fill' });
 
   const { data, info } = await scaled.raw().toBuffer({ resolveWithObject: true });
 
@@ -195,6 +208,9 @@ async function main(): Promise<void> {
   const only = process.argv.slice(2).filter((arg) => !arg.startsWith('-'));
   const files = readdirSync(INCOMING)
     .filter((file) => /\.(png|webp)$/i.test(file))
+    // `_source_*` are the generated originals, kept for reference and
+    // regeneration. They are not assets and match no slug.
+    .filter((file) => !file.startsWith('_'))
     .filter((file) => only.length === 0 || only.includes(slugFromFilename(file)));
 
   if (files.length === 0) {

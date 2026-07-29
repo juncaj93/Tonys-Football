@@ -479,6 +479,38 @@ export function Clipboard({
   aside?: string;
   children: React.ReactNode;
 }) {
+  const board = resolveAsset('surface_clipboard_blank');
+
+  // With art registered, the sheet is the drawn clipboard and the text is laid
+  // into its safe area — the region the surface was authored to keep flat and
+  // even so rendered type stays legible on it (`prompts/surface.md`). Nothing
+  // is baked in: the clipboard is blank and every word on it comes from the
+  // database at request time.
+  if (board.kind === 'art') {
+    return (
+      <div className="relative mx-auto w-full max-w-[19rem]">
+        <AssetView resolution={board} className="drop-shadow-[0_8px_16px_rgba(0,0,0,0.55)]" />
+        {/*
+          * The paper inside the drawn clipboard, measured off the processed
+          * asset rather than guessed: the sheet runs 16%-87% across and
+          * 17%-81% down the canvas, and the rest is board, clip and the
+          * transparent margin around it.
+          */}
+        <div className="absolute inset-x-[18%] top-[19%] bottom-[21%] overflow-y-auto text-ink-900">
+          <div className="mb-2 flex items-baseline justify-between gap-3 border-b border-dashed border-ink-300 pb-1.5">
+            <h2 className="font-mono text-[10px] font-bold tracking-[0.18em] uppercase">
+              {title}
+            </h2>
+            {aside !== undefined && (
+              <span className="font-mono text-[9px] tracking-wide text-ink-500">{aside}</span>
+            )}
+          </div>
+          {children}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="relative rounded-[4px] bg-[#3b2b22] p-2 shadow-[0_8px_20px_rgba(0,0,0,0.55)]">
       {/* The steel clip. */}

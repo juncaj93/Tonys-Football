@@ -7,10 +7,10 @@ import {
   Booths,
   ClosedFixture,
   Corkboard,
-  Counter,
   EnamelSign,
   HangingSign,
   MenuBoard,
+  SceneSurface,
   SpeechPlate,
   WallClock,
   WindowNeon,
@@ -108,24 +108,32 @@ export default async function ParlorPage() {
           </div>
         </header>
 
-        {/* ---- The counter ---------------------------------------------- */}
-        <Wall className="relative pb-0" wainscot={false}>
-          <Pendant className="top-0 left-[18%] z-0" height="h-44" />
-
-          <Counter
-            behind={
-              // A band of the room behind the counter. Tony stands on its
-              // floor, so the counter top below crops him at the forearms.
-              <div className="relative z-10 h-[9.5rem]">
+        {/* ---- The counter ----------------------------------------------
+          *
+          * Three layers, which is what puts Tony *in* the shop rather than on
+          * top of a picture of one:
+          *
+          *   1. `zone_front_counter` — the back of the room
+          *   2. Tony, standing behind the counter
+          *   3. `zone_counter_front` — the counter, drawn over his waist
+          *
+          * Both tiles were cut from one generated room along the counter's top
+          * edge, so they line up exactly and share a light direction by
+          * construction (`scripts/prepare-b0.ts`).
+          */}
+        <section className="relative">
+          <div className="relative">
+            {/*
+              * The children are the placeholder tier — what gets drawn only
+              * while the registry has no art for this slug. With the B0 tile
+              * registered they are not rendered, and the tile's own menu wall
+              * carries what the CSS menu board used to say. The offseason line
+              * itself has not been lost: it is in the header and on the
+              * corkboard, where it is text rather than a picture of text.
+              */}
+            <SceneSurface slug="zone_front_counter" className="w-full">
+              <div className="relative h-[9.5rem]">
                 <BackBar />
-
-                <div className="absolute bottom-0 left-2 sm:left-6">
-                  <TonyAtTheCounter
-                    slug={greeting?.tonySlug ?? 'character_tony_neutral'}
-                    mood={greeting?.expression ?? 'neutral'}
-                  />
-                </div>
-
                 <div className="absolute right-2 bottom-14 w-36 sm:right-6 sm:w-44">
                   <MenuBoard
                     lines={
@@ -136,39 +144,56 @@ export default async function ParlorPage() {
                   />
                 </div>
               </div>
-            }
-            onTop={
-              <div className="space-y-4">
-                <SpeechPlate speaker="Tony" mood={greeting?.expression ?? 'neutral'}>
-                  {greeting === null ? (
-                    // "No content" is always a valid outcome (`16 §10`). Tony is
-                    // at the counter and not saying anything, which is better
-                    // than a line that is wrong.
-                    <p className="text-[15px] leading-relaxed text-paper-mid/70 italic">
-                      Tony nods at {user.displayName} and goes back to the oven.
-                    </p>
-                  ) : (
-                    <p className="text-[17px] leading-snug font-medium text-paper-white sm:text-lg">
-                      {greeting.text}
-                    </p>
-                  )}
-                </SpeechPlate>
+            </SceneSurface>
 
-                {/*
-                  * Lying on the counter where Tony left it — smaller than the
-                  * dialogue above it, because it is a docket somebody put down,
-                  * not the headline of the screen.
-                  */}
-                <div
-                  className="mx-auto w-full max-w-[15rem]"
-                  style={{ transform: 'rotate(-1.4deg)' }}
-                >
-                  <ReceiptSlip receipt={receipt} name={user.displayName} />
-                </div>
-              </div>
-            }
-          />
-        </Wall>
+            {/*
+              * Tony. Placed against the tile in percentages so he keeps his
+              * footing at every width — he stands in the gap between the oven
+              * and the pizza boxes, and hangs below the tile far enough for the
+              * counter to take him at the waist.
+              */}
+            <div className="absolute bottom-[-10%] left-[16%] z-10 w-[26%] sm:w-[22%]">
+              <TonyAtTheCounter
+                slug={greeting?.tonySlug ?? 'character_tony_neutral'}
+                mood={greeting?.expression ?? 'neutral'}
+              />
+            </div>
+          </div>
+
+          <SceneSurface slug="zone_counter_front" className="relative z-20 w-full">
+            <div className="surface-counter h-5 w-full" />
+          </SceneSurface>
+
+          {/* The rest of the counter, running toward you. */}
+          <div className="surface-wood relative z-20 border-b border-wood-dark px-4 pt-4 pb-6">
+            <SpeechPlate speaker="Tony" mood={greeting?.expression ?? 'neutral'}>
+              {greeting === null ? (
+                // "No content" is always a valid outcome (`16 §10`). Tony is at
+                // the counter and not saying anything, which is better than a
+                // line that is wrong.
+                <p className="text-[15px] leading-relaxed text-paper-mid/70 italic">
+                  Tony nods at {user.displayName} and goes back to the oven.
+                </p>
+              ) : (
+                <p className="text-[17px] leading-snug font-medium text-paper-white sm:text-lg">
+                  {greeting.text}
+                </p>
+              )}
+            </SpeechPlate>
+
+            {/*
+              * Lying on the counter where Tony left it — smaller than the
+              * dialogue above it, because it is a docket somebody put down, not
+              * the headline of the screen.
+              */}
+            <div
+              className="mx-auto mt-4 w-full max-w-[15rem]"
+              style={{ transform: 'rotate(-1.4deg)' }}
+            >
+              <ReceiptSlip receipt={receipt} name={user.displayName} />
+            </div>
+          </div>
+        </section>
 
         {/* ---- The wall by the counter ----------------------------------- */}
         <Wall className="px-4 pt-6 pb-8">

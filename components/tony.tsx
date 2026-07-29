@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { SceneSurface } from '@/components/scene/fixtures';
+import { resolveAsset } from '@/lib/assets/registry';
 
 /**
  * Tony, behind his counter.
@@ -91,11 +92,28 @@ export function TonyAtTheCounter({
     // Any tap during the entrance ends it. Not a button: there is nothing to
     // do here once the 600ms has passed, so it must not sit in the tab order.
     <div onPointerDown={skip} className={playing ? 'tony-entrance' : undefined}>
-      <SceneSurface slug={slug} className="relative h-[8.5rem] w-28">
+      <SceneSurface slug={drawnAs(slug)} className="relative">
         <TonyFigure mood={mood} />
       </SceneSurface>
     </div>
   );
+}
+
+/**
+ * Which sprite to actually draw.
+ *
+ * The greeting picks a mood and the mood picks a slug, but the moods arrive in
+ * batches: `character_tony_neutral` landed in B0 and the other two follow in
+ * B1. Until they do, falling all the way back to the CSS stand-in would mean a
+ * manager who happens to draw a pleased line sees a drawn silhouette while the
+ * manager beside him sees the real sprite — the same shop rendered two
+ * different ways depending on the sentence.
+ *
+ * So an unavailable mood degrades to Tony's real neutral sprite rather than to
+ * the placeholder tier. His expression is momentarily wrong; he is still Tony.
+ */
+function drawnAs(slug: string): string {
+  return resolveAsset(slug).kind === 'art' ? slug : 'character_tony_neutral';
 }
 
 /**
