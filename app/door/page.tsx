@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { EnamelSign, HangingSign, WindowNeon } from '@/components/scene/fixtures';
+import { EnamelSign, HangingSign, ShopWindow } from '@/components/scene/fixtures';
 import { ParlorAir } from '@/components/scene/backdrop';
 import { Page, TAP_TARGET } from '@/components/shell';
 import { viewer } from '@/lib/auth/current-user';
@@ -14,8 +14,8 @@ import { getDb } from '@/lib/db';
  * `16 §11`: "pick your name from ten, enter PIN. Two taps."
  *
  * This is the first thing anybody ever sees, so it is the first place the shop
- * has to exist: the window with the neon reading backwards, the CLOSED card
- * still swinging, and the names on the key hooks behind the counter.
+ * has to exist: the window with the gold leaf reading backwards, the CLOSED
+ * card still swinging, and the names on the key hooks behind the counter.
  *
  * Listing the names is deliberate. In a private ten-person league the roster is
  * common knowledge — it is on Sleeper — so hiding it would buy nothing and cost
@@ -36,7 +36,7 @@ export default async function DoorPage() {
 
       <Page withNav={false}>
         <header className="relative h-32 overflow-hidden border-b-2 border-wood-dark">
-          <WindowNeon />
+          <ShopWindow />
           <HangingSign top="Closed" bottom="back in september" />
         </header>
 

@@ -58,6 +58,7 @@ const file = (name: string): string => path.join(INCOMING, name);
 const ROOM = {
   source: '_source_room_portrait.png',
   width: 941,
+  height: 1672,
   /** Ceiling trim, below the fluorescent panels. */
   wallTop: 185,
   /** The near edge of the counter top. Everything above is the back of the shop. */
@@ -74,31 +75,28 @@ const ROOM = {
 async function cutRoom(): Promise<void> {
   const source = file(ROOM.source);
 
-  // The back of the shop: mascot, menu wall, oven, boxes, case, booths, window.
+  // The two halves reconstruct the room exactly, with nothing thrown away:
+  // everything above the counter, and everything from the counter down. Stacked
+  // they are 941 x 1672 again — the aspect of a phone held upright, which is
+  // why the room was generated portrait in the first place.
   await sharp(source)
-    .extract({
-      left: 0,
-      top: ROOM.wallTop,
-      width: ROOM.width,
-      height: ROOM.counterTop - ROOM.wallTop,
-    })
+    .extract({ left: 0, top: 0, width: ROOM.width, height: ROOM.counterTop })
     .png()
     .toFile(file('zone_front_counter_01.png'));
 
-  // The counter itself, as a foreground strip drawn over Tony.
   await sharp(source)
     .extract({
       left: 0,
       top: ROOM.counterTop,
       width: ROOM.width,
-      height: ROOM.counterBase - ROOM.counterTop,
+      height: ROOM.height - ROOM.counterTop,
     })
     .png()
     .toFile(file('zone_counter_front_01.png'));
 
   console.log(
-    `room     → zone_front_counter (${String(ROOM.width)}×${String(ROOM.counterTop - ROOM.wallTop)})` +
-      ` · zone_counter_front (${String(ROOM.width)}×${String(ROOM.counterBase - ROOM.counterTop)})`,
+    `room     → zone_front_counter (${String(ROOM.width)}×${String(ROOM.counterTop)})` +
+      ` · zone_counter_front (${String(ROOM.width)}×${String(ROOM.height - ROOM.counterTop)})`,
   );
 }
 
@@ -388,16 +386,43 @@ async function correctTony(): Promise<void> {
   const cleared = keyOutBackground(raw);
   const painted = removeJerseyNumbers(raw);
 
+  // Trim to the figure itself. The generated frame is mostly empty backdrop,
+  // and a sprite carrying that margin would be squashed by the canvas fit —
+  // which is what was quietly narrowing him before.
+  const box = boundingBox(raw);
+
   await sharp(raw.data, {
     raw: { width: raw.width, height: raw.height, channels: raw.channels as 1 | 2 | 3 | 4 },
   })
+    .extract(box)
     .png()
     .toFile(file('character_tony_neutral_01.png'));
 
   console.log(
     `tony     → background keyed (${String(Math.round((cleared / (raw.width * raw.height)) * 100))}% cleared)` +
-      ` · ${String(painted)} jersey marking${painted === 1 ? '' : 's'} painted out`,
+      ` · ${String(painted)} jersey marking${painted === 1 ? '' : 's'} painted out` +
+      ` · trimmed to ${String(box.width)}×${String(box.height)}`,
   );
+}
+
+/** The tightest rectangle containing every opaque pixel. */
+function boundingBox(raw: Raw): { left: number; top: number; width: number; height: number } {
+  let minX = raw.width;
+  let maxX = 0;
+  let minY = raw.height;
+  let maxY = 0;
+
+  for (let y = 0; y < raw.height; y++) {
+    for (let x = 0; x < raw.width; x++) {
+      if (raw.data[at(raw, x, y) + 3] === 0) continue;
+      if (x < minX) minX = x;
+      if (x > maxX) maxX = x;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    }
+  }
+
+  return { left: minX, top: minY, width: maxX - minX + 1, height: maxY - minY + 1 };
 }
 
 // ---------------------------------------------------------------------------

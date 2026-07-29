@@ -84,9 +84,10 @@ export function AssetView({
   // Real art.
   //
   // `image-rendering: pixelated` is not decoration — it is the whole contract.
-  // These files are authored at 32×48 and 320×228 and displayed several times
-  // larger, so the browser's default smoothing would blur exactly the hard
-  // edges the pipeline spent its quantization step guaranteeing.
+  // Every file here is authored at its display size in CSS pixels and then
+  // rendered two or three times larger by the device's own pixel ratio, so the
+  // browser's default smoothing would blur exactly the hard edges the pipeline
+  // spent its quantization step guaranteeing.
   //
   // A plain `<img>` rather than `next/image`: the assets are static, tiny, and
   // already at their final dimensions, so there is nothing to optimize and a

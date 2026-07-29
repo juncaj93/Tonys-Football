@@ -57,17 +57,24 @@ export function SceneSurface({
 // Signage
 // ---------------------------------------------------------------------------
 
-/** The window sign, seen from inside — so the neon reads back to front. */
-export function WindowNeon() {
+/**
+ * The shop window, seen from the street on a July evening.
+ *
+ * Painted lettering on the glass rather than neon: the brand belongs to the
+ * room, and a lit sign bolted above the page competes with it. This is glass,
+ * a street light two doors down, and gold leaf that has been on that window
+ * since the shop opened — no glow, no buzz, nothing animated.
+ */
+export function ShopWindow() {
   return (
     <div aria-hidden="true" className="relative h-full w-full overflow-hidden">
-      {/* Night, and a street light two doors down. */}
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-deep via-[#0d1524] to-ink-900" />
-      <div className="absolute -top-6 left-1/4 h-24 w-40 rounded-full bg-blue-light/10 blur-2xl" />
+      {/* Evening, and a street light two doors down. */}
+      <div className="absolute inset-0 bg-gradient-to-b from-blue-deep via-[#101724] to-ink-900" />
+      <div className="absolute -top-8 left-1/4 h-24 w-40 rounded-full bg-blue-light/8 blur-2xl" />
 
       {/* Rain-flecked glass. */}
       <div
-        className="absolute inset-0 opacity-30"
+        className="absolute inset-0 opacity-25"
         style={{
           backgroundImage:
             'radial-gradient(circle at 18% 30%, rgba(216,244,255,0.35) 0.5px, transparent 1.5px),' +
@@ -77,14 +84,24 @@ export function WindowNeon() {
         }}
       />
 
-      <div className="anim-neon absolute inset-0 flex flex-col items-center justify-center">
-        <span className="neon-warm font-mono text-[13px] tracking-[0.42em]" style={{ transform: 'scaleX(-1)' }}>
+      {/* Gold leaf, applied on the inside of the glass, so it reads reversed. */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center">
+        <span
+          className="font-mono text-[13px] tracking-[0.42em] text-amber-mid/70"
+          style={{ transform: 'scaleX(-1)' }}
+        >
           TONY&rsquo;S
         </span>
-        <span className="neon-pink mt-1 font-mono text-[9px] tracking-[0.3em]" style={{ transform: 'scaleX(-1)' }}>
+        <span
+          className="mt-1 font-mono text-[9px] tracking-[0.3em] text-paper-mid/45"
+          style={{ transform: 'scaleX(-1)' }}
+        >
           PIZZA
         </span>
       </div>
+
+      {/* The warmth of the room leaking out under the door. */}
+      <div className="absolute inset-x-0 bottom-0 h-6 bg-gradient-to-t from-amber-deep/25 to-transparent" />
     </div>
   );
 }
@@ -186,7 +203,7 @@ export function MenuBoard({ lines }: { lines: readonly string[] }) {
       className="surface-slate relative rounded-[3px] border-[3px] border-wood-dark px-2 py-1.5 shadow-[0_6px_18px_rgba(0,0,0,0.6),inset_0_0_24px_rgba(0,0,0,0.5)]"
     >
       <div aria-hidden="true" className="absolute inset-x-2 top-1.5 h-px bg-paper-white/15" />
-      <p className="neon-warm text-center font-mono text-[8px] tracking-[0.28em]">MENU</p>
+      <p className="text-center font-mono text-[8px] tracking-[0.28em] text-amber-mid/75">MENU</p>
       <div className="mt-1.5 space-y-0.5">
         {lines.map((line) => (
           <p

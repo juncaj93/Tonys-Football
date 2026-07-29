@@ -257,20 +257,44 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
     clockAt(START);
   });
 
-  it('does not repeat a line to the same manager twice in a day', async () => {
+  /**
+   * The parlor is the home screen. Somebody opens it a dozen times a day, and
+   * drawing a new line on each open would spend a manager's whole eligible pool
+   * before lunch and leave Tony with nothing to say at his own counter.
+   */
+  it('says the same thing all day, however many times you walk in', async () => {
     await db!.delete(contentUsageLog);
     const ron = find('RonJonathan');
 
     const first = await greet(ron);
     const second = await greet(ron);
+    const third = await greet(ron);
 
-    expect(first?.entryKey).not.toBe(second?.entryKey);
+    expect(first).not.toBeNull();
+    expect(second?.entryKey).toBe(first?.entryKey);
+    expect(third?.entryKey).toBe(first?.entryKey);
+    expect(second?.text).toBe(first?.text);
   });
 
-  it('logs every line it shows, so the cooldown has something to work from', async () => {
+  it('draws again the next day', async () => {
+    await db!.delete(contentUsageLog);
+    const ron = find('RonJonathan');
+
+    const today = await greet(ron);
+    clockAt(START + 24 * 60 * 60 * 1000);
+    const tomorrow = await greet(ron);
+    clockAt(START);
+
+    expect(today).not.toBeNull();
+    expect(tomorrow?.entryKey).not.toBe(today?.entryKey);
+  });
+
+  it('logs each day it shows a line, and only once a day', async () => {
     await db!.delete(contentUsageLog);
     const alex = find('BigJuncer');
 
+    await greet(alex);
+    await greet(alex);
     await greet(alex);
     const logged = await db!.select().from(contentUsageLog);
 
@@ -288,17 +312,23 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
     }
   });
 
-  it('falls back to an offseason line rather than saying nothing', async () => {
+  /**
+   * Two weeks of daily visits, for the manager with the smallest pool of
+   * distinguishing lines. Cooldowns will run him out several times over; Tony
+   * still has to say something true every one of those mornings.
+   */
+  it('never leaves a manager standing at a silent counter', async () => {
     await db!.delete(contentUsageLog);
     const nate = find('NateyDee');
 
-    // Draw until the tagged lines are exhausted by their cooldowns; what is
-    // left must still be a real, true line.
-    for (let visit = 0; visit < 5; visit++) {
+    for (let day = 0; day < 14; day++) {
+      clockAt(START + day * 24 * 60 * 60 * 1000);
       const greeting = await greet(nate);
-      expect(greeting, `visit ${String(visit)}`).not.toBeNull();
+      expect(greeting, `day ${String(day)}`).not.toBeNull();
       expect(greeting?.text).toContain('NateyDee');
     }
+
+    clockAt(START);
   });
 
   /**
@@ -310,7 +340,9 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
     await db!.delete(contentUsageLog);
     const nate = find('NateyDee');
 
-    for (let visit = 0; visit < 6; visit++) {
+    for (let day = 0; day < 6; day++) {
+      clockAt(START + day * 24 * 60 * 60 * 1000);
+
       const greeting = await greetingFor(db!, {
         userId: nate.id,
         displayName: nate.displayName,
@@ -322,5 +354,7 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
       expect(greeting?.entryKey).not.toBe('A15');
       expect(greeting?.text ?? '').not.toContain('{days}');
     }
+
+    clockAt(START);
   });
 });

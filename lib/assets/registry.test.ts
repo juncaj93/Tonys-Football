@@ -253,15 +253,32 @@ describe('the committed inventory', () => {
 
   /**
    * `ART_SPEC §2.1` left the zone canvas provisional until the B0 composite ran
-   * on a real phone. It has now run: the approved room art is 941 x 670, so the
-   * canvas is 320 x 228 and every zone tile shares it.
+   * on a real phone. It has now run. What settled is the **width**: every zone
+   * tile is 320, which is the one-column measure the layout is built on. Height
+   * is whatever the tile contains, because the parlor turned out to be one tall
+   * portrait room rather than a set of equal panels.
    */
-  it('holds one canvas across every zone tile', () => {
+  it('holds one width across every zone tile', () => {
     const zones = assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'));
-    const canvases = new Set(
-      zones.filter((r) => r.slug !== 'zone_counter_front').map((r) => r.canvas),
-    );
+    const widths = new Set(zones.map((r) => r.canvas.split('x')[0]));
 
-    expect([...canvases]).toEqual(['320x228']);
+    expect([...widths]).toEqual(['320']);
+  });
+
+  /**
+   * The room is drawn once and cut at the counter's near edge, so that Tony can
+   * be drawn between the two halves and stand *in* the shop rather than on top
+   * of a picture of it. The cut is only invisible if the halves add back up to
+   * the whole, so that arithmetic is a test rather than a comment.
+   */
+  it('cuts the parlor into two halves that stack back into one room', () => {
+    const rear = assetRegistry.get('zone_front_counter')?.canvas ?? '';
+    const front = assetRegistry.get('zone_counter_front')?.canvas ?? '';
+
+    const [rearWidth, rearHeight] = rear.split('x');
+    const [frontWidth, frontHeight] = front.split('x');
+
+    expect(rearWidth).toBe(frontWidth);
+    expect(Number(rearHeight) + Number(frontHeight)).toBe(569);
   });
 });

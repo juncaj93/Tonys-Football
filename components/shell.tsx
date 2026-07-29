@@ -29,18 +29,52 @@ export const TAP_TARGET = 'min-h-[44px] min-w-[44px]';
 export function Page({
   children,
   withNav = true,
+  oneScreen = false,
 }: {
   children: React.ReactNode;
   withNav?: boolean;
+  /**
+   * The parlor. Exactly one viewport tall, nothing underneath, no scroll.
+   *
+   * `100dvh` rather than `100vh`: Safari's toolbar collapses as you scroll and
+   * `vh` is measured against the *expanded* viewport, so a `100vh` room is
+   * always a little taller than the screen and the bottom of it — the counter,
+   * the dialogue — sits under the browser chrome until you scroll, which is
+   * the exact thing this layout exists to avoid.
+   *
+   * The nav is a sibling in the flex column rather than fixed on top, so the
+   * room is laid out in the space that is genuinely left over.
+   */
+  oneScreen?: boolean;
 }) {
+  if (oneScreen) {
+    return (
+      <div
+        className="relative mx-auto flex h-dvh w-full max-w-3xl flex-col overflow-hidden"
+        style={{
+          paddingTop: 'env(safe-area-inset-top)',
+          // The nav is `fixed`, so without this it would sit *on top of* the
+          // last 44px of the room — and the one thing that lives down there is
+          // what Tony just said. Reserving the space is what makes "one screen"
+          // mean the whole screen rather than the screen minus a strip.
+          paddingBottom: withNav
+            ? 'calc(env(safe-area-inset-bottom) + 2.75rem)'
+            : 'env(safe-area-inset-bottom)',
+        }}
+      >
+        {children}
+      </div>
+    );
+  }
+
   return (
     <div
-      className="relative mx-auto flex min-h-dvh w-full max-w-3xl flex-col shadow-[0_0_80px_rgba(0,0,0,0.6)]"
+      className="relative mx-auto flex min-h-dvh w-full max-w-3xl flex-col"
       style={{
         paddingTop: 'env(safe-area-inset-top)',
         // Clearance for the fixed nav plus the home indicator beneath it.
         paddingBottom: withNav
-          ? 'calc(env(safe-area-inset-bottom) + 5.5rem)'
+          ? 'calc(env(safe-area-inset-bottom) + 5rem)'
           : 'calc(env(safe-area-inset-bottom) + 1.5rem)',
       }}
     >
@@ -81,12 +115,9 @@ export function BottomNav({ current }: { current: string }) {
   return (
     <nav
       aria-label="Primary"
-      className="fixed inset-x-0 bottom-0 z-40 border-t-2 border-wood-dark bg-gradient-to-b from-[#241a1c] to-ink-900"
+      className="fixed inset-x-0 bottom-0 z-40 border-t border-wood-dark bg-ink-900"
       style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
     >
-      {/* The strip catches a little of the counter light along its top edge. */}
-      <div aria-hidden="true" className="h-px w-full bg-amber-glow/25" />
-
       <ul className="mx-auto flex w-full max-w-3xl">
         {NAV.map((item) => {
           const active = item.href === current;
@@ -95,26 +126,19 @@ export function BottomNav({ current }: { current: string }) {
               <Link
                 href={item.href}
                 aria-current={active ? 'page' : undefined}
-                className={`relative flex ${TAP_TARGET} min-h-[3.5rem] flex-col items-center justify-center gap-1 px-1 text-center transition-colors active:bg-wood-dark/40`}
+                className={`relative flex ${TAP_TARGET} min-h-[2.75rem] items-center justify-center px-1 text-center`}
               >
                 <span
-                  className={`text-[13px] leading-none font-semibold ${
-                    active ? 'neon-warm' : 'text-paper-mid/80'
+                  className={`text-[12px] leading-none ${
+                    active ? 'font-semibold text-amber-mid' : 'text-ink-100/70'
                   }`}
                 >
                   {item.label}
                 </span>
-                <span
-                  className={`font-mono text-[9px] leading-none tracking-[0.12em] uppercase ${
-                    active ? 'text-amber-mid/90' : 'text-ink-300'
-                  }`}
-                >
-                  {item.open ? 'open' : 'shut'}
-                </span>
                 {active && (
                   <span
                     aria-hidden="true"
-                    className="absolute inset-x-4 bottom-1 h-0.5 rounded-full bg-amber-glow shadow-[0_0_8px_2px_rgba(255,217,138,0.5)]"
+                    className="absolute inset-x-5 bottom-0.5 h-px bg-amber-mid/70"
                   />
                 )}
               </Link>

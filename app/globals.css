@@ -245,61 +245,12 @@ button {
   opacity: 0.85;
 }
 
-/* Neon: the glow is the text's own shadow, so it costs nothing to paint. */
-.neon-warm {
-  color: #fff3d0;
-  text-shadow:
-    0 0 4px rgba(255, 217, 138, 0.95),
-    0 0 12px rgba(242, 169, 75, 0.75),
-    0 0 28px rgba(201, 122, 34, 0.55);
-}
-
-.neon-cool {
-  color: #d8f4ff;
-  text-shadow:
-    0 0 4px rgba(127, 212, 240, 0.95),
-    0 0 14px rgba(92, 155, 209, 0.7),
-    0 0 30px rgba(44, 90, 140, 0.5);
-}
-
-.neon-pink {
-  color: #ffd9f0;
-  text-shadow:
-    0 0 4px rgba(224, 96, 176, 0.95),
-    0 0 14px rgba(224, 96, 176, 0.6),
-    0 0 30px rgba(59, 32, 80, 0.6);
-}
-
 /* --- Ambient motion ------------------------------------------------------ *
  *
  * Four effects, all cheap, all ending on their resting state at 100% — which
  * is what makes the reduced-motion rule below a real absence rather than a
  * freeze mid-flicker.
  */
-
-@keyframes neon-buzz {
-  0%,
-  92%,
-  100% {
-    opacity: 1;
-  }
-  93% {
-    opacity: 0.45;
-  }
-  94% {
-    opacity: 1;
-  }
-  95% {
-    opacity: 0.6;
-  }
-  96% {
-    opacity: 1;
-  }
-}
-
-.anim-neon {
-  animation: neon-buzz 9s steps(1, end) infinite;
-}
 
 @keyframes lamp-breathe {
   0%,
@@ -368,6 +319,25 @@ button {
 .anim-sway {
   animation: sign-sway 6.5s ease-in-out infinite;
   transform-origin: top center;
+}
+
+/*
+ * A sheet arriving from the bottom of the screen. Short, and settling rather
+ * than bouncing — it is a thing being picked up off the counter, not a modal.
+ */
+@keyframes sheet-rise {
+  from {
+    transform: translateY(14%);
+    opacity: 0.6;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+
+.sheet-rise {
+  animation: sheet-rise 180ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
 }
 
 /*

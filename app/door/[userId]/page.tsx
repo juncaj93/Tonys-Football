@@ -1,7 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 
 import { PinForm } from '@/components/pin-form';
-import { EnamelSign, HangingSign, WindowNeon } from '@/components/scene/fixtures';
+import { EnamelSign, HangingSign, ShopWindow } from '@/components/scene/fixtures';
 import { ParlorAir } from '@/components/scene/backdrop';
 import { Page } from '@/components/shell';
 import { claimAction, signInAction } from '@/app/actions/auth';
@@ -47,7 +47,7 @@ export default async function DoorManagerPage({
 
       <Page withNav={false}>
         <header className="relative h-24 overflow-hidden border-b-2 border-wood-dark">
-          <WindowNeon />
+          <ShopWindow />
           <HangingSign top="Closed" bottom="back in september" />
         </header>
 

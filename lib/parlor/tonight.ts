@@ -95,7 +95,12 @@ export async function tonightBoard(db: Database): Promise<readonly TonightLine[]
     if (total > 0 && inside < total) {
       lines.push({
         key: 'keys',
-        text: `${String(inside)} of ${String(total)} managers have picked up their keys.`,
+        // "1 of 10 managers have" is the sort of thing a template writes and a
+        // person never says.
+        text:
+          inside === 1
+            ? `1 of ${String(total)} managers has picked up their key.`
+            : `${String(inside)} of ${String(total)} managers have picked up their keys.`,
         priority: 30,
       });
     } else if (total > 0) {
