@@ -1,94 +1,111 @@
 # Shell Audit — `zone_parlor_shell.png` (candidate 1)
 
-**Source presented:** 941 × 1672 · **Proposed production canvas:** 960 × 1707
+**Source:** 941 × 1672 · **Proposed production canvas:** 960 × 1707
 **Status:** audit only. Not processed, not registered, not integrated.
+**Revision 2** — re-inspected against the approved Option C assignments.
 
 ---
 
-## 0. What this audit could and could not check
+## 0. What this audit can and cannot check
 
-**Two things were unavailable, and both limit what follows.**
+**The binary is still not on the filesystem.** It has been shown in the conversation
+twice; both times it arrived as an image in context rather than as a file in
+`art/incoming/`. Everything in §7 was therefore **read by eye at full size**, tolerance
+**±3 logical units** (±9 source px).
 
-1. **The Option C shell requirements are not in this repository.** `grep` over every
-   markdown file finds no "Option C", no prepared-shell plan, and no revised
-   environmental-composition ruling. §1 below therefore audits the candidate against
-   the requirements that *are* canonical — `art/ART_SPEC.md`, the asset pipeline, and
-   the navigation map — and cannot confirm conformance to a document it has not seen.
+Read-by-eye is enough to confirm the approved assignments, to plan overlays, and to
+answer the shell-revision question in §11. It is **not** enough to:
 
-2. **The image file is not on disk.** It was pasted into the conversation, so every
-   coordinate in §7 and §9 is **read by eye at display scale**, tolerance roughly
-   **±3 logical units** (±9 source px). They are good enough to plan overlays against
-   and not good enough to trace polygons from. Drop the PNG into `art/incoming/` and
-   the numbers can be tightened to the pixel and machine-checked.
+- run `npm run art:process` and see what the quantizer does to the cream panel;
+- verify the palette conformance of the new fixtures;
+- trace production polygons for `lib/parlor/objects.ts`;
+- confirm there is no stray lettering at 1:1 (nothing visible at display size).
 
-Everything in §2–§6 and §8 is arithmetic or measured off the existing same-generator
-source, and is exact.
+Committing the PNG to `art/incoming/zone_parlor_shell.png` on this branch unblocks all
+four. Until then §7's numbers carry ±3 and the polygons cannot be authored.
+
+Everything in §2–§6 and §8 is arithmetic, or measured off the existing same-generator
+source, and is exact regardless.
 
 ---
 
-## 1. Against the requirements that are canonical
+## 1. Approved architecture, and what this shell has to satisfy
+
+The approved composition is:
+
+- one prepared parlor shell;
+- separate **transparent Door overlays**;
+- **baked blank Displays**;
+- separate foreground counter layer;
+- separate Tony sprite;
+- the old 320 × 200 homepage zone tiles retired.
+
+Two consequences matter for this audit, and they pull in opposite directions:
+
+**Displays are baked, so the shell must already contain them.** A Display that is not
+painted into the shell does not exist. The shell delivers all three — Tonight, the
+prediction slate, the receipt. **Pass.**
+
+**Doors are transparent overlays, so the shell does not need to contain them — it needs
+to contain somewhere they can go.** That is the weaker requirement, and it is the one
+this shell fails twice. See §11.
+
+### Against the canonical art requirements
 
 | Requirement | Source | Result |
 |---|---|---|
-| Shallow stage box, floor visible, gentle recession | `zone_tile.md` FAMILY | **Pass.** Floor reads clearly, back wall parallel, no aggressive vanishing point. |
-| Front ground line clear for composited sprites | `zone_tile.md` | **Pass.** The bottom carpet band is unobstructed. |
-| Flat front-facing sprite must look right standing on it | `zone_tile.md` | **Pass.** Floor angle is shallow. |
-| Outer ~16px of left/right edges free of load-bearing content | `zone_tile.md` | **Pass on the left** (wall panelling only). **Marginal on the right** — the booths and the window run to the edge, so a right-edge crop loses booth seating. Not load-bearing for navigation. |
+| Shallow stage box, floor visible, gentle recession | `zone_tile.md` | **Pass.** |
+| Front ground line clear for composited sprites | `zone_tile.md` | **Pass.** |
+| Flat front-facing sprite looks right standing on it | `zone_tile.md` | **Pass.** |
+| Outer ~16px of left/right edges free of load-bearing content | `zone_tile.md` | **Left pass. Right marginal** — booths and window run to the frame edge. |
 | Warm overhead light, no rim light | `_style_preamble` | **Pass.** Consistent with `character_tony_neutral`. |
-| Text surfaces blank | `surface.md` | **Pass.** Every prepared surface — the large panel, the slate, the receipt — is clean. No lettering anywhere in frame. This is the family's most common failure mode and this candidate avoids it. |
+| Text surfaces blank | `surface.md` | **Pass.** The cream panel, the slate and the receipt are all clean. No lettering anywhere in frame. This is the family's most common failure and this candidate avoids it. |
 
-**Improvements over the shipped room, confirmed:** the floor is calmer, the rug is a
-single readable shape rather than competing checker, and — the important one — the
-back wall now carries *prepared, blank* fixtures instead of a painted mural that
+**Improvements over the shipped room, confirmed:** the floor is calmer, the rug is one
+readable shape instead of competing checker, and — the one that matters — the back wall
+carries *prepared blank fixtures* where the old room carried a painted mural that
 nothing could be mounted on.
 
 ---
 
 ## 2. Composition at iPhone portrait
 
-The parlor is anchored: the room is pinned to the top of a `100dvh` screen under a
-44px utility bar, so **the bottom of the drawing is always cut off**. How much:
+The room is pinned to the top of a `100dvh` screen under a 44px utility bar, so the
+bottom of the drawing is always cut off:
 
-| Device | Room renders at | Visible after the 44px bar | Logical y visible |
+| Device | Room renders at | Visible below the bar | Logical y visible |
 |---|---|---|---|
-| iPhone 14 (390 × 664) | 693 px tall | 620 px | **0 – 509** |
-| iPhone SE (375 × 667) | 667 px tall | 623 px | 0 – 532 |
-| iPhone 12 mini (375 × 629) | 667 px tall | 585 px | 0 – 499 |
+| iPhone 14 (390 × 664) | 693 px | 620 px | **0 – 509** |
+| iPhone SE (375 × 667) | 667 px | 623 px | 0 – 532 |
+| iPhone 12 mini (375 × 629) | 667 px | 585 px | 0 – 499 |
 
-**Worst case is logical y = 499.** Everything interactive must sit above it.
+**Worst case: logical y = 499.**
 
-This candidate handles that well by accident or design: the bottom ~80 logical units
-are plain carpet, which is exactly the right thing to lose. Every prepared location
-read in §7 sits above y = 316. **Nothing is at risk of falling below the fold.**
-
-The lowest interactive element — the receipt at y ≈ 307 — clears the worst-case fold
-by 192 logical units. There is a lot of headroom here.
+The shell handles this well. The bottom ~80 logical units are plain carpet — exactly
+the right thing to lose — and every assigned location sits above y = 316. The lowest,
+the receipt at y ≈ 307, clears the worst case by 192 units. **Pass, with room to spare.**
 
 ---
 
-## 3–6. Can 941 × 1672 become 960 × 1707 safely?
+## 3–6. Canvas: 941 × 1672 → 960 × 1707
 
-### The short answer: don't do this conversion at all. It is a step backwards.
+### 960 × 1707 is exactly 3 × the logical 320 × 569
 
-**960 × 1707 is exactly 3 × the logical 320 × 569 space.** (320×3 = 960, 569×3 = 1707.)
-That is the only reason that canvas is interesting — and it means the *correct* way to
-produce it is not by resampling the source.
+(320 × 3 = 960, 569 × 3 = 1707.) That is the whole significance of the number — and it
+makes 960 × 1707 the correct **output** of the pipeline, not the correct **input** to it.
 
-### What the pipeline actually does
+### What the pipeline does
 
-`scripts/process-art.ts` **downscales, nearest-neighbour only**, to the declared
-canvas, then quantizes to `palette.json`. The shipped room went
-`941 × 1672 → 320 × 291 + 320 × 278`. The browser then upscales with
-`image-rendering: pixelated`.
+`scripts/process-art.ts` **downscales, nearest-neighbour only**, to the declared canvas,
+then quantizes to `palette.json`. The shipped room went 941 × 1672 → 320 × 291 + 320 × 278.
+The browser upscales with `image-rendering: pixelated`.
 
-So the source's entire job is **to be downsampled once**. Upscaling it 1.02× first
-adds one lossy resample for zero information gain, then throws the result away in a
-2.94× downscale. Strictly worse than doing nothing.
+The source's entire job is to be downsampled once. Upscaling 1.02× first adds a lossy
+resample and then discards it in a 2.94× downscale.
 
 ### Is there a pixel grid to protect?
 
-I measured the existing 941 × 1672 source — same generator, same dimensions — for
-column-edge periodicity:
+Column-edge periodicity on the existing 941 × 1672 source — same generator, same size:
 
 ```
 lag 1  1.000   lag 4  0.274   lag 7  0.137   lag 10  0.109
@@ -96,199 +113,226 @@ lag 2  0.850   lag 5  0.191   lag 8  0.181   lag 11  0.095
 lag 3  0.474   lag 6  0.166   lag 9  0.072   lag 12  0.086
 ```
 
-Monotonic decay, **no peak at any lag**. There is no pixel grid in the source — it is
-a smooth high-resolution painting *in the style of* pixel art, exactly as
-`process-art.ts` documents. The grid is created by the pipeline's downscale, not
-carried by the source.
+Monotonic decay, **no peak at any lag**. No pixel grid in the source — it is a smooth
+high-resolution painting *in the style of* pixel art, exactly as `process-art.ts`
+documents. The grid is created by the downscale.
 
-**Consequence:** the 941 → 960 upscale would not shatter a pixel grid, because there
-isn't one. It would just be a pointless lossy step.
+So a 941 → 960 upscale would not shatter a grid, because there isn't one. It would
+simply be a wasted lossy step.
 
-### The three options, ranked
+### Options, ranked
 
-**1 — Recommended: leave the source at 941 × 1672 and change nothing.**
-Run it through the existing pipeline to the declared canvas. If a 3× production PNG is
-wanted for review or for a non-`pixelated` context, generate it by
-**nearest-neighbour ×3 from the 320 × 569 output** — exact, lossless, no interpolation,
-and guaranteed to match what the browser renders.
+1. **Recommended — leave the source at 941 × 1672.** Run it through the pipeline to the
+   declared canvas. For a 3× review PNG, nearest-neighbour ×3 from the 320 × 569 output:
+   exact, lossless, identical to what the browser renders.
+2. **If a 960-wide source is mandatory — pad, never stretch.** Lanczos by the *width*
+   ratio to 960 × 1706, then pad one row of edge-replicated carpet to reach 1707. The pad
+   lands in a band no phone shows. Do **not** use the height ratio: it costs a 1px crop
+   off the right edge, which is where the booths are.
+3. **Not recommended — force it directly.** Non-uniform, but the distortion is only
+   **0.073% horizontal** (~0.2 px across the full width) — invisible. It is not a
+   distortion problem, it is a pointless-resample problem.
 
-**2 — Acceptable if 960 × 1707 must exist as a source: pad, never stretch.**
-Uniform scaling gives 960 × 1705.76 or 960.70 × 1707 — neither lands. So instead:
-scale by the **width** ratio 960/941 with Lanczos to 960 × 1706, then **pad one row of
-edge-replicated carpet at the bottom** to reach 1707. The pad lands in the dark carpet
-band that no phone displays. Do **not** scale by the height ratio: that needs a 1px
-crop off the width, and the right edge is where the booths are.
+### Regeneration at 960 × 1707
 
-**3 — Not recommended: force 941 × 1672 → 960 × 1707 directly.**
-This is a non-uniform scale. The distortion is only **0.073% horizontal** — about
-0.2 px across the full width, genuinely invisible — so it is not a *distortion*
-problem. It is a pointless-resample problem, same as option 2 but without the excuse.
+**Small win, not material on its own — but see §11.**
 
-### Is regeneration at 960 × 1707 materially better?
+960/320 = **3.0000** exactly; 941/320 = **2.9406**. Under nearest-neighbour a non-integer
+ratio drifts the sampled pixel across each block, which can put a 1px jitter into thin
+high-contrast details — the rail, the slate's inner moulding. At 3.0000 each output pixel
+samples a fixed position in an exact 3 × 3 block.
 
-**No. It is a small win, and not worth a regeneration on its own.**
+The shipped room came down the identical 2.94 path and looks correct at every size
+screenshotted. The artefact is real and small.
 
-The honest case for it: 960/320 = **3.0000 exactly**, whereas 941/320 = **2.9406**.
-Under nearest-neighbour downscaling a non-integer ratio makes the sampled pixel drift
-across each output block, which can put a one-pixel jitter into thin high-contrast
-details — the rail above the panel, the chalkboard's inner frame moulding. At 3.0000
-every output pixel samples a fixed position in an exact 3 × 3 block, and thin details
-come down cleanly.
-
-The case against: the shipped room came down the identical 2.94 path and looks
-correct at every size screenshotted this session. The artefact is real but small.
-
-**Recommendation:** ship this candidate at 941 × 1672. If it later goes back for a
-revision on artistic grounds, ask for 960 × 1707 *then* — free at that point. Do not
-spend a regeneration cycle on the ratio alone.
+**Original recommendation was: don't spend a regeneration cycle on the ratio alone — ask
+for 960 × 1707 if the shell ever goes back for a revision on artistic grounds.**
+§11 concludes it must. So the ratio fix is now free, and should be taken.
 
 ---
 
-## 7 & 9. Prepared locations — placement map
+## 7. Placement map — approved assignments
 
 Logical 320 × 569 space. `x, y, w, h`. **By eye, ±3 units** (see §0).
-Conversion used: logical = source × 0.340.
+Conversion: logical = source × 0.340.
 
-| # | Prepared location | Reading | Logical `x, y, w, h` | Kind |
-|---|---|---|---|---|
-| 1 | **Trophy banners** | the rail above the large panel | `56, 64, 128, 7` | Door → `/timeline` |
-| 2 | **Tonight board** | the large blank cream framed panel | `52, 77, 131, 98` | Display |
-| 3 | **Prediction chalkboard** | dark slate in the ornate frame | `154, 184, 38, 60` | Display |
-| 4 | **Newspaper rack** | *no rack in frame* — see §10 | — | Door → `/slice` |
-| 5 | **Display case** | glass-topped case set into the counter | `155, 284, 100, 25` | Door → `/collection` |
-| 6 | **Basement door** | the closed wooden door, back wall | `203, 122, 42, 126` | Door, locked |
-| 7 | **Underground / Casino** | *no second door in frame* — see §10 | — | Door, locked |
-| 8 | **Receipt** | the paper lying on the counter, left | `84, 293, 25, 14` | Display |
-| 9 | **Tony's standing position** | see §8 | `62, 173, 72, 111` visible | Toy |
+All nine approved assignments were confirmed against the file. **Seven are present in
+the shell; two have no prepared location.**
 
-Supporting geometry, same space:
+| Approved assignment | In the shell | Logical `x, y, w, h` | Kind |
+|---|---|---|---|
+| Large cream wall panel → **Tonight at Tony's** | ✅ present | `52, 78, 131, 98` | Display (baked) |
+| Rail above it → **trophy banners** | ✅ present | `57, 65, 126, 7` | Door → `/timeline` |
+| Dark framed slate → **Tony's prediction** | ✅ present | `154, 183, 38, 61` | Display (baked) |
+| Counter glass area → **Collection display case** | ✅ present | `155, 284, 101, 25` | Door → `/collection` |
+| Receipt on counter → **manager record** | ✅ present | `84, 293, 25, 14` | Display (baked) |
+| Existing wooden door → **Rooms / basement** | ✅ present | `203, 122, 42, 127` | Door, locked |
+| **Tony's standing lane** → recessed left-centre alcove | ✅ present | `62, 173, 72, 111` visible | Toy |
+| **Newspaper rack** → `/slice` | ❌ **absent** | — | Door |
+| **Underground / Casino entrance** | ❌ **absent** | — | Door, locked |
 
-| Feature | Logical |
-|---|---|
-| Recessed checkered alcove + shelf | `54, 185, 91, 68` |
-| Tall arched nook, far left | `6, 182, 46, 104` |
-| Counter top — back edge | **y = 284** |
-| Counter top — front edge | y = 316 |
-| Counter front panel | `0, 316, 320, 72` |
-| Floor rug | `71, 395, 149, 57` |
-| Booths, right | `248, 200, 72, 93` |
-| Bottom carpet band | `0, 490, 320, 79` |
-| **Worst-case phone fold** | **y = 499** |
+Supporting geometry:
+
+| Feature | Logical | Role |
+|---|---|---|
+| Recessed checkered alcove + shelf | `54, 184, 92, 70` | Tony's lane — **scenery, keep clear** |
+| Tall arched nook, far left | `6, 181, 46, 105` | scenery · **rack candidate, see §11** |
+| Counter top — back edge | **y = 285** | **the layer cut** |
+| Counter top — front edge | y = 316 | |
+| Counter front panel | `0, 316, 320, 72` | foreground |
+| Floor rug | `71, 394, 150, 59` | scenery |
+| Clear floor, left of the rug | `4, 396, 62, 58` | **hatch candidate, see §11** |
+| Clear floor, right of the counter | `272, 323, 48, 68` | **rack candidate, see §11** |
+| Booths, right | `248, 199, 72, 93` | scenery |
+| Bottom carpet band | `0, 490, 320, 79` | never visible on a phone |
+| **Worst-case phone fold** | **y = 499** | |
 
 ### Hit-target check
 
-Three prepared locations are **under the 44-unit minimum** in one dimension and will
-need their polygons padded, exactly as the Tonight board was on the shipped room:
+Three assigned locations are under the 44-unit minimum on one axis and need padded
+polygons, as the Tonight board did on the shipped room:
 
-- **Trophy banner rail** — 7 units tall. Pad to ≥44 vertically, or trace the banners
-  themselves once they are generated (they will hang well below the rail, which
-  probably solves it outright).
-- **Prediction chalkboard** — 38 units wide. Pad to 44, centred.
-- **Receipt** — 25 × 14. Needs padding on both axes. It sits on open counter with
-  nothing within 45 units, so padding is safe here.
+- **Trophy banner rail** — 7 units tall. Likely self-solving: the banner overlays will
+  hang well below the rail. Trace the banners, not the rail.
+- **Prediction slate** — 38 wide. Pad to 44, centred. Nothing within 44 to collide with.
+- **Receipt** — 25 × 14. Pad both axes. Open counter around it, so safe.
 
 ---
 
-## 8. Room for Tony and the foreground layer
+## 8. Tony and the foreground layer
 
-**Yes, and the fit is almost exact.**
+**Confirmed, and the fit is near-exact.**
 
-Cut the shell at **logical y = 284** — the counter top's back edge, which is also the
-top edge of the display case.
+Cut the shell at **logical y = 285** — the counter top's back edge, which is also the top
+edge of the glass case.
 
 ```
-  rear layer    logical y   0 – 284    (source y   0 –  835)
-  Tony                      drawn between
-  front layer   logical y 284 – 569    (source y 835 – 1672)
+  shell (rear)      logical y   0 – 285    (source y   0 –  838)
+  Tony sprite                   drawn between
+  counter (front)   logical y 285 – 569    (source y 838 – 1672)
 ```
 
-That cut puts the counter top, the display case, the receipt, the counter front, the
-rug and the carpet all **in front of** Tony — correct, since he stands behind the
-counter and the case sits on it between him and the viewer.
+That puts the counter top, the glass case, the receipt, the counter front, the rug and
+the carpet **in front of** Tony — correct, since the case sits on the counter between him
+and the viewer.
 
-**Tony's visible band: y 173 → 284 = 111 logical units.**
-On the shipped room it is 291 − 179 = **112 units**. Within one unit of identical, so
-`character_tony_neutral` transfers at its current scale with no re-authoring.
+**Tony's visible band: y 173 → 285 = 112 logical units.** On the shipped room it is
+291 − 179 = **112**. Identical. `character_tony_neutral` transfers with no re-authoring.
 
-### But his position is constrained to one lane
+### The lane is the only one that works, and it is tight
 
-Tony is 72 units wide. Laid over the back wall, the free columns are:
+Tony is 72 wide. Across the back wall: nook `6–52`, alcove `54–146`, slate `154–192`,
+door `203–245`, booths `248–320`; the Tonight panel spans `52–183` above.
 
-- `x 6–52` — the arched nook (scenery)
-- `x 54–145` — the recessed alcove (scenery)
-- `x 154–192` — **chalkboard** (prepared)
-- `x 203–245` — **basement door** (prepared)
-- `x 52–183` — **Tonight board** (prepared), y 77–175
-- `x 248–320` — booths (scenery)
+The gap between the Tonight panel's right edge (183) and the door's left edge (203) is
+**20 units** — too narrow. The approved alcove lane is the **only** 72-wide column that
+is not an assigned location.
 
-The gap between the Tonight board's right edge (183) and the door's left edge (203) is
-**20 units** — too narrow. So Tony must stand over scenery, and the only 72-wide
-scenery column is the alcove.
+At `x = 62` Tony sits centred in the alcove with **10 units of clearance from the nook**
+on his left and **20 from the slate** on his right, head finishing at y 173, **2 units
+below** the Tonight panel. Every assigned location stays unobstructed.
 
-**Recommended: `x 62, y 173, w 72, h 111` visible** — Tony centred on the recessed
-alcove, head finishing at y 173, two units clear of the Tonight board's bottom edge at
-175. That leaves the chalkboard, the basement door, the display case and the receipt
-completely unobstructed.
-
-This works **only if the recessed checkered alcove is scenery.** If the revised ruling
-intends it as a prepared location, Tony has nowhere to stand and the shell needs a
-clear standing lane added.
+⚠️ **This lane has no slack.** Any revision that widens the alcove's neighbours, or that
+puts anything into `x 54–146`, evicts Tony. **The revision brief in §11 must protect
+`x 54–146, y 173–285` explicitly.**
 
 ---
 
-## 10. Flagged before any Door asset is generated
+## 11. Do the two missing locations require a revised shell?
 
-**Blocking — two named destinations have no prepared location:**
+# Yes. Both. One regeneration resolves them together.
 
-1. **The Underground / Casino entrance is absent.** There is exactly **one** door in
-   the back wall. The map needs two locked doors (basement → Rooms, and
-   Underground/Casino), and they must be visually distinct because they behave
-   differently. As drawn, one of them cannot be placed. *Note: the casino is Phase 10
-   and explicitly not in v1 (`16 §Approved Scope`) — but its entrance being visible
-   and locked is a composition decision, so this needs resolving now rather than in P10.*
+The approved architecture makes Doors *transparent overlays*, so the fair question is
+not "is it painted?" but **"is there somewhere an overlay could convincingly go?"** I
+checked both against the actual file.
 
-2. **The newspaper rack is absent.** There is no rack, and nothing in frame reasonably
-   stands in for one. The arched nook at far left is a built-in cabinet, not a rack; it
-   is also 46 units wide against a 44-unit minimum, leaving no margin. **`/slice` still
-   has no room entrance.**
+### Underground / Casino — a revised shell is **unavoidable**
 
-**Ambiguous — needs a ruling before overlays are traced:**
+**There is no unallocated wall surface left.** Reading the back wall left to right:
+pillar → Tonight panel (`52–183`) → alcove, Tony's lane (`54–146`) → slate (`154–192`)
+→ door (`203–245`) → corner into the booth area (`248+`).
 
-3. **Is the rail the trophy-banner location, or a curtain rod for the panel below it?**
-   It reads as either. If it is the banner rail, the banners hang *over* the top of the
-   Tonight board and the two overlap — which changes both polygons.
+The only gap is `245–248`, three units. The wall is **fully assigned**.
 
-4. **Is the large blank panel the Tonight board or the menu board?** I have assigned it
-   to Tonight because Tonight is in v1 and the menu board is not. If that is wrong,
-   Tonight has no home and the chalkboard would have to carry it, which collides with
-   the prediction chalkboard.
+An overlay door has to be painted over something, and everything is now something. This
+cannot be solved by compositing — only by generating wall for it to stand in.
 
-5. **Is the recessed alcove scenery?** §8 depends on it. If it becomes a prepared
-   location, Tony has no standing lane.
+*(Noting: the casino is Phase 10 and out of v1 scope per `16 §Approved Scope`. But
+whether its entrance is **visible and locked** from day one is a composition decision,
+not a P10 decision, and the shell is being fixed now. Deciding it later means a second
+regeneration.)*
 
-6. **Which door is the basement?** Only one exists, so whichever it is assigned to, the
-   other is unplaced.
+### Newspaper rack — **technically possible as an overlay, and still not good enough**
 
-**Non-blocking:**
+Unlike the door, there *is* clear floor: `272, 323, 48, 68`, right of the counter's end.
+An overlay rack there would composite over the foreground counter layer, the lighting
+matches, and 48 × 68 clears the 44-unit minimum.
 
-7. The right edge carries booths and window to the frame boundary, against
-   `zone_tile.md`'s ~16px safe-edge guidance. Nothing navigational is there, so a
-   right-edge crop is survivable — but it is a deviation worth recording.
+I am recommending against it anyway, for three reasons:
+
+1. It touches the **right frame edge**, against `zone_tile.md`'s ~16px safe-edge rule —
+   the same edge already flagged marginal in §1.
+2. It sits in the **walkway to the booths**. A rack there reads as clutter dropped into
+   a corridor, not as a fixture of the shop.
+3. **48 units is 4 over the minimum.** Any future crop, any 1px trim, and `/slice`'s only
+   entrance fails its tap target.
+
+`/slice` is a first-class v1 destination. Its entrance should not be the worst-placed
+object in the room.
+
+**The better fix costs nothing extra in a regeneration:** convert the **tall arched nook
+at far left** (`6, 181, 46, 105`) into a built-in newspaper rack. It is already a
+prepared recess with correct lighting and depth, it is currently decorative with no
+assignment, and it sits **10 units clear of Tony's lane**. Widening it from 46 to ~58
+gives the tap target real margin.
+
+### What to ask the Art Designer for
+
+One regeneration, four changes:
+
+1. **Canvas: 960 × 1707.** Free now that the shell is being regenerated, and it removes
+   the non-integer downsample drift on thin details (§3–6). Aspect is effectively
+   unchanged — 0.073% — so the composition does not move.
+2. **Convert the far-left arched nook into a built-in newspaper rack.** Widen to ~58
+   logical units (~174 source px). Masthead area **completely blank** — the headline is
+   rendered at runtime; drawn lettering makes it unusable.
+3. **Add a second locked entrance for the Underground.** Two options, in preference
+   order:
+   - **A floor hatch** in the clear floor left of the rug — `4, 396, 62, 58` logical
+     (~12–195, 1165–1335 source). Preferred: it uses genuinely empty floor, competes
+     with nothing on the back wall, sits 100 units above the worst-case fold, and "down
+     to the Underground" is what a hatch means. A padlock on it reads as locked without
+     a single word of UI.
+   - **A second door**, which requires extending the back wall right of the existing one
+     by ~50 logical units and pushing the booth corner further right. More disruptive,
+     and it costs booth seating.
+4. **Protect Tony's lane.** Keep `x 54–146, y 173–285` free of any new fixture. It is the
+   only column he fits in, with no slack (§8).
+
+Everything else in the shell is approved and should not move.
 
 ---
 
-## Bottom line
+## Also flagged
 
-The shell is **materially better than what shipped** and I would build on it. It
-supports **6 of the 9** objects the navigation map needs — Tonight, the chalkboard,
-the display case, one locked door, the receipt, and Tony's position — against **1 of 9**
-today.
+- **The old 320 × 200 homepage zone tiles are retired**, per the ruling. Six entries in
+  `assets.inventory.json` still carry the superseded 320 × 228 B1 sizing —
+  `zone_tonight_board`, `zone_menu_board`, `zone_newspaper_rack`, `zone_display_case`,
+  `zone_wall`, plus the `dressing_door_*` pair at 64 × 96. They should be removed or
+  restated against the shell architecture, or the next person to read the inventory will
+  generate assets nothing can use. **Registry edit, not a build step — not done here.**
+- **`/timeline` still does not exist as a route.** The trophy-banner Door is assigned and
+  present in the shell, so it will have somewhere to go the moment the page is built.
 
-**It does not yet close the gap.** The newspaper rack and the second locked door are
-still missing, so `/slice` remains unreachable from the room and the Underground has no
-entrance. Those two need adding to the shell — or an explicit decision that they arrive
-as separate transparent overlays composited over it.
+---
 
-**On the canvas: keep 941 × 1672, do not resample.** The 960 × 1707 figure is right
-about one thing — it is exactly 3× the logical space — but that makes it the correct
-*output* of the pipeline, not the correct input to it.
+## Bottom line for the Art Designer
+
+**Do not integrate this shell.** It is a clear improvement and the right direction — it
+delivers **7 of the 9** approved locations against 1 today, all three baked Displays are
+correct and clean, and Tony fits to within a single logical unit.
+
+**But it needs one more pass.** `/slice` and the Underground have nowhere to go, and
+neither gap can be closed by compositing: the back wall is fully assigned, and the only
+floor a rack could stand on is the wrong floor. Regenerate at **960 × 1707** with the
+four changes in §11 and the shell closes the navigation map completely.
