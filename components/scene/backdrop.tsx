@@ -1,11 +1,15 @@
 /**
- * The room the page is standing in.
+ * The air of the shop, on the door screen.
  *
- * A fixed layer behind everything: the wall, the light falling on it, the haze
- * off the oven. Because it does not scroll with the content, the fixtures
- * sliding over it read as furniture in a space rather than as cards on a page —
- * which is the entire difference between a themed dashboard and a place
- * (`16 §1`).
+ * A fixed layer behind everything: lit air, haze off the oven, the dark closing
+ * in at the edges. Once the parlor became real art, every screen inside the
+ * building started using *that* instead — the room dimmed behind a panel, which
+ * is both truer and cheaper than lighting a CSS room.
+ *
+ * This survives on the door, which is the one screen where you are outside the
+ * building looking in. The lamp, the wall and the floor that used to live
+ * beside it were furniture drawn in gradients, and they are gone with the rest
+ * of the CSS shop.
  *
  * `position: fixed` rather than `background-attachment: fixed`, which iOS
  * Safari has never handled properly.
@@ -46,79 +50,6 @@ export function ParlorAir({ tone = 'warm' }: { tone?: 'warm' | 'cold' }) {
             'radial-gradient(120% 80% at 50% 40%, transparent 40%, rgba(18,13,14,0.75) 100%)',
         }}
       />
-    </div>
-  );
-}
-
-/**
- * A pendant lamp on a flex, and the cone of light under it.
- *
- * Placed by the caller, because where the light falls is a composition
- * decision: one over Tony, one further back over the booths.
- */
-export function Pendant({
-  className = '',
-  height = 'h-40',
-}: {
-  className?: string;
-  height?: string;
-}) {
-  return (
-    <div aria-hidden="true" className={`pointer-events-none absolute ${className}`}>
-      <div className="mx-auto h-6 w-px bg-ink-500" />
-      {/* The shade. */}
-      <div className="anim-lamp mx-auto h-3 w-12 rounded-t-[3px] bg-red-dark shadow-[0_2px_0_#5c1416]" />
-      <div className="anim-lamp mx-auto h-1.5 w-14 rounded-b-[2px] bg-red-mid" />
-      {/* The bulb, and what it throws. */}
-      <div className="anim-lamp mx-auto -mt-0.5 h-1.5 w-3 rounded-full bg-amber-glow shadow-[0_0_12px_4px_rgba(255,217,138,0.65)]" />
-      <div className={`lamp-cone anim-lamp mx-auto -mt-1 w-44 ${height}`} />
-    </div>
-  );
-}
-
-/**
- * The wall behind everything in a given band, with its tiled wainscot.
- *
- * Takes children so a fixture can be mounted *on* the wall rather than floating
- * in front of it.
- */
-export function Wall({
-  children,
-  className = '',
-  wainscot = true,
-}: {
-  children?: React.ReactNode;
-  className?: string;
-  wainscot?: boolean;
-}) {
-  return (
-    <div className={`relative ${className}`}>
-      {wainscot && (
-        <>
-          <div aria-hidden="true" className="surface-tile absolute inset-x-0 bottom-0 h-16" />
-          {/* The trim rail where tile meets paint. */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 bottom-16 h-2 bg-red-dark shadow-[0_1px_0_rgba(0,0,0,0.5)]"
-          />
-        </>
-      )}
-      <div className="relative">{children}</div>
-    </div>
-  );
-}
-
-/**
- * The floor, running away from you into the back of the shop.
- *
- * Black-and-white check on a perspective transform. It is only ever glimpsed —
- * under the booths, past the counter — which is exactly how much of the floor
- * you see standing in a pizzeria.
- */
-export function Floor({ className = '' }: { className?: string }) {
-  return (
-    <div aria-hidden="true" className={`pointer-events-none overflow-hidden ${className}`}>
-      <div className="surface-floor h-full w-full opacity-45" />
     </div>
   );
 }

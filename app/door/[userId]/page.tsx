@@ -1,7 +1,8 @@
 import { notFound, redirect } from 'next/navigation';
 
 import { PinForm } from '@/components/pin-form';
-import { EnamelSign, HangingSign, ShopWindow } from '@/components/scene/fixtures';
+import { HangingSign, ShopWindow } from '@/components/scene/fixtures';
+import { SignPlate } from '@/components/scene/panel';
 import { ParlorAir } from '@/components/scene/backdrop';
 import { Page } from '@/components/shell';
 import { claimAction, signInAction } from '@/app/actions/auth';
@@ -52,10 +53,10 @@ export default async function DoorManagerPage({
         </header>
 
         <main className="mx-auto w-full max-w-md flex-1 px-5 pt-7">
-          <EnamelSign tone={claiming ? 'red' : 'blue'}>
+          <SignPlate tone={claiming ? 'red' : 'blue'}>
             {claiming ? 'New key' : 'Welcome back'}
-          </EnamelSign>
-          <h1 className="mt-3 text-3xl leading-tight font-bold text-paper-white">
+          </SignPlate>
+          <h1 className="mt-3 font-mono text-[19px] leading-tight font-bold tracking-[0.04em] text-paper-white uppercase">
             {manager.displayName}
           </h1>
           <p className="mt-2 text-[15px] leading-relaxed text-ink-100">

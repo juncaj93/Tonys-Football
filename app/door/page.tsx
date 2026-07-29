@@ -1,7 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { EnamelSign, HangingSign, ShopWindow } from '@/components/scene/fixtures';
+import { HangingSign, ShopWindow } from '@/components/scene/fixtures';
+import { SignPlate } from '@/components/scene/panel';
 import { ParlorAir } from '@/components/scene/backdrop';
 import { Page, TAP_TARGET } from '@/components/shell';
 import { viewer } from '@/lib/auth/current-user';
@@ -41,8 +42,8 @@ export default async function DoorPage() {
         </header>
 
         <main className="mx-auto w-full max-w-md flex-1 px-5 pt-7">
-          <EnamelSign tone="red">Keys</EnamelSign>
-          <h1 className="mt-3 text-3xl leading-tight font-bold text-paper-white">
+          <SignPlate tone="red">Keys</SignPlate>
+          <h1 className="mt-3 font-mono text-[19px] leading-tight font-bold tracking-[0.04em] text-paper-white uppercase">
             Who&rsquo;s asking?
           </h1>
           <p className="mt-2 text-[15px] leading-relaxed text-ink-100">
@@ -66,7 +67,7 @@ export default async function DoorPage() {
                   <li key={manager.id}>
                     <Link
                       href={`/door/${manager.id}`}
-                      className={`flex ${TAP_TARGET} min-h-[3.5rem] items-center justify-between gap-3 rounded-[3px] border border-wood-dark bg-paper-mid px-4 text-ink-900 shadow-[0_2px_6px_rgba(0,0,0,0.5)] transition-transform active:translate-y-px active:bg-paper-dark`}
+                      className={`flex ${TAP_TARGET} min-h-[3.5rem] items-center justify-between gap-3 pixel-edge border-2 border-wood-dark bg-paper-mid px-4 text-ink-900 active:translate-y-px active:bg-paper-dark`}
                     >
                       <span className="flex min-w-0 items-center gap-2.5">
                         {/* The hook the tag hangs on. */}
