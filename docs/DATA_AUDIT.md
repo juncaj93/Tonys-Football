@@ -490,3 +490,70 @@ Encoded: week classification, scored-entry determination, bye handling, the fina
 ### Deferred to Phase B and beyond
 
 `fantasy_matchups` · `fantasy_lineups` · `fantasy_player_scores` · `fantasy_transactions` · `weekly_analytics` · per-week capture timestamps in the database · the derived-stat module (records, streaks, head-to-head, extremes) · scheduled sync jobs · the History UI · the banned-phrase validator.
+
+---
+
+## 16. Reconciliation with merged V1
+
+**Date:** 2026-07-29 · **Base:** `main` @ `09735af` (#8 V1 Doors Open, #11 art quantizer)
+**Authority:** TECH LEAD RULING on PR #10
+
+Phase A was written against `4204f43` and reconciled after #8 and #11 merged. Seven files conflicted; all resolved per the ruling. The behaviour recorded in §15 is unchanged — what follows is what the merge altered around it.
+
+### Migration renumbered to `0003`
+
+`0002_auth_content_records` is `main`'s and owns that number. Regenerating against the merged schema shrank Phase A's migration to four columns, because the six record columns arrived with #8 and are already applied:
+
+```
+season_memberships.team_name
+seasons.finalized_at
+seasons.snapshot_captured_at
+users.sleeper_username
+```
+
+Both immutability triggers moved with it. No applied migration was edited.
+
+### Points are `numeric`, not floating point
+
+Phase A had declared `points_for` / `points_against` as `doublePrecision`; #8 declared them `numeric(8, 2)` with `mode: 'number'`, and that declaration was already applied. **#8's is correct and Phase A's is gone.** Points decide who holds `most_points_2025`, and exact decimal storage is the right call.
+
+The reconciler is unaffected: it always compared in integer cents. That now hardens the arithmetic on top of exact storage rather than compensating for inexact storage — belt and braces instead of a workaround.
+
+### `TRUNCATE` and the immutability triggers
+
+The merged test helper (`resetDatabase`) truncates every table in one statement. `TRUNCATE` does not fire row-level triggers, so it bypasses the finalized-season guard.
+
+That is deliberate, not a hole. `TRUNCATE` requires table ownership, which no application role holds; `UPDATE` and `DELETE` are what an importer, a migration, a script, or a hand-run statement could plausibly issue, and those are guarded. A test harness that owns its database sits outside that threat model by construction. Recorded in both the helper and `0003` so it is not later mistaken for an oversight.
+
+### Two sources for `users.display_name`
+
+The reconciliation left two files able to set it:
+
+| | `content/managers.md` (#8) | `content/manager-mappings.json` (Phase A) |
+|---|---|---|
+| Covers | the ten current managers | all thirteen accounts |
+| Applied by | `scripts/seed.ts` | the importer |
+| Also carries | — | `is_retired`, mandatory per-mapping `source` |
+| Former occupants | left under Sleeper handles | Berardo · Armen · Shant |
+
+They agree on all ten current managers, `RonJonathan → Ryan` included, and differ only on the three former occupants — where the markdown says *"until somebody says otherwise"* and the identity correction of 2026-07-29 said otherwise.
+
+They also compose rather than merely coincide: the importer names all thirteen, the seed then rewrites only its own ten, and a first seed on a clean database reports `Names 0 renamed`. `lib/identity/consistency.test.ts` fails CI if they ever disagree.
+
+**Consolidating to one source is open** — a `DECISION REQUEST — TECH LEAD` on PR #10. Not blocking, and guarded meanwhile.
+
+### The deploy seed finalizes
+
+`scripts/seed.ts` now passes `finalizeYears: [2024, 2025]`. Without it the triggers existed in production and protected nothing. The years are named by hand rather than derived from Sleeper's `complete` status — that distinction *is* the ruling, and 2026 is deliberately absent.
+
+### Verification after reconciliation
+
+- **440 tests across 26 files, none skipped**, against a real Postgres — Phase A, #8's auth/greeting/tags, and #11's art tests green together
+- four migrations applied to a freshly created database; both triggers present; `points_for` confirmed `numeric(8,2)`
+- deploy path (`migrate → seed → build`) run twice: 48 records changed, then 0
+- the four 2024 record conflicts, five PF conflicts, and two disputed games still detected exactly; 2025 still clean
+- all ten managers carry a finish and a seasonal team name in both completed seasons
+
+### Still open
+
+`final_rank = null` renders as "Missed the playoffs" in #8's receipt. Now that 7th–10th derive, that case no longer arises for a completed season, so the copy describes a state that no longer occurs. Flagged per the ruling and deliberately not rewritten — a content decision, not a reconciliation one.
