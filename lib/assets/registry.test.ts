@@ -172,8 +172,13 @@ describe('the committed inventory', () => {
     expect(assetRegistry.size).toBe(inventoryJson.totalSlugs);
   });
 
-  it('declares every asset as a placeholder — no art exists yet', () => {
-    expect(assetRegistry.byStatus('placeholder')).toHaveLength(assetRegistry.size);
+  it('declares every live asset as a placeholder — no art exists yet', () => {
+    // Retired slugs keep their records forever so archived issues and past
+    // seasons still resolve (ASSET_PIPELINE.md 3). They are not placeholders
+    // awaiting art; they are decisions that were reversed.
+    const live = assetRegistry.all().filter((r) => r.artStatus !== 'retired');
+
+    expect(assetRegistry.byStatus('placeholder')).toHaveLength(live.length);
   });
 
   it('resolves every slug to a placeholder, never missing', () => {
@@ -211,8 +216,24 @@ describe('the committed inventory', () => {
     );
   });
 
-  it('contains the six shop zones', () => {
-    expect(assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'))).toHaveLength(6);
+  it('contains the room shells, and the six zone tiles are retired', () => {
+    // 18_PARLOR_NAVIGATION_MAP.md v2.0: the room is one portrait shell plus
+    // transparent overlays, not six composed landscape tiles.
+    const shells = ['zone_parlor_shell', 'zone_parlor_counter_front', 'zone_back_hall_shell'];
+
+    for (const slug of shells) {
+      expect(assetRegistry.get(slug)?.artStatus).toBe('placeholder');
+    }
+
+    for (const slug of [
+      'zone_tonight_board',
+      'zone_chalkboard',
+      'zone_newspaper_rack',
+      'zone_display_case',
+      'zone_trophy_wall',
+    ]) {
+      expect(assetRegistry.get(slug)?.artStatus).toBe('retired');
+    }
   });
 
   it('flags the zone canvas as provisional pending B0', () => {

@@ -2,37 +2,57 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 85,
+  "totalSlugs": 98,
 
   "statusValues": ["placeholder", "generated", "approved", "retired"],
   "batchValues": ["B0", "B1", "B2", "B3", "B4", "B5+"],
 
   "interaction": {
-    "$comment": "Per PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md. Every room object is exactly one role. ONLY 'door' receives persistent affordance — that is what makes the highlight mean 'somewhere you can go right now'. Objects without a role are scenery and are not interactive.",
+    "$comment": "Per PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md v2.0 (Counter Shop and Back Hall). Every room object is exactly one role. A Door glows ONLY when it has something meaningful to say — the fixed 'exactly three glow' rule of v1.0 is withdrawn. Objects without a role are scenery and are not interactive.",
     "roles": {
-      "door": "Navigates. Highlighted. Ships with a silhouette path.",
-      "door_locked": "Visible and tappable, NEVER highlighted. Answers with a Tony line, not a route.",
-      "display": "Shows live content in place. Not highlighted — the content is the affordance.",
+      "door": "Navigates. Glows only when it has something to say.",
+      "door_locked": "Visible and tappable, NEVER glows. Answers with a Tony line, not a route.",
+      "display": "Shows live content in place. Never glows — the content is the affordance.",
       "toy": "Reacts. No information, no navigation.",
       "scenery": "Not interactive. The default, and most of the room."
     },
     "silhouettes": {
-      "$comment": "A rectangle around an irregular pixel object swallows empty wall beside it, so taps land on nothing and the highlight covers scenery. Assets flagged needsSilhouette ship an SVG polygon in the tile's coordinate space, stored beside the art. Both the hit area and the glow use it. Genuinely rectangular objects — posters, boards, plaques — need no path.",
-      "required": [
-        "zone_newspaper_rack",
-        "zone_display_case",
-        "zone_trophy_wall",
-        "dressing_door_basement",
-        "dressing_door_boarded"
-      ],
-      "minimumTouchTarget": "44px effective — expand the hit path, never the glow"
+      "$comment": "ALPHA-DERIVED. Glow is filter: drop-shadow() applied to the overlay's OWN alpha channel, so it follows the silhouette exactly, never covers the wall beside the object, and updates automatically when the art is swapped. The authored-SVG-polygon requirement of v1.0 is withdrawn: no authored masks, no polygons, no hit-map images, and 'needsSilhouette' is no longer a field.",
+      "derivation": "filter: drop-shadow() on the overlay's own alpha",
+      "authoredPathsRequired": [],
+      "minimumTouchTarget": "44px effective — expand the hit region, never the glow",
+      "reducedMotion": "static outline instead of a pulse"
+    },
+    "homepageObjects": {
+      "$comment": "Exactly eight. Four Doors, three Displays, one Toy. No basement door, no Underground door, no display case, no second doorway, no floor hatch.",
+      "doors": {
+        "left_arched_nook": "/slice — object_newspaper_rack; glows when a Slice is unread",
+        "banner_rail": "/timeline — object_banner; never glows persistently",
+        "countertop_tray": "/counter — object_box_*; glows when a box is owned or available; an owned box opens AT THE TRAY, in place",
+        "right_rear_doorway": "/back-hall — baked opening; glows only when something beyond it is open"
+      },
+      "displays": {
+        "large_wall_board": "Tonight at Tony's — blank surface baked into the shell, text at runtime",
+        "small_sign": "Tony's prediction in V1; Tony's Line behind the feature flag later",
+        "receipt": "Manager record — blank paper baked into the shell, text at runtime"
+      },
+      "toy": {
+        "tony": "character_tony_neutral — dialogue, no route"
+      }
+    },
+    "backHall": {
+      "$comment": "One rear doorway leads here. Rooms and Underground exist ONLY inside the Back Hall — never on the homepage. One compact scene, two environmental choices, one in-world return door.",
+      "rooms": "/rooms — locked until V2",
+      "underground": "/underground — locked until a later phase; never labelled CASINO on first discovery"
     }
   },
 
   "provisional": {
-    "$comment": "Zone tile canvas dimensions are PROVISIONAL pending the B0 composite test on a real phone. See ART_SPEC.md 2.1. All other canvas sizes are settled and do not depend on this.",
+    "$comment": "Superseded by the portrait shell. The room is ONE shell at 960x1707 (3x the 320x569 logical room) plus transparent overlays — not six composed 320x200 landscape tiles. zoneCanvas is retained only because the B0 style-lock composite was authored against it. See PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md 8.",
     "zoneCanvas": "320x200",
-    "settlesAt": "B0"
+    "settlesAt": "B0",
+    "shellCanvas": "960x1707",
+    "logicalRoom": "320x569"
   },
 
   "placeholderMapping": {
@@ -54,17 +74,43 @@
       "avatar_base_body":            { "family": "avatar",      "canvas": "32x48",  "batch": "B0", "art_status": "placeholder", "alt": "Manager avatar" },
       "wear_head_ballcap":           { "family": "avatar",      "canvas": "32x48",  "batch": "B0", "art_status": "placeholder", "slot": "head", "alt": "Plain ballcap" },
       "avatar_body_starter_01":      { "family": "avatar",      "canvas": "32x48",  "batch": "B0", "art_status": "placeholder", "slot": "body", "alt": "Plain t-shirt" },
-      "zone_front_counter":          { "family": "zone",        "canvas": "320x200","batch": "B0", "art_status": "placeholder", "alt": "The front counter at Tony's" },
+      "zone_front_counter":          { "family": "zone",        "canvas": "320x200","batch": "B0", "art_status": "placeholder", "$note": "B0 style-lock subject ONLY. It is no longer a composed room tile — the room is zone_parlor_shell. Kept because B0 exists to lock the pixel grid, perspective, and palette, and that job is unaffected by the navigation ruling.", "alt": "The front counter at Tony's" },
       "collectible_bapple_tree":     { "family": "collectible", "canvas": "32x32",  "batch": "B0", "art_status": "placeholder", "rarity": "legendary", "alt": "The Bapple Tree" },
       "surface_poster_blank":        { "family": "surface",     "canvas": "96x64",  "batch": "B0", "art_status": "placeholder", "safeArea": [8,12,80,40], "alt": "Poster" }
     },
 
-    "_zones_B1": {
-      "zone_tonight_board":          { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "display", "alt": "Tonight at Tony's board" },
-      "zone_chalkboard":             { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "display", "alt": "Chalkboard behind the counter" },
-      "zone_newspaper_rack":         { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "door", "needsSilhouette": true, "alt": "Newspaper rack" },
-      "zone_display_case":           { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "door", "needsSilhouette": true, "alt": "Glass collectible display case" },
-      "zone_trophy_wall":            { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "placeholder", "role": "door", "needsSilhouette": true, "alt": "Trophy wall with championship banners" }
+    "_zones_B1_retired": {
+      "$comment": "RETIRED by PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md v2.0. The six-landscape-tile room is withdrawn in favour of one portrait shell plus transparent overlays. zone_display_case is retired outright — there is no display case on the homepage; the countertop tray is the collectible entrance. Records are kept, never deleted, so archived Slice issues and past seasons continue to resolve (ASSET_PIPELINE.md 3).",
+      "zone_tonight_board":          { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "retired", "$supersededBy": "zone_parlor_shell (blank board baked in; text at runtime)", "alt": "Tonight at Tony's board" },
+      "zone_chalkboard":             { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "retired", "$supersededBy": "zone_parlor_shell (blank small sign baked in; text at runtime)", "alt": "Chalkboard behind the counter" },
+      "zone_newspaper_rack":         { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "retired", "$supersededBy": "object_newspaper_rack overlay in the shell's left arched alcove", "alt": "Newspaper rack" },
+      "zone_display_case":           { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "retired", "$supersededBy": "none — no display case on the homepage; the countertop tray leads to /counter", "alt": "Glass collectible display case" },
+      "zone_trophy_wall":            { "family": "zone", "canvas": "320x200", "batch": "B1", "art_status": "retired", "$supersededBy": "zone_parlor_shell (bare rail baked in) + object_banner overlay", "alt": "Trophy wall with championship banners" }
+    },
+
+    "_parlorShell_B1": {
+      "$comment": "The room. ONE portrait shell at 960x1707 — exactly 3x the 320x569 logical room. Architecture and blank Display surfaces are baked; every object is a transparent overlay; every changing word, number, and glow is runtime HTML/CSS. Shell-generation brief: PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md 11.",
+      "zone_parlor_shell":           { "family": "zone", "canvas": "960x1707", "batch": "B1", "art_status": "placeholder", "role": "scenery", "alt": "Tony's Pizza Parlor" },
+      "zone_parlor_counter_front":   { "family": "zone", "canvas": "960x1707", "batch": "B1", "art_status": "placeholder", "role": "scenery", "alt": "The parlor counter, foreground" }
+    },
+
+    "_parlorObjects_B1": {
+      "$comment": "Transparent overlays dropped into the shell's prepared places. Glow is filter: drop-shadow() on each overlay's own alpha — no authored masks. The four box variants are mutually exclusive states of the one countertop tray; tapping an owned box opens it AT THE TRAY, in place, never after a navigation.",
+      "object_newspaper_rack":       { "family": "zone", "canvas": "160x260", "batch": "B1", "art_status": "placeholder", "role": "door", "route": "/slice", "glowsWhen": "a Slice is unread", "alt": "Newspaper rack" },
+      "object_banner":               { "family": "zone", "canvas": "150x96",  "batch": "B1", "art_status": "placeholder", "role": "door", "route": "/timeline", "glowsWhen": "never persistently", "$note": "One reusable overlay, one instance rendered per season. The year and champion name are runtime text — baked lettering is rejected. The rail holds six at full size; from the seventh they scale together.", "alt": "Championship banner" },
+      "object_box_standard":         { "family": "zone", "canvas": "96x96",   "batch": "B1", "art_status": "placeholder", "role": "door", "route": "/counter", "alt": "A pizza box on the counter" },
+      "object_box_rare":             { "family": "zone", "canvas": "96x96",   "batch": "B1", "art_status": "placeholder", "role": "door", "route": "/counter", "alt": "A rare pizza box on the counter" },
+      "object_box_legendary":        { "family": "zone", "canvas": "96x96",   "batch": "B1", "art_status": "placeholder", "role": "door", "route": "/counter", "alt": "A legendary pizza box on the counter" },
+      "object_box_owned":            { "family": "zone", "canvas": "96x96",   "batch": "B1", "art_status": "placeholder", "role": "door", "route": "opens in place at the tray", "alt": "Your unopened pizza box" }
+    },
+
+    "_backHall_B1": {
+      "$comment": "Reached through the one rear doorway in the parlor. A small pixel-art scene, not a menu card: one compact screen, two environmental choices, and an in-world return door. Rooms and Underground exist ONLY here.",
+      "zone_back_hall_shell":        { "family": "zone", "canvas": "960x1707", "batch": "B1", "art_status": "placeholder", "role": "scenery", "alt": "The back hall behind Tony's" },
+      "object_stairs_rooms":         { "family": "zone", "canvas": "260x300", "batch": "B1", "art_status": "placeholder", "role": "door_locked", "route": "/rooms", "alt": "Stairs down to the rooms" },
+      "object_door_underground_locked": { "family": "zone", "canvas": "180x300", "batch": "B1", "art_status": "placeholder", "role": "door_locked", "route": "/underground", "$note": "Curtained and unmarked. Never labelled CASINO on first discovery. Locked line: \"Don't worry about it.\"", "alt": "An unmarked curtained doorway" },
+      "object_door_underground_open":   { "family": "zone", "canvas": "180x300", "batch": "B1", "art_status": "placeholder", "role": "door", "route": "/underground", "alt": "An open unmarked doorway" },
+      "object_door_return":          { "family": "zone", "canvas": "180x300", "batch": "B1", "art_status": "placeholder", "role": "door", "route": "/", "alt": "Back to the parlor" }
     },
 
     "_tony_B1": {
@@ -133,6 +179,7 @@
     },
 
     "_surfaces_B4": {
+      "$comment": "Text-bearing surfaces. Four of these are now baked blank into zone_parlor_shell rather than composited — the large board, the small sign, the receipt, and the bare rail. These records stay for non-parlor uses (the Slice, the Timeline, /counter) and as the safe-area reference for the shell's blank faces. surface_menu_board_blank has no remaining parlor use; the separate menu board is gone.",
       "surface_banner_blank":        { "family": "surface", "canvas": "96x32",  "batch": "B4", "art_status": "placeholder", "safeArea": [10,8,76,16],  "alt": "Banner" },
       "surface_chalkboard":          { "family": "surface", "canvas": "96x64",  "batch": "B4", "art_status": "placeholder", "safeArea": [6,10,84,44],  "alt": "Chalkboard" },
       "surface_receipt_strip":       { "family": "surface", "canvas": "48x96",  "batch": "B4", "art_status": "placeholder", "safeArea": [6,8,36,80],   "alt": "Paper receipt" },
@@ -159,8 +206,8 @@
       "dressing_broken_chair":       { "family": "zone", "canvas": "64x64", "batch": "B5+", "art_status": "placeholder", "alt": "Broken chair" },
       "dressing_papers_fresh":       { "family": "zone", "canvas": "64x64", "batch": "B5+", "art_status": "placeholder", "alt": "Fresh stack of newspapers" },
       "dressing_tally_marks":        { "family": "zone", "canvas": "32x64", "batch": "B5+", "art_status": "placeholder", "alt": "Tally marks on the door frame" },
-      "dressing_door_boarded":       { "family": "zone", "canvas": "64x96", "batch": "B1", "art_status": "placeholder", "role": "door_locked", "needsSilhouette": true, "alt": "Boarded-up back door" },
-      "dressing_door_basement":      { "family": "zone", "canvas": "64x96", "batch": "B1", "art_status": "placeholder", "role": "door_locked", "needsSilhouette": true, "alt": "Closed basement door" },
+      "dressing_door_boarded":       { "family": "zone", "canvas": "64x96", "batch": "B1", "art_status": "retired", "$supersededBy": "object_door_underground_locked, inside the Back Hall — there is no Underground door on the homepage", "alt": "Boarded-up back door" },
+      "dressing_door_basement":      { "family": "zone", "canvas": "64x96", "batch": "B1", "art_status": "retired", "$supersededBy": "object_stairs_rooms, inside the Back Hall — there is no basement door on the homepage", "alt": "Closed basement door" },
       "dressing_receipts_stapled":   { "family": "zone", "canvas": "32x32", "batch": "B5+", "art_status": "placeholder", "alt": "Two receipts stapled together" }
     },
 
