@@ -1,9 +1,23 @@
 import Link from 'next/link';
 
 import { ReceiptSlip } from '@/components/receipt';
-import { BottomNav, Page, TAP_TARGET, Zone } from '@/components/shell';
-import { TonyCounter } from '@/components/tony';
-import { AssetView } from '@/lib/assets/placeholder';
+import {
+  ArcadeCabinet,
+  BackBar,
+  Booths,
+  ClosedFixture,
+  Corkboard,
+  Counter,
+  EnamelSign,
+  HangingSign,
+  MenuBoard,
+  SpeechPlate,
+  WallClock,
+  WindowNeon,
+} from '@/components/scene/fixtures';
+import { Floor, ParlorAir, Pendant, Wall } from '@/components/scene/backdrop';
+import { BottomNav, Page, TAP_TARGET } from '@/components/shell';
+import { TonyAtTheCounter } from '@/components/tony';
 import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
@@ -11,28 +25,35 @@ import { getDb } from '@/lib/db';
 import { receiptFor } from '@/lib/parlor/receipt';
 import { seasonClock } from '@/lib/parlor/season';
 import { tonightBoard } from '@/lib/parlor/tonight';
-import { resolveAsset } from '@/lib/assets/registry';
 import { loadTags } from '@/lib/tags/repository';
 
 /**
- * Tony's Pizza Parlor — the six zones (`16 §7.1`).
+ * Tony's Pizza Parlor.
  *
- * | Zone            | Role                                    |
- * |-----------------|-----------------------------------------|
- * | Front counter   | Tony, the greeting, your receipt        |
- * | Tonight at Tony's | What matters now, ≤4 lines            |
- * | Menu board      | Featured rotator + chalkboard prediction |
- * | Newspaper rack  | Latest Slice + archive                  |
- * | Display case    | New items, spotlights, Showcases        |
- * | Wall            | Three dressing slots                    |
+ * You are standing at the counter. The window is behind you to the right, the
+ * neon reading backwards through the glass; two pendants light the counter and
+ * the booths; the room falls away into the dark at the back where the doors
+ * are.
  *
- * Four of the six have nothing real in them yet, and every one of those says
- * why in the shop's own voice rather than sitting empty. That is the offseason
- * dressing the handoff asks for: **the shop reads as closed for the summer,
- * deliberately** — not as software that has not loaded.
+ * The six zones of `16 §7.1` are all here, but as **fixtures in a room** rather
+ * than as sections of a page:
  *
- * Mobile stacks the zones full-width in priority order. Desktop composes them
- * into a room. Same components, same assets, no scaling down (`16 §7.1`).
+ * | Zone            | What it is in the room                     |
+ * |-----------------|--------------------------------------------|
+ * | Front counter   | the counter, Tony behind it, your receipt on it |
+ * | Tonight at Tony's | the corkboard on the wall, four pinned slips |
+ * | Menu board      | the slate over the back bar                |
+ * | Newspaper rack  | the wire rack by the door, empty           |
+ * | Display case    | the lit glass case, shelves bare           |
+ * | Wall            | the back of the room — booths, arcade, two doors |
+ *
+ * Nothing has a gap around it: the wall runs behind every fixture and the
+ * lighting layer is fixed, so scrolling moves you through one place rather than
+ * down a list of cards.
+ *
+ * The offseason is the designed state, not an absence (`17 §1`). The room is
+ * empty because it is July: chairs are up on the tables, the case is dark, the
+ * rack has no papers in it, and the sign in the window says so.
  */
 
 // The greeting is chosen per manager and logged on every visit, so this page is
@@ -59,127 +80,164 @@ export default async function ParlorPage() {
     daysUntilKickoff: clock.daysUntilKickoff,
   });
 
+  const countdown =
+    clock.daysUntilKickoff === null
+      ? 'Week one'
+      : `${String(clock.daysUntilKickoff)} days to week one`;
+
   return (
     <>
+      <ParlorAir />
+
       <Page>
-        <header className="px-4 pt-5 pb-3">
-          <div className="flex items-baseline justify-between gap-3">
-            <p className="font-mono text-[11px] tracking-[0.22em] text-amber-mid uppercase">
-              {clock.phase === 'offseason' ? 'Offseason' : 'Season'} ·{' '}
-              {clock.daysUntilKickoff === null
-                ? 'Week one'
-                : `${String(clock.daysUntilKickoff)} days out`}
-            </p>
+        {/* ---- The window, and the street outside ------------------------ */}
+        <header className="relative h-24 overflow-hidden border-b-2 border-wood-dark">
+          <WindowNeon />
+          <HangingSign top="Closed" bottom="back in september" />
+
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-4 pb-2">
+            <span className="font-mono text-[10px] tracking-[0.22em] text-blue-neon/80 uppercase">
+              {clock.phase === 'offseason' ? 'Offseason' : 'Season'} · {countdown}
+            </span>
             <Link
               href="/profile"
-              className={`${TAP_TARGET} flex items-center font-mono text-[11px] tracking-wide text-ink-100 underline decoration-dotted underline-offset-4`}
+              className={`flex ${TAP_TARGET} items-center font-mono text-[11px] tracking-wide text-paper-mid underline decoration-dotted underline-offset-4`}
             >
               {user.displayName}
             </Link>
           </div>
-          <h1 className="mt-1 text-2xl leading-tight font-bold text-paper-white">
-            Tony&rsquo;s Pizza
-          </h1>
         </header>
 
-        <div className="grid gap-4 px-4 lg:grid-cols-[1.15fr_1fr] lg:items-start">
-          {/* ---- Front counter ------------------------------------------- */}
-          <Zone
-            title="Front counter"
-            aside={greeting === null ? undefined : greeting.expression}
-            tone="counter"
-            className="lg:row-span-2"
-          >
-            <TonyCounter
-              slug={greeting?.tonySlug ?? 'character_tony_neutral'}
-              line={greeting?.text ?? null}
-              name={user.displayName}
-            />
+        {/* ---- The counter ---------------------------------------------- */}
+        <Wall className="relative pb-0" wainscot={false}>
+          <Pendant className="top-0 left-[18%] z-0" height="h-44" />
 
-            <div className="mt-5">
-              <ReceiptSlip receipt={receipt} name={user.displayName} />
-            </div>
-          </Zone>
+          <Counter
+            behind={
+              // A band of the room behind the counter. Tony stands on its
+              // floor, so the counter top below crops him at the forearms.
+              <div className="relative z-10 h-[9.5rem]">
+                <BackBar />
 
-          {/* ---- Tonight at Tony's --------------------------------------- */}
-          <Zone title="Tonight at Tony's" tone="dark" aside="the board">
-            {tonight.length === 0 ? (
-              <p className="text-sm text-ink-100">Nothing on the board.</p>
-            ) : (
-              <ul className="space-y-2.5">
-                {tonight.map((line) => (
-                  <li key={line.key} className="flex gap-2.5 text-[15px] leading-snug">
-                    <span aria-hidden="true" className="text-amber-mid">
-                      —
-                    </span>
-                    <span className="text-paper-mid">{line.text}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </Zone>
+                <div className="absolute bottom-0 left-2 sm:left-6">
+                  <TonyAtTheCounter
+                    slug={greeting?.tonySlug ?? 'character_tony_neutral'}
+                    mood={greeting?.expression ?? 'neutral'}
+                  />
+                </div>
 
-          {/* ---- Menu board ---------------------------------------------- */}
-          <Zone title="Menu board" aside="offseason">
-            <AssetView resolution={resolveAsset('zone_menu_board')} className="min-h-20" />
-            <p className="mt-3 text-sm leading-relaxed text-ink-700">
-              No specials until the season starts. Tony&rsquo;s chalkboard prediction goes up
-              here the first Tuesday that matters.
-            </p>
-          </Zone>
+                <div className="absolute right-2 bottom-14 w-36 sm:right-6 sm:w-44">
+                  <MenuBoard
+                    lines={
+                      clock.daysUntilKickoff === null
+                        ? ['Week one', 'is on']
+                        : ['No specials', 'till September']
+                    }
+                  />
+                </div>
+              </div>
+            }
+            onTop={
+              <div className="space-y-4">
+                <SpeechPlate speaker="Tony" mood={greeting?.expression ?? 'neutral'}>
+                  {greeting === null ? (
+                    // "No content" is always a valid outcome (`16 §10`). Tony is
+                    // at the counter and not saying anything, which is better
+                    // than a line that is wrong.
+                    <p className="text-[15px] leading-relaxed text-paper-mid/70 italic">
+                      Tony nods at {user.displayName} and goes back to the oven.
+                    </p>
+                  ) : (
+                    <p className="text-[17px] leading-snug font-medium text-paper-white sm:text-lg">
+                      {greeting.text}
+                    </p>
+                  )}
+                </SpeechPlate>
 
-          {/* ---- Newspaper rack ------------------------------------------ */}
-          <Zone title="Newspaper rack" aside="empty">
-            <AssetView resolution={resolveAsset('zone_newspaper_rack')} className="min-h-20" />
-            <p className="mt-3 text-sm leading-relaxed text-ink-700">
-              The rack is empty. The first Slice prints the Tuesday after week one.
-            </p>
-            <Link
+                {/*
+                  * Lying on the counter where Tony left it — smaller than the
+                  * dialogue above it, because it is a docket somebody put down,
+                  * not the headline of the screen.
+                  */}
+                <div
+                  className="mx-auto w-full max-w-[15rem]"
+                  style={{ transform: 'rotate(-1.4deg)' }}
+                >
+                  <ReceiptSlip receipt={receipt} name={user.displayName} />
+                </div>
+              </div>
+            }
+          />
+        </Wall>
+
+        {/* ---- The wall by the counter ----------------------------------- */}
+        <Wall className="px-4 pt-6 pb-8">
+          <WallClock className="absolute -top-1 right-4 z-10" />
+          <Corkboard
+            title="Tonight at Tony's"
+            notes={tonight.map((line) => ({ key: line.key, text: line.text }))}
+          />
+        </Wall>
+
+        {/* ---- By the door: the rack and the case ------------------------ */}
+        <section className="relative px-4 pb-8">
+          <div className="grid gap-4 sm:grid-cols-2">
+            <ClosedFixture
+              slug="zone_newspaper_rack"
               href="/slice"
-              className={`mt-3 inline-flex ${TAP_TARGET} items-center text-sm font-semibold text-red-dark underline underline-offset-4`}
-            >
-              Look at the rack anyway
-            </Link>
-          </Zone>
+              label="The rack"
+              note="Empty. The first Slice prints the Tuesday after week one."
+              variant="rack"
+            />
+            <ClosedFixture
+              slug="zone_display_case"
+              href="/collection"
+              label="The case"
+              note="Glass is clean, shelves are bare. Nothing to collect yet."
+              variant="case"
+            />
+          </div>
+        </section>
 
-          {/* ---- Display case -------------------------------------------- */}
-          <Zone title="Display case" aside="empty">
-            <AssetView resolution={resolveAsset('zone_display_case')} className="min-h-20" />
-            <p className="mt-3 text-sm leading-relaxed text-ink-700">
-              Glass is clean, shelves are bare. Nothing to collect until the season opens.
-            </p>
-          </Zone>
+        {/* ---- The back of the room -------------------------------------- */}
+        <section className="relative">
+          <Pendant className="top-0 right-[22%] z-0" height="h-28" />
 
-          {/* ---- The wall ------------------------------------------------ */}
-          <Zone title="The wall" aside="3 slots" tone="dark" className="lg:col-span-2">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <WallSlot
-                slug="surface_poster_blank"
-                caption="Closed for the summer. Back in September."
-              />
-              <WallSlot
-                slug="dressing_door_boarded"
-                caption="Back door, boarded up. Tony says it has always been like that."
-              />
-              <WallSlot
-                slug="dressing_door_basement"
-                caption="Basement door, shut. Nothing down there yet."
-              />
+          <div className="relative px-4 pt-10">
+            <div className="mb-2 flex items-center justify-between">
+              <EnamelSign tone="cream">The back</EnamelSign>
+              <span className="font-mono text-[10px] tracking-[0.18em] text-ink-300 uppercase">
+                nobody in tonight
+              </span>
             </div>
-          </Zone>
-        </div>
+
+            <div className="relative">
+              <ArcadeCabinet className="absolute right-1 bottom-6 z-10" />
+              <Booths />
+            </div>
+          </div>
+
+          <Floor className="h-16" />
+
+          <div className="relative -mt-4 grid gap-4 px-4 pb-10 sm:grid-cols-2">
+            <ClosedFixture
+              slug="dressing_door_basement"
+              href="/rooms"
+              label="Basement"
+              note="Chained shut. Every manager gets a room down there eventually."
+              variant="door"
+            />
+            <ClosedFixture
+              slug="dressing_door_boarded"
+              label="Back door"
+              note="Boarded over. Tony says it has always been like that."
+              variant="boarded"
+            />
+          </div>
+        </section>
       </Page>
 
       <BottomNav current="/" />
     </>
-  );
-}
-
-function WallSlot({ slug, caption }: { slug: string; caption: string }) {
-  return (
-    <div>
-      <AssetView resolution={resolveAsset(slug)} className="min-h-24" />
-      <p className="mt-2 text-[13px] leading-snug text-ink-100">{caption}</p>
-    </div>
   );
 }

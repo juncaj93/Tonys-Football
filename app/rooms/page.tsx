@@ -1,14 +1,15 @@
-import { AssetView } from '@/lib/assets/placeholder';
-import { resolveAsset } from '@/lib/assets/registry';
-import { BottomNav, ClosedDoor, Page, Zone } from '@/components/shell';
+import { ClosedFixture, EnamelSign } from '@/components/scene/fixtures';
+import { Floor, ParlorAir, Wall } from '@/components/scene/backdrop';
+import { BottomNav, Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
 
 /**
- * The basement door, shut.
+ * The bottom of the stairs, and a door with a chain on it.
  *
  * Basements are v1.1, Phase 6 (`16 §3`), and `16 §7.1` asks for the closed
- * basement door to exist as a wall dressing from the start **so the room feels
- * like an arrival when it opens** rather than a tab that appeared one day.
+ * basement door to exist from the start **so the room feels like an arrival
+ * when it opens** rather than a tab that appeared one day. A chain and a
+ * padlock say "later" in a way a disabled button cannot.
  */
 
 export const dynamic = 'force-dynamic';
@@ -18,23 +19,40 @@ export default async function RoomsPage() {
 
   return (
     <>
+      <ParlorAir tone="cold" />
+
       <Page>
-        <header className="px-4 pt-5 pb-3">
-          <h1 className="text-2xl leading-tight font-bold text-paper-white">Downstairs</h1>
-          <p className="mt-1 font-mono text-[11px] tracking-[0.2em] text-amber-mid uppercase">
-            Door&rsquo;s shut
+        <Wall className="px-4 pt-6 pb-4" wainscot={false}>
+          <div className="relative z-10">
+            <EnamelSign tone="cream">Downstairs</EnamelSign>
+            <h1 className="mt-3 text-2xl leading-tight font-bold text-paper-white">
+              The door is chained
+            </h1>
+            <p className="mt-2 max-w-md text-[15px] leading-relaxed text-ink-100">
+              There is a light on down there and the sound of somebody moving boxes. Tony has
+              not said what is in them.
+            </p>
+
+            <div className="mt-6">
+              <ClosedFixture
+                slug="dressing_door_basement"
+                label="Basement"
+                note="A chain, a padlock, and a strip of light along the bottom of the door."
+                variant="door"
+                artHeight="h-56"
+              />
+            </div>
+          </div>
+        </Wall>
+
+        {/* The stairs, falling away into the dark. */}
+        <Floor className="h-20 opacity-60" />
+
+        <div className="px-4 pb-8">
+          <p className="text-[13px] leading-relaxed text-ink-300">
+            Every manager gets a room down here eventually — shelves, a wall, a chair, and
+            whatever they have collected. Visitors will be able to come down and look.
           </p>
-        </header>
-
-        <div className="grid gap-4 px-4">
-          <Zone title="Basement door" aside="closed" tone="dark">
-            <AssetView resolution={resolveAsset('dressing_door_basement')} className="min-h-24" />
-          </Zone>
-
-          <ClosedDoor
-            what="Nothing down there yet"
-            note="Every manager gets a room eventually — shelves, a wall, whatever they have collected. Tony is still moving boxes."
-          />
         </div>
       </Page>
 

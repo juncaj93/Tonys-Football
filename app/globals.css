@@ -83,6 +83,293 @@ button {
   font-size: max(1rem, 16px);
 }
 
+/* ==========================================================================
+ * The parlor
+ *
+ * `16 §1` names the failure mode this product is designed against: "a themed
+ * fantasy dashboard with a slot machine bolted on". A stack of cards with
+ * headings is that dashboard, however good the copy inside the cards is. The
+ * room has to be built.
+ *
+ * So the shop is drawn here, in CSS, as an actual space: a wall with a
+ * wainscot, light falling from two pendant lamps, a counter with a front and a
+ * top that Tony stands behind, a corkboard, a glass case, booths receding into
+ * the dark, and a door nobody has opened in a while.
+ *
+ * Nothing here waits on art. `17 §13` says M1 ships on placeholders and that
+ * swapping in real art is a registry row — so the placeholder treatment itself
+ * had to become the room rather than a taped-up sign standing in for one.
+ * When a zone tile lands, the drawn fixture gives way to it (`SceneSurface`).
+ *
+ * Everything is gradients, shadows and transforms — no images, no filters over
+ * large areas, and every animation moves only `opacity` or `transform`, so an
+ * iPhone composites it on the GPU and the battery does not notice.
+ * ========================================================================== */
+
+/* --- Surfaces ------------------------------------------------------------ */
+
+/* Cream subway tile with grout, the lower half of every pizzeria wall. */
+.surface-tile {
+  background-color: #c9b592;
+  background-image:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.22)),
+    repeating-linear-gradient(
+      90deg,
+      rgba(26, 18, 20, 0.34) 0 1px,
+      transparent 1px 34px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      rgba(26, 18, 20, 0.34) 0 1px,
+      transparent 1px 26px
+    );
+}
+
+/* Sawn oak: three grain passes at different frequencies so it is not stripes. */
+.surface-wood {
+  background-color: var(--color-wood-mid);
+  background-image:
+    linear-gradient(180deg, rgba(255, 217, 138, 0.14), rgba(0, 0, 0, 0.42)),
+    repeating-linear-gradient(
+      92deg,
+      rgba(74, 46, 28, 0.55) 0 2px,
+      transparent 2px 9px
+    ),
+    repeating-linear-gradient(
+      88deg,
+      rgba(201, 154, 99, 0.22) 0 1px,
+      transparent 1px 23px
+    );
+}
+
+/* The counter top: worn laminate catching the lamp above it. */
+.surface-counter {
+  background-image:
+    linear-gradient(
+      180deg,
+      #d8c39d 0%,
+      #c2a87e 38%,
+      #a98a63 76%,
+      #6b4c31 100%
+    ),
+    repeating-linear-gradient(
+      95deg,
+      rgba(255, 255, 255, 0.12) 0 1px,
+      transparent 1px 40px
+    );
+}
+
+/* The red-and-white check, on the awning and the booth trim. */
+.surface-check {
+  background-image: repeating-conic-gradient(
+    var(--color-red-dark) 0deg 90deg,
+    #e8d9bb 90deg 180deg
+  );
+  background-size: 18px 18px;
+}
+
+/* Cork, with the pin holes of a hundred old notices. */
+.surface-cork {
+  background-color: #9c7247;
+  background-image:
+    radial-gradient(circle at 20% 30%, rgba(74, 46, 28, 0.5) 1px, transparent 2px),
+    radial-gradient(circle at 68% 12%, rgba(74, 46, 28, 0.4) 1px, transparent 2px),
+    radial-gradient(circle at 44% 74%, rgba(74, 46, 28, 0.45) 1px, transparent 2px),
+    radial-gradient(circle at 86% 58%, rgba(74, 46, 28, 0.4) 1px, transparent 2px),
+    linear-gradient(180deg, rgba(255, 217, 138, 0.18), rgba(0, 0, 0, 0.34));
+  background-size: 26px 26px, 34px 34px, 22px 22px, 30px 30px, 100% 100%;
+}
+
+/* Chalkboard: dark slate with the ghost of everything wiped off it. */
+.surface-slate {
+  background-color: #1d2a24;
+  background-image:
+    radial-gradient(70% 50% at 30% 20%, rgba(245, 237, 220, 0.09), transparent 70%),
+    radial-gradient(60% 40% at 74% 76%, rgba(245, 237, 220, 0.06), transparent 70%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.05), rgba(0, 0, 0, 0.4));
+}
+
+/* The floor, receding. Perspective does the work; the tile is flat. */
+.surface-floor {
+  background-image: repeating-conic-gradient(
+    #14100f 0deg 90deg,
+    #a08a68 90deg 180deg
+  );
+  background-size: 44px 44px;
+  transform: perspective(130px) rotateX(56deg);
+  transform-origin: bottom center;
+}
+
+/* Glass over a lit case: one hard reflection, one soft. */
+.surface-glass {
+  background-image:
+    linear-gradient(102deg, transparent 0 32%, rgba(245, 237, 220, 0.16) 32% 38%, transparent 38%),
+    linear-gradient(102deg, transparent 0 54%, rgba(245, 237, 220, 0.08) 54% 66%, transparent 66%),
+    linear-gradient(180deg, rgba(127, 212, 240, 0.09), rgba(20, 35, 61, 0.22));
+}
+
+/* --- Light --------------------------------------------------------------- */
+
+/*
+ * The room's own lighting, on a fixed layer behind everything.
+ *
+ * Warm from the two pendants over the counter, cool from the street through
+ * the window. The contrast between them is most of why it reads as evening
+ * indoors rather than as a dark background colour.
+ */
+.parlor-air {
+  background:
+    radial-gradient(58% 34% at 24% 12%, rgba(255, 217, 138, 0.22), transparent 72%),
+    radial-gradient(52% 30% at 79% 30%, rgba(242, 169, 75, 0.15), transparent 74%),
+    radial-gradient(120% 26% at 50% -8%, rgba(92, 155, 209, 0.16), transparent 70%),
+    radial-gradient(80% 40% at 50% 108%, rgba(140, 31, 34, 0.18), transparent 72%),
+    linear-gradient(180deg, #26191b 0%, #1a1214 46%, #120d0e 100%);
+}
+
+/*
+ * The cone under a pendant shade.
+ *
+ * Softened at the edges rather than clipped to a hard triangle: light falling
+ * through air has no outline, and a crisp wedge reads as a shape drawn on the
+ * wall instead of as the room being lit.
+ */
+.lamp-cone {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 217, 138, 0.26) 0%,
+    rgba(255, 217, 138, 0.1) 45%,
+    transparent 90%
+  );
+  clip-path: polygon(40% 0, 60% 0, 104% 100%, -4% 100%);
+  filter: blur(6px);
+  opacity: 0.85;
+}
+
+/* Neon: the glow is the text's own shadow, so it costs nothing to paint. */
+.neon-warm {
+  color: #fff3d0;
+  text-shadow:
+    0 0 4px rgba(255, 217, 138, 0.95),
+    0 0 12px rgba(242, 169, 75, 0.75),
+    0 0 28px rgba(201, 122, 34, 0.55);
+}
+
+.neon-cool {
+  color: #d8f4ff;
+  text-shadow:
+    0 0 4px rgba(127, 212, 240, 0.95),
+    0 0 14px rgba(92, 155, 209, 0.7),
+    0 0 30px rgba(44, 90, 140, 0.5);
+}
+
+.neon-pink {
+  color: #ffd9f0;
+  text-shadow:
+    0 0 4px rgba(224, 96, 176, 0.95),
+    0 0 14px rgba(224, 96, 176, 0.6),
+    0 0 30px rgba(59, 32, 80, 0.6);
+}
+
+/* --- Ambient motion ------------------------------------------------------ *
+ *
+ * Four effects, all cheap, all ending on their resting state at 100% — which
+ * is what makes the reduced-motion rule below a real absence rather than a
+ * freeze mid-flicker.
+ */
+
+@keyframes neon-buzz {
+  0%,
+  92%,
+  100% {
+    opacity: 1;
+  }
+  93% {
+    opacity: 0.45;
+  }
+  94% {
+    opacity: 1;
+  }
+  95% {
+    opacity: 0.6;
+  }
+  96% {
+    opacity: 1;
+  }
+}
+
+.anim-neon {
+  animation: neon-buzz 9s steps(1, end) infinite;
+}
+
+@keyframes lamp-breathe {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.88;
+  }
+}
+
+.anim-lamp {
+  animation: lamp-breathe 7s ease-in-out infinite;
+}
+
+/* Oven haze, drifting across the room and never quite repeating. */
+@keyframes haze-drift {
+  0% {
+    transform: translate3d(-6%, 4%, 0) scale(1);
+    opacity: 0.5;
+  }
+  50% {
+    transform: translate3d(7%, -3%, 0) scale(1.12);
+    opacity: 0.75;
+  }
+  100% {
+    transform: translate3d(-6%, 4%, 0) scale(1);
+    opacity: 0.5;
+  }
+}
+
+.anim-haze {
+  animation: haze-drift 34s ease-in-out infinite;
+  will-change: transform;
+}
+
+/* The arcade cabinet in the corner, still running its attract loop. */
+@keyframes arcade-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  35% {
+    opacity: 0.9;
+  }
+  70% {
+    opacity: 0.4;
+  }
+}
+
+.anim-arcade {
+  animation: arcade-glow 4.5s ease-in-out infinite;
+}
+
+/* A hanging sign that has not quite settled since the door last shut. */
+@keyframes sign-sway {
+  0%,
+  100% {
+    transform: rotate(-1.6deg);
+  }
+  50% {
+    transform: rotate(1.4deg);
+  }
+}
+
+.anim-sway {
+  animation: sign-sway 6.5s ease-in-out infinite;
+  transform-origin: top center;
+}
+
 /*
  * Tony's entrance (`17 §3`): he leans in and wipes his hands, about 600ms.
  *
