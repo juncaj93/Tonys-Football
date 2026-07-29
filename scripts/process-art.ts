@@ -47,7 +47,7 @@ interface PaletteFile {
   readonly ramps: Record<string, { readonly colors: Record<string, string> }>;
 }
 
-function loadPalette(): readonly [number, number, number][] {
+export function loadPalette(): readonly [number, number, number][] {
   const raw = JSON.parse(
     readFileSync(path.join(process.cwd(), 'art', 'palette.json'), 'utf8'),
   ) as PaletteFile;
@@ -60,13 +60,51 @@ function loadPalette(): readonly [number, number, number][] {
 }
 
 /**
- * Nearest palette colour.
+ * Nearest palette colour, by plain Euclidean distance in sRGB.
  *
- * Weighted RGB distance rather than plain Euclidean: the eye is far more
- * sensitive to green than to blue, and unweighted matching sends warm browns —
- * most of this palette — to the wrong ramp.
+ * ## Why not luma weighting
+ *
+ * This is not a greyscale matcher. `palette.json` is 32 colours spread across
+ * ten deliberately separated hue families — ink, wood, red, paper, amber, blue,
+ * green, yellow, violet, skin — and the job here is to pick the right *family*
+ * first and the right step within it second. A metric that cannot see hue
+ * cannot do the first part.
+ *
+ * The previous implementation weighted each channel **before** squaring:
+ *
+ *     const db = (b - colour[2]) * 0.11;   // then db * db
+ *
+ * Squaring a 0.11 coefficient leaves blue contributing **1.21%** of the
+ * distance. That matters because **blue is the axis that separates the warm
+ * dark woods from `violet.violet-deep #3B2050`** — the two are close in red and
+ * green and far apart only in blue, which is precisely the channel that had
+ * been discounted to nothing.
+ *
+ * The result was a real defect rather than a theoretical one. `zone_parlor_shell`
+ * came out with **8.48% of its pixels painted violet**: the checkerboard
+ * backsplash, the doorway recess and the carpet, all of which are mid-dark warm
+ * brown in the source. It went unnoticed for two batches because the earlier
+ * assets' dark areas were near-black and landed on the `ink` ramp under either
+ * metric.
+ *
+ * Worked example — backsplash tile `#500E01`:
+ *
+ *     candidate               weighted   euclidean
+ *     #3B2050 violet-deep           15          84
+ *     #4A2E1C wood-dark             19          42   ← correct
+ *
+ * ## Why plain Euclidean
+ *
+ * Chosen because it is measured, simple, and carries no tuning constants. Across
+ * the shell it maps 0% of pixels to violet-deep, as does a linear-light variant;
+ * plain sRGB was ruled the right one because the extra conversion buys nothing
+ * measurable here and adds a step to reason about. Any coefficient reintroduced
+ * in front of a channel is a thumb on the scale that will eventually pull some
+ * other hue across a ramp boundary, silently, in an asset nobody is looking at.
+ *
+ * **Do not reintroduce luma weighting.** See `art/ASSET_PIPELINE.md §4`.
  */
-function nearest(
+export function nearest(
   palette: readonly [number, number, number][],
   r: number,
   g: number,
@@ -76,9 +114,9 @@ function nearest(
   let bestDistance = Number.POSITIVE_INFINITY;
 
   for (const colour of palette) {
-    const dr = (r - colour[0]) * 0.3;
-    const dg = (g - colour[1]) * 0.59;
-    const db = (b - colour[2]) * 0.11;
+    const dr = r - colour[0];
+    const dg = g - colour[1];
+    const db = b - colour[2];
     const distance = dr * dr + dg * dg + db * db;
     if (distance < bestDistance) {
       bestDistance = distance;
@@ -226,7 +264,12 @@ async function main(): Promise<void> {
   }
 }
 
-main().catch((error: unknown) => {
-  console.error(`\nProcessing failed: ${error instanceof Error ? error.message : String(error)}`);
-  process.exit(1);
-});
+// Only when run as a command. `nearest` is asserted directly by
+// `scripts/process-art.test.ts`, and importing a module must not process the
+// art batch as a side effect of loading it.
+if (require.main === module) {
+  main().catch((error: unknown) => {
+    console.error(`\nProcessing failed: ${error instanceof Error ? error.message : String(error)}`);
+    process.exit(1);
+  });
+}

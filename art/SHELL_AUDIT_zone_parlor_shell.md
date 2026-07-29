@@ -2,13 +2,38 @@
 
 **Source:** `art/incoming/zone_parlor_shell.png` — **941 × 1672, PNG, sRGB, 8-bit, 3 channels, no alpha**
 **Production canvas:** 320 × 569 · **Registered** (canvas only; no path, nothing resolves it)
-**Revision 4** — measured against the real file. Object map untouched, nothing integrated.
+**Revision 5** — B0 gate passed. Object map untouched, nothing integrated.
+
+---
+
+## B0 re-approval — approved 2026-07-29
+
+The quantizer change invalidated the earlier B0 palette approval, so the composite was
+rebuilt from the corrected outputs and re-approved: **corrected Euclidean quantizer,
+canonical branded Tony, shell layering, cream board, shadow separation, and foreground
+counter integration all accepted.**
+
+The composite is the shell cut at **logical y 292**, Tony at **`64, 180`** sized 72 × 197,
+and the shell's own rows 292–568 drawn back over him. There is no separate
+`zone_parlor_counter_front` asset — the shell is one image and its lower half *is* the
+foreground layer. `zone_counter_front.png` belongs to the superseded two-tile room.
+
+Measured on the rendered composite: palette **closed** across every pixel, 28 of 32 colours
+used, **0 violet**, no partial alpha, no unfilled pixels. Tony's visible band 112 units,
+13 clear of the nook and 18 of the prediction sign.
+
+**One limitation accepted rather than fixed.** The alcove backsplash reads brown where the
+source is dark maroon: the palette has nothing between `red-dark #8C1F22` and near-black, so
+dark reds land on wood. Accepted for B0. **It does not justify a palette change** — see
+`ASSET_PIPELINE.md §4`, which says not to add palette colours to rescue a single asset.
+
+**B1 requires separate explicit authorization.**
 
 ---
 
 ## Verdict
 
-# The shell passes. The pipeline does not.
+# The shell passes. The pipeline did not, and now does.
 
 The art is approved from my side: all eight assignments are present, every text surface is
 clean, Tony fits to within one logical unit, and every coordinate below is now **measured,
@@ -82,8 +107,8 @@ Logical 320 × 569, derived from edge detection on the real file. Source px in b
 |---|---|---|---|
 | Nook → `/slice` | `6, 180, 45, 112` | 18–151, 529–858 | ✅ |
 | Board → Tonight | `49, 79, 132, 97` | 143–531, 233–518 | ✅ |
-| Rail → `/timeline` | `58, 66, 122, 3` | 170–530, 193–203 | ❌ **3 tall** |
-| Rail incl. brackets | `58, 58, 122, 13` | 170–530, 171–210 | ❌ 13 tall |
+| Rail rod → `/timeline` | `54, 65, 131, 5` | 159–543, 191–206 | ❌ **5 tall** |
+| Rail incl. brackets | `54, 58, 131, 16` | 159–543, 171–218 | ❌ 16 tall |
 | Sign → prediction | `154, 184, 37, 59` | 454–563, 542–714 | pad → `151, 184, 44, 59` |
 | Receipt | `86, 292, 23, 18` | 253–320, 858–910 | pad → `75, 279, 44, 44` |
 | Tray → `/counter` | `156, 284, 94, 25` | 458–733, 833–906 | pad → `156, 275, 94, 44` |
@@ -127,18 +152,60 @@ Inset from the measured inner field to clear the frame bevel and the quantizer's
 | Sign — prediction | `158, 188, 30, 51` | **`161, 191, 24, 45`** | 72 × 135 px | ⚠️ Narrow. A short stacked prediction only. Tony's Line will need a panel. |
 | Receipt — manager record | `86, 292, 23, 18` | **`88, 294, 19, 14`** | 57 × 42 px | ❌ Not usable for baked text. |
 
-**The receipt is fine as a tap target that opens a panel** — which is what it did in PR #8.
-It is a defect only if the intent was to print the record onto the paper itself. Needs a
-stated intent.
+### Surface classifications — ruled
 
-### The rail
+Both open questions above are settled. Recorded 2026-07-29.
 
-Measured at **3 logical units tall** — thinner than the ±3 estimate suggested, and not
-paddable in place: reaching 44 means growing it 14× and swallowing the board below.
+| Surface | Classification | Basis |
+|---|---|---|
+| Tonight board | **surface-rendered** | `60, 88, 111, 79` — 333 × 237 device px at 3×, comfortable for four board lines |
+| Champion banner | **surface-rendered** | text rendered onto the banner overlay when it ships |
+| **Prediction sign** | **trigger-only** | usable text area 24–36 units wide against a ~40 × 20 threshold — below it on the width axis under every reading. Tapping opens a panel; nothing is baked onto the slate. |
+| Receipt | **trigger-only** | `88, 294, 19, 14` = 57 × 42 device px. Tapping opens the expanded manager-record panel; nothing is printed onto the paper. This is what it already did in PR #8. |
 
-It solves itself when the banners exist, because banners hang *below* the rod and the Door's
-polygon should trace the banners. **Recommendation unchanged: no `/timeline` Door until the
-banner overlay ships.** Not a shell defect.
+Neither trigger-only surface is a defect. Both are legible objects at room scale that are
+too small to *carry* text, which is a different thing — and the panel was always the better
+place to read a record anyway.
+
+**Accepted 2026-07-29.** The classification table above is ratified as written, and that
+**closes the prediction-sign gate** — the small sign was the last surface still flagged
+unmeasured, with a standing instruction not to build the prediction until it was
+classified. It is classified. The prediction may be built against a panel.
+
+### The rail — reconciled 2026-07-29
+
+**The rod is `x 54–184`. Inclusive indices, 131 units wide, centre 119.0.**
+
+That is the single figure. It is stable across three darkness thresholds, agrees with
+`art/incoming/zone_parlor_shell.png` sampled to 320 × 569, and is the only feature in the
+band running more than 100 columns continuously.
+
+| Part | Extent | Note |
+|---|---|---|
+| Rod | **x 54–184**, rows y 65, 68, 69 | the load-bearing figure |
+| Brackets | x 58–62, 118–122, 176–180 | descend to y 73 |
+| End caps | x 54–57, 180–184 | row y 66 |
+| **Not rail** | left pillar x 30–48 · right wall corner x 197–220 | architecture — dark on *every* row in the band, which is what identifies them |
+
+**Three figures previously on record are superseded, and all three were wrong.** Each
+measured a different feature and none measured the rod:
+
+| Superseded | Was | Actually measured |
+|---|---|---|
+| `55–185` / 130 | banner geometry study, PR #11 | the rod ±1 — an off-by-one at both ends |
+| `58–180` / 122 | this document, §4 "production figures" | bracket to bracket, not the rod |
+| `58–185` / 127 | independent gradient detection | first bracket to rod +1 |
+
+**Neither escalation trigger fires.** Six banners at width 18 and gap 4 need 128 units; the
+rod carries 131, so the slot count is unchanged at six. Gap 4 is preserved, and every hit
+partition clears WCAG 2.5.8 AA on every supported viewport — see
+`B2_CHAMPION_BANNER.md`, which records the partition table and the one correction the
+reconciliation forced.
+
+The rod is still **5 logical units tall** and still not paddable in place: reaching 44 means
+growing it 9× and swallowing the board below. That solves itself when the banners exist,
+because banners hang *below* the rod and the hit regions trace the banners rather than the
+rail. **No `/timeline` target on the rod itself.** Not a shell defect.
 
 ---
 
@@ -217,16 +284,22 @@ to shipped behaviour, and the shell audit is not the place to make it unilateral
 usable; the two sizing constraints (rail, receipt) are sequencing and intent questions, not
 art defects.
 
-**Pipeline output: NO-GO**, pending the metric decision. Nothing defective was committed.
+**Pipeline output: ~~NO-GO~~ → GO.** It was no-go pending the metric decision; nothing
+defective was ever committed. Resolved by the Euclidean ruling.
 
-### To ship the shell
+### To ship the shell — all five closed
 
-1. Decide on the `nearest()` metric. Recommendation: plain Euclidean.
-2. Re-run `npm run art:process` for the **whole** incoming batch, not just the shell, and
-   compare Tony before and after.
-3. Optionally add a mid-cream palette entry for the board.
-4. Set `path` and `art_status: "generated"` on the inventory row — a second reviewed edit.
-5. State the receipt's intent: panel (fine as drawn) or baked text (needs a bigger receipt).
+1. ~~Decide on the `nearest()` metric.~~ **Ruled: plain Euclidean.** `ASSET_PIPELINE.md §4`.
+2. ~~Re-run the whole batch and compare Tony.~~ **Done.** Five assets, all palette-closed at
+   0% violet. The comparison found a second defect the metric had been causing: Tony's blue
+   jersey was quantizing to a tan.
+3. ~~Optionally add a mid-cream palette entry for the board.~~ **Not needed.** The board's
+   failure was a hue flip between yellow and pink; under Euclidean it is a three-step warm
+   vignette that reads as aged paper. Palette unchanged.
+4. Set `path` and `art_status: "generated"` on the inventory row — **still open**, a
+   separate reviewed edit.
+5. ~~State the receipt's intent.~~ **Ruled: trigger-only**, opening a panel. So is the
+   prediction sign.
 
 ### Recorded, not acted on
 
@@ -237,3 +310,20 @@ art defects.
   The shell is not going back, so the sub-pixel sampling drift is accepted rather than
   overlooked.
 - Six inventory rows still carry the retired 320 × 228 / 64 × 96 sizings.
+
+---
+
+## 7. Queued for the next specification pass
+
+Ruled and in force now; the specification text has not caught up yet. Nothing here is a
+question — each is recorded so the next authorized spec pass transcribes rather than
+rediscovers.
+
+| Ruling | Effect on the specification |
+|---|---|
+| **`zone_parlor_counter_front` is removed** | **Supersedes `18 §9.1`**, which lists it as a homepage overlay. That row is **withdrawn**. The foreground counter is a *render step over the shell* — the shell cut at logical y 292 with rows 292–568 redrawn over Tony — **not an asset**. One image instead of two also removes a whole class of defect: two independently generated images that must stay pixel-aligned across every future regeneration. |
+| **Champion banners** | Six fixed slots on the rail, `object_champion_banner` at 18 × 15. Geometry and interaction in `B2_CHAMPION_BANNER.md`. |
+| **The receipt is a panel trigger** | Nothing is printed onto the paper; tapping opens the expanded manager record. |
+| **The banner rail is a Display, not a Door** | The homepage object map becomes **3 Doors · 4 Displays · 1 Toy** — still eight objects. |
+
+The last three land on the parlor-navigation branch before it merges, not after.

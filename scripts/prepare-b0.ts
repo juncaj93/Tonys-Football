@@ -28,11 +28,17 @@
  *
  * Two corrections, both agreed with the commissioner:
  *
- * - **The jersey numbers come off.** `prompts/character_tony.md` says "NO
- *   markings, NO numbers, NO logos", and that is not fussiness: a numbered
- *   blue-and-silver jersey moves toward an identifiable real team, which is
- *   the publicity-rights concern in `06 §17`. The cuff stripes and collar stay
- *   — a blue-and-silver jersey is what the spec asks for.
+ * - ~~**The jersey numbers come off.**~~ **Superseded 2026-07-29.** The
+ *   correction was written when `prompts/character_tony.md` said "NO markings,
+ *   NO numbers, NO logos", on the reading that a numbered blue-and-silver
+ *   jersey moves toward an identifiable real team.
+ *
+ *   The commissioner ruled otherwise: Tony's `16` is fictional character
+ *   styling, not a player identity, and a number on its own identifies nobody.
+ *   The line is **identifiability, not decoration** — team logos, league marks,
+ *   player names, signatures, helmet marks and sponsor marks stay prohibited.
+ *   The correction has been removed rather than left dormant; it is in the
+ *   history if the reasoning is ever needed again. See `art/ART_SPEC.md §10`.
  * - **The background comes out.** It was generated opaque on a grey vignette.
  *   A sprite has to be a cutout or it cannot stand in a room.
  */
@@ -242,133 +248,6 @@ function morph(
   return pass(pass(mask, true), false);
 }
 
-const isJerseyBlue = (r: number, g: number, b: number): boolean =>
-  b > 110 && b - r > 45 && b > g;
-
-const isLight = (r: number, g: number, b: number): boolean =>
-  Math.min(r, g, b) > 140 && Math.max(r, g, b) - Math.min(r, g, b) < 70;
-
-/**
- * Take the numbers off the jersey, leaving the stripes and collar.
- *
- * Light marks on the jersey are found, grouped, and judged by shape. A number
- * is a compact blob; a cuff stripe is long and thin; the collar is a wide arc.
- * Only blobs are painted out, with the blue immediately around them.
- *
- * Shape is the discriminator rather than position because position would have
- * to be re-measured for every regeneration, and the sleeve and chest numbers
- * sit at different heights.
- */
-function removeJerseyNumbers(raw: Raw): number {
-  const { width, height } = raw;
-  const candidate = new Uint8Array(width * height);
-
-  // A light pixel counts only if it sits in jersey territory — measured by how
-  // much blue surrounds it — so the apron and the paper hat are never touched.
-  const R = 18;
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const i = at(raw, x, y);
-      if (raw.data[i + 3]! === 0) continue;
-      if (!isLight(raw.data[i]!, raw.data[i + 1]!, raw.data[i + 2]!)) continue;
-
-      let blue = 0;
-      let seen = 0;
-      for (let dy = -R; dy <= R; dy += 6) {
-        for (let dx = -R; dx <= R; dx += 6) {
-          const nx = x + dx;
-          const ny = y + dy;
-          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-          const j = at(raw, nx, ny);
-          seen++;
-          if (isJerseyBlue(raw.data[j]!, raw.data[j + 1]!, raw.data[j + 2]!)) blue++;
-        }
-      }
-      if (seen > 0 && blue / seen > 0.3) candidate[y * width + x] = 1;
-    }
-  }
-
-  // Group the candidates and judge each group by its shape.
-  const seenPixel = new Uint8Array(width * height);
-  let painted = 0;
-
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      const start = y * width + x;
-      if (candidate[start] !== 1 || seenPixel[start] === 1) continue;
-
-      const group: number[] = [];
-      const stack = [x, y];
-      seenPixel[start] = 1;
-      let minX = x;
-      let maxX = x;
-      let minY = y;
-      let maxY = y;
-
-      while (stack.length > 0) {
-        const cy = stack.pop()!;
-        const cx = stack.pop()!;
-        group.push(cx, cy);
-        minX = Math.min(minX, cx);
-        maxX = Math.max(maxX, cx);
-        minY = Math.min(minY, cy);
-        maxY = Math.max(maxY, cy);
-
-        for (const [dx, dy] of [
-          [1, 0],
-          [-1, 0],
-          [0, 1],
-          [0, -1],
-        ] as const) {
-          const nx = cx + dx;
-          const ny = cy + dy;
-          if (nx < 0 || ny < 0 || nx >= width || ny >= height) continue;
-          const p = ny * width + nx;
-          if (candidate[p] !== 1 || seenPixel[p] === 1) continue;
-          seenPixel[p] = 1;
-          stack.push(nx, ny);
-        }
-      }
-
-      const w = maxX - minX + 1;
-      const h = maxY - minY + 1;
-      const area = group.length / 2;
-      const ratio = w / h;
-
-      // Blobs only. Stripes and the collar are much wider than they are tall.
-      const isNumber = area > 300 && area < 60_000 && ratio > 0.25 && ratio < 3.2;
-      if (!isNumber) continue;
-
-      // Paint with the blue found just outside the group's box, so the fill
-      // matches the shading it lands in rather than a flat swatch.
-      let r = 0;
-      let g = 0;
-      let b = 0;
-      let n = 0;
-      for (let sy = Math.max(0, minY - 6); sy <= Math.min(height - 1, maxY + 6); sy++) {
-        for (let sx = Math.max(0, minX - 6); sx <= Math.min(width - 1, maxX + 6); sx++) {
-          const j = at(raw, sx, sy);
-          if (!isJerseyBlue(raw.data[j]!, raw.data[j + 1]!, raw.data[j + 2]!)) continue;
-          r += raw.data[j]!;
-          g += raw.data[j + 1]!;
-          b += raw.data[j + 2]!;
-          n++;
-        }
-      }
-      if (n === 0) continue;
-
-      for (let k = 0; k < group.length; k += 2) {
-        const j = at(raw, group[k]!, group[k + 1]!);
-        raw.data[j] = Math.round(r / n);
-        raw.data[j + 1] = Math.round(g / n);
-        raw.data[j + 2] = Math.round(b / n);
-      }
-      painted++;
-    }
-  }
-
-  return painted;
-}
 
 async function correctTony(): Promise<void> {
   const { data, info } = await sharp(file(TONY_SOURCE))
@@ -384,7 +263,6 @@ async function correctTony(): Promise<void> {
   };
 
   const cleared = keyOutBackground(raw);
-  const painted = removeJerseyNumbers(raw);
 
   // Trim to the figure itself. The generated frame is mostly empty backdrop,
   // and a sprite carrying that margin would be squashed by the canvas fit —
@@ -400,7 +278,6 @@ async function correctTony(): Promise<void> {
 
   console.log(
     `tony     → background keyed (${String(Math.round((cleared / (raw.width * raw.height)) * 100))}% cleared)` +
-      ` · ${String(painted)} jersey marking${painted === 1 ? '' : 's'} painted out` +
       ` · trimmed to ${String(box.width)}×${String(box.height)}`,
   );
 }

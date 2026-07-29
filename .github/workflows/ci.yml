@@ -3,8 +3,14 @@ name: CI
 on:
   push:
     branches: [main]
+  # Deliberately unfiltered by base branch.
+  #
+  # This used to read `branches: [main]`, which meant a pull request stacked on
+  # another pull request's head got Vercel checks and no Typecheck / Lint / Test
+  # / Build run at all — silently, with a green tick beside it. A stacked branch
+  # is not an unusual case here and the filter's failure mode is invisible, so
+  # the trigger covers every base rather than one.
   pull_request:
-    branches: [main]
 
 # A newer push to the same branch supersedes an in-flight run.
 concurrency:
