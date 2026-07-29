@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
 
+import { existsSync } from 'node:fs';
+import path from 'node:path';
+
 import inventoryJson from '@/art/assets.inventory.json';
 
 import { assetRegistry, buildRegistry, resolveAsset } from './registry';
@@ -172,14 +175,35 @@ describe('the committed inventory', () => {
     expect(assetRegistry.size).toBe(inventoryJson.totalSlugs);
   });
 
-  it('declares every asset as a placeholder — no art exists yet', () => {
-    expect(assetRegistry.byStatus('placeholder')).toHaveLength(assetRegistry.size);
+  /**
+   * The point of the registry is that a slug always resolves to *something*.
+   * `missing` is the only failure — it means a component asks for art nobody
+   * ever declared, and it renders as a red box rather than as the shop.
+   */
+  it('resolves every slug to art or a placeholder, never missing', () => {
+    for (const record of assetRegistry.all()) {
+      expect(resolveAsset(record.slug).kind, record.slug).not.toBe('missing');
+    }
   });
 
-  it('resolves every slug to a placeholder, never missing', () => {
-    for (const record of assetRegistry.all()) {
-      expect(resolveAsset(record.slug).kind).toBe('placeholder');
+  /**
+   * An asset claiming to have art must actually have the file. Registering a
+   * path before the image lands is the one way the placeholder-first contract
+   * can break: the fallback stops rendering and nothing replaces it.
+   */
+  it('has a real file behind every asset that claims to have art', () => {
+    for (const record of assetRegistry.byStatus('generated')) {
+      expect(record.path, record.slug).not.toBeNull();
+      expect(
+        existsSync(path.join(process.cwd(), 'public', record.path ?? '')),
+        `${record.slug} declares ${record.path ?? 'null'}, which does not exist`,
+      ).toBe(true);
     }
+  });
+
+  it('leaves everything without art on the placeholder tier', () => {
+    const withArt = assetRegistry.byStatus('generated').length;
+    expect(assetRegistry.byStatus('placeholder')).toHaveLength(assetRegistry.size - withArt);
   });
 
   it('uses only known families', () => {
@@ -197,7 +221,8 @@ describe('the committed inventory', () => {
   it('contains the seven B0 test-set slugs that lock ART_SPEC', () => {
     const b0 = assetRegistry.byBatch('B0').map((r) => r.slug);
 
-    expect(b0).toHaveLength(7);
+    // Contains, not equals: the batch has since taken on the counter foreground
+    // and the clipboard, both cut or generated alongside the original seven.
     expect(b0).toEqual(
       expect.arrayContaining([
         'character_tony_neutral',
@@ -212,10 +237,48 @@ describe('the committed inventory', () => {
   });
 
   it('contains the six shop zones', () => {
-    expect(assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'))).toHaveLength(6);
+    const zones = assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'));
+
+    expect(zones.map((r) => r.slug)).toEqual(
+      expect.arrayContaining([
+        'zone_front_counter',
+        'zone_tonight_board',
+        'zone_menu_board',
+        'zone_newspaper_rack',
+        'zone_display_case',
+        'zone_wall',
+      ]),
+    );
   });
 
-  it('flags the zone canvas as provisional pending B0', () => {
-    expect(assetRegistry.provisional).toEqual({ zoneCanvas: '320x200', settlesAt: 'B0' });
+  /**
+   * `ART_SPEC §2.1` left the zone canvas provisional until the B0 composite ran
+   * on a real phone. It has now run. What settled is the **width**: every zone
+   * tile is 320, which is the one-column measure the layout is built on. Height
+   * is whatever the tile contains, because the parlor turned out to be one tall
+   * portrait room rather than a set of equal panels.
+   */
+  it('holds one width across every zone tile', () => {
+    const zones = assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'));
+    const widths = new Set(zones.map((r) => r.canvas.split('x')[0]));
+
+    expect([...widths]).toEqual(['320']);
+  });
+
+  /**
+   * The room is drawn once and cut at the counter's near edge, so that Tony can
+   * be drawn between the two halves and stand *in* the shop rather than on top
+   * of a picture of it. The cut is only invisible if the halves add back up to
+   * the whole, so that arithmetic is a test rather than a comment.
+   */
+  it('cuts the parlor into two halves that stack back into one room', () => {
+    const rear = assetRegistry.get('zone_front_counter')?.canvas ?? '';
+    const front = assetRegistry.get('zone_counter_front')?.canvas ?? '';
+
+    const [rearWidth, rearHeight] = rear.split('x');
+    const [frontWidth, frontHeight] = front.split('x');
+
+    expect(rearWidth).toBe(frontWidth);
+    expect(Number(rearHeight) + Number(frontHeight)).toBe(569);
   });
 });

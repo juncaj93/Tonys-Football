@@ -38,31 +38,49 @@ If that screen reads as a single coherent place, the whole library is unblocked 
 
 ## 2. Grid and canvas
 
-**Master unit: Tony's height = 46px.** Everything scales from this.
+> **Revised 2026-07-29, against approved batch B0.** The numbers below the line
+> are the settled ones. What changed, and why, is §2.2 — read it before
+> generating anything in a character or avatar family.
+
+**Master unit: Tony's height = 240px.** Everything scales from this.
 
 | Family | Logical canvas | Notes |
 |---|---|---|
-| Character (Tony) | 32 × 48 | Tony occupies 46px of the 48px height, feet on the bottom edge |
-| Avatar layers | 32 × 48 | Identical canvas to Tony. Every layer uses the full canvas with fixed anchors (§5). |
-| Zone tile | 320 × 200 ⚠️ **PROVISIONAL** | Composed side by side on desktop, stacked full-width on mobile. See §2.1. |
+| Character (Tony) | 88 × 240 | Feet on the bottom edge. Renders 1:1 in CSS pixels at phone width. |
+| Avatar layers | ⚠️ **REOPENED** — see §2.2 | Must be identical to each other and fixed before B2. |
+| Zone tile | 320 wide, height by content | The parlor is 320 × 569, cut at the counter into 320 × 291 and 320 × 278. See §2.1. |
 | Collectible | 32 × 32 | One source asset serves thumbnail (16px), case (32px), and reveal (96px) |
 | Surface (text-driven) | 96 × 64 | Blank; text is rendered at runtime into the safe area (§7) |
 | Rarity frame | 40 × 40 | One geometry, four palette states |
 | Placeholder | 32 × 32 and 96 × 64 | Two assets covering every unfilled slot |
 | UI icon | 16 × 16 | Separate family; not held to the environment grid |
 
-**Scaling: integer only, nearest-neighbor.** No fractional scaling anywhere. Display sizes are 1×, 2×, 3×, 4× exactly. Mobile typically renders zone tiles at 1× width-fit with the device pixel ratio handled by integer step, never by smooth interpolation.
+**Scaling: authored at display size, then integer only.** Every asset is drawn at the size it is shown in CSS pixels, so the only scaling that happens is the device's own pixel ratio — 2× or 3×, always whole. Nothing is authored small and blown up, and nothing is authored large and shrunk.
 
-**No mixed pixel density within a single scene.** A character at 32×48 never shares a frame with an asset authored at a different effective pixel size.
+The one place this bends is width: the room is sized to the viewport, so a 430px-wide phone renders it about 1.1× rather than exactly 1×. That is the price of the room filling the screen, it is bounded and near unity, and it is a very different thing from the 4–5× blow-ups this rule exists to forbid.
 
-### 2.1 Zone tile dimensions are provisional
+**No mixed pixel density within a single scene.** The parlor's room and Tony are drawn at the same effective pixel size; an asset authored at a different one never shares that frame.
 
-**320 × 200 is a starting point, not a locked number.** Two unresolved details:
+### 2.1 Zone tile dimensions — **settled**
 
-1. **Aspect ratio.** 320 × 200 is 8:5. Stacked full-width on a phone, a slightly different ratio may read better as a card, and the shallow stage box needs enough vertical room to carry both a floor band and a usable wall.
-2. **Integer scaling versus arbitrary phone widths.** A fixed 320px canvas does not divide evenly into every viewport. The likely resolution is to author tiles with **croppable side margins** — nothing load-bearing within roughly 16px of the left and right edges — so a tile can be scaled by an integer factor and cropped rather than fractionally resized.
+The B0 composite ran on a phone on 2026-07-29. What settled:
 
-**Both settle during the B0 composite test on a real phone**, before any other zone tile is generated. Character, collectible, surface, and frame canvases are **not** provisional and do not depend on this.
+- **Width is 320.** That is the one-column measure the whole layout is built on, and it is fixed.
+- **Height is whatever the tile contains.** The 8:5 guess did not survive contact: the approved parlor came back as a portrait room — ceiling, wall, counter, floor — because a phone held upright is a portrait window and a shallow letterbox band inside it reads as a picture of a room rather than as a room.
+- **The parlor is 320 × 569**, drawn once and cut at the counter's near edge into `zone_front_counter` (320 × 291) and `zone_counter_front` (320 × 278). Tony is drawn between the two halves. The cut is the occlusion, and it is why he is in the shop rather than pasted onto it.
+- **Croppable margins held.** Nothing load-bearing sits within ~16px of the left and right edges, and the room is sized by width so those edges are never cropped in practice; what crops on a short phone is floor, off the bottom.
+
+### 2.2 The character canvas changed, and the avatar canvas is reopened
+
+**Tony was 32 × 48. He is now 88 × 240.**
+
+The old number was set before any room existed. Against the approved parlor it produces a 46px-tall figure roughly the height of the pizza boxes on the shelf behind him — at which size his eyes, eyebrows, moustache, the cigarette behind his ear, and the join between jersey and apron are not merely small, they are not present. The parlor's whole premise is that a person is standing behind that counter looking at you, and the master unit has to be large enough for that to be true.
+
+So the master unit moved with the room. Both numbers are now read off the same drawing rather than guessed, and Tony renders at **1:1 in CSS pixels** at phone width, which is what keeps `image-rendering: pixelated` honest.
+
+**Consequence — this is a live decision, not a settled one.** §5 requires every avatar layer to share one canvas so that a hat drawn once sits on a body drawn once. That invariant is untouched. What is no longer obvious is *which* canvas, because §2's old answer was "identical to Tony" and Tony is now sized for one specific fixture in one specific room. Avatars appear in the Showcase and, later, in basements — not behind that counter, and not necessarily at that scale.
+
+**Nothing in a character or avatar family may be generated until this is decided.** It affects `character_tony_pleased`, `character_tony_unimpressed` (B1 — these must match Tony exactly, and are already updated), and every `avatar_*` and `wear_*` slug (B2, still 32 × 48 in the inventory and **not** to be generated at that size without a decision).
 
 ---
 

@@ -133,12 +133,53 @@ export interface SeasonPlacements {
   readonly thirdPlaceRosterId: number | null;
   /** Placement position (1-based) → roster ID, for every position derivable. */
   readonly byPosition: Readonly<Record<number, number>>;
+  /**
+   * Every roster that appears anywhere in the winners bracket, ascending.
+   *
+   * This is the only honest answer to "did they make the playoffs". Seed and
+   * record cannot answer it — a bye, a tiebreak, or a format change would each
+   * make that inference wrong — and being told you missed January when you did
+   * not is precisely the kind of false claim `16 §12` forbids.
+   *
+   * Empty on a season whose bracket has not been drawn yet.
+   */
+  readonly playoffRosterIds: readonly number[];
   readonly warnings: readonly string[];
 }
 
 export function derivePlacements(bracket: readonly SleeperBracketMatch[]): SeasonPlacements {
   const byPosition: Record<number, number> = {};
   const warnings: string[] = [];
+
+  // Sleeper fills `t1`/`t2` with a reference object until the feeding match is
+  // decided; the decoder normalizes those to null, so only real entrants land
+  // here.
+  //
+  // A drawn bracket is NOT a played bracket. Sleeper publishes the 2026
+  // bracket during the preseason with first-round slots already filled in,
+  // before a single game exists — reading that as "these six made the
+  // playoffs" would have Tony congratulating people on a January they have not
+  // reached. So participation counts only once the bracket has decided
+  // something. Mid-playoffs this under-claims for a few days and then corrects
+  // itself, which is the right direction to be wrong in (`16 §12`).
+  const hasBeenPlayed = bracket.some((match) => match.winnerRosterId !== null);
+
+  const entrants = [
+    ...new Set(
+      bracket
+        .flatMap((match) => [match.team1RosterId, match.team2RosterId])
+        .filter((rosterId): rosterId is number => rosterId !== null),
+    ),
+  ].sort((a, b) => a - b);
+
+  const playoffRosterIds = hasBeenPlayed ? entrants : [];
+
+  if (!hasBeenPlayed && entrants.length > 0) {
+    warnings.push(
+      `The winners bracket names ${String(entrants.length)} rosters but no game has been ` +
+        `decided; playoff participation is not derivable yet and was left unclaimed.`,
+    );
+  }
 
   for (const match of bracket) {
     if (match.placement === null) continue;
@@ -175,6 +216,7 @@ export function derivePlacements(bracket: readonly SleeperBracketMatch[]): Seaso
     runnerUpRosterId: byPosition[2] ?? null,
     thirdPlaceRosterId: byPosition[3] ?? null,
     byPosition,
+    playoffRosterIds,
     warnings,
   };
 }

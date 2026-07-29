@@ -11,12 +11,15 @@
 git push  →  Vercel build
                  │
                  ├─ npm run db:migrate      ← migrations, before anything serves traffic
+                 ├─ npm run db:seed         ← league history + content, idempotent
                  └─ next build
                           ↓
               deployment goes live
 ```
 
 `package.json` defines `vercel-build`, and Vercel runs it in place of `build`. That ordering is the whole point: the schema is always at least as new as the code running against it. A failed migration fails the build, and the previous deployment keeps serving.
+
+`db:seed` imports the recorded 2024–2026 league chain and the Counter Greetings from `content/counter-greetings.md`. Both steps are idempotent — a second run reports zero changes — so a database that is already current is left alone. It reads committed fixtures rather than the live Sleeper API, so a Sleeper outage cannot take a deploy down with it. Editing a greeting in the markdown and pushing is therefore all it takes to change what Tony says.
 
 `npm run build` stays pure — no database, no side effects — so local builds and CI do not need a database to typecheck and compile.
 
@@ -39,6 +42,7 @@ Set in **Vercel → Project → Settings → Environment Variables**. The Enviro
 | `SESSION_SECRET` | unique | unique, different | — | `openssl rand -base64 32`. Different per environment so a preview cookie cannot be replayed against production. |
 | `SLEEPER_LEAGUE_ID` | `1385016656425668608` | same | same | Configuration, not a secret. |
 | `COMMISSIONER_SLEEPER_USER_ID` | commissioner's Sleeper ID | same | same | Unset = nobody is an admin and admin routes 404. |
+| `CLAIM_CODE` | optional | optional | — | A shared word the claim screen asks for once. Unset = anyone with the URL can claim an unclaimed name. |
 | `ANTHROPIC_API_KEY` | optional | leave unset | — | The Slice must publish without it (`16 §9`). |
 | `CRON_SECRET` | later | — | — | Not used until the two scheduled jobs exist. |
 
@@ -55,7 +59,7 @@ Set in **Vercel → Project → Settings → Environment Variables**. The Enviro
 3. Create a second branch named **`sandbox`** from it. This is what every preview deploy uses.
 4. Copy the **pooled** connection string of each branch.
 
-Both branches are empty. The first deploy migrates them; `npm run db:seed` populates content and imports the recorded league history, and both are idempotent.
+Both branches are empty. The first deploy migrates and seeds them, and every step of that is idempotent.
 
 ### Vercel
 

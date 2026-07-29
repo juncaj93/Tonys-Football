@@ -74,7 +74,11 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 
 Shipped: the Next.js foundation, the injected clock, the asset registry, the identity schema, the Sleeper adapter, and the idempotent historical import with recorded 2024–2026 fixtures.
 
-**Current assignment: V0 Pipeline + V1 Doors Open.** See `docs/IMPLEMENTATION_HANDOFF.md`.
+**V0 Pipeline** — shipped. Neon production and sandbox, Vercel on `main`, migrations and seeding as a deploy step, a live `*.vercel.app` URL. See `docs/DEPLOYMENT.md`.
+
+**V1 Doors Open** — shipped. Claim flow, 6-digit PIN, 90-day rolling session, derived tags, content engine v0 seeded from Group A, the six-zone parlor, Tonight at Tony's, the Counter Greeting, the receipt, and the offseason dressing.
+
+**Next assignment:** V2 Memory. See `docs/IMPLEMENTATION_HANDOFF.md`.
 
 The engineer runs continuously inside a vertical slice and stops only at the conditions in `17 §8`. PR checkpoints are the six categories in `17 §7` — not every subtask.
 
