@@ -81,6 +81,80 @@ The prompt gets close. **The pipeline makes it exact.**
 
 Also strips `#000000` and `#FFFFFF`, which are common model defaults and are prohibited by the palette.
 
+#### The colour metric: plain Euclidean RGB. Ruled 2026-07-29.
+
+Nearest-palette matching uses **plain Euclidean distance on raw sRGB channel
+differences**:
+
+```ts
+const dr = r - colour[0];
+const dg = g - colour[1];
+const db = b - colour[2];
+const distance = dr * dr + dg * dg + db * db;
+```
+
+No weights, no linear-light conversion, no tuning constants.
+
+**Do not reintroduce luma weighting.** The reason is not stylistic preference — it
+shipped, and it broke assets.
+
+##### What went wrong
+
+The original implementation applied luma coefficients to each channel **before**
+squaring:
+
+```ts
+const db = (b - colour[2]) * 0.11;   // then db * db
+```
+
+Squaring a 0.11 coefficient leaves blue contributing **1.21%** of the total
+distance. Green, at 0.59² = 34.8%, dominates. The metric therefore ranks
+candidates almost entirely by brightness and is nearly blind to hue.
+
+That is the wrong tool for this job. `palette.json` is not a greyscale ramp — it
+is 32 colours across **ten deliberately separated hue families**, and the
+matcher's first job is to choose the right family. Luma weighting is appropriate
+for converting colour to grey. It is not appropriate for a cross-ramp palette
+matcher.
+
+##### The failure mode: warm browns turn violet
+
+**Blue is the axis that separates the warm dark woods from `violet.violet-deep
+#3B2050`.** The two are close in red and green and far apart only in blue —
+exactly the channel that had been discounted to near-nothing.
+
+Backsplash tile `#500E01`, a dark warm red-brown:
+
+| Candidate | Weighted | Euclidean |
+|---|---|---|
+| `#3B2050` violet-deep | **15 — chosen** | 84 |
+| `#4A2E1C` wood-dark | 19 | **42 — chosen** |
+
+Across `zone_parlor_shell` the weighted metric painted **8.48% of the image
+violet** — the checkerboard backsplash, the doorway recess and the carpet. It
+also mapped Tony's **blue jersey to `#C99A63`, a tan**, for the same reason.
+
+It survived two batches unnoticed because the earlier assets' dark areas were
+near-black and landed on the `ink` ramp under either metric. `zone_parlor_shell`
+was the first asset with large mid-dark warm-brown fields.
+
+##### Why plain Euclidean specifically
+
+Measured, simple, and free of tuning constants. It maps 0% of the shell to
+violet-deep. A linear-light variant scores the same on that measure and was not
+chosen: the extra conversion buys nothing observable here and adds a step to
+reason about. Any coefficient placed in front of a channel is a thumb on the
+scale that will eventually drag some other hue across a ramp boundary — silently,
+in an asset nobody happens to be looking at.
+
+##### Remediation rule
+
+If an asset comes out with a wrong-hue cast, **count the pixels before adjusting
+anything.** `scripts/process-art.test.ts` asserts palette closure and the shell's
+violet share on every run; extend it with the new asset rather than eyeballing
+the output. Do not add palette colours or reweight the metric to fix a single
+asset — a source that needs either is usually a source that needs revising.
+
 ### Step 3 — Alpha cleanup
 
 Remove background, harden edges, eliminate anti-aliasing fringe. Pixel art has no partial alpha except where deliberately authored.
@@ -153,6 +227,7 @@ Swapping an asset is a commit that auto-deploys in about a minute. Free, version
 | Hat floats above the head | Layer not authored to anchors | **Regenerate the layer.** Never adjust the renderer. |
 | Collectible unreadable in inventory | Designed for 96px, not 16px | Regenerate with a simpler silhouette and lower detail budget |
 | Text illegible on a poster | Safe area has interior detail | Regenerate the surface with a flatter center |
+| **Warm dark browns map to violet** | **Colour metric discounts blue** | **Use plain Euclidean RGB distance; do not reintroduce luma weighting** |
 | Banding across a wall | Too many source colors for the palette | Re-quantize; if it persists, simplify the source |
 | Rarity indistinguishable in greyscale | Frames differ by color only | Regenerate with distinct geometry per tier |
 | Model bakes text into a blank surface | Most common surface failure | Regenerate. Strengthen the NO TEXT instruction. |
