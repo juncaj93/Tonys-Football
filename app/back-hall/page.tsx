@@ -67,17 +67,28 @@ export default async function BackHallPage() {
               * (`18 §5`) — the whole point is that you find out what it is by
               * being let in, not by reading a sign on the way past.
               */}
-            <Link href="/underground" className="block outline-none">
-              <PixelPanel className="px-4 py-4 active:translate-y-px">
-                <PanelHeading>The curtained door</PanelHeading>
-                <p className="mt-1.5 text-[15px] leading-[1.45] text-paper-mid/75">
-                  Heavy curtain, no handle you can see, no sign on it.
-                </p>
-                <p className="mt-2 font-display text-[9px] text-amber-mid/70 uppercase">
-                  &ldquo;Don&rsquo;t worry about it.&rdquo;
-                </p>
-              </PixelPanel>
-            </Link>
+            {/*
+              * **Not a `Link`.** It was one, to `/underground`, which does not
+              * exist — so Next prefetched it on hover and every visit to this
+              * page logged a 404. Nothing rendered wrong, nothing failed a test,
+              * and the console error was the only evidence.
+              *
+              * A locked destination is *supposed* to be a dead end that answers
+              * in-world (`18 §6`): "Tappable, but answers in-world — not a
+              * route, not a modal, not a coming-soon badge." A link to a route
+              * that has not been built is none of those things; it is a broken
+              * link wearing the costume of a locked door. The plate is inert
+              * until the Underground opens, and the line on it is the answer.
+              */}
+            <PixelPanel className="px-4 py-4">
+              <PanelHeading>The curtained door</PanelHeading>
+              <p className="mt-1.5 text-[15px] leading-[1.45] text-paper-mid/75">
+                Heavy curtain, no handle you can see, no sign on it.
+              </p>
+              <p className="mt-2 font-display text-[9px] text-amber-mid/70 uppercase">
+                &ldquo;Don&rsquo;t worry about it.&rdquo;
+              </p>
+            </PixelPanel>
           </div>
 
           {/* The way back is a door in the world, not the browser's back button. */}

@@ -39,3 +39,6 @@ Thumbs.db
 
 # vercel
 .vercel
+
+# Visual QA artifacts. Screenshots belong to a workflow run, not to git history.
+/visual-qa/
