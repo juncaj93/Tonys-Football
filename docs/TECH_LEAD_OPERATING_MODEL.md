@@ -137,6 +137,11 @@ Chronological. `PR #n · comment` is the authoritative text.
 | 2026-07-29 | The board correction stays **provenance, not a pipeline stage**; every asset remains a pure function of its source | `art/ASSET_PIPELINE.md §4a` · PR #13 |
 | 2026-07-29 | Merge order **superseded** by the integration-branch model | PR #14 |
 | 2026-07-29 | Finalized seasons refuse record updates; open seasons still update | `docs/DATA_AUDIT.md` · PR #10 |
+| 2026-07-30 | **Full autonomous delivery mandate** — Technical Lead is also integration owner, visual gate, and delegated commissioner for V1 | this file |
+| 2026-07-30 | Transient panels are **set down in the room**, never bottom sheets. Sized to content, centred, pixel-bevelled, shared material with Tony's box and the champion panel | `components/scene/room-object.tsx` |
+| 2026-07-30 | **Body copy floor is 17px.** Size the container to the type, never the type to the container | `components/scene/tony-toy.tsx` |
+| 2026-07-30 | The Tonight board is **surface-rendered**: state line + one headliner on the board's own face, all four lines in the panel | `TONIGHT_FIELD` |
+| 2026-07-30 | The prediction sign gets a **wiped-board** treatment — chalk residue, no invented prediction | `PREDICTION_SLATE` |
 
 ---
 
@@ -144,12 +149,15 @@ Chronological. `PR #n · comment` is the authoritative text.
 
 Integration branch **`integration/v1-parlor-milestone`**, tracked by **PR #14**, which is also the visual gate.
 
-| | Work | Owner | State |
+**Complete.** All four steps merged to the integration branch and then to `main`.
+
+| | Work | PR | State |
 |---|---|---|---|
-| 1 | Board alignment + durable geometry | SW | ✅ merged |
-| 2 | Sleeper Phase A correctness | Stats & Data | ✅ merged |
-| 3 | Parlor navigation reconciliation + superseding rulings | SW | in progress |
-| 4 | Homepage wiring | SW | after 3 |
+| 1 | Board alignment + durable geometry | #13 | ✅ |
+| 2 | Sleeper Phase A correctness | #10 | ✅ |
+| 3 | Parlor navigation reconciliation | #9 | ✅ |
+| 4 | Homepage wiring | #15 | ✅ |
+| 5 | Visual polish — panels, typography, board face, prediction slate | direct | ✅ |
 
 ### Settled geometry — the wiring builds against these
 
@@ -162,6 +170,8 @@ Integration branch **`integration/v1-parlor-milestone`**, tracked by **PR #14**,
 | Newspaper rack | `(10, 224)` at 38 × 38 |
 | Layer cut | logical **y 292** |
 | Tony | `(64, 180)` at 72 × 197, visible band 112 units |
+| Tonight board text field | `TONIGHT_FIELD` `60, 93, 111, 74` — state line + one headliner |
+| Prediction slate | `PREDICTION_SLATE` `154, 184, 37, 59` — chalk residue only |
 
 Board and banner row co-centre at `119.5`, delta `0.0`. Partitions clear WCAG 2.5.8 AA at 24.75 CSS px on a 360 px viewport.
 
