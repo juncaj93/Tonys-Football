@@ -1,18 +1,13 @@
 import Link from 'next/link';
 
-import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
+import { ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
 import { RARITIES } from '@/lib/counter/catalog';
-import {
-  COLLECTION_FILTERS,
-  collectionFor,
-  parseFilter,
-  type CollectionEntry,
-} from '@/lib/counter/collection';
+import { collectionFor, parseFilter, type CollectionEntry } from '@/lib/counter/collection';
 import { getDb } from '@/lib/db';
 
 /**
@@ -83,69 +78,156 @@ export default async function CollectionPage({
                   : '')}
           </p>
 
-          {/* Set progress, per tier. The rarest line is the one people read. */}
-          <PixelPanel className="mt-5 px-4 py-3.5">
-            <PanelHeading>Set progress</PanelHeading>
-            <dl className="mt-2 space-y-1.5">
-              {RARITIES.map((rarity) => {
-                const tier = collection.byRarity[rarity];
-                return (
-                  <div key={rarity} className="flex items-baseline justify-between gap-3">
-                    <dt
-                      className={`rarity-word rarity-${rarity} font-display text-[11px] tracking-[0.1em] uppercase`}
-                    >
-                      {rarity}
-                    </dt>
-                    <dd className="text-[17px] leading-[1.4] text-ink-700">
-                      {String(tier.held)} / {String(tier.total)}
-                    </dd>
-                  </div>
-                );
-              })}
-            </dl>
-          </PixelPanel>
-
           {/*
-            * The filters — small enamel plates, not a select: the shop has signs,
-            * not form controls. 44px of hit height each.
+            * Set progress **is** the filter.
             *
-            * A **grid** rather than a wrap. Five plates cannot fit one row at 360
-            * and stay readable, and a wrap left "LEGENDARY" orphaned on its own
-            * line looking like overflow. 3 + 2 reads as deliberate.
+            * These were two blocks: a cream panel of four `held / total` rows,
+            * and below it five rarity plates in a 3 + 2 grid. Together they took
+            * a third of a 390 before a single collectible appeared — and they
+            * were saying the same four words to each other.
+            *
+            * Merging them costs nothing and buys the whole shelf a screen
+            * earlier. The numbers now do work: a tier tells you how far along you
+            * are *and* takes you to it. Still a URL and not client state, so a
+            * filtered shelf stays shareable and survives a refresh.
+            *
+            * Four columns at 360 is 88 css px each, well over the AA floor, and
+            * the row is a 44px hit target throughout.
             */}
-          <nav aria-label="Filter by rarity" className="mt-5 grid grid-cols-3 gap-2">
-            {COLLECTION_FILTERS.map((option) => {
-              const active = option === filter;
+          <nav aria-label="Filter by rarity" className="mt-4 grid grid-cols-4 gap-px border-2 border-wood-dark bg-wood-dark">
+            {RARITIES.map((rarity) => {
+              const tier = collection.byRarity[rarity];
+              const active = filter === rarity;
+              const complete = tier.held === tier.total;
               return (
                 <Link
-                  key={option}
-                  href={option === 'all' ? '/counter/collection' : `/counter/collection?rarity=${option}`}
+                  key={rarity}
+                  href={active ? '/counter/collection' : `/counter/collection?rarity=${rarity}`}
                   aria-current={active ? 'page' : undefined}
-                  className={`pixel-edge flex min-h-[44px] items-center justify-center border-2 px-2 text-center font-display text-[11px] tracking-wide uppercase active:translate-y-px ${
-                    active
-                      ? 'border-wood-dark bg-paper-mid text-ink-900'
-                      : 'border-wood-dark bg-[#1c1113] text-paper-mid/80'
+                  /*
+                    * `rarity-${rarity}` sits on the **cell**, not on the word.
+                    *
+                    * That class is what defines `--rarity`, and it was on the
+                    * word span alone — so the stripe below, a sibling, resolved
+                    * `var(--rarity)` to nothing and rendered transparent. It
+                    * looked like a styling choice in the screenshot rather than a
+                    * missing custom property, which is exactly the failure mode
+                    * `colour-tokens.test.ts` exists for at the Tailwind level.
+                    */
+                  className={`rarity-${rarity} relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 py-2 active:translate-y-px ${
+                    active ? 'bg-paper-mid' : 'bg-[#241618]'
                   }`}
                 >
-                  {option === 'all' ? 'Everything' : option}
+                  <span
+                    className={`rarity-word rarity-${rarity} font-display text-[10px] tracking-[0.08em] uppercase`}
+                  >
+                    {rarity}
+                  </span>
+                  <span
+                    className={`font-display text-[13px] ${
+                      active
+                        ? 'text-ink-900'
+                        : complete
+                          ? 'text-paper-white'
+                          : 'text-paper-mid/85'
+                    }`}
+                  >
+                    {String(tier.held)}/{String(tier.total)}
+                  </span>
+                  {/*
+                    * A stripe of the tier's own colour along the bottom.
+                    *
+                    * Two jobs, and the second is the reason it is here. It makes
+                    * the rail legible *as a control* — without it the merged rail
+                    * looked exactly like the read-only panel it replaced, and
+                    * nothing said it could be tapped. And it carries rarity a
+                    * fourth way for anybody who cannot separate the tier colours
+                    * in the word itself.
+                    */}
+                  <span
+                    aria-hidden="true"
+                    className="absolute inset-x-0 bottom-0 h-[3px]"
+                    style={{ backgroundColor: 'var(--rarity)', opacity: active ? 1 : 0.55 }}
+                  />
                 </Link>
               );
             })}
           </nav>
 
+          {filter !== 'all' && (
+            /*
+             * The way back to everything. Present only while filtered, because a
+             * permanent "all" tab in a four-tier rail is a fifth thing competing
+             * for the same glance — and tapping the active tier already clears
+             * it. This is the discoverable version of that.
+             */
+            <Link
+              href="/counter/collection"
+              className="mt-2 flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-paper-mid/85 uppercase underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px"
+            >
+              Show everything
+            </Link>
+          )}
+
           {/*
-            * The shelf.
+            * The shelf, in rows that sit on boards.
             *
-            * Three across at every supported width. Four would put each cell under
-            * 80 css px at 360, which is not enough for a 32-unit sprite plus a
-            * readable name — sizing the grid to the type rather than the type to
-            * the grid.
+            * It used to be a 24-cell grid of bordered cards, and the unowned
+            * ones were dark cards with a grey dash in them. At actual size on a
+            * dimmed room those read as **components that failed to load** —
+            * `VISUAL_ACCEPTANCE.md §4` rejects exactly that, and the commissioner
+            * named it as the "generic dashboard cards" defect.
+            *
+            * The fix is not more contrast. It is that **an empty spot should be
+            * empty shelf.** Each row of three stands on a wooden board; a held
+            * item is a labelled card standing on it, and an unowned one is a gap
+            * with the item's name written on the board. A gap on a shelf reads as
+            * something to fill, which is what set progress is *for*, and it
+            * cannot read as a failure because there is nothing there to have
+            * failed.
+            *
+            * Three across at every supported width. Four would put each cell
+            * under 80 css px at 360, which is not enough for a sprite plus a
+            * readable name — sizing the shelf to the type rather than the type
+            * to the shelf.
             */}
-          <ul className="mt-5 grid grid-cols-3 gap-2.5">
-            {shown.map((entry) => (
-              <ShelfSpot key={entry.slug} entry={entry} />
+          <div className="mt-5 space-y-1">
+            {rows(shown).map((row, index) => (
+              <div key={index}>
+                {/*
+                  * Row height follows what is standing on it.
+                  *
+                  * A fixed height was the first fix, for an uneven-pitch problem
+                  * that was real — but it left a row of three unowned names
+                  * floating under 120px of nothing, which is worse than uneven:
+                  * it is *empty*, and the commissioner asked for density.
+                  *
+                  * A board with jars on it is taller than a bare board. That is
+                  * true of shelves, so letting the row say which it is reads as
+                  * furniture rather than as a layout bug — and the pitch is still
+                  * even *within* each kind.
+                  */}
+                <ul
+                  className={`grid grid-cols-3 items-end gap-2 ${
+                    row.some((entry) => entry.count > 0) ? 'h-[8rem]' : 'h-[3.5rem]'
+                  }`}
+                >
+                  {row.map((entry) => (
+                    <ShelfSpot key={entry.slug} entry={entry} />
+                  ))}
+                  {/* Keeps the last row's board full width rather than ragged. */}
+                  {Array.from({ length: 3 - row.length }, (_, gap) => (
+                    <li key={`gap-${String(gap)}`} aria-hidden="true" className="h-full" />
+                  ))}
+                </ul>
+                {/* The board itself. Everything above is standing on this. */}
+                <div
+                  aria-hidden="true"
+                  className="surface-wood h-2 w-full border-x-2 border-b-2 border-wood-dark shadow-[0_3px_5px_rgba(0,0,0,0.55)]"
+                />
+              </div>
             ))}
-          </ul>
+          </div>
 
           {shown.length === 0 && (
             <p className="mt-5 text-[17px] leading-[1.5] text-paper-mid/80">
@@ -153,29 +235,50 @@ export default async function CollectionPage({
             </p>
           )}
 
-          <div className="mt-8 space-y-3">
-            {/*
-              * Through to the Showcase. It is the natural next thought once you can
-              * see what you have: which one do the others get to look at.
-              */}
+          {/*
+            * One action, then two ways back.
+            *
+            * Three stacked full-width blocks is the shape of an ecommerce
+            * checkout, and it was the last generic thing on the page. The
+            * Showcase is the actual next thought once you can see what you own;
+            * the other two are navigation and read as navigation.
+            */}
+          <div className="mt-8">
             <Link
               href="/counter/showcase"
               className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-red-dark font-display text-[12px] text-paper-white uppercase active:translate-y-px"
             >
               Put one in the showcase
             </Link>
-            <Link
-              href="/counter"
-              className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-[#1c1113] font-display text-[12px] text-paper-mid uppercase active:translate-y-px"
-            >
-              Back to the counter
-            </Link>
-            <ReturnPlate />
+
+            <div className="mt-4 flex items-center justify-between gap-4">
+              <Link
+                href="/counter"
+                className="flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-paper-mid/85 uppercase underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px"
+              >
+                The counter
+              </Link>
+              <ReturnPlate />
+            </div>
           </div>
+
         </div>
       </Page>
     </>
   );
+}
+
+/**
+ * Chunked into rows of three, so each row can stand on its own board.
+ *
+ * A plain grid cannot do this: the board has to be a sibling *under* each row,
+ * and CSS grid gives no handle on "the end of a row" that survives a filter
+ * changing how many cells there are.
+ */
+function rows(entries: readonly CollectionEntry[]): CollectionEntry[][] {
+  const out: CollectionEntry[][] = [];
+  for (let i = 0; i < entries.length; i += 3) out.push(entries.slice(i, i + 3));
+  return out;
 }
 
 /**
@@ -194,34 +297,29 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
   const held = entry.count > 0;
 
   if (!held) {
+    /*
+     * An unowned item is a **gap on the board**, not a dark card.
+     *
+     * The previous version was an opaque near-black cell with a grey dash in it,
+     * arrived at by *raising the contrast* of an earlier translucent one. Both
+     * were the same mistake: a filled rectangle where nothing is standing reads
+     * as a thing that failed to render, however dark or light you make it.
+     *
+     * So there is no surface here at all — just the name, written on the board
+     * the way a shopkeeper labels a space they mean to fill. It still shows the
+     * name, because hiding it would make the shelf a mystery instead of a set,
+     * and the catalog is not secret.
+     */
     return (
-      /*
-       * An empty spot, and it has to look *empty on purpose*.
-       *
-       * The first version was `bg-ink-900/45` with the name at 40% opacity, over an
-       * already-dimmed room. On screen the spots were ghosts and the names were
-       * barely legible — which `VISUAL_ACCEPTANCE.md §4` rejects twice over, as a
-       * surface that "looks unloaded rather than deliberately quiet" and as type
-       * that is uncomfortable to read.
-       *
-       * Opaque backing, a real border, and a name at 70% now. A labelled gap on a
-       * shelf reads as something to fill; a ghost reads as a bug.
-       */
-      <li className="flex flex-col items-center gap-1.5 border-2 border-wood-dark bg-[#170f10] px-1.5 pt-2.5 pb-2">
-        <span aria-hidden="true" className="flex h-12 w-full items-center justify-center">
-          {/* The shelf's own edge, showing through where nothing sits on it. */}
-          <span className="h-[3px] w-7 bg-paper-mid/25" />
-        </span>
-        <span className="text-center text-[12px] leading-[1.25] text-paper-mid/70">
-          {entry.name}
-        </span>
+      <li className="flex h-full flex-col justify-end px-0.5 pb-1.5 text-center">
+        <span className="text-[14px] leading-[1.2] text-paper-mid/55">{entry.name}</span>
       </li>
     );
   }
 
   return (
     <li
-      className={`rarity-frame rarity-${entry.rarity} pixel-edge relative flex flex-col items-center gap-1.5 border-2 border-wood-dark bg-paper-mid px-1.5 pt-2.5 pb-2`}
+      className={`rarity-frame rarity-${entry.rarity} pixel-edge relative flex h-full flex-col items-center gap-1 border-2 border-wood-dark bg-paper-mid px-1.5 pt-2 pb-1.5`}
     >
       <span aria-hidden="true" className="flex h-12 w-full items-center justify-center">
         <span className="block h-12 w-12">
@@ -230,10 +328,17 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
         </span>
       </span>
 
-      <span className="text-center text-[11px] leading-[1.25] text-ink-900">{entry.name}</span>
+      {/*
+        * The name, at 14px rather than 11.
+        *
+        * It is the only thing on the card that says *what this is* while the art
+        * is still a placeholder, and 11px is decorative type for a load-bearing
+        * value — which `PRODUCT_DELIVERY_MANDATE.md §6` rules out directly.
+        */}
+      <span className="text-center text-[14px] leading-[1.2] text-ink-900">{entry.name}</span>
 
       <span
-        className={`rarity-word rarity-${entry.rarity} font-display text-[8px] tracking-[0.12em] uppercase`}
+        className={`rarity-word rarity-${entry.rarity} font-display text-[10px] tracking-[0.1em] uppercase`}
       >
         {entry.rarity}
       </span>
@@ -243,7 +348,7 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
         * Screen readers get the word; the mark is decoration.
         */}
       {entry.count > 1 && (
-        <span className="absolute top-1 right-1 bg-ink-900 px-1 font-display text-[9px] text-paper-mid">
+        <span className="absolute top-1 right-1 bg-ink-900 px-1 font-display text-[10px] text-paper-mid">
           <span aria-hidden="true">&times;{entry.count}</span>
           <span className="sr-only">{entry.count} copies</span>
         </span>

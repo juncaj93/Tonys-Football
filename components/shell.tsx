@@ -93,8 +93,12 @@ export function Page({
  * Every interior — the rack, the case, the back rooms, your paperwork — is a
  * room you walked into from the counter, so the way out is the door you came
  * through rather than a tab. One control, top left, where a back button lives.
+ *
+ * Labelled **out front** rather than "the counter", for the same reason
+ * `ReturnPlate` is: `/counter` is a real route titled *Tony's counter*, so a
+ * back link to `/` that names the counter points at the page you are on.
  */
-export function BackToTheCounter({ children = 'Back to the counter' }: { children?: string }) {
+export function BackToTheCounter({ children = 'Back out front' }: { children?: string }) {
   return (
     <Link
       href="/"
