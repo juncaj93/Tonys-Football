@@ -35,11 +35,20 @@ const REQUIRED = [
 ] as const;
 
 describe('the demo catalog', () => {
-  it('has one state per thing the commissioner enumerated', () => {
-    // Epic is not on the mandate's list — it names common, rare and top rarity —
-    // but a four-tier economy with no epic demo cannot show the escalation the
-    // reveal is built around, so it is carried deliberately.
-    expect(DEMO_STATES.length).toBe(REQUIRED.length + 1);
+  it('covers everything the commissioner enumerated, plus what review needed', () => {
+    /*
+     * Two states are carried beyond the mandate's list, and both were added
+     * because a review could not otherwise be done:
+     *
+     *  - **epic** — the list names common, rare and top rarity, but a four-tier
+     *    economy with no epic demo cannot show the escalation the reveal is
+     *    built around.
+     *  - **pull-while-broke** — the reveal plate offers another box only when the
+     *    tab can take it, and the *absent* offer had no state. Every reveal
+     *    screenshot ever taken was of somebody who could afford another one.
+     */
+    const CARRIED_BEYOND_THE_LIST = 2;
+    expect(DEMO_STATES.length).toBe(REQUIRED.length + CARRIED_BEYOND_THE_LIST);
   });
 
   it('gives every state a stable key, a route, and a sentence', () => {

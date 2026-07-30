@@ -1,4 +1,5 @@
-import { RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
+import { CATALOG_SIZE, RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
+import { PROVISIONAL_ECONOMY } from '@/lib/counter/tokens';
 import { resolveAsset } from '@/lib/assets/registry';
 import { type AssetResolution } from '@/lib/assets/types';
 
@@ -48,6 +49,10 @@ export interface PreviewReveal {
   readonly rarity: Rarity;
   readonly replayed: boolean;
   readonly asset: AssetResolution;
+  /** Synthetic, like the rest of it — see the note on `previewReveal`. */
+  readonly distinct: number;
+  readonly total: number;
+  readonly nextBoxPrice: number | null;
 }
 
 function isRarity(value: string): value is Rarity {
@@ -84,11 +89,29 @@ export function previewReveal(
   const item = catalog().find((candidate) => candidate.rarity === raw);
   if (item === undefined) return null;
 
+  /*
+   * A plausible middle of the loop, fixed.
+   *
+   * These three drive the plate's meaning line and its offer, and the point of
+   * this route is to review how those *look* — so they are pinned rather than
+   * read from a database. Nobody's real collection is consulted and nothing is
+   * counted: a preview at 390 and one at 360 must show the same plate.
+   *
+   * `PREVIEW_DISTINCT` is deliberately not 1 and not 24, so the meaning line
+   * renders its ordinary case rather than either edge. The edges are worth
+   * reviewing too and they are reachable from a real pull.
+   */
   return {
     slug: item.slug,
     name: item.name,
     rarity: item.rarity,
     replayed: false,
     asset: resolveAsset(item.slug),
+    distinct: PREVIEW_DISTINCT,
+    total: CATALOG_SIZE,
+    nextBoxPrice: PROVISIONAL_ECONOMY.standardBoxPriceTokens,
   };
 }
+
+/** A mid-collection pull — neither the first nor the last. */
+const PREVIEW_DISTINCT = 7;

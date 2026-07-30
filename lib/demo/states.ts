@@ -101,6 +101,12 @@ export const DEMO_STATES: readonly DemoState[] = [
   },
 
   { key: 'broke', shows: 'not enough tokens to buy', reach: 'arranged', route: '/counter' },
+  {
+    key: 'pull-while-broke',
+    shows: 'a pull with nothing left to buy another with',
+    reach: 'arranged',
+    route: '/',
+  },
   { key: 'purchase-ok', shows: 'a successful purchase', reach: 'driven', route: '/counter' },
   { key: 'purchase-refused', shows: 'a purchase the database refused', reach: 'driven', route: '/counter' },
   { key: 'network-retry', shows: 'a failed request, retried', reach: 'client', route: '/counter' },

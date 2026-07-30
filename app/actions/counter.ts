@@ -5,8 +5,9 @@ import { type AssetResolution } from '@/lib/assets/types';
 import { requireUser } from '@/lib/auth/current-user';
 import { openBox, purchaseBox } from '@/lib/counter/boxes';
 import { type Rarity } from '@/lib/counter/catalog';
+import { collectionFor } from '@/lib/counter/collection';
 import { setShowcase } from '@/lib/counter/showcase';
-import { openSeason } from '@/lib/counter/tokens';
+import { economyFor, openSeason, wallet } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
 
 /**
@@ -45,6 +46,30 @@ export interface RevealPayload {
    * way. It skips the anticipation beat, because a second look is not a moment.
    */
   readonly replayed: boolean;
+
+  /*
+   * What the pull *means*, which is not the same as what it is.
+   *
+   * The plate said `COMMON / Squeeze bottle` and stopped — a label, not a
+   * meaning. A new player finished the loop knowing the name of an object and
+   * nothing about whether it mattered, how much of the set they had, or that it
+   * was theirs permanently. These three fields are what turn a label into an
+   * event, and they are computed on the server because the client is not allowed
+   * to count anybody's collection.
+   */
+
+  /** Distinct items held after this pull. */
+  readonly distinct: number;
+  /** The catalog's size — the denominator that makes `distinct` mean something. */
+  readonly total: number;
+  /**
+   * The price of the next box, or null when they cannot afford one.
+   *
+   * Null covers "no tab" and "not enough" together, because the plate says the
+   * same thing to both: nothing. It never renders a price they cannot meet —
+   * an offer you cannot take is worse than no offer.
+   */
+  readonly nextBoxPrice: number | null;
 }
 
 export type OpenBoxResponse =
@@ -126,6 +151,34 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
 
   const { reveal } = result;
 
+  /*
+   * Read *after* the open, so the count includes what they just pulled.
+   *
+   * Both are cheap and neither is allowed on the client: a collection count is a
+   * fact about somebody's property, and a price the client picked would be a
+   * price the client could change.
+   */
+  const db = getDb();
+  const [collection, season] = await Promise.all([collectionFor(db, user.id), openSeason(db)]);
+
+  let nextBoxPrice: number | null = null;
+  if (season !== null) {
+    const held = await wallet(db, { userId: user.id, seasonId: season.id });
+    if (held !== null) {
+      try {
+        const { values } = await economyFor(db, season.id);
+        // Offered only when they can actually take it. See the field's note.
+        if (held.balance >= values.standardBoxPriceTokens) {
+          nextBoxPrice = values.standardBoxPriceTokens;
+        }
+      } catch {
+        // No stored economy is a seeding failure, not something to tell a
+        // manager about mid-reveal. The plate simply makes no offer.
+        nextBoxPrice = null;
+      }
+    }
+  }
+
   return {
     ok: true,
     reveal: {
@@ -134,6 +187,9 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
       rarity: reveal.rarity,
       asset: resolveAsset(reveal.slug),
       replayed: reveal.replayed,
+      distinct: collection.distinct,
+      total: collection.total,
+      nextBoxPrice,
     },
   };
 }

@@ -24,7 +24,7 @@ Visual QA finds something that is genuinely worth improving and genuinely not wo
 | | Where | What | Why it waited |
 |---|---|---|---|
 | 1 | `/counter/collection`, empty state | Twenty-four unowned rows is roughly eight screens of scrolling for a manager who owns nothing. The shelf is correct — `18 §4` shows the whole catalog and set progress is a statement about the gap — but the *pacing* on day one is not reviewed. | The information is right; only the rhythm is in question, and changing it touches the ruling about showing the whole set. |
-| 2 | Reveal plate, 360 | The plate sits low-left and the collectible sits small and right. The composition is legible and not yet *composed* — the item should probably dominate more. | Waiting on real collectible art. Judging focal weight against a placeholder carton would mean tuning to a shape that is about to change. |
+| 2 | Reveal plate, 360 | The collectible sits small and to the right of a plate that is now four lines tall. Legible, and not yet *composed* — the item should dominate more than its caption does. | Waiting on real collectible art. Judging focal weight against a placeholder carton means tuning to a shape that is about to change. |
 | 3 | `/counter`, all widths | Three stacked cream panels read as a list of cards rather than as a counter. Less generic than it was, still not furniture. | The Collection and Showcase were the louder defects and shipped first. This is the next one down. |
 | 4 | Tier rail, `/counter/collection` | `2/10` and the tier word are both display type at 10–13px. Legible and slightly cramped; the rail could breathe. | Cosmetic. The rail replaced two blocks and already bought a screen back. |
 | 5 | Tony's dialogue | The order pad landed in #30 and reads as Tony's. The *timing* of its arrival and dismissal has never been reviewed against the reveal's timing — two transient things that must never compete (`MANDATE §6`). | Needs the reveal states, which only became photographable in #36. Now unblocked. |
@@ -39,3 +39,5 @@ Visual QA finds something that is genuinely worth improving and genuinely not wo
 | — | The Showcase wall as ten near-black rectangles | #35 |
 | — | Set progress eating a third of the screen above the shelf | #35 |
 | — | `ReturnPlate` labelled "back to the counter" while on `/counter` | #35 |
+| — | The reveal ended at a label — no meaning, no set progress, no way to want another | #38 |
+| — | The loop ended in a silent room: bare tray, no price on anything, nothing to do next | #38 |
