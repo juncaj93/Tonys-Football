@@ -3,6 +3,7 @@ import { and, asc, eq, isNotNull } from 'drizzle-orm';
 import { now } from '@/lib/clock';
 import { type Queryable } from '@/lib/db';
 import { collectibles, users } from '@/lib/db/schema';
+import { notADemoSeat } from '@/lib/demo/boundary';
 
 import { catalogItem, type Rarity } from './catalog';
 
@@ -99,6 +100,10 @@ export async function leagueShowcase(db: Queryable): Promise<LeagueShowcase[]> {
     .from(users)
     // LEFT join: a manager with no pick is still a manager.
     .leftJoin(collectibles, eq(collectibles.id, users.showcaseCollectibleId))
+    // A demo seat is not a manager. The wall is a claim about who the league is,
+    // and `MANDATE §8` keeps the demo system out of those — see
+    // `lib/demo/boundary.ts`.
+    .where(notADemoSeat())
     .orderBy(asc(users.displayName));
 
   return rows.map((row) => ({

@@ -31,8 +31,15 @@
 import { and, desc, eq, inArray } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
-import { type Database } from '@/lib/db';
-import { seasonMemberships, seasons, syncRuns, users, type SyncRun } from '@/lib/db/schema';
+import { type Database, type Queryable } from '@/lib/db';
+import {
+  fantasyMatchups,
+  seasonMemberships,
+  seasons,
+  syncRuns,
+  users,
+  type SyncRun,
+} from '@/lib/db/schema';
 import {
   loadManagerMappings,
   mappingsBySleeperId,
@@ -41,7 +48,8 @@ import {
 
 import { championUserId, type ChainResult, type ImportedSeason } from './chain';
 import { hasRosterMetadata } from './metadata';
-import { toCents } from './reconcile';
+import { isPairingDisputed, toCents } from './reconcile';
+import { isScoredWeek } from './weeks';
 
 /**
  * More than one co-owner on a roster.
@@ -192,6 +200,153 @@ function collectPeople(seasonList: readonly ImportedSeason[]): Map<string, strin
     }
   }
   return people;
+}
+
+/**
+ * Write one season's games.
+ *
+ * ## Only scored, paired games
+ *
+ * A week's `type` comes from the league's own `playoff_week_start` and
+ * `last_scored_leg` (`weeks.ts`), so week 18 is `unscored` even though every
+ * roster has points in it, and those rows are not games. An unpaired roster —
+ * eliminated, still accumulating points — is not a game either. Both are normal
+ * states rather than errors, and `fantasy_matchups` is a table of games.
+ *
+ * ## Never overwrite a finalized result
+ *
+ * The same rule the memberships follow, and for a stronger reason: a game has a
+ * *winner*, and republishing a different one is a false claim about two named
+ * people. Where a re-import disagrees with a stored row in a **finalized**
+ * season, the stored row wins and the disagreement is recorded as a conflict.
+ * In an open season the new figures win, because the week is still moving.
+ *
+ * The database backs this up — a trigger refuses the update outright — so this
+ * function is the polite half of a rule that is enforced whether or not anybody
+ * calls it politely.
+ *
+ * ## `disputed` is written here, once
+ *
+ * `reconcile.ts` already knows which games sit inside the 2024
+ * finalized-versus-snapshot disagreement. Recording it on the row means a fact
+ * derived months later reads one boolean instead of re-running a
+ * reconciliation — and cannot forget to.
+ */
+async function persistWeeks(
+  tx: Queryable,
+  input: {
+    season: ImportedSeason;
+    seasonId: string;
+    finalized: boolean;
+    conflicts: string[];
+  },
+): Promise<{ inserted: number; updated: number; unchanged: number; refused: number }> {
+  const { season, seasonId, finalized, conflicts } = input;
+
+  const stored = await tx
+    .select({
+      id: fantasyMatchups.id,
+      week: fantasyMatchups.week,
+      sleeperMatchupId: fantasyMatchups.sleeperMatchupId,
+      rosterAId: fantasyMatchups.rosterAId,
+      rosterBId: fantasyMatchups.rosterBId,
+      pointsACents: fantasyMatchups.pointsACents,
+      pointsBCents: fantasyMatchups.pointsBCents,
+      winnerRosterId: fantasyMatchups.winnerRosterId,
+      marginCents: fantasyMatchups.marginCents,
+      disputed: fantasyMatchups.disputed,
+    })
+    .from(fantasyMatchups)
+    .where(eq(fantasyMatchups.seasonId, seasonId));
+
+  const byKey = new Map(stored.map((row) => [`${String(row.week)}:${String(row.sleeperMatchupId)}`, row]));
+
+  let inserted = 0;
+  let updated = 0;
+  let unchanged = 0;
+  let refused = 0;
+
+  for (const week of season.weeks) {
+    if (!isScoredWeek(week.type)) continue;
+
+    for (const pairing of week.pairings) {
+      const disputed =
+        season.reconciliation !== null &&
+        isPairingDisputed(season.reconciliation, week.week, pairing.rosterAId, pairing.rosterBId);
+
+      const incoming = {
+        seasonId,
+        week: week.week,
+        weekType: week.type,
+        sleeperMatchupId: pairing.matchupId,
+        rosterAId: pairing.rosterAId,
+        rosterBId: pairing.rosterBId,
+        pointsACents: toCents(pairing.pointsA),
+        pointsBCents: toCents(pairing.pointsB),
+        winnerRosterId: pairing.winnerRosterId,
+        // Recomputed from the cents rather than carried over from
+        // `pairing.margin`, which is a rounded float. The CHECK constraint
+        // compares these two integers, so a float that rounded differently
+        // would fail the insert rather than store a margin that disagrees with
+        // its own points.
+        marginCents: Math.abs(toCents(pairing.pointsA) - toCents(pairing.pointsB)),
+        capturedAt: week.capturedAt,
+        disputed,
+      };
+
+      const existing = byKey.get(`${String(week.week)}:${String(pairing.matchupId)}`);
+
+      if (existing === undefined) {
+        await tx.insert(fantasyMatchups).values(incoming);
+        inserted++;
+        continue;
+      }
+
+      const differs =
+        existing.rosterAId !== incoming.rosterAId ||
+        existing.rosterBId !== incoming.rosterBId ||
+        existing.pointsACents !== incoming.pointsACents ||
+        existing.pointsBCents !== incoming.pointsBCents ||
+        existing.winnerRosterId !== incoming.winnerRosterId ||
+        existing.marginCents !== incoming.marginCents;
+
+      if (!differs) {
+        // `disputed` and `capturedAt` are annotation about our knowledge of the
+        // game rather than the game, so they are refreshed even on a finalized
+        // season — a re-reconciliation must be able to record what it found.
+        if (existing.disputed !== incoming.disputed) {
+          await tx
+            .update(fantasyMatchups)
+            .set({ disputed: incoming.disputed, capturedAt: incoming.capturedAt, updatedAt: now() })
+            .where(eq(fantasyMatchups.id, existing.id));
+          updated++;
+        } else {
+          unchanged++;
+        }
+        continue;
+      }
+
+      if (finalized) {
+        conflicts.push(
+          `${String(season.year)} week ${String(week.week)} matchup ${String(pairing.matchupId)}: ` +
+            `Sleeper now reports ${String(pairing.pointsA)}–${String(pairing.pointsB)} ` +
+            `for rosters ${String(pairing.rosterAId)}/${String(pairing.rosterBId)}, ` +
+            `stored ${String(existing.pointsACents / 100)}–${String(existing.pointsBCents / 100)}. ` +
+            'The season is finalized; the stored result stands and nothing was written.',
+        );
+        refused++;
+        continue;
+      }
+
+      await tx
+        .update(fantasyMatchups)
+        .set({ ...incoming, updatedAt: now() })
+        .where(eq(fantasyMatchups.id, existing.id));
+      updated++;
+    }
+  }
+
+  return { inserted, updated, unchanged, refused };
 }
 
 export async function persistChain(
@@ -509,6 +664,19 @@ export async function persistChain(
           membershipsCreated++;
           recordsChanged++;
         }
+
+        // ---- The weeks -----------------------------------------------------
+        //
+        // Before finalization, for the same reason the memberships are: a
+        // season frozen earlier in this pass would refuse its own rows.
+        const games = await persistWeeks(tx, {
+          season,
+          seasonId,
+          finalized: wasFinalized,
+          conflicts,
+        });
+        recordsChanged += games.inserted + games.updated;
+        recordsSkipped += games.refused;
 
         // Freezing happens last, after this season's rows are written — a
         // season finalized earlier in the same pass would refuse its own

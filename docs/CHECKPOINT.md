@@ -18,7 +18,13 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 **M2 — the complete pizza-box loot loop. ✅ Shipped to `main` 2026-07-30 (`238dfca`, PR #23). Production deployed.**
 
-**Active milestone: none — pick up the queue below, starting at #26.**
+**Active: M2 completion and polish (commissioner roadmap), with Stats Intelligence running in parallel.**
+
+| Landed since | PR |
+|---|---|
+| Demo-state catalog and the two isolation guards | #31 |
+| Demo appliers, the CLI, the one-command database, four demo-backed visual states | #32 |
+| Stats Intelligence — `fantasy_matchups`, the typed fact layer, the calibrated significance policy, the board socket | #33 |
 
 The commissioner's M2 definition is the *whole* dopamine loop, twelve items: acquire → box on the counter → select → anticipation and animation → rarity-legible reveal → transactional idempotent write → server-side persistence → appears in the collection → equip/showcase → the parlor reflects it → duplicate/retry/refresh correct → passes iPhone visual QA. **M2 is not complete after acquisition, storage, a route, or a static reveal.**
 
@@ -94,7 +100,7 @@ Open a branch off `main` (M2's integration branch is closed; a new milestone get
 
 | | Work | Issue |
 |---|---|---|
-| 1 | **Stats Intelligence — the deterministic fact layer.** Everything narrative depends on it and nothing may guess in its absence | **#26** |
+| 1 | ✅ **Stats Intelligence — the deterministic fact layer** (#33). Weekly matchups persisted, typed facts with evidence and suppression, significance calibrated against the real 162 games, the board socket filled | **#26** |
 | 2 | **M3 — modular character identity.** Constrained and dependable: canonical base bodies, fixed layer set, saved configuration, reliable layering. Wearable equip slots land here, with something to attach to | **#24** |
 | 3 | ✅ **The demo system** (`MANDATE §8`) — landed in #31 and #32 | — |
 | 4 | **The deterministic Slice**, consuming typed facts only |  |
@@ -108,7 +114,7 @@ Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requi
 
 | Gate | Result | Where |
 |---|---|---|
-| `npm run check` | green — **617 tests, 38 files** | local, throwaway Postgres |
+| `npm run check` | green — **656 tests, 40 files** | local, throwaway Postgres |
 | `npm run visual:qa` | green — **22 states × 3 widths**, production build | local |
 | `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
 | PR #23 (integration → `main`) | green on final head `c91548c`; **merged** as `238dfca` | PR #23 |
