@@ -109,43 +109,82 @@ export function TonyToy({
         * taller than the screen, so an absolutely positioned child pins itself
         * to the bottom of the *drawing*, which is off the bottom of the phone.
         */}
+      {/*
+        * ## He speaks on paper, because everything in this shop is on paper
+        *
+        * It was a black rectangle with a hairline of amber across the top, and
+        * the commissioner read it exactly as it was built — *"the black
+        * dialogue rectangle remains large, heavy, and visually separate from
+        * the parlor… feels like website UI."*
+        *
+        * The parlor's material is **cream paper on wood with a stepped bevel**.
+        * The board is paper, the receipt is paper, the reveal plate is paper,
+        * the Slice is literally a newspaper. A dark slab was the only surface
+        * in the product made of something the shop is not made of, and that is
+        * the whole reason it read as chrome bolted over a game.
+        *
+        * So it is an **order pad**: the same `paper-mid` and `wood-dark` as
+        * every other surface, a red rule under the header the way a printed
+        * pad has one, and his name at the top so the words are attributed to a
+        * person rather than emitted by the page.
+        *
+        * ## Narrower, and up off the floor
+        *
+        * `inset-x-3` made it span the screen. It is now `max-w-[17.5rem]` in a
+        * left-aligned lane under Tony, so at 360 it covers a little over three
+        * quarters of the width and at 390 rather less — and it sits above the
+        * home-indicator gutter rather than in it.
+        *
+        * ## Still `fixed`
+        *
+        * The shape has to live inside the room to share its coordinate system,
+        * but the room is taller than the screen; an absolutely positioned child
+        * pins itself to the bottom of the *drawing*, which is off the bottom of
+        * the phone. That was true before and is still true.
+        */}
       {!dismissed && (
         <div
           className="tony-line pointer-events-none fixed inset-x-3 z-40 flex justify-start"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
+          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
         >
-          <div className="pointer-events-auto relative max-w-[19rem]">
-            {/* A stepped tail, drawn in pixels rather than rotated. */}
+          <div className="pointer-events-auto relative max-w-[17.5rem]">
             {/*
-              * At 38% the tail lands under Tony's own lane rather than under
-              * the left edge of the box. Measured against the room: he stands
-              * at logical x 64–136 of 320, the box starts at the screen edge
-              * plus a gutter, and 38% of 17rem is where those two meet.
+              * A stepped tail, drawn in pixels rather than rotated.
+              *
+              * At 34% it lands under Tony's own lane. Measured against the
+              * room: he stands at logical x 64–136 of 320, the pad starts at
+              * the screen edge plus a gutter, and 34% of 17.5rem is where those
+              * two meet. Two steps, light over dark, so it reads as folded
+              * paper rather than as a triangle.
               */}
-            <span aria-hidden="true" className="absolute -top-[8px] left-[38%] flex flex-col">
-              <span className="ml-[8px] h-[4px] w-[8px] bg-amber-mid/45" />
-              <span className="ml-[4px] h-[4px] w-[16px] bg-[#1c1113]" />
+            <span aria-hidden="true" className="absolute -top-[8px] left-[34%] flex flex-col">
+              <span className="ml-[8px] h-[4px] w-[8px] bg-paper-white" />
+              <span className="ml-[4px] h-[4px] w-[16px] bg-paper-mid" />
             </span>
 
             <button
               type="button"
               onClick={() => setDismissed(true)}
               aria-label="Dismiss what Tony said"
-              className="pixel-edge relative block w-full border-2 border-wood-dark bg-[#1c1113] py-2 pr-7 pl-3 text-left"
+              className="pixel-edge relative block w-full border-2 border-wood-dark bg-paper-mid py-2 pr-7 pl-3 text-left"
             >
-              <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-amber-mid/45" />
+              {/*
+                * The header of a printed order pad: who is talking, and the red
+                * rule under it. This is what makes the words *his* rather than
+                * the interface's — `MANDATE §9` in miniature.
+                */}
+              <span className="mb-1.5 block border-b-2 border-red-dark/25 pb-1 font-display text-[11px] tracking-[0.12em] text-wood-mid uppercase">
+                Tony
+              </span>
 
               {/*
                 * A pixel ✕ rather than an icon set: two bars, crossed, on the
                 * grid. It is decoration on a button that is already labelled,
                 * so it is `aria-hidden` and the whole box carries the label.
                 */}
-              <span
-                aria-hidden="true"
-                className="absolute top-1.5 right-1.5 h-3 w-3 opacity-55"
-              >
-                <span className="absolute top-1/2 left-0 h-[2px] w-full rotate-45 bg-amber-mid" />
-                <span className="absolute top-1/2 left-0 h-[2px] w-full -rotate-45 bg-amber-mid" />
+              <span aria-hidden="true" className="absolute top-2 right-2 h-3 w-3 opacity-60">
+                <span className="absolute top-1/2 left-0 h-[2px] w-full rotate-45 bg-wood-mid" />
+                <span className="absolute top-1/2 left-0 h-[2px] w-full -rotate-45 bg-wood-mid" />
               </span>
 
               {/*
@@ -153,10 +192,7 @@ export function TonyToy({
                 * new. Without it React reuses the element, the effect never
                 * re-runs, and a poked line would appear all at once.
                 */}
-              <span
-                aria-live="polite"
-                className="block text-[17px] leading-[1.5] text-paper-white"
-              >
+              <span aria-live="polite" className="block text-[17px] leading-[1.5] text-ink-900">
                 <SpokenLine key={line} retypeOnChange>
                   {line}
                 </SpokenLine>
