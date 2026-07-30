@@ -8,9 +8,15 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Read this first
+
+`docs/PRODUCT_DELIVERY_MANDATE.md` is a **standing commissioner ruling** and sits above every other document. It defines what "complete" means (§5), the permanent visual standard (§6), the mandatory screenshot loop (§7), demoability as a product requirement (§8), specialist ownership (§9), and the deterministic typed-fact layer that must precede any narrative copy (§10).
+
+---
+
 ## Where the product is — 2026-07-30
 
-**Active milestone: M2 — the complete pizza-box loot loop.**
+**Active milestone: M2 — the complete pizza-box loot loop. Built; shipping.**
 
 The commissioner's M2 definition is the *whole* dopamine loop, twelve items: acquire → box on the counter → select → anticipation and animation → rarity-legible reveal → transactional idempotent write → server-side persistence → appears in the collection → equip/showcase → the parlor reflects it → duplicate/retry/refresh correct → passes iPhone visual QA. **M2 is not complete after acquisition, storage, a route, or a static reveal.**
 
@@ -34,16 +40,29 @@ Base a slice branch on the **active integration branch**, never on `main`. Rebas
 | 1 | Box on the tray · open in place · reveal · persistence | ✅ merged (PR #19) |
 | 2 | Acquisition — ledger, trigger balance, opening grant, purchase | ✅ merged (PR #20) |
 | 3 | `/counter/collection` — the shelf, set progress, duplicates | ✅ merged (PR #21) |
-| 4 | Showcase, and the parlor reflecting the result | **PR #22 open** |
+| 4 | Showcase, and the parlor reflecting the result | ✅ merged (PR #22) |
+| — | Delivery mandate persisted + the board fix | **PR #25 open** → integration |
 
 All twelve items of the commissioner's M2 definition are covered by slices 1–4. Wearable *equipping* is explicitly **M3's**, not M2's — twelve wearables and five slots need a character to be equipped onto (ruling index, 2026-07-30).
 
 ### Exact next task
 
-1. Drive **PR #22** green and merge it into `integration/m2-loot-box`.
-2. Open the **integration PR: `integration/m2-loot-box` → `main`**. Read it as a *product*, not a diff — `AUTONOMY.md §3` calls this `ready-for-production`, and a set of green PRs is not a milestone. Walk the whole loop once at 390/375/360: tab → buy → tray glows → open in place → reveal → shelf → showcase → receipt reflects it.
-3. **Merging that PR deploys production.** `vercel-build` runs migrate → seed → build. Migrations 0004–0006 are all additive.
-4. Then start **M3 — modular character identity**. Read `PROJECT_SPEC/03` slots, `PROJECT_SPEC/11_LEAGUE_MEMBER_CHARACTER_SYSTEM.md`, and `art/ASSET_PIPELINE.md` first. Start constrained and dependable: canonical base bodies, a fixed slot set, saved configuration, reliable layering. **Not** free-form generation.
+1. Merge **PR #25** (mandate + board fix) into `integration/m2-loot-box` once its gates are green.
+2. **PR #23** is `integration/m2-loot-box` → `main` and was already fully green before #25 was added; it re-runs on the new head. Read it as a *product*, not a diff. Walk the whole loop at 390/375/360: tab → buy → tray glows → open in place → reveal → shelf → showcase → receipt reflects it.
+3. **Merging #23 deploys production.** `vercel-build` runs migrate → seed → build. Migrations 0004–0006 are additive. Then verify the live URL — **which cannot be done from the sandbox** (see below) — and post a `RELEASE REVIEW`.
+4. Then the queue below, in order.
+
+### The queue after M2 ships
+
+| | Work | Issue |
+|---|---|---|
+| 1 | **Stats Intelligence — the deterministic fact layer.** Everything narrative depends on it and nothing may guess in its absence | **#26** |
+| 2 | **M3 — modular character identity.** Constrained and dependable: canonical base bodies, fixed layer set, saved configuration, reliable layering. Wearable equip slots land here, with something to attach to | **#24** |
+| 3 | **The demo system** (`MANDATE §8`) — deterministic, preview-only, never touching production league data. A feature is not demo-ready if showing its states needs hand-edited SQL |  |
+| 4 | **The deterministic Slice**, consuming typed facts only |  |
+| 5 | M4 Back Hall / Rooms · M5 one polished casino game |  |
+
+Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requires the fact layer to exist before any narrative copy, and `boardFace()`'s null `detail` is already the socket it fills.
 
 ---
 
@@ -51,9 +70,11 @@ All twelve items of the commissioner's M2 definition are covered by slices 1–4
 
 | Gate | Result | Where |
 |---|---|---|
-| `npm run check` | green — **549 tests, 33 files** | local, throwaway Postgres |
+| `npm run check` | green — **555 tests, 34 files** | local, throwaway Postgres |
 | `npm run visual:qa` | green — **18 states × 3 widths**, production build | local |
-| `ci.yml` + `visual-qa.yml` | green on real runners for slices 1, 2 and 3 | PRs #19 #20 #21 |
+| `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
+| PR #23 (integration → `main`) | fully green before #25 was added on top | PR #23 |
+| The whole loop, walked on a production build | tab → buy → open in place → reveal → shelf → showcase → receipt. Ledger `SEASON_START 250, BOX_PURCHASE -50` | local |
 | Reduced motion | verified in-browser: reveal at 106 ms, `opacity: 1`, `transform: none`, no console errors | local |
 
 **Preview and production URLs cannot be reached from the sandbox** — the proxy denies CONNECT to `*.vercel.app`. Verify GitHub-side and say so explicitly. Never claim a URL was smoke-tested when it was not.
@@ -97,6 +118,11 @@ Precedence when they conflict: commissioner ruling → Technical Lead ruling →
 - **`users.showcase_collectible_id`'s FK lives in SQL, not `schema.ts`** — declaring the reverse of `collectibles.user_id` makes both table types mutually recursive and TypeScript gives up (TS7022).
 - **That FK makes `TRUNCATE collectibles CASCADE` reach `users`** and therefore `loot_boxes` and `sessions`. Do not build test state by truncating a middle table; build it directly. For a local reset, truncate and **re-seed**.
 - **A skip list is a place for defects to live.** `colour-fidelity` and `legacy` run on every visual state now. Do not exempt a page from them.
+- **SW never decides what a result means.** No blowout classification, no winner inferred from UI values, no loaded language without a Stats classification. `boardFace()`'s null `detail` is the pattern: leave the socket empty rather than infer.
+- **Typography is 16–18 CSS px, adjusted upward for optical size** — this supersedes the old bare "17px floor".
+- **The board's face is a hero plus at most one short fact.** Sentences go in the panel. Tests cap the hero at 10 characters and the detail at 20 with no full stop.
+- **`TONIGHT_FIELD` is inset 6 units inside `TONIGHT_CREAM`.** Text must never touch the painted frame.
+- **Demoability is a requirement, not a convenience** (`MANDATE §8`). Preview-only, fixed seeds, never production league data, never a real award.
 
 ---
 
