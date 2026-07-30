@@ -31,9 +31,15 @@ import Link from 'next/link';
 
 export type SurfaceTone = 'paper' | 'board' | 'wood';
 
+/*
+ * `on-paper` re-points the rarity slots at inks mixed for a light ground
+ * (`globals.css`, Rarity). Any `.rarity-*` inside a paper panel inherits them,
+ * so a tier label cannot end up as `amber-glow` on cream — which is how the
+ * Collection shipped an invisible LEGENDARY row.
+ */
 const TONES: Record<SurfaceTone, string> = {
   // A photocopied sheet under a warm bulb. Carries most of the reading.
-  paper: 'bg-paper-mid text-ink-900 border-wood-dark',
+  paper: 'on-paper bg-paper-mid text-ink-900 border-wood-dark',
   // Painted board, the colour of the shop after closing.
   board: 'bg-[#1c1113] text-paper-white border-wood-dark',
   // Varnished counter wood.

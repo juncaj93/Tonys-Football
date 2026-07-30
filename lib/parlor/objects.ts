@@ -66,8 +66,72 @@ export const ROOM = { width: 320, height: 569 } as const;
  */
 export const COUNTER_EDGE = 292;
 
-/** Where Tony stands, and how big he is drawn. Measured on the shell. */
-export const TONY = { x: 64, y: 180, width: 72, height: 197 } as const;
+/**
+ * Where Tony stands, and how big he is drawn.
+ *
+ * ## The scale is set by where the counter cuts him, not by taste
+ *
+ * `character_tony_neutral` is a **complete figure** — 88 × 240, head to boots,
+ * hands at his sides. The counter front covers him from `COUNTER_EDGE` down, so
+ * his scale decides which of his own rows the cut lands on:
+ *
+ * ```
+ * cut row = (COUNTER_EDGE − TONY.y) ÷ TONY.height × 240
+ * ```
+ *
+ * Scanning the sprite for skin puts his **hands at rows 106–134**. At the old
+ * `72 × 197` the cut landed on **row 137** — three rows under the hand, so the
+ * counter's edge and the bottom of his hand were the same line. A hand that stops
+ * exactly where an occluder starts does not read as *hidden behind*; it reads as
+ * **removed**, which is what the commissioner saw: *"Tony's lower body and pants
+ * are visibly cut incorrectly around the counter."* Nothing was mis-registered —
+ * the container is aspect-locked to `ROOM` and the overlay lines up to the pixel.
+ * The cut was simply in the worst available place.
+ *
+ * ## The fix is three units of position, not a bigger man
+ *
+ * The first attempt scaled him to `95 × 259`, which moves the cut to row 104 —
+ * above the hands entirely. It works geometrically and it was wrong: he became
+ * the largest thing in the room and stopped reading as a man standing at the
+ * far side of a counter. Commissioner, 2026-07-30: *"you made Tony way too big
+ * now. He needs to be the size he was."*
+ *
+ * **He is the size he was.** `72 × 197`, unchanged. What moved is `y`, by three
+ * units, and that is enough because the problem was never how big the cut was —
+ * it was *where* it landed. At `y = 180` the cut fell on row 136.9, less than
+ * three rows under the bottom of his hand; at this scale three rows is about
+ * eleven device pixels, so hand and counter edge were effectively the same line.
+ * At `y = 177` it falls on **row 140** — six rows clear, roughly twenty-two
+ * device pixels of apron between his hand and the counter, which is the
+ * difference between *behind* and *severed*.
+ *
+ * Three units is all the room there is: his head starts at `y` and the board's
+ * painted frame ends at row 174, so 177 leaves three units of wall above him.
+ * Any further up and he touches the board.
+ *
+ * Height is not free: `AssetView` draws at `w-full h-auto`, so the sprite keeps
+ * its own aspect and `height` here must stay `width × 240 ÷ 88`. Change one and
+ * you must change the other, or the number here stops describing what is drawn.
+ * `tony-scale.test.ts` holds both the aspect and the cut row.
+ */
+export const TONY = { x: 64, y: 177, width: 72, height: 197 } as const;
+
+/** Rows of `character_tony_neutral` its own canvas is tall. */
+export const TONY_SPRITE = { width: 88, height: 240 } as const;
+
+/**
+ * Where Tony's tap region starts — below the board's frame, not at his hairline.
+ *
+ * The board's painted frame ends at row 174. Six units of clearance keeps the
+ * two hit regions apart at every supported width, which is what the `overlap`
+ * gate checks.
+ */
+export const TONY_TAP_TOP = 181;
+
+/** Which row of Tony's sprite the counter's edge lands on. */
+export function tonyCutRow(): number {
+  return ((COUNTER_EDGE - TONY.y) / TONY.height) * TONY_SPRITE.height;
+}
 
 export type ObjectKind = 'door' | 'display' | 'toy';
 
@@ -228,7 +292,22 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     id: 'tony',
     kind: 'toy',
     label: 'Talk to Tony',
-    rect: [TONY.x, TONY.y, TONY.width, COUNTER_EDGE - TONY.y],
+    /*
+     * Starts a little below the top of his head, not at it.
+     *
+     * Nudging him up to clear the counter from his hands brought `TONY.y` to
+     * 177, three units under the board's painted frame — and a hit region that
+     * begins at his hairline then overlapped the board's by about 3.5 css px.
+     * Two objects sharing pixels is the `overlap` gate's whole purpose, and the
+     * gate caught it.
+     *
+     * Tapping someone's hair is not how you get their attention anyway. The
+     * region starts at his shoulders, which is both unambiguous and comfortably
+     * clear of the board. His face is still inside it — the sprite's head
+     * occupies roughly the first 40 rows of 240, about 33 room units here, so
+     * this begins well above his chin.
+     */
+    rect: [TONY.x, TONY_TAP_TOP, TONY.width, COUNTER_EDGE - TONY_TAP_TOP],
   },
 ];
 
@@ -241,12 +320,33 @@ export function roomObject(id: string): RoomObjectSpec {
 /**
  * The Tonight board's cream field, measured — `SHELL_AUDIT §4`.
  *
- * `111 × 79` at `(60, 93)`. This is the **art's** extent: where the cream stops
+ * `119 × 88` at `(61, 83)`. This is the **art's** extent: where the cream stops
  * and the painted frame begins. Text does not go here — `TONIGHT_FIELD` is inset
  * inside it. Recorded separately so the inset is visibly derived from a
  * measurement rather than guessed.
+ *
+ * ## How it is measured, and why the eye is not allowed to do it
+ *
+ * The frame is a dark red band on every side. Scanning `zone_parlor_shell.png`
+ * for that band gives the inner edges directly:
+ *
+ * ```
+ * horizontal runs at y = 100,120,140,160 → (58,60) and (180,182)  → x 61..179
+ * vertical   runs at x =  80,120,160     → (79,82) and (171,174)  → y 83..170
+ * ```
+ *
+ * The previous value — `[60, 93, 111, 79]` — was read off a zoomed screenshot by
+ * eye, and it was wrong on three sides: nine units short on the right, ten too
+ * low on the top. The right-hand error is the one that showed. It put the field's
+ * centre at **115** when the board's true centre is **120**, so every line on the
+ * board was painted five units left of where a sign painter would have put it.
+ * Commissioner, 2026-07-30: *"text is off centered"*. It was, by 5 units — about
+ * 20 device pixels on the phone, which is exactly the size of error the eye
+ * catches instantly and cannot name.
+ *
+ * Re-measure by scanning the art, never by looking at it.
  */
-export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [60, 93, 111, 79];
+export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [61, 83, 119, 88];
 
 /**
  * Where the board's words actually go — the cream field **inset by 6 units**.
@@ -264,12 +364,24 @@ export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [60, 93, 111, 79];
  * border of the frame"*. A sign painter leaves a margin; the frame is part of the
  * drawing and text must not crowd it.
  *
- * Six units on every side, so the text block is `99 × 67` and clears the painted
- * frame on all four sides at every supported width. What sits inside it is a hero
- * and at most one short fact (`boardFace`), centred — not the two sentences at 8px
- * and 9px that were there before.
+ * Six units on every side, so the text block is `107 × 76`, centred on the board's
+ * true centre of **120**, and clears the painted frame on all four sides at every
+ * supported width. What sits inside it is a hero and at most one short fact
+ * (`boardFace`), centred — not the two sentences at 8px and 9px that were there
+ * before.
+ *
+ * Derived from `TONIGHT_CREAM` rather than written out, so a re-measurement of the
+ * art can never leave the two disagreeing. That disagreement is what produced the
+ * off-centre defect: the inset was correct arithmetic applied to a wrong rectangle.
  */
-export const TONIGHT_FIELD: RoomObjectSpec['rect'] = [66, 99, 99, 67];
+const FIELD_INSET = 6;
+
+export const TONIGHT_FIELD: RoomObjectSpec['rect'] = [
+  TONIGHT_CREAM[0] + FIELD_INSET,
+  TONIGHT_CREAM[1] + FIELD_INSET,
+  TONIGHT_CREAM[2] - FIELD_INSET * 2,
+  TONIGHT_CREAM[3] - FIELD_INSET * 2,
+];
 
 /**
  * The prediction sign's slate — the art's own bounds, `SHELL_AUDIT §4`.
@@ -360,8 +472,24 @@ export const TRAY_REVEAL: RoomObjectSpec['rect'] = [180, 262, 46, 46];
  * 168 of 320 units wide — a little over half the room, nowhere near the viewport
  * edges, and nowhere near the bottom of the screen. A plate on a counter, **not
  * a bottom sheet.**
+ *
+ * ## Centred, because it was not
+ *
+ * `x` was 126, so the plate ran 126→294 and hung off the right of the room with
+ * its lower half over the floor. Nothing lines up with it: not the tray it came
+ * from, not the item above it, not the room. It read as a card dropped on top of
+ * a screenshot, which is what the commissioner saw — *"overlapping web cards
+ * rather than a composed game scene."*
+ *
+ * Centred on the room's midline and lifted onto the counter's front face, so the
+ * item, the plate and the tray share one vertical axis and the plate rests on
+ * something solid instead of floating over the checkerboard.
  */
-export const TRAY_PLATE_ANCHOR = { x: 126, y: 316, width: 168 } as const;
+export const TRAY_PLATE_ANCHOR = {
+  x: (ROOM.width - 168) / 2,
+  y: 308,
+  width: 168,
+} as const;
 
 /** The plate's anchor as the percentages the browser wants. No height — see above. */
 export function placePlate(): { left: string; top: string; width: string } {

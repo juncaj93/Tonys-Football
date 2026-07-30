@@ -137,10 +137,26 @@ export default async function ParlorPage() {
           * Tonight panel behind the board still carries it in prose, which is
           * where a screen reader gets it.
           */}
-        <header className="flex h-11 shrink-0 items-center justify-end gap-1 overflow-hidden bg-ink-900 pr-1 pl-3">
+        {/*
+          * Over the room, not above it.
+          *
+          * The bar carries the safe-area inset itself now that `Page` has
+          * stopped padding the whole screen, and a short scrim under it keeps
+          * the iOS clock and battery legible where they cross the ceiling.
+          * `pointer-events-none` on the strip with the link opting back in, so
+          * the top of the room stays tappable everywhere the name is not.
+          */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 z-40 h-24 bg-gradient-to-b from-ink-900/85 via-ink-900/45 to-transparent"
+        />
+        <header
+          className="pointer-events-none absolute inset-x-0 top-0 z-40 flex h-11 items-center justify-end gap-1 pr-1 pl-3"
+          style={{ marginTop: 'env(safe-area-inset-top)' }}
+        >
           <Link
             href="/profile"
-            className="flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-display text-[9px] whitespace-nowrap text-paper-mid/75"
+            className="pointer-events-auto flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-display text-[13px] tracking-[0.08em] whitespace-nowrap text-paper-white/90 uppercase"
           >
             {user.displayName}
           </Link>
@@ -258,11 +274,13 @@ export default async function ParlorPage() {
               className="pointer-events-none absolute flex flex-col items-center justify-center overflow-hidden text-center"
               style={place(TONIGHT_FIELD)}
             >
-              <p className="font-display text-[20px] leading-[1.1] tracking-[0.02em] text-red-dark uppercase">
+              <p className="board-paint font-display text-[21px] leading-[1.1] tracking-[0.02em] text-red-dark uppercase">
                 {face.hero}
               </p>
               {face.detail !== null && (
-                <p className="mt-1.5 text-[16px] leading-[1.25] text-ink-900/80">{face.detail}</p>
+                <p className="board-paint mt-1.5 text-[16px] leading-[1.25] text-wood-dark">
+                  {face.detail}
+                </p>
               )}
             </div>
 

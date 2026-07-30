@@ -62,6 +62,9 @@
 
   --color-violet-deep: #3b2050;
   --color-magenta-neon: #e060b0;
+  /* Epic, mixed for paper. Same hue as magenta-neon, taken down until it reads
+   * on `paper-mid` — 5.9:1 against `#e0d2b8`, where the neon manages 2.4:1. */
+  --color-magenta-deep: #8f1f6b;
 
   /* Rarity reinforces frame geometry and a text label — never color alone. */
   --color-rarity-common: var(--color-ink-300);
@@ -540,6 +543,61 @@ button {
  * covers his face and half the back bar. This is on the sprite's wrapper rather
  * than inside the hotspot because it moves Tony, not the target.
  */
+/*
+ * Paint on the Tonight board.
+ *
+ * The board's face is not a flat fill — it is dithered, two cheeses deep
+ * (`#ffd98a` over `#f2c94c`) with a lit centre falling off to the corners. Type
+ * laid straight onto it competes with the dither at exactly the frequency the
+ * glyph stems occupy, which is why the commissioner read the board as *"messy"*
+ * even once the words were short and centred.
+ *
+ * A panel behind the text would fix it and would also put a web card on a
+ * painted sign. So: a **one-pixel cream halo**, hard offsets and zero blur, in
+ * the board's own top cheese. It is what a sign painter does when lettering over
+ * a busy ground — cut the letter out of the surface first — and because the
+ * offsets are whole pixels with no blur it survives `image-rendering: pixelated`
+ * scaling without softening a single edge.
+ *
+ * Four offsets, not eight: corners would thicken the halo to two pixels on the
+ * diagonal and start to read as an outline font.
+ */
+/*
+ * Interaction priority.
+ *
+ * One primary transient at a time. `data-parlor-focus` is claimed by whatever
+ * owns the moment — today only the box opening — and everything ambient yields
+ * for as long as it is held.
+ *
+ * Tony does not lose his line; it is set aside and comes straight back when the
+ * plate is cleared, because the state that holds it never unmounts. He is
+ * standing right there watching you open it, and a shopkeeper talking over the
+ * thing he just handed you is the interruption, not the courtesy.
+ */
+body[data-parlor-focus='reveal'] .tony-line {
+  opacity: 0;
+  transform: translate3d(0, 6px, 0);
+  pointer-events: none;
+  transition:
+    opacity 160ms ease-out,
+    transform 160ms ease-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body[data-parlor-focus='reveal'] .tony-line {
+    transition: none;
+    transform: none;
+  }
+}
+
+.board-paint {
+  text-shadow:
+    1px 0 0 var(--color-amber-glow),
+    -1px 0 0 var(--color-amber-glow),
+    0 1px 0 var(--color-amber-glow),
+    0 -1px 0 var(--color-amber-glow);
+}
+
 .tony-mark {
   transition: transform 260ms ease-out;
 }
@@ -811,17 +869,50 @@ button {
  * would make rarity un-rebalanceable — and rebalancing is what P3's simulation
  * exists to do.
  */
+/*
+ * ## The tier colours are lit for the room, and the room is dark
+ *
+ * `blue-light`, `magenta-neon` and `amber-glow` are chosen to glow on the dim
+ * boards and the tray. Put the same four on a cream `PixelPanel` and two of them
+ * stop existing: legendary is `#ffd98a` on `#e0d2b8` — **1.2:1** — and epic is
+ * `#e060b0` on the same — **2.4:1**. The Collection's set-progress list shipped
+ * that way, so `LEGENDARY 0 / 2` had an invisible label and `EPIC` a barely
+ * visible one, on the one screen whose entire job is telling you what you own.
+ *
+ * So the tier is resolved through an indirection the *surface* controls. The
+ * `.rarity-*` classes no longer name a colour; they name a slot. A paper surface
+ * re-points those slots at inks mixed for paper, and because custom properties
+ * inherit, a `.rarity-epic` anywhere inside picks the paper ink up without
+ * knowing it is on paper.
+ *
+ * Same hue, same tier order, same word-first rule — only the value changes with
+ * the ground it is printed on, which is what ink does.
+ */
+:root {
+  --rarity-common: var(--color-rarity-common);
+  --rarity-rare: var(--color-rarity-rare);
+  --rarity-epic: var(--color-rarity-epic);
+  --rarity-legendary: var(--color-rarity-legendary);
+}
+
+.on-paper {
+  --rarity-common: var(--color-ink-500);
+  --rarity-rare: var(--color-blue-mid);
+  --rarity-epic: var(--color-magenta-deep);
+  --rarity-legendary: var(--color-amber-deep);
+}
+
 .rarity-common {
-  --rarity: var(--color-rarity-common);
+  --rarity: var(--rarity-common);
 }
 .rarity-rare {
-  --rarity: var(--color-rarity-rare);
+  --rarity: var(--rarity-rare);
 }
 .rarity-epic {
-  --rarity: var(--color-rarity-epic);
+  --rarity: var(--rarity-epic);
 }
 .rarity-legendary {
-  --rarity: var(--color-rarity-legendary);
+  --rarity: var(--rarity-legendary);
 }
 
 .rarity-word {

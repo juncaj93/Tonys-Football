@@ -79,7 +79,7 @@ export default async function ShowcasePage() {
             {mine !== null && (
               <div className="mt-2 flex items-center gap-3">
                 <span aria-hidden="true" className="block h-14 w-14 shrink-0">
-                  <AssetView resolution={resolveAsset(mine.slug)} compact />
+                  <AssetView resolution={resolveAsset(mine.slug)} compact placeholder="collectible" />
                 </span>
                 <span>
                   <span className="block text-[17px] leading-[1.3] text-ink-900">{mine.name}</span>
@@ -129,7 +129,7 @@ export default async function ShowcasePage() {
                       <span className="h-[3px] w-6 bg-paper-mid/25" />
                     ) : (
                       <span className="block h-11 w-11">
-                        <AssetView resolution={resolveAsset(entry.item.slug)} compact />
+                        <AssetView resolution={resolveAsset(entry.item.slug)} compact placeholder="collectible" />
                       </span>
                     )}
                   </span>
