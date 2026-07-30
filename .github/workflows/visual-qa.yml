@@ -1,0 +1,126 @@
+name: Visual QA
+
+# The gate green CI is not.
+#
+# Every visual regression this project shipped passed `ci.yml`: the legacy
+# homepage, the violet floor, a bottom sheet covering a quarter of the room, and
+# a <Link> to a route that did not exist. This workflow builds the real thing,
+# seeds real imported data, drives twelve states at three widths, asserts what
+# can be asserted, and uploads every screenshot so the rest can be looked at.
+#
+# It needs no API key. `VISUAL_ACCEPTANCE.md` is the specification it enforces.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  NEXT_TELEMETRY_DISABLED: '1'
+
+jobs:
+  visual:
+    name: Screenshots · gates
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: tonys
+          POSTGRES_PASSWORD: local_dev_only
+          POSTGRES_DB: tonys_visual
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U tonys -d tonys_visual"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgres://tonys:local_dev_only@localhost:5432/tonys_visual
+      # Never a real secret: this build is thrown away with the runner.
+      SESSION_SECRET: visual_qa_ephemeral_secret_thirty_two_chars_min
+      SLEEPER_LEAGUE_ID: '1385016656425668608'
+      VISUAL_QA_BASE: http://localhost:3111
+      VISUAL_QA_OUT: visual-qa
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Apply migrations
+        run: npm run db:migrate
+
+      # The recorded fixtures are committed, so this cannot fail on a Sleeper
+      # outage and produces the same league every time.
+      - name: Seed the league
+        run: npm run db:seed
+
+      # Six banners is a state the real league will not reach until 2029, and it
+      # is the state where the rail's geometry and AA compliance are tightest.
+      # Preview-only: this database is destroyed with the runner.
+      - name: Add preview seasons for the six-banner state
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 <<'SQL'
+          INSERT INTO seasons (year, status, is_historical, finalized_at)
+          SELECT y, 'ARCHIVED', true, now()
+          FROM (VALUES (2021), (2022), (2023)) AS t(y)
+          ON CONFLICT (year) DO NOTHING;
+
+          INSERT INTO season_memberships (season_id, user_id, roster_id, final_rank)
+          SELECT s.id, u.id, 1, 1
+          FROM (VALUES (2021, 'Nathan'), (2022, 'Ryan'), (2023, 'Cheese')) AS m(yr, name)
+          JOIN seasons s ON s.year = m.yr
+          JOIN users u ON u.display_name = m.name
+          ON CONFLICT DO NOTHING;
+          SQL
+
+      # A production build, not `next dev`. The dev overlay is not product UI and
+      # dev-mode rendering is not what anybody ships.
+      - name: Build
+        run: npm run build
+
+      - name: Start
+        run: |
+          npx next start -p 3111 > server.log 2>&1 &
+          for i in $(seq 1 60); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:3111/door || true)
+            [ "$code" = "200" ] && echo "up after ${i}s" && exit 0
+            sleep 1
+          done
+          echo "server never became ready"; cat server.log; exit 1
+
+      - name: Visual QA
+        run: npm run visual:qa
+
+      # Uploaded on failure too — a failing gate is exactly when somebody wants
+      # to see the pixels.
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-qa-${{ github.sha }}
+          path: visual-qa/
+          retention-days: 14
+
+      - name: Server log on failure
+        if: failure()
+        run: tail -80 server.log || true
