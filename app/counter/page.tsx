@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { BuyBox } from '@/components/counter/buy-box';
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
@@ -12,7 +14,7 @@ import { getDb } from '@/lib/db';
  *
  * **`/counter`, not `/shop`** — the product takes no money, and "the counter"
  * is what Tony calls it. `/counter/collection` and `/counter/showcase` sit
- * beneath this when they ship.
+ * beneath this; `/counter/collection` ships here, `/counter/showcase` follows.
  *
  * ## Landing priority, from `18 §4`
  *
@@ -111,11 +113,12 @@ export default async function CounterPage() {
             </PixelPanel>
 
             {/*
-              * The collection view is `/counter/collection` and lands in its own
-              * slice. What must be true *now* is the count: this panel said
-              * "nothing collected yet" unconditionally, and the moment a box could
-              * be opened that became a false statement about a manager's own
-              * property.
+              * The shelf's summary, and the way through to it.
+              *
+              * This panel once said "nothing collected yet" unconditionally, which
+              * became a false statement about a manager's own property the moment a
+              * box could be opened. It now counts, and `/counter/collection` is
+              * where the pieces actually are.
               */}
             <PixelPanel className="px-4 py-4">
               <PanelHeading>Your collection</PanelHeading>
@@ -124,6 +127,21 @@ export default async function CounterPage() {
                   ? `${plural(collectiblesOwned, 'collectible', 'collectibles')}, kept permanently, across every season.`
                   : 'Nothing collected yet. What you pull is yours permanently, across every season.'}
               </p>
+
+              {/*
+                * Through to the shelf.
+                *
+                * It is offered even when the shelf is empty: set progress is the
+                * reason to go and look, and hiding the route until somebody has
+                * pulled something would make the counter's own claim about
+                * permanence unverifiable.
+                */}
+              <Link
+                href="/counter/collection"
+                className="mt-3 flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-ink-700/85 uppercase underline decoration-ink-700/30 underline-offset-2 active:translate-y-px"
+              >
+                Look at the shelves
+              </Link>
             </PixelPanel>
           </div>
 

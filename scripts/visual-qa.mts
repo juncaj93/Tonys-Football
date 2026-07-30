@@ -91,7 +91,9 @@ type StateName =
   | 'keyboard-focus'
   | 'six-banners'
   | 'tray-owned-box'
-  | 'tray-reveal';
+  | 'tray-reveal'
+  | 'collection'
+  | 'collection-filtered';
 
 async function dismissTony(page: Page): Promise<void> {
   const x = page.getByRole('button', { name: /Dismiss what Tony said/i });
@@ -195,6 +197,36 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1500);
       return;
+    /*
+     * The shelf, after a pull.
+     *
+     * Ordered **after** `tray-reveal` in `ALL_STATES`, so by the time this runs the
+     * manager owns something and the grid shows a held spot beside empty ones. A
+     * capture of an entirely empty shelf would miss the two things worth reviewing:
+     * the rarity treatment on a held spot, and whether the empty spots read as
+     * deliberately empty rather than as components that failed to load.
+     */
+    case 'collection':
+      await page.goto(`${BASE}/counter/collection`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    /*
+     * A filter that matches nothing.
+     *
+     * The empty-result path, which is a real state a manager reaches by tapping a
+     * tier they have not pulled yet — and `VISUAL_ACCEPTANCE.md §4` requires empty
+     * surfaces to be visibly empty on purpose. `legendary` is the safe choice: at
+     * the provisional weights it is 2 parts in 4000, so a seeded run will not have
+     * one by accident.
+     */
+    case 'collection-filtered':
+      await page.goto(`${BASE}/counter/collection?rarity=legendary`, {
+        waitUntil: 'networkidle',
+      });
+      await page.waitForTimeout(1200);
+      return;
+
     case 'back-hall':
       await home(page);
       await dismissTony(page);
@@ -283,7 +315,10 @@ const ALL_STATES: readonly StateName[] = [
   'keyboard-focus',
   'six-banners',
   'tray-owned-box',
+  // After the reveal on purpose: the shelf is worth reviewing with something on it.
   'tray-reveal',
+  'collection',
+  'collection-filtered',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
@@ -386,14 +421,24 @@ async function checkColourFidelity(page: Page, width: number): Promise<void> {
 /** Legacy assets and routes that were withdrawn and must not come back. */
 async function checkNoLegacy(page: Page, width: number): Promise<void> {
   const html = await page.content();
-  const banned: readonly [string, string][] = [
-    ['zone_front_counter', 'the legacy two-tile room'],
-    ['zone_counter_front', 'the withdrawn foreground asset'],
-    ['/collection', 'the withdrawn collectible route'],
-    ['ShowInteractables', 'the withdrawn hitbox control'],
+
+  const banned: readonly [RegExp, string, string][] = [
+    [/zone_front_counter/, 'zone_front_counter', 'the legacy two-tile room'],
+    [/zone_counter_front/, 'zone_counter_front', 'the withdrawn foreground asset'],
+    /*
+     * The withdrawn route is `/collection` at the **root**. `/counter/collection`
+     * is the canonical one (`18 §4`), and a plain substring match banned it —
+     * which is how this gate first reported the correct route as a violation.
+     *
+     * Anchored to a quote or a path boundary so `href="/collection"` fails and
+     * `href="/counter/collection"` does not.
+     */
+    [/["'(\s]\/collection(["'?#/\s)]|$)/, '/collection', 'the withdrawn root collectible route'],
+    [/ShowInteractables/, 'ShowInteractables', 'the withdrawn hitbox control'],
   ];
-  for (const [needle, why] of banned) {
-    if (html.includes(needle)) fail('legacy', `@${String(width)} page references ${needle} — ${why}`);
+
+  for (const [pattern, name, why] of banned) {
+    if (pattern.test(html)) fail('legacy', `@${String(width)} page references ${name} — ${why}`);
   }
 }
 
@@ -583,10 +628,22 @@ async function run(): Promise<void> {
         await page.waitForTimeout(300);
         await page.screenshot({ path: path.join(OUT, `${String(width)}-${state}.png`) });
 
-        // The homepage gates only make sense on the homepage.
-        if (!['rack', 'counter', 'back-hall'].includes(state)) {
-          await checkColourFidelity(page, width);
-          await checkNoLegacy(page, width);
+        /*
+         * Colour fidelity and legacy references apply to **every** page.
+         *
+         * They used to be skipped on `rack`, `counter` and `back-hall`, on the
+         * reasoning that "the homepage gates only make sense on the homepage".
+         * That was true of the object map and the tap targets and false of these
+         * two — and the exemption is precisely why `RoomBehind` sat there drawing
+         * the withdrawn two-tile room behind every interior screen, undetected,
+         * from V1 until the `collection` state happened not to be on the list.
+         *
+         * A skip list is a place for defects to live. These now run everywhere.
+         */
+        await checkColourFidelity(page, width);
+        await checkNoLegacy(page, width);
+
+        {
 
           /*
            * Overlap is only meaningful between targets that are reachable at
