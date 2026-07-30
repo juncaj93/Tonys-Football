@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { roomObjectAttributes } from '@/components/scene/room-object';
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
 import { type Banner } from '@/lib/parlor/champions';
-import { BANNER, ROOM, bannerPartitions, place } from '@/lib/parlor/objects';
+import { BANNER, ROOM, bannerPartitions, place, roomObject } from '@/lib/parlor/objects';
 
 /**
  * The championship rail.
@@ -54,6 +55,9 @@ export function BannerRail({ banners }: { banners: readonly Banner[] }) {
   const triggers = useRef<(HTMLButtonElement | null)[]>([]);
   const partitions = bannerPartitions();
   const open = openSlot === null ? null : banners[openSlot];
+  // The rail's own entry in the object map. Every partition below reports as
+  // this one Display.
+  const rail = roomObject('banners');
 
   return (
     <>
@@ -80,6 +84,11 @@ export function BannerRail({ banners }: { banners: readonly Banner[] }) {
             }}
             style={place(partition)}
             className="room-shape absolute z-30 outline-none"
+            // The rail is ONE Display in the object map, rendered as one button
+            // per occupied slot. `data-room-partition` is what tells the
+            // `object-map` gate that these six share an identity on purpose, so
+            // it can keep rejecting genuine duplicates.
+            {...roomObjectAttributes(rail, index)}
           >
             {/*
               * The pennant itself, inside the hit region. The image carries its

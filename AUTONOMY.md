@@ -45,7 +45,9 @@ One label per issue, and exactly one. The label **is** the state.
 | `production-verification` | Merged; smoke tests running | release reviewer |
 | `blocked-human-only` | Needs a credential, permission or payment | commissioner |
 
-**Only `blocked-human-only` waits on a person.** Everything else is a machine's turn.
+**Only `blocked-human-only` waits on a person.** Everything else is an actor's turn.
+
+"Actor" means whoever holds that role contract when the work is picked up — a session, a workflow, whatever is available. The label says what happens next and which `agents/*.md` file governs it; it deliberately does not say what kind of thing performs it. That is why removing the orchestrator (`§4`) changed nothing here.
 
 ---
 
@@ -88,9 +90,25 @@ One label per issue, and exactly one. The label **is** the state.
 | `npm run visual:qa` — 12 states × 3 widths, deterministic gates, artifacts | **live**, no credentials |
 | `.github/workflows/visual-qa.yml` — runs the above on every PR, uploads screenshots | **live**, no credentials |
 | `.github/workflows/ci.yml` — typecheck · lint · test · build | **live** |
-| `.github/workflows/orchestrator.yml` — the model-driven loop | **inert until `ANTHROPIC_API_KEY` exists**; guarded so it skips rather than fails |
+| `.github/workflows/orchestrator.yml` — the model-driven loop | **off, by decision.** Manual dispatch only. See below |
 
-This split is deliberate. The arithmetic gates are the ones that never sleep, so they were built first and depend on nothing. The judgement gates need a model, and a model needs a key.
+This split is deliberate, and on 2026-07-30 it paid for itself. The arithmetic gates were built first precisely because they depend on nothing; the judgement gates need a model, and a model costs money.
+
+### The orchestrator is off, by commissioner decision
+
+**2026-07-30: the league does not pay for API use.** That is a standing decision, and it is the highest form of authority in `§1` — it is not re-litigated and it is not worked around.
+
+What changed:
+
+- `orchestrator.yml` is reduced to **`workflow_dispatch` only**. No schedule, no `issues: labeled`, no `issue_comment`. It cannot fire on its own and nothing routine invokes it. The file is kept, not deleted, so the design stays legible and the decision stays reversible.
+- `ANTHROPIC_API_KEY` should be **removed from Actions secrets**. With it absent, `preflight` skips the job, so even a manual dispatch is a no-op and no workflow in this repository can spend anything.
+- A hard, welcome side effect: the hourly cron was standing up a Postgres service, an `npm ci` and a build every hour on a **private** repository, where Actions minutes are metered. That cost stops too.
+
+**Nothing about the lifecycle in `§3` changes.** The labels are the state machine; the workflow was only ever one possible actor reading them. `agents/*.md` are role contracts, and a contract works the same whether a workflow or a person opens it. Turns are now taken in a session by whoever is driving the work — which is how M2 slice 1 shipped, under exactly the gates the loop would have applied.
+
+**No product scope is lost.** Generative AI in this product is limited to Tony's Tuesday Slice, and `16 §9` already requires the Slice to publish correctly with the AI key unset — the template renderer is the default path, not a degraded one. `docs/DEPLOYMENT.md` has always specified this key as optional and unset in production. The only thing that needed money was the automation, and the automation was a convenience.
+
+**Do not reintroduce a paid dependency** — no scheduled model calls, no per-pull-request review agent, no "just for the Slice" API path — without a new commissioner decision recorded in `§1`.
 
 ---
 
@@ -112,6 +130,8 @@ This split is deliberate. The arithmetic gates are the ones that never sleep, so
 2. Install or authorize a GitHub App
 3. Grant account permissions
 4. Authorize payment
+
+**Item 4 has a standing answer for API use: no** (2026-07-30). Do not escalate it again, and do not design work that depends on it being reversed. If a task appears to need paid model access, the correct move is to find the unpaid path — `16 §9` already requires one for the only feature that uses a model at all — or to say plainly that the task is not doable within that constraint.
 
 Anything else — branch strategy, PR mechanics, spacing, typography, stale docs, test repairs, preview deploys, production deploys after the gates pass — is decided in the repository. Aesthetic uncertainty is resolved from the approved references, not by asking.
 

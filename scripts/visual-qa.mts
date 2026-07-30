@@ -89,7 +89,9 @@ type StateName =
   | 'counter'
   | 'back-hall'
   | 'keyboard-focus'
-  | 'six-banners';
+  | 'six-banners'
+  | 'tray-owned-box'
+  | 'tray-reveal';
 
 async function dismissTony(page: Page): Promise<void> {
   const x = page.getByRole('button', { name: /Dismiss what Tony said/i });
@@ -176,10 +178,21 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.getByRole('link', { name: /rack/i }).click({ force: true });
       await page.waitForTimeout(1500);
       return;
+    /*
+     * `/counter`, reached directly rather than by tapping the tray.
+     *
+     * The tray is a Door, but its destination is conditional: with a box on it,
+     * tapping **opens the box in place** (`18 §4.1`) instead of navigating, so
+     * there is no anchor to click while a manager is holding one. Every seeded
+     * manager starts with a box, so that is the state this driver always finds.
+     *
+     * Navigating straight there is the honest way to photograph the page. The
+     * Door itself is asserted by `object-map` on `idle` and `tray-owned-box`,
+     * which check the tray's identity and kind rather than its HTML tag — so
+     * nothing is lost by not clicking it here.
+     */
     case 'counter':
-      await home(page);
-      await dismissTony(page);
-      await page.getByRole('link', { name: /counter/i }).click({ force: true });
+      await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1500);
       return;
     case 'back-hall':
@@ -194,6 +207,62 @@ async function reach(page: Page, state: StateName): Promise<void> {
       // Four tabs lands inside the room rather than on the utility bar.
       for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
       await page.waitForTimeout(250);
+      return;
+
+    /*
+     * A box on the tray, unopened.
+     *
+     * Non-destructive on purpose — it looks and does not touch. Every width
+     * signs in as the same manager, so a state that *opened* the box would
+     * consume it and leave the two narrower widths photographing an empty tray.
+     *
+     * This is the state that proves the whole visual claim of the slice: the box
+     * is on the tray, the tray Door glows for the first time, and the object map
+     * is still eight.
+     *
+     * ## It currently looks like `idle`, and that is the truth rather than a bug
+     *
+     * The seed grants every manager a box, so *today* the idle room has a box on
+     * the tray and these two artifacts resemble each other. The value here is the
+     * gates: this is the named state where `object-map`, `tap-target` and `glow`
+     * run against the owned tray, so a reviewer knows which screenshot is
+     * making that claim.
+     *
+     * They diverge as soon as boxes are acquired rather than seeded — a manager
+     * who has opened theirs has an empty tray again, and `idle` goes back to the
+     * calm room it was in V1.
+     */
+    case 'tray-owned-box':
+      await home(page);
+      await dismissTony(page);
+      // Past the glow's 3.4s cycle, so the capture is not caught mid-breath.
+      await page.waitForTimeout(600);
+      return;
+
+    /*
+     * The reveal.
+     *
+     * **Opt-in, via `--state=tray-reveal`, and deliberately not in `ALL_STATES`.**
+     *
+     * A box opens exactly once, by design — that is the slice's central
+     * guarantee, enforced by a unique constraint. So capturing the reveal
+     * *consumes* the state, which means it cannot be part of a gate that has to
+     * be idempotent and has to produce the same artifact set at three widths from
+     * one seeded database. Including it would make `npm run visual:qa` pass on a
+     * fresh database and fail on the second run, and a gate that cries wolf gets
+     * switched off.
+     *
+     * This is a real gap and it is stated rather than hidden: the reveal is
+     * reviewed from an on-demand capture until boxes are *acquirable*, at which
+     * point the driver can mint one per width and this becomes a required state.
+     * That is the next slice (token purchase through `apply_token_delta`).
+     */
+    case 'tray-reveal':
+      await home(page);
+      await dismissTony(page);
+      await page.getByRole('button', { name: /Open your pizza box/i }).click({ force: true });
+      // The anticipation beat is 1100ms and the rise is 420ms.
+      await page.waitForTimeout(2200);
       return;
   }
 }
@@ -211,7 +280,11 @@ const ALL_STATES: readonly StateName[] = [
   'back-hall',
   'keyboard-focus',
   'six-banners',
+  'tray-owned-box',
 ];
+
+/** Reachable by name, but not part of the required set. See `tray-reveal` above. */
+const OPT_IN_STATES: readonly StateName[] = ['tray-reveal'];
 
 /* ------------------------------------------------------------------- gates -- */
 
@@ -330,35 +403,155 @@ async function checkNoLegacy(page: Page, width: number): Promise<void> {
  * The room's whole grammar is 3 Doors, 4 Displays, 1 Toy. A ninth interactive
  * object, or a Door that has quietly become a Display, is a product regression
  * that no unit test sees.
+ *
+ * ## This used to count anchors, and that was too weak in both directions
+ *
+ * The old gate counted `<a href>` matching `slice|counter|back-hall` and looked
+ * for one button labelled "Talk to Tony". Two problems:
+ *
+ *   - **It reported a false failure.** The tray is a Door, and when a box is
+ *     owned it *opens at the tray, in place* (`18 §4.1`) rather than navigating,
+ *     so it renders as a button. An anchor count reads that as a missing Door —
+ *     and the obvious way to make the gate green again would have been to route
+ *     to `/counter` first, which is the precise defect the ruling forbids. A gate
+ *     that pressures you toward a known defect is worse than no gate.
+ *   - **It missed real ones.** Nothing checked the four Displays, and nothing
+ *     would have noticed a Door quietly becoming a Display as long as some
+ *     anchor still pointed at the route.
+ *
+ * So the assertion is now the **whole map by identity**: every interactive room
+ * object carries `data-room-object` and `data-room-kind`
+ * (`components/scene/room-object.tsx`), and the rendered set must equal
+ * `ROOM_OBJECTS` exactly — same ids, same kinds, no extras, no duplicates. That
+ * catches the ninth object, the demoted Door, the vanished Display, and the
+ * renamed id, and it is indifferent to which HTML tag an object happens to use.
  */
+
+/** The map, as `objects.ts` declares it. Kept in sync by the gate, not by hand. */
+const EXPECTED_OBJECTS: Readonly<Record<string, 'door' | 'display' | 'toy'>> = {
+  slice: 'door',
+  counter: 'door',
+  'back-hall': 'door',
+  tonight: 'display',
+  banners: 'display',
+  prediction: 'display',
+  receipt: 'display',
+  tony: 'toy',
+};
+
+/**
+ * The one object allowed to render as several targets.
+ *
+ * The banner rail is a single Display divided into one button per occupied slot,
+ * because "which season is that one?" is a question about a specific banner. Any
+ * *other* id appearing twice is a duplicate, and a duplicate doubles a tap
+ * target where nobody can see it.
+ */
+const PARTITIONED = new Set(['banners']);
+
 async function checkObjectMap(page: Page, width: number): Promise<void> {
-  const counts = await page.evaluate(() => {
-    const links = [...document.querySelectorAll('a[href]')].filter((a) => {
-      const r = a.getBoundingClientRect();
-      return r.width > 0 && a.getAttribute('href')?.startsWith('/') === true;
-    });
-    const roomLinks = links.filter((a) => /slice|counter|back-hall/.test(a.getAttribute('href') ?? ''));
-    const buttons = [...document.querySelectorAll('button[aria-label]')].filter(
-      (b) => b.getBoundingClientRect().width > 0,
+  const found = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-room-object]')]
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => ({
+        id: el.getAttribute('data-room-object') ?? '',
+        kind: el.getAttribute('data-room-kind') ?? '',
+        partitioned: el.hasAttribute('data-room-partition'),
+      })),
+  );
+
+  const at = `@${String(width)}`;
+
+  // Collapse partitions to the object they belong to, then count. A partitioned
+  // object is one object; anything else appearing twice is a defect.
+  const byId = new Map<string, typeof found>();
+  for (const object of found) {
+    byId.set(object.id, [...(byId.get(object.id) ?? []), object]);
+  }
+
+  for (const [id, group] of byId) {
+    if (group.length === 1) continue;
+    if (!PARTITIONED.has(id)) {
+      fail('object-map', `${at} "${id}" is rendered ${String(group.length)} times`);
+    } else if (!group.every((object) => object.partitioned)) {
+      fail(
+        'object-map',
+        `${at} "${id}" has ${String(group.length)} elements but not all are marked as partitions`,
+      );
+    }
+  }
+
+  for (const [id, kind] of Object.entries(EXPECTED_OBJECTS)) {
+    const group = byId.get(id);
+    if (group === undefined) {
+      fail('object-map', `${at} room object "${id}" (${kind}) is missing`);
+    } else if (group[0]!.kind !== kind) {
+      fail('object-map', `${at} "${id}" is a ${group[0]!.kind}, expected a ${kind}`);
+    }
+  }
+
+  for (const id of byId.keys()) {
+    if (!(id in EXPECTED_OBJECTS)) {
+      fail(
+        'object-map',
+        `${at} unexpected room object "${id}" — the homepage is exactly eight`,
+      );
+    }
+  }
+
+  // The headline numbers, stated so a failure names the grammar and not just a row.
+  const tally = (kind: string): number =>
+    [...byId.values()].filter((group) => group[0]!.kind === kind).length;
+
+  if (tally('door') !== 3 || tally('display') !== 4 || tally('toy') !== 1) {
+    fail(
+      'object-map',
+      `${at} expected 3 Doors · 4 Displays · 1 Toy, found ${String(tally('door'))} · ${String(tally('display'))} · ${String(tally('toy'))}`,
     );
-    return {
-      doors: roomLinks.length,
-      buttons: buttons.map((b) => b.getAttribute('aria-label') ?? ''),
-    };
+  }
+}
+
+/**
+ * A box on the tray glows; nothing else in the room does.
+ *
+ * `18` allows exactly one persistent affordance — a Door with something to say —
+ * and V1 shipped with none. This slice creates the first, so this gate exists to
+ * stop the second from arriving unnoticed: a glow on a Display, or a second Door
+ * lighting up, teaches the room's grammar wrong and no unit test can see it.
+ *
+ * Measured as "a `drop-shadow` filter on an element inside the room", which is
+ * the room's only sanctioned glow mechanism (`18 §9.4`).
+ */
+async function checkOnlyTheTrayGlows(page: Page, width: number): Promise<void> {
+  const glowing = await page.evaluate(() => {
+    const room = document.querySelector('main');
+    if (room === null) return [];
+    return [...room.querySelectorAll<HTMLElement>('*')]
+      .filter((el) => {
+        const filter = getComputedStyle(el).filter;
+        return filter !== 'none' && filter.includes('drop-shadow');
+      })
+      .map((el) => el.className.toString().slice(0, 60));
   });
 
-  if (counts.doors !== 3) {
-    fail('object-map', `@${String(width)} expected 3 Doors, found ${String(counts.doors)}`);
+  for (const className of glowing) {
+    if (!/\bbox-(owned|opening)\b|\brarity-/.test(className)) {
+      fail(
+        'glow',
+        `@${String(width)} something other than the tray's box is glowing: "${className}"`,
+      );
+    }
   }
-  const toy = counts.buttons.filter((l) => /Talk to Tony/i.test(l)).length;
-  if (toy !== 1) fail('object-map', `@${String(width)} expected 1 Toy, found ${String(toy)}`);
 }
 
 /* -------------------------------------------------------------------- main -- */
 
 async function run(): Promise<void> {
   const only = process.argv.find((a) => a.startsWith('--state='))?.split('=')[1];
-  const states = only === undefined ? ALL_STATES : ALL_STATES.filter((s) => s === only);
+  const states =
+    only === undefined
+      ? ALL_STATES
+      : [...ALL_STATES, ...OPT_IN_STATES].filter((s) => s === only);
   if (states.length === 0) throw new Error(`unknown --state=${String(only)}`);
 
   mkdirSync(OUT, { recursive: true });
@@ -411,6 +604,21 @@ async function run(): Promise<void> {
           if (state === 'idle') {
             await checkTargets(page, width);
             await checkObjectMap(page, width);
+            // Nothing glows in the idle room unless a box is on the tray.
+            await checkOnlyTheTrayGlows(page, width);
+          }
+
+          /*
+           * The owned tray is the second state where every room object is
+           * simultaneously live, so the map and the targets are judged here too.
+           * This is the state that would catch the box arriving as a *ninth*
+           * object, or the tray Door being replaced rather than restated — the
+           * two ways this slice could have broken the room's grammar.
+           */
+          if (state === 'tray-owned-box') {
+            await checkTargets(page, width);
+            await checkObjectMap(page, width);
+            await checkOnlyTheTrayGlows(page, width);
           }
         }
 

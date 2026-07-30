@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Arriving } from '@/components/scene/arrival';
 import { BannerRail } from '@/components/scene/banner-rail';
+import { CounterTray } from '@/components/scene/counter-tray';
 import { RoomDisplay, RoomDoor } from '@/components/scene/room-object';
 import { TonyToy } from '@/components/scene/tony-toy';
 import { Page } from '@/components/shell';
@@ -11,6 +12,7 @@ import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
+import { ownedBox } from '@/lib/counter/boxes';
 import { getDb } from '@/lib/db';
 import { championBanners } from '@/lib/parlor/champions';
 import {
@@ -54,10 +56,17 @@ import { loadTags } from '@/lib/tags/repository';
  * are not in the markup at all.
  *
  * **Only Doors glow, and only when they have something to say.** The board, the
- * sign, the receipt, the tray and the doorway are baked into the shell, so they
- * have no alpha to derive a glow from — which is correct rather than a
- * limitation: Displays never glow by rule, and in V1 the two baked Doors have
- * nothing to announce.
+ * sign, the receipt, the empty tray and the doorway are baked into the shell, so
+ * they have no alpha to derive a glow from — which is correct rather than a
+ * limitation: Displays never glow by rule.
+ *
+ * The tray is the one that changed. When a manager owns an unopened box there is
+ * a **box overlay** on the tray, and an overlay has its own alpha — so the tray
+ * Door glows, for the first time, because it finally has something to say. The
+ * doorway still does not, because nothing beyond it is open yet.
+ *
+ * The box is a **state of the tray**, not a ninth object. Tapping it opens it
+ * where it sits (`18 §4.1`); tapping an empty tray still goes to `/counter`.
  */
 
 // The greeting is chosen per manager and logged on the first visit of each day,
@@ -72,11 +81,12 @@ export default async function ParlorPage() {
   const db = getDb();
   const clock = seasonClock();
 
-  const [tags, managers, tonight, banners] = await Promise.all([
+  const [tags, managers, tonight, banners, box] = await Promise.all([
     loadTags(db),
     listDoorManagers(db),
     tonightBoard(db),
     championBanners(db),
+    ownedBox(db, user.id),
   ]);
 
   const greeting = await greetingFor(db, {
@@ -185,7 +195,26 @@ export default async function ParlorPage() {
 
             {/* Doors. */}
             <RoomDoor spec={roomObject('slice')} />
-            <RoomDoor spec={roomObject('counter')} />
+
+            {/*
+              * The tray.
+              *
+              * Still one Door and still the same hit region. What changes is
+              * what a tap does: with nothing on the tray it goes to `/counter`
+              * to browse, and with a box on it **the box opens here, in place**
+              * (`18 §4.1`). Routing to `/counter` first would put a navigation
+              * step inside the most exciting moment in the product, which is
+              * the exact failure the ruling names.
+              *
+              * The box is a *state of the tray*, not a ninth object — the
+              * homepage stays 3 Doors · 4 Displays · 1 Toy.
+              */}
+            <CounterTray
+              spec={roomObject('counter')}
+              ownedBoxId={box?.id ?? null}
+              boxAsset={resolveAsset('object_box_owned')}
+            />
+
             <RoomDoor spec={roomObject('back-hall')} />
 
             {/*

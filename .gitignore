@@ -42,3 +42,4 @@ Thumbs.db
 
 # Visual QA artifacts. Screenshots belong to a workflow run, not to git history.
 /visual-qa/
+/visual-qa-*/

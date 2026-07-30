@@ -2,29 +2,48 @@ name: Orchestrator
 
 # The model-driven half of the autonomous lifecycle (`AUTONOMY.md §3`).
 #
-# INERT UNTIL A KEY EXISTS. Every job below is guarded on ANTHROPIC_API_KEY, so
-# with no secret set this workflow reports "skipped — no key" and does nothing.
-# That is deliberate: a workflow that fails loudly every hour because a secret is
-# missing gets switched off, and then nobody notices when the key does arrive.
+# ## OFF BY COMMISSIONER DECISION, 2026-07-30: the league does not pay for API use.
 #
-# The deterministic half — ci.yml and visual-qa.yml — needs no key and runs now.
+# This workflow is the only thing in the repository that ever spent money. It is
+# therefore reduced to `workflow_dispatch` only — no schedule, no label trigger,
+# no comment trigger. **It cannot fire on its own, and nothing routine invokes
+# it.** The file is kept rather than deleted so the design is still legible and
+# the decision stays reversible, which is cheaper than rebuilding it from a
+# commit message if the answer ever changes.
 #
-# To arm this, see AUTONOMY.md §4 and the setup request on the tracking issue.
+# Two independent guards mean an accidental run costs nothing:
+#
+#   1. `preflight` skips the whole job unless ANTHROPIC_API_KEY is set. With the
+#      secret removed — the recommended state — a manual dispatch is a no-op.
+#   2. A credit failure is reported as a warning rather than a red build, so a
+#      dispatch against an unfunded key does not look like a broken repository.
+#
+# ## What replaces it
+#
+# Nothing needs to. The lifecycle in `AUTONOMY.md §3` is driven by labels in this
+# repository, not by this file — the labels are the state, and the actor is
+# whoever is reading them. `agents/*.md` are role contracts, and they work
+# identically whether a workflow or a person opens them.
+#
+# The gates that matter never depended on a key and still run on every pull
+# request: `ci.yml` (typecheck · lint · test · build) and `visual-qa.yml`
+# (12 states x 3 widths against a production build). That split was deliberate
+# from the start, and this decision is exactly the case it was built for.
+#
+# ## No product scope is lost
+#
+# Generative AI in this product is limited to Tony's Tuesday Slice, and `16 §9`
+# already requires that **the Slice publish correctly with the AI API key unset.**
+# The template renderer is the default path, not a degraded one. See
+# `docs/DEPLOYMENT.md`, which has always specified this key as optional.
 
 on:
-  schedule:
-    # Hourly, anchored off :00 so it does not collide with every other repo.
-    - cron: '17 * * * *'
   workflow_dispatch:
     inputs:
       issue:
         description: 'Issue number to advance (blank = pick highest priority)'
         required: false
         type: string
-  issues:
-    types: [labeled]
-  issue_comment:
-    types: [created]
 
 concurrency:
   # One turn at a time. Two agents on one branch is how a merge conflict becomes
@@ -53,7 +72,7 @@ jobs:
             echo "Key present. Orchestrator armed."
           else
             echo "armed=false" >> "$GITHUB_OUTPUT"
-            echo "::notice title=Orchestrator inert::ANTHROPIC_API_KEY is not set. See AUTONOMY.md section 4."
+            echo "::notice title=Orchestrator inert::ANTHROPIC_API_KEY is not set, which is the expected state — the league does not pay for API use (commissioner decision, 2026-07-30). See AUTONOMY.md section 4."
           fi
 
   turn:
@@ -152,8 +171,8 @@ jobs:
           ISSUE: ${{ steps.actor.outputs.issue }}
           LABEL: ${{ steps.actor.outputs.label }}
         run: |
-          set -euo pipefail
-          claude -p "$(cat <<PROMPT
+          set -uo pipefail
+          PROMPT=$(cat <<PROMPT
           You are taking one turn in Tony's autonomous delivery system.
 
           Read, in this order, and treat them as binding:
@@ -174,6 +193,35 @@ jobs:
 
           Never print a secret. Green CI is necessary and never sufficient.
           PROMPT
-          )" --permission-mode acceptEdits --allowedTools \
+          )
+
+          # The turn is allowed to fail; how it failed decides what that means.
+          set +e
+          claude -p "$PROMPT" --permission-mode acceptEdits --allowedTools \
               "Bash,Read,Write,Edit,Glob,Grep" \
-            2>&1 | tail -200
+            > turn.log 2>&1
+          STATUS=$?
+          set -e
+
+          tail -200 turn.log
+
+          #
+          # An unfunded key is not a broken build.
+          #
+          # Both runs on 2026-07-30 exited on "Credit balance is too low" before the
+          # role file was even read, so the first model-driven turn produced nothing
+          # at all. The commissioner then decided the league does not pay for API
+          # use, which is why this workflow no longer fires on its own.
+          #
+          # The check stays anyway. Somebody dispatching this manually against a
+          # key that has no credit should get one clear warning, not a red X that
+          # implies the repository is broken — it is not; it is switched off on
+          # purpose.
+          #
+          if [ "$STATUS" -ne 0 ] && \
+             grep -qiE 'credit balance is too low|insufficient (credit|quota|funds)' turn.log; then
+            echo "::warning title=Orchestrator is unfunded::The ANTHROPIC_API_KEY account has no credit, so no turn can run. This is expected — the league does not pay for API use (commissioner decision, 2026-07-30). Nothing is broken; see AUTONOMY.md section 4."
+            exit 0
+          fi
+
+          exit "$STATUS"

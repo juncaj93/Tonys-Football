@@ -2,6 +2,8 @@ import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/s
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
+import { counterState } from '@/lib/counter/boxes';
+import { getDb } from '@/lib/db';
 
 /**
  * Tony's Counter.
@@ -27,7 +29,8 @@ import { requireUser } from '@/lib/auth/current-user';
 export const dynamic = 'force-dynamic';
 
 export default async function CounterPage() {
-  await requireUser();
+  const { user } = await requireUser();
+  const { unopenedBoxes, collectiblesOwned } = await counterState(getDb(), user.id);
 
   return (
     <>
@@ -38,22 +41,43 @@ export default async function CounterPage() {
           <SignPlate>Tony&rsquo;s counter</SignPlate>
 
           <p className="mt-4 text-[17px] leading-[1.5] text-paper-mid/80">
-            The tray is empty and the case behind it is dark. Tony has not put anything out yet.
+            {unopenedBoxes > 0
+              ? 'There is a box on the tray with your name on it. Open it out front — Tony likes to watch.'
+              : 'The tray is empty and the case behind it is dark. Tony has not put anything out yet.'}
           </p>
 
           <div className="mt-6 space-y-4">
+            {/*
+              * Landing priority, from `18 §4`: owned unopened box first, then
+              * available stock, then collection progress. There is no stock to
+              * rotate yet — pricing is simulation-gated (`16 §8`) — so this page
+              * shows the two things that are true today and invents neither a
+              * price nor a countdown.
+              */}
             <PixelPanel className="px-4 py-4">
-              <PanelHeading>Nothing on the tray</PanelHeading>
-              <p className="mt-1.5 text-[15px] leading-[1.45] text-paper-mid/75">
-                Boxes go on sale for tokens once the season starts. Everything rotates Tuesday to
-                Tuesday, the same for everybody, and it all comes back around.
+              <PanelHeading>{unopenedBoxes > 0 ? 'On the tray' : 'Nothing on the tray'}</PanelHeading>
+              <p className="mt-1.5 text-[17px] leading-[1.5] text-paper-mid/80">
+                {unopenedBoxes > 0
+                  ? plural(unopenedBoxes, 'unopened box', 'unopened boxes') +
+                    '. It opens at the tray on the way in, not in here — this page is for browsing.'
+                  : 'Boxes go on sale for tokens once the season starts. Everything rotates Tuesday to Tuesday, the same for everybody, and it all comes back around.'}
               </p>
             </PixelPanel>
 
+            {/*
+              * The collection view itself is a separate slice (`/counter/collection`).
+              * What must be true *now* is the count: this panel said "nothing
+              * collected yet" unconditionally, and the moment a box could be
+              * opened that became a false statement about the manager's own
+              * property. Accuracy outranks everything else here.
+              */}
             <PixelPanel className="px-4 py-4">
               <PanelHeading>Your collection</PanelHeading>
-              <p className="mt-1.5 text-[15px] leading-[1.45] text-paper-mid/75">
-                Nothing collected yet. What you pull is yours permanently, across every season.
+              <p className="mt-1.5 text-[17px] leading-[1.5] text-paper-mid/80">
+                {collectiblesOwned > 0
+                  ? plural(collectiblesOwned, 'collectible', 'collectibles') +
+                    ', kept permanently, across every season.'
+                  : 'Nothing collected yet. What you pull is yours permanently, across every season.'}
               </p>
             </PixelPanel>
           </div>
@@ -65,4 +89,9 @@ export default async function CounterPage() {
       </Page>
     </>
   );
+}
+
+/** "1 collectible" / "3 collectibles". Counting is a fact, so it is stated exactly. */
+function plural(n: number, one: string, many: string): string {
+  return `${String(n)} ${n === 1 ? one : many}`;
 }

@@ -83,7 +83,13 @@ Shipped: the Next.js foundation, the injected clock, the asset registry, the ide
 
 **V1 Doors Open** — shipped. Claim flow, 6-digit PIN, 90-day rolling session, derived tags, content engine v0 seeded from Group A, the six-zone parlor, Tonight at Tony's, the Counter Greeting, the receipt, and the offseason dressing.
 
-**Next assignment:** V2 Memory. See `docs/IMPLEMENTATION_HANDOFF.md`.
+**Autonomous delivery** — shipped. `AUTONOMY.md` is the operational contract, `VISUAL_ACCEPTANCE.md` is the second gate, and `npm run visual:qa` enforces the machine-checkable part of it on every pull request.
+
+**M2 slice 1 — the loot box on the tray** — shipped. An owned box sits on the tray, the tray Door glows for the first time, and tapping it **opens the box in place**: an anticipation beat, then the collectible on the tray and a plate naming it. The opening is server-authoritative, transactional and idempotent — `box_openings.box_id` is unique, so a box opens once whatever asks. The reward comes from a stored, content-hash-versioned, append-only reward table whose weights are **provisional until the P3 simulation**, and the recorded roll plus that version recompute the outcome exactly. The 24-item catalog is derived from the asset registry rather than copied into a table.
+
+**Next assignment:** M2 slice 2 — token acquisition through `apply_token_delta`. Boxes are currently a seeded fixture. See `docs/IMPLEMENTATION_HANDOFF.md`.
+
+**No paid API use** (commissioner decision, 2026-07-30). The orchestrator workflow is retired to manual dispatch only and `ANTHROPIC_API_KEY` is unset — nothing in this repository spends money. This affects no product scope: generative AI is limited to Tony's Tuesday Slice, and `16 §9` already requires the Slice to publish correctly with the key unset. Delivery runs on the label lifecycle in `AUTONOMY.md §2` plus the two unpaid gates, `npm run check` and `npm run visual:qa`. Do not reintroduce a paid dependency without a new decision.
 
 The engineer runs continuously inside a vertical slice and stops only at the conditions in `17 §8`. PR checkpoints are the six categories in `17 §7` — not every subtask.
 
