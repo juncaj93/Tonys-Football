@@ -26,23 +26,34 @@ describe('Tony at the counter', () => {
     expect(Math.abs(TONY.height - implied)).toBeLessThan(1);
   });
 
-  it('cuts above his hands, not through them or flush with them', () => {
+  it('never cuts through his hands', () => {
     const row = tonyCutRow();
-
-    // Above the hands entirely: his arms descend into the counter mid-sleeve.
-    expect(row).toBeLessThan(HANDS.top);
-
-    // Not so high that the cut lands in his torso — he would be a bust on a
-    // shelf rather than a man standing behind a counter.
-    expect(row).toBeGreaterThan(90);
+    const throughHands = row > HANDS.top && row < HANDS.bottom;
+    expect(throughHands).toBe(false);
   });
 
-  it('never lets the cut land within two rows of a hand edge', () => {
-    // The specific failure mode: an occluder that stops exactly where a limb
-    // stops reads as removal rather than as occlusion. Distance, not order.
+  it('leaves real distance between the hand and the counter edge', () => {
+    /*
+     * The failure the commissioner reported. An occluder that stops within a
+     * few pixels of where a limb stops does not read as *behind* — it reads as
+     * *severed*, and the eye is unforgiving about it.
+     *
+     * Five rows is the threshold, not two. At this scale a room unit is roughly
+     * 3.7 device pixels, so five rows is about nineteen — enough apron between
+     * his hand and the counter for the overlap to be legible as overlap. The
+     * shipped-and-wrong value cleared the hand by 2.9 rows and looked amputated.
+     */
     const row = tonyCutRow();
-    expect(Math.abs(row - HANDS.top)).toBeGreaterThan(2);
-    expect(Math.abs(row - HANDS.bottom)).toBeGreaterThan(2);
+    const clearance = row < HANDS.top ? HANDS.top - row : row - HANDS.bottom;
+    expect(clearance).toBeGreaterThanOrEqual(5);
+  });
+
+  it('keeps him the size he was drawn to be', () => {
+    // Commissioner ruling, 2026-07-30: scaling him up to move the cut made him
+    // the largest thing in the room. The cut is positioned with `y`, not with
+    // scale — this is the guard that stops the easy fix being reached for again.
+    expect(TONY.width).toBe(72);
+    expect(TONY.height).toBe(197);
   });
 
   it('leaves him inside the room and under the board', () => {

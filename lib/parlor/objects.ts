@@ -88,21 +88,45 @@ export const COUNTER_EDGE = 292;
  * the container is aspect-locked to `ROOM` and the overlay lines up to the pixel.
  * The cut was simply in the worst available place.
  *
- * `95 × 259` puts the cut on **row 104**, above the hands, mid-sleeve. His arms
- * descend and disappear behind the counter the way a person's do, and the parts
- * hidden are exactly the parts a counter physically covers. He also reads bigger
- * and closer, filling the gap between the board and the counter that he used to
- * sit adrift in.
+ * ## The fix is three units of position, not a bigger man
+ *
+ * The first attempt scaled him to `95 × 259`, which moves the cut to row 104 —
+ * above the hands entirely. It works geometrically and it was wrong: he became
+ * the largest thing in the room and stopped reading as a man standing at the
+ * far side of a counter. Commissioner, 2026-07-30: *"you made Tony way too big
+ * now. He needs to be the size he was."*
+ *
+ * **He is the size he was.** `72 × 197`, unchanged. What moved is `y`, by three
+ * units, and that is enough because the problem was never how big the cut was —
+ * it was *where* it landed. At `y = 180` the cut fell on row 136.9, less than
+ * three rows under the bottom of his hand; at this scale three rows is about
+ * eleven device pixels, so hand and counter edge were effectively the same line.
+ * At `y = 177` it falls on **row 140** — six rows clear, roughly twenty-two
+ * device pixels of apron between his hand and the counter, which is the
+ * difference between *behind* and *severed*.
+ *
+ * Three units is all the room there is: his head starts at `y` and the board's
+ * painted frame ends at row 174, so 177 leaves three units of wall above him.
+ * Any further up and he touches the board.
  *
  * Height is not free: `AssetView` draws at `w-full h-auto`, so the sprite keeps
  * its own aspect and `height` here must stay `width × 240 ÷ 88`. Change one and
  * you must change the other, or the number here stops describing what is drawn.
  * `tony-scale.test.ts` holds both the aspect and the cut row.
  */
-export const TONY = { x: 53, y: 180, width: 95, height: 259 } as const;
+export const TONY = { x: 64, y: 177, width: 72, height: 197 } as const;
 
 /** Rows of `character_tony_neutral` its own canvas is tall. */
 export const TONY_SPRITE = { width: 88, height: 240 } as const;
+
+/**
+ * Where Tony's tap region starts — below the board's frame, not at his hairline.
+ *
+ * The board's painted frame ends at row 174. Six units of clearance keeps the
+ * two hit regions apart at every supported width, which is what the `overlap`
+ * gate checks.
+ */
+export const TONY_TAP_TOP = 181;
 
 /** Which row of Tony's sprite the counter's edge lands on. */
 export function tonyCutRow(): number {
@@ -268,7 +292,22 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     id: 'tony',
     kind: 'toy',
     label: 'Talk to Tony',
-    rect: [TONY.x, TONY.y, TONY.width, COUNTER_EDGE - TONY.y],
+    /*
+     * Starts a little below the top of his head, not at it.
+     *
+     * Nudging him up to clear the counter from his hands brought `TONY.y` to
+     * 177, three units under the board's painted frame — and a hit region that
+     * begins at his hairline then overlapped the board's by about 3.5 css px.
+     * Two objects sharing pixels is the `overlap` gate's whole purpose, and the
+     * gate caught it.
+     *
+     * Tapping someone's hair is not how you get their attention anyway. The
+     * region starts at his shoulders, which is both unambiguous and comfortably
+     * clear of the board. His face is still inside it — the sprite's head
+     * occupies roughly the first 40 rows of 240, about 33 room units here, so
+     * this begins well above his chin.
+     */
+    rect: [TONY.x, TONY_TAP_TOP, TONY.width, COUNTER_EDGE - TONY_TAP_TOP],
   },
 ];
 

@@ -6,6 +6,7 @@ import {
   ROOM,
   ROOM_OBJECTS,
   TONY,
+  TONY_TAP_TOP,
   bannerPartitions,
   overlaps,
   roomObject,
@@ -117,9 +118,20 @@ describe('the hit regions', () => {
     }
   });
 
-  it('keeps Tony behind the counter edge', () => {
+  it('keeps Tony behind the counter edge, and off the board', () => {
     const [, y, , height] = roomObject('tony').rect;
-    expect(y).toBe(TONY.y);
+
+    // His region starts at his shoulders rather than his hairline. It used to
+    // start at `TONY.y`, which was fine until he moved up three units to get
+    // the counter's edge off his hands — at which point a region beginning at
+    // the top of his head overlapped the board's by about 3.5 css px.
+    expect(y).toBe(TONY_TAP_TOP);
+    expect(y).toBeGreaterThan(TONY.y);
+
+    // Still his, though: it must not start so low that his face is outside it.
+    // His head is roughly the first 40 of 240 sprite rows — about 33 room units.
+    expect(y).toBeLessThan(TONY.y + 33);
+
     // The shell's front half is drawn over him from here down, so a region that
     // continued past it would take taps on painted counter.
     expect(y + height).toBe(COUNTER_EDGE);
