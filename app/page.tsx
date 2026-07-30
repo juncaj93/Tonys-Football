@@ -13,7 +13,14 @@ import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
 import { getDb } from '@/lib/db';
 import { championBanners } from '@/lib/parlor/champions';
-import { COUNTER_EDGE, ROOM, TONY, place, roomObject } from '@/lib/parlor/objects';
+import {
+  COUNTER_EDGE,
+  ROOM,
+  TONIGHT_FIELD,
+  TONY,
+  place,
+  roomObject,
+} from '@/lib/parlor/objects';
 import { seasonClock } from '@/lib/parlor/season';
 import { tonightBoard } from '@/lib/parlor/tonight';
 import { loadTags } from '@/lib/tags/repository';
@@ -80,6 +87,9 @@ export default async function ParlorPage() {
   });
 
   const line = greeting?.text ?? `Tony nods at ${user.displayName} and goes back to the oven.`;
+  // The board's face carries the state line plus one headline. The countdown
+  // already has its own row there, so the headliner is the next line down.
+  const headliner = tonight.find((entry) => entry.key !== 'kickoff');
   const shell = resolveAsset('zone_parlor_shell');
 
   return (
@@ -176,6 +186,35 @@ export default async function ParlorPage() {
             <RoomDoor spec={roomObject('slice')} />
             <RoomDoor spec={roomObject('counter')} />
             <RoomDoor spec={roomObject('back-hall')} />
+
+            {/*
+              * The board's own face.
+              *
+              * Ruled **surface-rendered**, and it was rendering nothing: the
+              * text lived only in the panel that opens over it, so the largest
+              * object in an idle room was a blank cream rectangle. An idle room
+              * is what a manager looks at most of the time.
+              *
+              * A state line and one headliner is what the measured field holds
+              * — `TONIGHT_FIELD`, 111 x 74 logical. The panel keeps all four
+              * lines. `aria-hidden` because the button beneath already carries
+              * the label and the panel carries the prose; a screen reader
+              * should not hear the headline twice on the way to the same place.
+              */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute flex flex-col gap-[3%] overflow-hidden"
+              style={place(TONIGHT_FIELD)}
+            >
+              <p className="font-display text-[8px] leading-none tracking-wide text-red-dark/85 uppercase">
+                {clock.daysUntilKickoff === null
+                  ? 'Week one'
+                  : `Week one · ${String(clock.daysUntilKickoff)} days`}
+              </p>
+              {headliner !== undefined && (
+                <p className="text-[9px] leading-[1.45] text-ink-900/80">{headliner.text}</p>
+              )}
+            </div>
 
             {/* Displays. */}
             <RoomDisplay spec={roomObject('tonight')} title="Tonight at Tony's">

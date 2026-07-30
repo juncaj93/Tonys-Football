@@ -238,6 +238,25 @@ export function roomObject(id: string): RoomObjectSpec {
   return found;
 }
 
+/**
+ * The Tonight board's cream field, measured — `SHELL_AUDIT §4`.
+ *
+ * The board is the only surface in the room ruled **surface-rendered**: its text
+ * belongs on the board's face at room scale, not only inside the panel that
+ * opens over it. A blank cream rectangle is the largest object in an idle room,
+ * and an idle room is what a manager sees most of the time.
+ *
+ * `111 × 79` logical is **135 × 96 css** at the 390px viewport the room is
+ * designed against. That holds a state line and a short headliner — not the
+ * four lines `18 §3.2` allows, which is why the panel still exists and still
+ * carries all of them. The board answers *"what week is it, and what happened"*
+ * at a glance; the panel answers *"tell me the rest."*
+ *
+ * Coordinates are the board's shipped position, so they move with the +5 shift
+ * rather than being written down twice.
+ */
+export const TONIGHT_FIELD: RoomObjectSpec['rect'] = [60, 93, 111, 74];
+
 /** A room rectangle as the percentages the browser wants. */
 export function place(rect: RoomObjectSpec['rect']): {
   left: string;
