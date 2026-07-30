@@ -669,6 +669,263 @@ button {
   }
 }
 
+/* --- The box on the tray ------------------------------------------------- *
+ *
+ * The first overlay in the room whose glow is real.
+ *
+ * `18 §9.4`: affordance is `filter: drop-shadow()` on the overlay's **own alpha
+ * channel** — no authored masks, no polygons, no hit-map images. The light
+ * follows the box's silhouette because it *is* the box's silhouette, and it
+ * keeps following it when the placeholder is swapped for final art. That is the
+ * property an authored outline cannot have: a traced shape is a second copy of
+ * the artwork, maintained by hand, and it goes stale silently.
+ *
+ * This is also the first time a Door in this room has had something to say. Both
+ * baked Doors were correctly silent in V1; a box on the tray is the tray Door's
+ * first announcement.
+ *
+ * Two stacked shadows rather than one: a tight warm core so the edge reads at
+ * arm's length, and a wide soft halo so the box lifts off a counter that is
+ * already warm. One large blur alone washes out against this art.
+ */
+.box-owned {
+  filter:
+    drop-shadow(0 0 2px rgba(255, 244, 216, 0.95)) drop-shadow(0 0 9px rgba(255, 217, 138, 0.55));
+  animation: box-waits 3400ms ease-in-out infinite;
+}
+
+@keyframes box-waits {
+  0%,
+  100% {
+    opacity: 0.88;
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    opacity: 1;
+    transform: translate3d(0, -1px, 0);
+  }
+}
+
+/*
+ * The anticipation beat.
+ *
+ * The box moves and nothing else does. Sub-pixel rotation on a pixel-art sprite
+ * would resample it, so this is **translation only** — a shake, not a wobble,
+ * which is also what a cardboard box being opened actually does.
+ *
+ * It brightens as it goes, so the beat has a direction rather than being a
+ * loop that happens to stop.
+ */
+.box-opening {
+  filter:
+    drop-shadow(0 0 3px rgba(255, 244, 216, 1)) drop-shadow(0 0 14px rgba(255, 217, 138, 0.7));
+  animation: box-opens 1100ms steps(1, end) 1 both;
+}
+
+@keyframes box-opens {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  12% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  24% {
+    transform: translate3d(1px, -1px, 0);
+  }
+  36% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  48% {
+    transform: translate3d(2px, -1px, 0);
+  }
+  60% {
+    transform: translate3d(-2px, -1px, 0);
+  }
+  72% {
+    transform: translate3d(2px, -2px, 0);
+  }
+  84% {
+    transform: translate3d(-2px, -2px, 0);
+  }
+  100% {
+    transform: translate3d(0, -3px, 0);
+  }
+}
+
+/*
+ * The collectible arriving.
+ *
+ * It rises out of the box and settles. `both` so the final state holds when the
+ * animation is stripped — which is exactly what happens under reduced motion,
+ * where the item simply *is* there.
+ */
+.reveal-rise {
+  animation: reveal-rises 420ms cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+@keyframes reveal-rises {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0) scale(0.82);
+  }
+  100% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * The information, none of the theatre. The global rule already collapses the
+   * duration; these make the resting state explicit rather than relying on a
+   * 0.01ms animation landing on its final keyframe.
+   */
+  .box-owned,
+  .box-opening {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+
+  .reveal-rise {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --- Rarity -------------------------------------------------------------- *
+ *
+ * **Never colour alone.** The tokens at the top of this file carry that rule and
+ * this is where it is kept. Three signals per tier, and the two that are not
+ * colour are the ones that survive a colour-blind reader, a dim screen, and a
+ * screenshot printed in greyscale:
+ *
+ *   - the printed **word** — `.rarity-word` takes the tier's colour but the text
+ *     itself is the signal
+ *   - the **frame** — plain, then corner ticks, then doubled, then both
+ *   - the colour, third
+ *
+ * All of it is drawn around the sprite at runtime. `ASSET_PIPELINE.md §7`: the
+ * same art serves every tier, because a gold frame baked into a legendary's PNG
+ * would make rarity un-rebalanceable — and rebalancing is what P3's simulation
+ * exists to do.
+ */
+.rarity-common {
+  --rarity: var(--color-rarity-common);
+}
+.rarity-rare {
+  --rarity: var(--color-rarity-rare);
+}
+.rarity-epic {
+  --rarity: var(--color-rarity-epic);
+}
+.rarity-legendary {
+  --rarity: var(--color-rarity-legendary);
+}
+
+.rarity-word {
+  color: var(--rarity);
+}
+
+/*
+ * The lift under the collectible itself, from its own alpha — the same mechanism
+ * as the box's glow, tinted by tier.
+ *
+ * ## Common gets a lift too, and it is deliberately colourless
+ *
+ * The first version gave common nothing, on the reasoning that the absence is
+ * itself the signal. On screen that was wrong for a reason that only shows up in
+ * a screenshot: while collectible art is still placeholder, the item and the box
+ * it came out of are drawn as the same carton — so an unlit common pull was
+ * indistinguishable from the box that was there a second earlier, and the moment
+ * read as "nothing happened".
+ *
+ * So every reveal is lifted, and **rarity escalates from there**: neutral, then
+ * tinted, then tinted and bright, then gold and bright. The tier is still carried
+ * by the word and the frame first, which is the rule that matters.
+ */
+.rarity-common.reveal-rise {
+  filter: drop-shadow(0 0 4px rgba(245, 237, 220, 0.5));
+}
+
+.rarity-rare.reveal-rise {
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--rarity) 60%, transparent));
+}
+
+.rarity-epic.reveal-rise {
+  filter:
+    drop-shadow(0 0 3px color-mix(in srgb, var(--rarity) 80%, transparent))
+    drop-shadow(0 0 11px color-mix(in srgb, var(--rarity) 45%, transparent));
+}
+
+.rarity-legendary.reveal-rise {
+  filter:
+    drop-shadow(0 0 3px rgba(255, 244, 216, 1))
+    drop-shadow(0 0 9px color-mix(in srgb, var(--rarity) 70%, transparent))
+    drop-shadow(0 0 20px color-mix(in srgb, var(--rarity) 40%, transparent));
+}
+
+/*
+ * The plate's edge carries the tier as geometry.
+ *
+ * ## The outer border stays the house colour, and that is the fix
+ *
+ * The first version painted the plate's own 2px border in the rarity tone and
+ * added a 4px rarity ring inside it. On screen an epic pull was a cream card
+ * inside a bright magenta double frame — a neon UI component sitting on a
+ * hand-drawn counter, and the loudest thing in the room by a distance.
+ * `VISUAL_ACCEPTANCE.md §4` rejects exactly that.
+ *
+ * So the plate is a **shop surface first**: wood-dark edge, cream face, the same
+ * material as Tony's speech box and the champion panel. Rarity is an *accent
+ * inside* it — a thin ring, a pair of corner ticks — which still escalates as
+ * geometry while the room keeps its own voice.
+ *
+ * Escalation, in order: plain edge · corner ticks · inset ring · both.
+ */
+.rarity-frame {
+  position: relative;
+}
+
+/* An inset ring: epic and above. One hard line, inside the house edge. */
+.rarity-frame.rarity-epic,
+.rarity-frame.rarity-legendary {
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--rarity) 70%, transparent),
+    3px 3px 0 rgba(0, 0, 0, 0.45);
+}
+
+/*
+ * Corner ticks: rare, and again on legendary. Two 4px marks on the grid.
+ *
+ * Anchored with `left` and `right` rather than offset by a hardcoded pixel
+ * distance — the plate's width is content-driven now, so a fixed offset would
+ * put the second tick in the middle of a short name and off the edge of a long
+ * one.
+ */
+.rarity-frame.rarity-rare::before,
+.rarity-frame.rarity-legendary::before,
+.rarity-frame.rarity-rare::after,
+.rarity-frame.rarity-legendary::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  width: 4px;
+  height: 4px;
+  background: var(--rarity);
+}
+
+.rarity-frame.rarity-rare::before,
+.rarity-frame.rarity-legendary::before {
+  left: 3px;
+}
+
+.rarity-frame.rarity-rare::after,
+.rarity-frame.rarity-legendary::after {
+  right: 3px;
+}
+
 /* --- Small signs of life ------------------------------------------------- *
  *
  * Three, and only three. The soda machine's buttons, a highlight crossing the

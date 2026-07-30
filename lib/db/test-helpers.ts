@@ -47,6 +47,12 @@ export async function resetDatabase(db: Database): Promise<void> {
       admin_audit_logs,
       auth_attempts,
       sessions,
+      collectibles,
+      box_openings,
+      loot_boxes,
+      reward_tables,
+      token_transactions,
+      economy_configs,
       season_memberships,
       seasons,
       sync_runs,
@@ -86,6 +92,47 @@ function unwrap(error: unknown): PostgresError {
   throw new Error(
     `Expected a Postgres error with a SQLSTATE code, got: ${String(error)}`,
   );
+}
+
+/**
+ * Assert that a query failed with a specific Postgres **message**.
+ *
+ * For errors a `RAISE EXCEPTION` in plpgsql produces, where the useful
+ * information is the sentence rather than the SQLSTATE — `apply_token_delta`
+ * raises four distinct refusals that all share code `23514` or `23503`, so a code
+ * assertion cannot tell them apart.
+ *
+ * Walks the cause chain for the same reason `expectPgError` does: drizzle wraps
+ * driver errors, so `error.message` is only "Failed query: …" and matching on it
+ * would pass for any failure at all — including the query being malformed.
+ */
+export async function expectPgMessage(
+  promise: Promise<unknown>,
+  expected: RegExp,
+): Promise<void> {
+  let thrown: unknown;
+
+  try {
+    await promise;
+  } catch (error: unknown) {
+    thrown = error;
+  }
+
+  expect(thrown, 'expected the query to fail, but it succeeded').toBeDefined();
+
+  const messages: string[] = [];
+  let current: unknown = thrown;
+  for (let depth = 0; depth < 5; depth++) {
+    if (typeof current !== 'object' || current === null) break;
+    const message = (current as { message?: unknown }).message;
+    if (typeof message === 'string') messages.push(message);
+    current = (current as { cause?: unknown }).cause;
+  }
+
+  expect(
+    messages.some((message) => expected.test(message)),
+    `expected one of these messages to match ${expected.source}:\n  ${messages.join('\n  ')}`,
+  ).toBe(true);
 }
 
 export async function expectPgError(

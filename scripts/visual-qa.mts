@@ -25,6 +25,21 @@
  *
  * Layer 1 is the one that never sleeps, so it carries the most weight here.
  * `VISUAL_ACCEPTANCE.md` is the specification it implements.
+ *
+ * ## This driver needs a *freshly seeded* database, and is not re-runnable
+ *
+ * It opens Alex's welcome box, and a box opens **once, ever** — that is the
+ * whole point of `box_openings.box_id UNIQUE`. Re-seeding does not give it
+ * back either, because the welcome grant is idempotent on a stable
+ * `grant_key`. So a second run against the same database finds a manager with
+ * no box, the tray states go looking for something that is gone, and the
+ * failure surfaces somewhere unrelated and geometric — a room object reported
+ * "outside of the viewport" — which reads like a layout regression and is not
+ * one. CI is immune because every run gets a new database. Locally:
+ *
+ *   dropdb tonys_dev && createdb tonys_dev && npm run db:migrate && npm run db:seed
+ *
+ * before each run. A green result on a used database means nothing.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -89,7 +104,13 @@ type StateName =
   | 'counter'
   | 'back-hall'
   | 'keyboard-focus'
-  | 'six-banners';
+  | 'six-banners'
+  | 'tray-owned-box'
+  | 'tray-reveal'
+  | 'collection'
+  | 'collection-filtered'
+  | 'showcase'
+  | 'showcase-chosen';
 
 async function dismissTony(page: Page): Promise<void> {
   const x = page.getByRole('button', { name: /Dismiss what Tony said/i });
@@ -176,12 +197,82 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.getByRole('link', { name: /rack/i }).click({ force: true });
       await page.waitForTimeout(1500);
       return;
+    /*
+     * `/counter`, reached directly rather than by tapping the tray.
+     *
+     * The tray is a Door, but its destination is conditional: with a box on it,
+     * tapping **opens the box in place** (`18 §4.1`) instead of navigating, so
+     * there is no anchor to click while a manager is holding one. Every seeded
+     * manager starts with a box, so that is the state this driver always finds.
+     *
+     * Navigating straight there is the honest way to photograph the page. The
+     * Door itself is asserted by `object-map` on `idle` and `tray-owned-box`,
+     * which check the tray's identity and kind rather than its HTML tag — so
+     * nothing is lost by not clicking it here.
+     */
     case 'counter':
-      await home(page);
-      await dismissTony(page);
-      await page.getByRole('link', { name: /counter/i }).click({ force: true });
+      await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1500);
       return;
+    /*
+     * The shelf, after a pull.
+     *
+     * Ordered **after** `tray-reveal` in `ALL_STATES`, so by the time this runs the
+     * manager owns something and the grid shows a held spot beside empty ones. A
+     * capture of an entirely empty shelf would miss the two things worth reviewing:
+     * the rarity treatment on a held spot, and whether the empty spots read as
+     * deliberately empty rather than as components that failed to load.
+     */
+    case 'collection':
+      await page.goto(`${BASE}/counter/collection`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    /*
+     * A filter that matches nothing.
+     *
+     * The empty-result path, which is a real state a manager reaches by tapping a
+     * tier they have not pulled yet — and `VISUAL_ACCEPTANCE.md §4` requires empty
+     * surfaces to be visibly empty on purpose. `legendary` is the safe choice: at
+     * the provisional weights it is 2 parts in 4000, so a seeded run will not have
+     * one by accident.
+     */
+    case 'collection-filtered':
+      await page.goto(`${BASE}/counter/collection?rarity=legendary`, {
+        waitUntil: 'networkidle',
+      });
+      await page.waitForTimeout(1200);
+      return;
+
+    /*
+     * The Showcase, before anything is chosen.
+     *
+     * The empty state carries real weight here: it is what nine of ten managers see
+     * on day one, and `18 §4` forbids clout, so having nothing out has to look like
+     * a choice rather than a deficiency.
+     */
+    case 'showcase':
+      await page.goto(`${BASE}/counter/showcase`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    /*
+     * The Showcase, with something in it.
+     *
+     * Runs after `tray-reveal` has put a collectible on the shelf, so the picker has
+     * something to offer. Picking it is the last step of the milestone's loop — the
+     * point at which a pull becomes something the league can see.
+     */
+    case 'showcase-chosen':
+      await page.goto(`${BASE}/counter/showcase`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: /Show this one/i }).first().click();
+      // The pick is confirmed by a server round trip and a refresh, not optimistically.
+      await page.getByRole('button', { name: /take it off the shelf/i }).waitFor({
+        timeout: 15_000,
+      });
+      await page.waitForTimeout(400);
+      return;
+
     case 'back-hall':
       await home(page);
       await dismissTony(page);
@@ -194,6 +285,64 @@ async function reach(page: Page, state: StateName): Promise<void> {
       // Four tabs lands inside the room rather than on the utility bar.
       for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
       await page.waitForTimeout(250);
+      return;
+
+    /*
+     * A box on the tray, unopened.
+     *
+     * Non-destructive on purpose — it looks and does not touch. Every width
+     * signs in as the same manager, so a state that *opened* the box would
+     * consume it and leave the two narrower widths photographing an empty tray.
+     *
+     * This is the state that proves the whole visual claim of the slice: the box
+     * is on the tray, the tray Door glows for the first time, and the object map
+     * is still eight.
+     *
+     * ## It currently looks like `idle`, and that is the truth rather than a bug
+     *
+     * The seed grants every manager a box, so *today* the idle room has a box on
+     * the tray and these two artifacts resemble each other. The value here is the
+     * gates: this is the named state where `object-map`, `tap-target` and `glow`
+     * run against the owned tray, so a reviewer knows which screenshot is
+     * making that claim.
+     *
+     * They diverge as soon as boxes are acquired rather than seeded — a manager
+     * who has opened theirs has an empty tray again, and `idle` goes back to the
+     * calm room it was in V1.
+     */
+    case 'tray-owned-box':
+      await home(page);
+      await dismissTony(page);
+      // Past the glow's 3.4s cycle, so the capture is not caught mid-breath.
+      await page.waitForTimeout(600);
+      return;
+
+    /*
+     * The reveal.
+     *
+     * **Required at every width, now that boxes are bought rather than seeded.**
+     *
+     * It could not be before. A box opens exactly once by design, so the seeded
+     * fixture box meant capturing the reveal at 390 consumed it and the two
+     * narrower widths photographed an empty tray — a gate that passes on a fresh
+     * database and fails on the second run, which is worse than no gate.
+     *
+     * Purchase fixes it properly rather than by contrivance: each width buys its
+     * own box out of the season's opening balance, which covers several at the
+     * provisional price. So this state now also exercises the ledger, the balance
+     * check and the tray transition in one pass.
+     */
+    case 'tray-reveal':
+      await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: /Buy a standard pizza box/i }).click();
+      // The purchase refreshes the page; wait for the tray panel to appear rather
+      // than for a fixed delay, so a slow runner does not photograph a stale page.
+      await page.getByText(/unopened box/i).first().waitFor({ timeout: 15_000 });
+      await home(page);
+      await dismissTony(page);
+      await page.getByRole('button', { name: /Open your pizza box/i }).click({ force: true });
+      // The anticipation beat is 1100ms and the rise is 420ms.
+      await page.waitForTimeout(2200);
       return;
   }
 }
@@ -211,6 +360,13 @@ const ALL_STATES: readonly StateName[] = [
   'back-hall',
   'keyboard-focus',
   'six-banners',
+  'tray-owned-box',
+  // After the reveal on purpose: the shelf is worth reviewing with something on it.
+  'tray-reveal',
+  'collection',
+  'collection-filtered',
+  'showcase',
+  'showcase-chosen',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
@@ -313,14 +469,24 @@ async function checkColourFidelity(page: Page, width: number): Promise<void> {
 /** Legacy assets and routes that were withdrawn and must not come back. */
 async function checkNoLegacy(page: Page, width: number): Promise<void> {
   const html = await page.content();
-  const banned: readonly [string, string][] = [
-    ['zone_front_counter', 'the legacy two-tile room'],
-    ['zone_counter_front', 'the withdrawn foreground asset'],
-    ['/collection', 'the withdrawn collectible route'],
-    ['ShowInteractables', 'the withdrawn hitbox control'],
+
+  const banned: readonly [RegExp, string, string][] = [
+    [/zone_front_counter/, 'zone_front_counter', 'the legacy two-tile room'],
+    [/zone_counter_front/, 'zone_counter_front', 'the withdrawn foreground asset'],
+    /*
+     * The withdrawn route is `/collection` at the **root**. `/counter/collection`
+     * is the canonical one (`18 §4`), and a plain substring match banned it —
+     * which is how this gate first reported the correct route as a violation.
+     *
+     * Anchored to a quote or a path boundary so `href="/collection"` fails and
+     * `href="/counter/collection"` does not.
+     */
+    [/["'(\s]\/collection(["'?#/\s)]|$)/, '/collection', 'the withdrawn root collectible route'],
+    [/ShowInteractables/, 'ShowInteractables', 'the withdrawn hitbox control'],
   ];
-  for (const [needle, why] of banned) {
-    if (html.includes(needle)) fail('legacy', `@${String(width)} page references ${needle} — ${why}`);
+
+  for (const [pattern, name, why] of banned) {
+    if (pattern.test(html)) fail('legacy', `@${String(width)} page references ${name} — ${why}`);
   }
 }
 
@@ -330,28 +496,145 @@ async function checkNoLegacy(page: Page, width: number): Promise<void> {
  * The room's whole grammar is 3 Doors, 4 Displays, 1 Toy. A ninth interactive
  * object, or a Door that has quietly become a Display, is a product regression
  * that no unit test sees.
+ *
+ * ## This used to count anchors, and that was too weak in both directions
+ *
+ * The old gate counted `<a href>` matching `slice|counter|back-hall` and looked
+ * for one button labelled "Talk to Tony". Two problems:
+ *
+ *   - **It reported a false failure.** The tray is a Door, and when a box is
+ *     owned it *opens at the tray, in place* (`18 §4.1`) rather than navigating,
+ *     so it renders as a button. An anchor count reads that as a missing Door —
+ *     and the obvious way to make the gate green again would have been to route
+ *     to `/counter` first, which is the precise defect the ruling forbids. A gate
+ *     that pressures you toward a known defect is worse than no gate.
+ *   - **It missed real ones.** Nothing checked the four Displays, and nothing
+ *     would have noticed a Door quietly becoming a Display as long as some
+ *     anchor still pointed at the route.
+ *
+ * So the assertion is now the **whole map by identity**: every interactive room
+ * object carries `data-room-object` and `data-room-kind`
+ * (`components/scene/room-object.tsx`), and the rendered set must equal
+ * `ROOM_OBJECTS` exactly — same ids, same kinds, no extras, no duplicates. That
+ * catches the ninth object, the demoted Door, the vanished Display, and the
+ * renamed id, and it is indifferent to which HTML tag an object happens to use.
  */
+
+/** The map, as `objects.ts` declares it. Kept in sync by the gate, not by hand. */
+const EXPECTED_OBJECTS: Readonly<Record<string, 'door' | 'display' | 'toy'>> = {
+  slice: 'door',
+  counter: 'door',
+  'back-hall': 'door',
+  tonight: 'display',
+  banners: 'display',
+  prediction: 'display',
+  receipt: 'display',
+  tony: 'toy',
+};
+
+/**
+ * The one object allowed to render as several targets.
+ *
+ * The banner rail is a single Display divided into one button per occupied slot,
+ * because "which season is that one?" is a question about a specific banner. Any
+ * *other* id appearing twice is a duplicate, and a duplicate doubles a tap
+ * target where nobody can see it.
+ */
+const PARTITIONED = new Set(['banners']);
+
 async function checkObjectMap(page: Page, width: number): Promise<void> {
-  const counts = await page.evaluate(() => {
-    const links = [...document.querySelectorAll('a[href]')].filter((a) => {
-      const r = a.getBoundingClientRect();
-      return r.width > 0 && a.getAttribute('href')?.startsWith('/') === true;
-    });
-    const roomLinks = links.filter((a) => /slice|counter|back-hall/.test(a.getAttribute('href') ?? ''));
-    const buttons = [...document.querySelectorAll('button[aria-label]')].filter(
-      (b) => b.getBoundingClientRect().width > 0,
+  const found = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-room-object]')]
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => ({
+        id: el.getAttribute('data-room-object') ?? '',
+        kind: el.getAttribute('data-room-kind') ?? '',
+        partitioned: el.hasAttribute('data-room-partition'),
+      })),
+  );
+
+  const at = `@${String(width)}`;
+
+  // Collapse partitions to the object they belong to, then count. A partitioned
+  // object is one object; anything else appearing twice is a defect.
+  const byId = new Map<string, typeof found>();
+  for (const object of found) {
+    byId.set(object.id, [...(byId.get(object.id) ?? []), object]);
+  }
+
+  for (const [id, group] of byId) {
+    if (group.length === 1) continue;
+    if (!PARTITIONED.has(id)) {
+      fail('object-map', `${at} "${id}" is rendered ${String(group.length)} times`);
+    } else if (!group.every((object) => object.partitioned)) {
+      fail(
+        'object-map',
+        `${at} "${id}" has ${String(group.length)} elements but not all are marked as partitions`,
+      );
+    }
+  }
+
+  for (const [id, kind] of Object.entries(EXPECTED_OBJECTS)) {
+    const group = byId.get(id);
+    if (group === undefined) {
+      fail('object-map', `${at} room object "${id}" (${kind}) is missing`);
+    } else if (group[0]!.kind !== kind) {
+      fail('object-map', `${at} "${id}" is a ${group[0]!.kind}, expected a ${kind}`);
+    }
+  }
+
+  for (const id of byId.keys()) {
+    if (!(id in EXPECTED_OBJECTS)) {
+      fail(
+        'object-map',
+        `${at} unexpected room object "${id}" — the homepage is exactly eight`,
+      );
+    }
+  }
+
+  // The headline numbers, stated so a failure names the grammar and not just a row.
+  const tally = (kind: string): number =>
+    [...byId.values()].filter((group) => group[0]!.kind === kind).length;
+
+  if (tally('door') !== 3 || tally('display') !== 4 || tally('toy') !== 1) {
+    fail(
+      'object-map',
+      `${at} expected 3 Doors · 4 Displays · 1 Toy, found ${String(tally('door'))} · ${String(tally('display'))} · ${String(tally('toy'))}`,
     );
-    return {
-      doors: roomLinks.length,
-      buttons: buttons.map((b) => b.getAttribute('aria-label') ?? ''),
-    };
+  }
+}
+
+/**
+ * A box on the tray glows; nothing else in the room does.
+ *
+ * `18` allows exactly one persistent affordance — a Door with something to say —
+ * and V1 shipped with none. This slice creates the first, so this gate exists to
+ * stop the second from arriving unnoticed: a glow on a Display, or a second Door
+ * lighting up, teaches the room's grammar wrong and no unit test can see it.
+ *
+ * Measured as "a `drop-shadow` filter on an element inside the room", which is
+ * the room's only sanctioned glow mechanism (`18 §9.4`).
+ */
+async function checkOnlyTheTrayGlows(page: Page, width: number): Promise<void> {
+  const glowing = await page.evaluate(() => {
+    const room = document.querySelector('main');
+    if (room === null) return [];
+    return [...room.querySelectorAll<HTMLElement>('*')]
+      .filter((el) => {
+        const filter = getComputedStyle(el).filter;
+        return filter !== 'none' && filter.includes('drop-shadow');
+      })
+      .map((el) => el.className.toString().slice(0, 60));
   });
 
-  if (counts.doors !== 3) {
-    fail('object-map', `@${String(width)} expected 3 Doors, found ${String(counts.doors)}`);
+  for (const className of glowing) {
+    if (!/\bbox-(owned|opening)\b|\brarity-/.test(className)) {
+      fail(
+        'glow',
+        `@${String(width)} something other than the tray's box is glowing: "${className}"`,
+      );
+    }
   }
-  const toy = counts.buttons.filter((l) => /Talk to Tony/i.test(l)).length;
-  if (toy !== 1) fail('object-map', `@${String(width)} expected 1 Toy, found ${String(toy)}`);
 }
 
 /* -------------------------------------------------------------------- main -- */
@@ -393,10 +676,22 @@ async function run(): Promise<void> {
         await page.waitForTimeout(300);
         await page.screenshot({ path: path.join(OUT, `${String(width)}-${state}.png`) });
 
-        // The homepage gates only make sense on the homepage.
-        if (!['rack', 'counter', 'back-hall'].includes(state)) {
-          await checkColourFidelity(page, width);
-          await checkNoLegacy(page, width);
+        /*
+         * Colour fidelity and legacy references apply to **every** page.
+         *
+         * They used to be skipped on `rack`, `counter` and `back-hall`, on the
+         * reasoning that "the homepage gates only make sense on the homepage".
+         * That was true of the object map and the tap targets and false of these
+         * two — and the exemption is precisely why `RoomBehind` sat there drawing
+         * the withdrawn two-tile room behind every interior screen, undetected,
+         * from V1 until the `collection` state happened not to be on the list.
+         *
+         * A skip list is a place for defects to live. These now run everywhere.
+         */
+        await checkColourFidelity(page, width);
+        await checkNoLegacy(page, width);
+
+        {
 
           /*
            * Overlap is only meaningful between targets that are reachable at
@@ -411,6 +706,21 @@ async function run(): Promise<void> {
           if (state === 'idle') {
             await checkTargets(page, width);
             await checkObjectMap(page, width);
+            // Nothing glows in the idle room unless a box is on the tray.
+            await checkOnlyTheTrayGlows(page, width);
+          }
+
+          /*
+           * The owned tray is the second state where every room object is
+           * simultaneously live, so the map and the targets are judged here too.
+           * This is the state that would catch the box arriving as a *ninth*
+           * object, or the tray Door being replaced rather than restated — the
+           * two ways this slice could have broken the room's grammar.
+           */
+          if (state === 'tray-owned-box') {
+            await checkTargets(page, width);
+            await checkObjectMap(page, width);
+            await checkOnlyTheTrayGlows(page, width);
           }
         }
 

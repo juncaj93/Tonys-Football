@@ -1,5 +1,7 @@
+import { sql } from 'drizzle-orm';
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
@@ -108,6 +110,35 @@ export const users = pgTable('users', {
 
   /** Retired, not deleted. History is preserved permanently. */
   isRetired: boolean('is_retired').notNull().default(false),
+
+  /**
+   * The one collectible this manager shows the league.
+   *
+   * `16 §5.3` is explicit that the Showcase is **a column, not a feature** — one
+   * item, surfaced where the league can see it, with no levels, prestige or clout
+   * attached (`18 §4`). Keeping it a column is what stops it growing a table and
+   * then a ranking.
+   *
+   * It hangs off `users` rather than off a membership because a Showcase is part
+   * of who somebody is, not of a season they played — the same reason the
+   * collectible it points at is permanent while the tokens that bought it reset.
+   *
+   * **A manager may only show what they own**, and that is enforced by a trigger
+   * rather than by the service that sets it: an FK can say "this is a
+   * collectible" but not "this is *your* collectible".
+   *
+   * Nullable, and null is an ordinary state — a manager who has not chosen yet,
+   * or who has taken their item back off the shelf.
+   *
+   * **The foreign key is declared in SQL, not here**, and deliberately so:
+   * `collectibles.user_id` references `users`, so declaring the reverse in the
+   * schema makes the two table types mutually recursive and TypeScript gives up on
+   * inferring either (`TS7022`). Postgres has no such trouble with a cycle. The
+   * constraint lives in `drizzle/0006_showcase.sql` alongside the ownership trigger
+   * it belongs with, and drizzle leaves undeclared constraints alone rather than
+   * dropping them.
+   */
+  showcaseCollectibleId: uuid('showcase_collectible_id'),
 
   ...timestamps,
 });
@@ -314,6 +345,28 @@ export const seasonMemberships = pgTable(
     isActive: boolean('is_active').notNull().default(true),
 
     /**
+     * Tony Tokens held this season.
+     *
+     * ## Read this column; never write it
+     *
+     * `16 §5.4`: the balance is written **only** by an AFTER-INSERT trigger on
+     * `token_transactions`, with `CHECK (balance >= 0)`, so an overdraft fails at
+     * the database and the balance physically cannot drift from the ledger. **No
+     * feature gets its own balance-writing path** — and that is not left to
+     * discipline: a second trigger rejects any UPDATE that changes this column
+     * unless the ledger trigger is the one making it.
+     *
+     * So the only way to move tokens is `apply_token_delta()`. An `UPDATE
+     * season_memberships SET token_balance = …` raises, whoever issues it.
+     *
+     * It lives on the membership rather than on `users` because **tokens are
+     * seasonal and do not carry over** (`03 §6`) — a season's wallet belongs to a
+     * season's seat. Collectibles are the opposite and hang off `users.id`.
+     * `16 §5.3` collapses the `season_wallets` table into exactly this column.
+     */
+    tokenBalance: integer('token_balance').notNull().default(0),
+
+    /**
      * Final league placement, 1..N.
      *
      * Covers the whole league, not just the playoff field: the winners bracket
@@ -327,6 +380,17 @@ export const seasonMemberships = pgTable(
   (table) => [
     unique('season_memberships_season_roster_unique').on(table.seasonId, table.rosterId),
     unique('season_memberships_season_user_unique').on(table.seasonId, table.userId),
+    /*
+     * Overdraft is impossible, and it is impossible *here* rather than in a
+     * service that remembers to check.
+     *
+     * `16 §5.4` and the P3 release gate both state it as a property of the
+     * database. A balance check in application code is a race: two purchases
+     * arriving together both read 100, both decide 100 >= 100, and both spend.
+     * This constraint is evaluated inside the same statement that changes the
+     * balance, so the second one fails.
+     */
+    check('season_memberships_token_balance_non_negative', sql`${table.tokenBalance} >= 0`),
   ],
 );
 
@@ -648,6 +712,426 @@ export const adminAuditLogs = pgTable(
   (table) => [index('admin_audit_actor_idx').on(table.actorUserId, table.occurredAt)],
 );
 
+// ---------------------------------------------------------------------------
+// Tony Tokens
+// ---------------------------------------------------------------------------
+
+/**
+ * Why a balance moved.
+ *
+ * `03 §5` requires every balance change to record a reason code, and the point
+ * of an enum rather than free text is that "how did this manager get 400 tokens"
+ * has a finite, auditable set of answers. Adding a value is a one-line
+ * migration.
+ *
+ * Only the two that can actually happen today are used by application code:
+ *
+ *   - `SEASON_START` — the opening balance. `03 §4` names 250 as a baseline; the
+ *     value lives in `economy_configs` and is provisional until P3.
+ *   - `BOX_PURCHASE` — spending at the counter.
+ *
+ * The rest are declared because they are named in `03 §4` and the ledger should
+ * not need a migration the first Tuesday of the season. They are deliberately
+ * **not** wired to anything: there is no cron yet (`16 §4.3` allows exactly two
+ * jobs and neither is built), and inventing a weekly reward that fires on
+ * nothing would be fabricated data.
+ */
+export const tokenReason = pgEnum('token_reason', [
+  'SEASON_START',
+  'BOX_PURCHASE',
+  'MATCHUP_WIN',
+  'WEEKLY_HIGH_SCORE',
+  'SEASON_AWARD',
+  'COMMISSIONER_ADJUSTMENT',
+]);
+
+/**
+ * The token ledger. Append-only, and the only way a balance moves.
+ *
+ * `16 §5.4` is the whole contract:
+ *
+ * ```
+ * apply_token_delta(user_id, season_id, amount, reason_code,
+ *                   idempotency_key, source_ref, actor_id)
+ * ```
+ *
+ * ## Why the idempotency key is genuinely needed here
+ *
+ * Slice 1 argued *against* a client-supplied key for opening a box, because a
+ * box opens once and the operation therefore has a natural key. A token delta is
+ * the opposite: it is an **event**, not a thing. "Add 150 tokens" has no natural
+ * key — the same delta may legitimately happen twice, so nothing about the row
+ * itself can tell a retry from a second genuine award. The caller has to name the
+ * occasion, and `UNIQUE(idempotency_key)` makes a replay a no-op.
+ *
+ * That is why the two slices differ, and the difference is the point rather than
+ * an inconsistency.
+ *
+ * ## Seasonal, so it hangs off the membership
+ *
+ * `16 §5.1`: permanent things FK to `users.id`, seasonal things to
+ * `season_memberships.id`. Tokens do not carry over (`03 §6`), so the ledger is
+ * seasonal — while collectibles bought with them are permanent. A manager keeps
+ * what they pulled and loses what they did not spend.
+ */
+export const tokenTransactions = pgTable(
+  'token_transactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonMembershipId: uuid('season_membership_id')
+      .notNull()
+      // Never delete a seat out from under its own financial history.
+      .references(() => seasonMemberships.id, { onDelete: 'restrict' }),
+
+    /** Signed. Negative is a spend. Never zero — a no-op is not a transaction. */
+    amount: integer('amount').notNull(),
+
+    reasonCode: tokenReason('reason_code').notNull(),
+
+    /**
+     * Human-readable, required by `03 §5`.
+     *
+     * Curated or templated, never generated — `16 §10` limits generative text to
+     * the Slice. This is what a manager reads on their own statement, so it says
+     * what happened in the shop's voice rather than naming an enum value.
+     */
+    description: text('description').notNull(),
+
+    /**
+     * The caller's name for this occasion. A replay is a no-op.
+     *
+     * Not nullable and not defaulted: a caller that cannot name the occasion has
+     * not thought about what happens when its request is retried.
+     */
+    idempotencyKey: text('idempotency_key').notNull().unique(),
+
+    /** The thing this was about — a box id, a matchup, an auction lot. */
+    sourceRef: text('source_ref'),
+
+    /** The commissioner, on a manual adjustment. Null means the system did it. */
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'restrict' }),
+
+    /** From the injected clock — a statement's dates are business dates. */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index('token_transactions_membership_idx').on(table.seasonMembershipId, table.createdAt),
+    /*
+     * A zero-amount row would pass every other check and mean nothing, while
+     * still consuming an idempotency key — so a genuine later delta under the
+     * same key would be silently swallowed.
+     */
+    check('token_transactions_amount_non_zero', sql`${table.amount} <> 0`),
+  ],
+);
+
+/**
+ * Versioned economy configuration, per season.
+ *
+ * `03 §11`: *"Exact costs and probabilities belong in database configuration, not
+ * hardcoded frontend logic."* And `16 §8` gates every value on the P3
+ * multi-season simulation. Both are satisfied the same way the reward table is:
+ * the row is **immutable and versioned**, so a rebalance writes a new version and
+ * every historical transaction stays interpretable against the numbers that were
+ * live when it happened.
+ *
+ * `provisional` records whether the simulation has signed the values off, so
+ * "has this been simulated" is a query rather than a memory. Clearing it is the
+ * one legitimate update to an existing row.
+ */
+export const economyConfigs = pgTable(
+  'economy_configs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    /** Content hash of `values`. Two environments seeding the same numbers agree. */
+    version: text('version').notNull(),
+
+    /** `{ seasonStartTokens, standardBoxPriceTokens }`, and more as systems land. */
+    values: jsonb('values').$type<Record<string, number>>().notNull(),
+
+    /** True until the P3 simulation signs these numbers off. */
+    provisional: boolean('provisional').notNull().default(true),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // One row per (season, version): a season may carry several versions over
+    // time, and the same numbers must not be stored twice for one season.
+    unique('economy_configs_season_version_unique').on(table.seasonId, table.version),
+  ],
+);
+
+// ---------------------------------------------------------------------------
+// The collectible economy
+// ---------------------------------------------------------------------------
+
+/**
+ * Rarity.
+ *
+ * `03` and `16 §8`: rarity gates **how often an item appears**, never what it
+ * costs or what it can do. So this is a property of the catalog entry and of
+ * the historical record of a pull — it is deliberately not a price tier.
+ *
+ * Stored on three rows for three different reasons, and the duplication is
+ * intentional:
+ *
+ *   - the **reward table** entry, because that is the roll's input
+ *   - the **opening**, because that is what the manager was told they got
+ *   - the **collectible**, because that is what they own
+ *
+ * If the catalog ever reclassifies an item, none of the three historical
+ * records may move. A join to a live catalog would silently rewrite what
+ * somebody pulled in 2026, which is exactly the class of quiet history
+ * rewriting `16 §5.1` exists to prevent.
+ */
+export const collectibleRarity = pgEnum('collectible_rarity', [
+  'common',
+  'rare',
+  'epic',
+  'legendary',
+]);
+
+/**
+ * One box in v1 (`16`, approved scope: "one loot box and a 24-item catalog").
+ *
+ * The enum has a single value on purpose. `object_box_rare` and
+ * `object_box_legendary` exist in the asset registry as *tray dressing* for
+ * rotation, which is a later slice; adding enum values for boxes that cannot be
+ * acquired would be scaffolding for code that does not exist.
+ */
+export const lootBoxKind = pgEnum('loot_box_kind', ['standard']);
+
+/** A box is unopened or opened. There is no third state, and no un-opening. */
+export const lootBoxState = pgEnum('loot_box_state', ['UNOPENED', 'OPENED']);
+
+/**
+ * A stored, immutable, versioned reward table.
+ *
+ * `18 §4.3`: "The reward is resolved from a stored reward table, with the box's
+ * config version recorded on the opening." Both halves of that matter, and this
+ * table is the first half.
+ *
+ * **Append-only.** A row is never updated. When the catalog or the weights
+ * change, the seed writes a *new* version and every historical opening keeps
+ * pointing at the version it actually rolled against. That is what makes an
+ * opening auditable a year later: the table it came from still exists, byte for
+ * byte, and can be replayed.
+ *
+ * `version` is a content hash of the entries rather than a counter, so two
+ * environments that seeded the same catalog agree on the version without
+ * coordinating, and an accidental edit cannot reuse an existing version number.
+ *
+ * ## The weights in here are provisional, and the column comment says so
+ *
+ * `16 §8` gates reward pacing on the multi-season simulation in P3: **no values
+ * lock before it runs.** `provisional` records that in the data rather than in a
+ * comment somebody has to find, so "has this been simulated yet" is a query.
+ */
+export const rewardTables = pgTable('reward_tables', {
+  id: uuid('id').primaryKey().defaultRandom(),
+
+  /** Content hash of `entries`. Stable across environments. */
+  version: text('version').notNull().unique(),
+
+  kind: lootBoxKind('kind').notNull(),
+
+  /**
+   * `[{ slug, rarity, weight }]`, canonically ordered.
+   *
+   * One jsonb column rather than a child table because the table is a single
+   * immutable unit: half a reward table is not a reward table, and a child
+   * table invites a partial insert that the version hash would then be lying
+   * about.
+   */
+  entries: jsonb('entries')
+    .$type<{ slug: string; rarity: string; weight: number }[]>()
+    .notNull(),
+
+  /** True until the P3 simulation has signed off on these frequencies. */
+  provisional: boolean('provisional').notNull().default(true),
+
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * A box somebody owns.
+ *
+ * In this slice a box arrives from the seed. Purchase with tokens is the next
+ * slice and goes through `apply_token_delta`; nothing here writes a balance.
+ *
+ * `grant_key` is what makes granting idempotent. Without it, every deploy's
+ * seed would hand out another box — and re-granting after an opening would be a
+ * reroll with extra steps.
+ */
+export const lootBoxes = pgTable(
+  'loot_boxes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    userId: uuid('user_id')
+      .notNull()
+      // A person is retired, never deleted, and their boxes go with them.
+      .references(() => users.id, { onDelete: 'restrict' }),
+
+    kind: lootBoxKind('kind').notNull().default('standard'),
+
+    state: lootBoxState('state').notNull().default('UNOPENED'),
+
+    /** Where it came from: `seed`, and later `purchase` or `weekly_reward`. */
+    source: text('source').notNull(),
+
+    /**
+     * A stable key for the act of granting, unique across the table.
+     *
+     * The seed derives one per manager per fixture box, so running the seed
+     * twice is a no-op — including after the box has been opened, which is the
+     * case that matters. Nullable because a purchased box is granted by a
+     * user action that is already idempotent on its own.
+     */
+    grantKey: text('grant_key').unique(),
+
+    /** From the injected clock: when this box became someone's. */
+    grantedAt: timestamp('granted_at', { withTimezone: true }).notNull(),
+
+    /** Set exactly when `state` becomes `OPENED`, and never cleared. */
+    openedAt: timestamp('opened_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('loot_boxes_user_state_idx').on(table.userId, table.state),
+    /*
+     * State and timestamp cannot disagree.
+     *
+     * The pair is what every read uses — the tray asks "is a box unopened", the
+     * audit asks "when was it opened" — so a row where one says opened and the
+     * other says never would make the tray and the ledger tell different
+     * stories. The database refuses it rather than trusting every future writer
+     * to keep them in step.
+     */
+    check(
+      'loot_boxes_opened_at_matches_state',
+      sql`(${table.state} = 'OPENED') = (${table.openedAt} IS NOT NULL)`,
+    ),
+  ],
+);
+
+/**
+ * The append-only record of one box being opened.
+ *
+ * ## `box_id` is UNIQUE, and that single constraint is the idempotency mechanism
+ *
+ * `18 §4.3` requires that "duplicate requests and refresh rerolls are
+ * rejected". The obvious implementation is a client-supplied idempotency key,
+ * and it is the wrong one here: the operation already has a natural key. **A
+ * box opens once, ever.** So a unique constraint on `box_id` makes a second
+ * opening physically impossible, whatever asks for it — a double tap, a
+ * refresh mid-reveal, two serverless instances racing, or a hand-run INSERT.
+ *
+ * A separate idempotency key would add a column that a client controls, and
+ * would still need this constraint underneath to be worth anything. (The
+ * idempotency-key invariant in `16 §5.4` is about `apply_token_delta`, where
+ * the operation genuinely has no natural key — a delta is not a thing, it is an
+ * event. That is a different problem and it is out of this slice's scope.)
+ *
+ * The service takes `FOR UPDATE` on the box first, so the common concurrent
+ * case *waits* and then reads back the existing opening rather than erroring.
+ * The constraint is the backstop, not the happy path.
+ */
+export const boxOpenings = pgTable(
+  'box_openings',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /** One opening per box, forever. See the note above. */
+    boxId: uuid('box_id')
+      .notNull()
+      .unique()
+      .references(() => lootBoxes.id, { onDelete: 'restrict' }),
+
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+
+    /** The registry slug of what came out. Not an FK: the catalog is the registry. */
+    collectibleSlug: text('collectible_slug').notNull(),
+
+    /** What the manager was told they got. Frozen, see `collectibleRarity`. */
+    rarity: collectibleRarity('rarity').notNull(),
+
+    /**
+     * The reward table this roll was resolved against — `18 §4.3`'s "config
+     * version recorded on the opening". RESTRICT, so a version that any opening
+     * references can never be deleted out from under its own audit trail.
+     */
+    rewardTableVersion: text('reward_table_version')
+      .notNull()
+      .references(() => rewardTables.version, { onDelete: 'restrict' }),
+
+    /**
+     * The roll, in the same units the resolver used: an integer in
+     * `[0, totalWeight)`.
+     *
+     * Recorded so an opening is genuinely *auditable* rather than merely
+     * logged. With the table version and this number, the outcome is a pure
+     * function anybody can recompute — which is the only way to answer "was
+     * that legendary real" without being asked to take the server's word.
+     */
+    roll: integer('roll').notNull(),
+
+    openedAt: timestamp('opened_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [index('box_openings_user_idx').on(table.userId, table.openedAt)],
+);
+
+/**
+ * A collectible somebody owns, permanently.
+ *
+ * `16 §5.1`: collectibles hang off `users.id`, never off a season membership.
+ * Roster 4 in 2025 is not roster 4 in 2026, and a replacement manager must not
+ * inherit the previous occupant's shelf.
+ *
+ * Duplicates are allowed — no unique on `(user_id, slug)`. Pulling the same
+ * parmesan shaker twice is an ordinary outcome of a weighted table, and the
+ * Collection counts copies. Forbidding it would silently turn every duplicate
+ * roll into a reroll, which is a reward-pacing change made by accident in a
+ * constraint.
+ */
+export const collectibles = pgTable(
+  'collectibles',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+
+    /** The registry slug. Art is swapped by registry row, never by data edit. */
+    slug: text('slug').notNull(),
+
+    rarity: collectibleRarity('rarity').notNull(),
+
+    acquiredAt: timestamp('acquired_at', { withTimezone: true }).notNull(),
+
+    /**
+     * The opening that produced it.
+     *
+     * UNIQUE, so one opening can never mint two collectibles — the other half
+     * of exactly-once, and the half a retry of the *second* insert would break
+     * if only the opening were guarded. Nullable because later sources (weekly
+     * rewards, rings) are not box openings.
+     */
+    sourceOpeningId: uuid('source_opening_id')
+      .unique()
+      .references(() => boxOpenings.id, { onDelete: 'restrict' }),
+  },
+  (table) => [index('collectibles_user_idx').on(table.userId, table.acquiredAt)],
+);
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Season = typeof seasons.$inferSelect;
@@ -666,3 +1150,15 @@ export type ContentUsage = typeof contentUsageLog.$inferSelect;
 export type NewContentUsage = typeof contentUsageLog.$inferInsert;
 export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type NewAdminAuditLog = typeof adminAuditLogs.$inferInsert;
+export type TokenTransaction = typeof tokenTransactions.$inferSelect;
+export type NewTokenTransaction = typeof tokenTransactions.$inferInsert;
+export type EconomyConfig = typeof economyConfigs.$inferSelect;
+export type NewEconomyConfig = typeof economyConfigs.$inferInsert;
+export type RewardTable = typeof rewardTables.$inferSelect;
+export type NewRewardTable = typeof rewardTables.$inferInsert;
+export type LootBox = typeof lootBoxes.$inferSelect;
+export type NewLootBox = typeof lootBoxes.$inferInsert;
+export type BoxOpening = typeof boxOpenings.$inferSelect;
+export type NewBoxOpening = typeof boxOpenings.$inferInsert;
+export type Collectible = typeof collectibles.$inferSelect;
+export type NewCollectible = typeof collectibles.$inferInsert;

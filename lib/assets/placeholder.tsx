@@ -46,18 +46,78 @@ export function PlaceholderSign({
 }
 
 /**
+ * The placeholder for a **small object in the room**, rather than a surface.
+ *
+ * ## Why `PlaceholderSign` could not do this job
+ *
+ * The taped-up sign is built for a wall: `min-h-24`, padding, a label and the
+ * slug. Put it in a 44 × 30 slot and it does not shrink — the min-height wins,
+ * the label wraps to four lines, and a 54 × 133 white slab stands on the counter
+ * with a developer's slug printed down it. That is not a placeholder for a pizza
+ * box; it is broken software wearing tape, and it was the loudest thing in the
+ * room the first time it rendered.
+ *
+ * `object_box_owned` is the first placeholder the product has ever drawn at
+ * object scale — every other overlay in the parlor (the rack, the banner, the
+ * shell, Tony) already has generated art — so this case had never come up.
+ *
+ * ## What it draws instead
+ *
+ * A small closed carton, in five flat rectangles: a base, a lid, the seam
+ * between them, and a label mark. Hard edges, square corners, palette colours,
+ * no gradients and no text — the same rules every other surface in the shop
+ * follows.
+ *
+ * This follows the precedent `globals.css` sets for the room itself: *"the
+ * placeholder treatment itself had to become the room rather than a taped-up
+ * sign standing in for one."* A drawn stand-in at the right size reads as a shop
+ * whose props are simple. A sign with a slug on it reads as a bug.
+ *
+ * It fills its container exactly, so the object's geometry lives in
+ * `objects.ts` where it belongs and this never has an opinion about size.
+ *
+ * **On the glow**: an overlay's affordance is `drop-shadow()` on its own alpha
+ * (`18 §9.4`). This stand-in is a filled rectangle, so its glow is
+ * rectangular — honestly so, because that *is* this shape's silhouette. When the
+ * real box art lands with real transparency, the same CSS follows the real
+ * outline with no change here. That is the property the mechanism was chosen for.
+ */
+export function PlaceholderObject({ className = '' }: { className?: string }) {
+  return (
+    <span aria-hidden="true" className={`relative block h-full w-full ${className}`}>
+      {/* The base of the carton. */}
+      <span className="absolute inset-0 border-2 border-wood-dark bg-paper-dark" />
+      {/* The lid, catching the light from above. */}
+      <span className="absolute inset-x-0 top-0 h-[42%] border-2 border-wood-dark bg-paper-mid" />
+      {/* Where the lid meets the base. One hard line, no shadow. */}
+      <span className="absolute inset-x-[8%] top-[42%] h-[2px] bg-wood-dark/70" />
+      {/* The handwritten label. A mark, not a word — there is no room for a word. */}
+      <span className="absolute top-[12%] left-[16%] h-[3px] w-[44%] bg-red-dark/80" />
+      <span className="absolute top-[24%] left-[16%] h-[2px] w-[28%] bg-red-dark/55" />
+    </span>
+  );
+}
+
+/**
  * Renders any resolution.
  *
- * Art is not yet implemented because no asset has advanced past `placeholder`;
- * that branch lands with batch B1. `missing` is rendered loudly on purpose —
- * a typo'd slug should be obvious in development, not silently invisible.
+ * `missing` is rendered loudly on purpose — a typo'd slug should be obvious in
+ * development, not silently invisible.
+ *
+ * `compact` picks the object-scale placeholder over the wall-scale one. It is a
+ * property of *where the asset is being drawn*, not of the asset, which is why it
+ * is a prop here rather than a registry field: the same slug may appear on the
+ * counter at 44 units and in a Collection grid at 96.
  */
 export function AssetView({
   resolution,
   className = '',
+  compact = false,
 }: {
   resolution: AssetResolution;
   className?: string;
+  /** Drawn at object scale — a few dozen units — rather than as a surface. */
+  compact?: boolean;
 }) {
   if (resolution.kind === 'missing') {
     return (
@@ -72,12 +132,10 @@ export function AssetView({
   }
 
   if (resolution.kind === 'placeholder') {
-    return (
-      <PlaceholderSign
-        label={resolution.label}
-        slug={resolution.slug}
-        className={className}
-      />
+    return compact ? (
+      <PlaceholderObject className={className} />
+    ) : (
+      <PlaceholderSign label={resolution.label} slug={resolution.slug} className={className} />
     );
   }
 

@@ -2,6 +2,7 @@ import Link from 'next/link';
 
 import { Arriving } from '@/components/scene/arrival';
 import { BannerRail } from '@/components/scene/banner-rail';
+import { CounterTray } from '@/components/scene/counter-tray';
 import { RoomDisplay, RoomDoor } from '@/components/scene/room-object';
 import { TonyToy } from '@/components/scene/tony-toy';
 import { Page } from '@/components/shell';
@@ -11,6 +12,9 @@ import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
+import { ownedBox } from '@/lib/counter/boxes';
+import { showcaseFor } from '@/lib/counter/showcase';
+import { openSeason, wallet } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
 import { championBanners } from '@/lib/parlor/champions';
 import {
@@ -23,7 +27,7 @@ import {
   roomObject,
 } from '@/lib/parlor/objects';
 import { seasonClock } from '@/lib/parlor/season';
-import { tonightBoard } from '@/lib/parlor/tonight';
+import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
 import { loadTags } from '@/lib/tags/repository';
 
 /**
@@ -54,10 +58,17 @@ import { loadTags } from '@/lib/tags/repository';
  * are not in the markup at all.
  *
  * **Only Doors glow, and only when they have something to say.** The board, the
- * sign, the receipt, the tray and the doorway are baked into the shell, so they
- * have no alpha to derive a glow from — which is correct rather than a
- * limitation: Displays never glow by rule, and in V1 the two baked Doors have
- * nothing to announce.
+ * sign, the receipt, the empty tray and the doorway are baked into the shell, so
+ * they have no alpha to derive a glow from — which is correct rather than a
+ * limitation: Displays never glow by rule.
+ *
+ * The tray is the one that changed. When a manager owns an unopened box there is
+ * a **box overlay** on the tray, and an overlay has its own alpha — so the tray
+ * Door glows, for the first time, because it finally has something to say. The
+ * doorway still does not, because nothing beyond it is open yet.
+ *
+ * The box is a **state of the tray**, not a ninth object. Tapping it opens it
+ * where it sits (`18 §4.1`); tapping an empty tray still goes to `/counter`.
  */
 
 // The greeting is chosen per manager and logged on the first visit of each day,
@@ -72,12 +83,22 @@ export default async function ParlorPage() {
   const db = getDb();
   const clock = seasonClock();
 
-  const [tags, managers, tonight, banners] = await Promise.all([
+  const [tags, managers, tonight, banners, box, season] = await Promise.all([
     loadTags(db),
     listDoorManagers(db),
     tonightBoard(db),
     championBanners(db),
+    ownedBox(db, user.id),
+    openSeason(db),
   ]);
+
+  // Null when this manager holds no seat this season — a co-owner, or somebody not
+  // seated yet. A zero would make "no tab" and "spent everything" look the same.
+  const purse =
+    season === null ? null : await wallet(db, { userId: user.id, seasonId: season.id });
+
+  // What the league can see of them, so the room reflects the Showcase choice.
+  const shown = await showcaseFor(db, user.id);
 
   const greeting = await greetingFor(db, {
     userId: user.id,
@@ -88,27 +109,35 @@ export default async function ParlorPage() {
   });
 
   const line = greeting?.text ?? `Tony nods at ${user.displayName} and goes back to the oven.`;
-  // The board's face carries the state line plus one headline. The countdown
-  // already has its own row there, so the headliner is the next line down.
-  const headliner = tonight.find((entry) => entry.key !== 'kickoff');
+  /*
+   * The board's face: a hero and at most one short fact.
+   *
+   * The matchup of the week is a Stats & Data fact and is not passed yet, so in
+   * the offseason the detail is the countdown — a verified clock value. The face
+   * shows nothing rather than inventing prose (`PRODUCT_DELIVERY_MANDATE.md §9`).
+   */
+  const face = boardFace({ daysUntilKickoff: clock.daysUntilKickoff });
   const shell = resolveAsset('zone_parlor_shell');
 
   return (
     <Page oneScreen>
       <Arriving>
         {/*
-          * The utility bar. Deliberately the smallest thing on the screen: the
-          * day and who you are, and nothing else. The "what's open?" control
-          * that used to live here is gone — `18 §7` makes that assist optional
-          * and off by default rather than persistent chrome, and it was also
-          * where the visible rectangles around room objects came from.
+          * The utility bar. Deliberately the smallest thing on the screen:
+          * **who you are, and nothing else.** The "what's open?" control that
+          * used to live here is gone — `18 §7` makes that assist optional and
+          * off by default rather than persistent chrome, and it was also where
+          * the visible rectangles around room objects came from.
+          *
+          * The countdown that sat on the left is gone too. Once the board
+          * started saying `WEEK ONE / 42 days out` in 20px type, the bar was
+          * printing the same fact a second time in 9px, a few hundred pixels
+          * above it — the "same thing rendered twice" reviewer gate, and the
+          * chrome losing the comparison badly. The room says when it is; the
+          * Tonight panel behind the board still carries it in prose, which is
+          * where a screen reader gets it.
           */}
-        <header className="flex h-11 shrink-0 items-center justify-between gap-1 overflow-hidden bg-ink-900 pr-1 pl-3">
-          <span className="shrink-0 font-display text-[9px] whitespace-nowrap text-ink-100/55 uppercase">
-            {clock.daysUntilKickoff === null
-              ? 'Week one'
-              : `${String(clock.daysUntilKickoff)} days out`}
-          </span>
+        <header className="flex h-11 shrink-0 items-center justify-end gap-1 overflow-hidden bg-ink-900 pr-1 pl-3">
           <Link
             href="/profile"
             className="flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-display text-[9px] whitespace-nowrap text-paper-mid/75"
@@ -185,35 +214,55 @@ export default async function ParlorPage() {
 
             {/* Doors. */}
             <RoomDoor spec={roomObject('slice')} />
-            <RoomDoor spec={roomObject('counter')} />
+
+            {/*
+              * The tray.
+              *
+              * Still one Door and still the same hit region. What changes is
+              * what a tap does: with nothing on the tray it goes to `/counter`
+              * to browse, and with a box on it **the box opens here, in place**
+              * (`18 §4.1`). Routing to `/counter` first would put a navigation
+              * step inside the most exciting moment in the product, which is
+              * the exact failure the ruling names.
+              *
+              * The box is a *state of the tray*, not a ninth object — the
+              * homepage stays 3 Doors · 4 Displays · 1 Toy.
+              */}
+            <CounterTray
+              spec={roomObject('counter')}
+              ownedBoxId={box?.id ?? null}
+              boxAsset={resolveAsset('object_box_owned')}
+            />
+
             <RoomDoor spec={roomObject('back-hall')} />
 
             {/*
               * The board's own face.
               *
-              * Ruled **surface-rendered**, and it was rendering nothing: the
-              * text lived only in the panel that opens over it, so the largest
-              * object in an idle room was a blank cream rectangle. An idle room
-              * is what a manager looks at most of the time.
+              * **A hero and one short fact, centred.** Commissioner ruling,
+              * 2026-07-30: the board was not clear — too small, too many words,
+              * and colliding with the painted frame. It had been carrying a state
+              * line *plus a full sentence* at 8px and 9px, duplicating badly what
+              * the panel behind it already says in full.
               *
-              * A state line and one headliner is what the measured field holds
-              * — `TONIGHT_FIELD`, 111 x 74 logical. The panel keeps all four
-              * lines. `aria-hidden` because the button beneath already carries
-              * the label and the panel carries the prose; a screen reader
-              * should not hear the headline twice on the way to the same place.
+              * So: `WEEK ONE` at 20px in the board's own red, one short line under
+              * it, and nothing else. `TONIGHT_FIELD` is now inset six units inside
+              * the cream so neither line touches the frame.
+              *
+              * `aria-hidden` because the button beneath carries the label and the
+              * panel carries the prose; a screen reader should not hear the
+              * headline twice on the way to the same place.
               */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute flex flex-col gap-[3%] overflow-hidden"
+              className="pointer-events-none absolute flex flex-col items-center justify-center overflow-hidden text-center"
               style={place(TONIGHT_FIELD)}
             >
-              <p className="font-display text-[8px] leading-none tracking-wide text-red-dark/85 uppercase">
-                {clock.daysUntilKickoff === null
-                  ? 'Week one'
-                  : `Week one · ${String(clock.daysUntilKickoff)} days`}
+              <p className="font-display text-[20px] leading-[1.1] tracking-[0.02em] text-red-dark uppercase">
+                {face.hero}
               </p>
-              {headliner !== undefined && (
-                <p className="text-[9px] leading-[1.45] text-ink-900/80">{headliner.text}</p>
+              {face.detail !== null && (
+                <p className="mt-1.5 text-[16px] leading-[1.25] text-ink-900/80">{face.detail}</p>
               )}
             </div>
 
@@ -265,8 +314,41 @@ export default async function ParlorPage() {
               </p>
             </RoomDisplay>
 
+            {/*
+              * The receipt: the manager's own record.
+              *
+              * The token balance belongs here rather than in the utility bar. The
+              * homepage has exactly eight interactive objects (`18 §3`) and a
+              * balance readout bolted to the chrome is the first step toward the
+              * dashboard `16 §1` names as the failure mode — while "what have I
+              * got" is precisely what a receipt answers.
+              */}
             <RoomDisplay spec={roomObject('receipt')} title="Your record">
-              <p className="pb-3 text-[19px] leading-[1.45] text-ink-700">{user.displayName}</p>
+              <p className="text-[19px] leading-[1.45] text-ink-700">{user.displayName}</p>
+              {purse !== null && (
+                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
+                  {String(purse.balance)} Tony Tokens on your tab this season.
+                </p>
+              )}
+              {/*
+                * What the league can see of you.
+                *
+                * Milestone item 10 — returning to the parlor reflects the result.
+                * The tray already does that for a box; this does it for the choice
+                * made at the Showcase, and it belongs on the receipt because the
+                * receipt is the manager's own record of themselves.
+                */}
+              {shown !== null && (
+                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
+                  {shown.name} is out in the showcase.
+                </p>
+              )}
+              {shown === null && (
+                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700/85">
+                  Nothing of yours is out in the showcase.
+                </p>
+              )}
+              <p className="pb-3" />
             </RoomDisplay>
 
             {/* The Toy. */}

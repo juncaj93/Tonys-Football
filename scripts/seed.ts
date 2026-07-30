@@ -3,12 +3,13 @@
  *
  *   npm run db:seed
  *
- * Four idempotent steps, safe to run on every deploy and safe to run twice:
+ * Five idempotent steps, safe to run on every deploy and safe to run twice:
  *
  *   1. import the league chain from recorded fixtures
  *   2. apply the names Tony uses, from `content/managers.md`
  *   3. seed the Counter Greetings from `content/counter-greetings.md`
- *   4. grant admin to the commissioner named in the environment
+ *   4. open each manager's token tab and put one box on their tray
+ *   5. grant admin to the commissioner named in the environment
  *
  * Fixtures rather than the live API, deliberately (`16 §12`): the import is
  * then offline, repeatable, and identical in every environment, and a Sleeper
@@ -20,13 +21,17 @@ import { eq } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
+import { ensureRewardTable, grantBox } from '@/lib/counter/boxes';
+import { applyTokenDelta, ensureEconomyConfig, openSeason } from '@/lib/counter/tokens';
+import { CATALOG_SIZE } from '@/lib/counter/catalog';
+import { standardRewardTable } from '@/lib/counter/rewards';
 import {
   assertOnlyApprovedGroups,
   readCounterGreetings,
   seedCounterGreetings,
 } from '@/lib/content/seed';
 import { closePool, getDb } from '@/lib/db';
-import { users } from '@/lib/db/schema';
+import { seasonMemberships, users } from '@/lib/db/schema';
 import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
 import { persistChain } from '@/lib/sleeper/persist';
@@ -43,6 +48,16 @@ const DEFAULT_LEAGUE_ID = '1385016656425668608';
  * still moving, so a human names the years instead.
  */
 const FINALIZED_SEASONS = [2024, 2025] as const;
+
+/**
+ * The grant-key prefix for the seeded fixture box.
+ *
+ * Versioned in the string. If a later slice ever needs to grant a *second*
+ * fixture box deliberately, it uses a new prefix — which is a visible, reviewable
+ * change, rather than the invisible one where a key is reused and every manager
+ * silently gets another box on the next deploy.
+ */
+const FIXTURE_BOX_GRANT = 'seed:m2s1:standard';
 
 async function main(): Promise<void> {
   if ((process.env['DATABASE_URL'] ?? '') === '') {
@@ -108,7 +123,102 @@ async function main(): Promise<void> {
 
     await assertOnlyApprovedGroups(db);
 
-    // --- 4. The commissioner ----------------------------------------------
+    // --- 4. The tray ------------------------------------------------------
+    //
+    // The reward table is stored before any box exists to open, because
+    // `18 §4.3` requires openings to resolve against a *stored* table — the
+    // service refuses to roll against a version this database has never
+    // recorded rather than writing one on first use.
+    const { version } = await ensureRewardTable(db);
+    const table = standardRewardTable();
+    console.log(
+      `Rewards  table ${version} · ${String(table.entries.length)} items · ` +
+        `total weight ${String(table.totalWeight)} · PROVISIONAL until the P3 simulation`,
+    );
+
+    if (table.entries.length !== CATALOG_SIZE) {
+      // Loud and fatal. `16` approves a 24-item catalog; a registry edit that
+      // changes the count changes the economy, and it should not be possible to
+      // discover that from a screenshot weeks later.
+      throw new Error(
+        `the catalog holds ${String(table.entries.length)} items, not ${String(CATALOG_SIZE)}. ` +
+          'If the change is intended, update CATALOG_SIZE and say so in the pull request. ' +
+          'Never delete an approved slug to satisfy an older count.',
+      );
+    }
+
+    /*
+     * The season's opening balance.
+     *
+     * `03 §4` names 250 as the first-season starting balance, and it is the only
+     * token source that can honestly exist today: matchup wins and weekly high
+     * scores need a season that has been played, and the two cron jobs that would
+     * award them are not built (`16 §4.3`). Inventing a weekly reward that fires
+     * on nothing would be fabricated data.
+     *
+     * Idempotent through the ledger's own key, so every deploy grants it once
+     * and never again — including after it has been spent, which is the case that
+     * matters. The amount is provisional until the P3 simulation.
+     */
+    const open = await openSeason(db);
+    if (open === null) {
+      console.log('Tokens   no open season, so no wallets to open.');
+    } else {
+      const economy = await ensureEconomyConfig(db, open.id);
+      const seated = await db
+        .select({ userId: seasonMemberships.userId })
+        .from(seasonMemberships)
+        .where(eq(seasonMemberships.seasonId, open.id));
+
+      for (const seat of seated) {
+        await applyTokenDelta(db, {
+          userId: seat.userId,
+          seasonId: open.id,
+          amount: economy.values.seasonStartTokens,
+          reason: 'SEASON_START',
+          description: `Tony opens a tab for the ${String(open.year)} season.`,
+          idempotencyKey: `season-start:${open.id}:${seat.userId}`,
+        });
+      }
+
+      console.log(
+        `Tokens   ${String(open.year)} · config ${economy.version} · ` +
+          `${String(economy.values.seasonStartTokens)} opening tokens x ${String(seated.length)} seats · ` +
+          `box ${String(economy.values.standardBoxPriceTokens)} · PROVISIONAL until the P3 simulation`,
+      );
+    }
+
+    /*
+     * The house's welcome box — one per manager, granted once, ever.
+     *
+     * This began as a fixture, because slice 1 had no way to acquire a box and one
+     * had to come from somewhere. Purchase exists now, so that justification is
+     * gone and the grant is kept for a different and better reason: **the first
+     * box should not cost anything.** A manager's first visit ends with them
+     * opening something rather than doing arithmetic about whether to, and it costs
+     * the economy nothing that P3 has to model — it is one box, once, forever.
+     *
+     * `grantKey` is what keeps it a gift rather than a faucet: the key is stable
+     * per manager, so every subsequent deploy grants nothing — **including after
+     * the box has been opened**, which is the case that matters. A re-grant of an
+     * opened box would be a reroll dressed up as a deployment.
+     */
+    const managers = await db.select({ id: users.id }).from(users);
+    let granted = 0;
+    for (const manager of managers) {
+      const result = await grantBox(db, {
+        userId: manager.id,
+        grantKey: `${FIXTURE_BOX_GRANT}:${manager.id}`,
+        source: 'seed',
+      });
+      if (result.granted) granted += 1;
+    }
+    console.log(
+      `Tray     ${String(granted)} welcome boxes granted · ` +
+        `${String(managers.length - granted)} managers already had theirs`,
+    );
+
+    // --- 5. The commissioner ----------------------------------------------
     const commissioner = process.env['COMMISSIONER_SLEEPER_USER_ID'] ?? '';
 
     if (commissioner === '') {

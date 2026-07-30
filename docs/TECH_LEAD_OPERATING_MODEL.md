@@ -138,14 +138,74 @@ Chronological. `PR #n · comment` is the authoritative text.
 | 2026-07-29 | Merge order **superseded** by the integration-branch model | PR #14 |
 | 2026-07-29 | Finalized seasons refuse record updates; open seasons still update | `docs/DATA_AUDIT.md` · PR #10 |
 | 2026-07-30 | **Full autonomous delivery mandate** — Technical Lead is also integration owner, visual gate, and delegated commissioner for V1 | this file |
+| 2026-07-30 | **COMMISSIONER: standing Product Delivery Mandate.** The objective is a demonstrable, polished, statistically trustworthy product — not the existence of routes, schemas or PRs. Completion bar, permanent visual standard, mandatory screenshot loop, demoability, specialist ownership, deterministic stats-fact layer | `docs/PRODUCT_DELIVERY_MANDATE.md` |
+| 2026-07-30 | **COMMISSIONER: the Tonight board is not clear.** Too small, too many words, colliding with the frame. It should read like `WEEK 5` plus one short fact, elegantly, inside the cream field | `TONIGHT_FIELD` · `lib/parlor/tonight.ts` |
+| 2026-07-30 | Typography floor is **16–18 CSS px, adjusted upward when the pixel font needs optical size** — supersedes the bare "17px floor". Panels adapt around readable text; text is never shrunk to fit a panel | `PRODUCT_DELIVERY_MANDATE.md §6` |
+| 2026-07-30 | **COMMISSIONER: the league does not pay for API use.** The orchestrator is reduced to manual dispatch, `ANTHROPIC_API_KEY` is removed, and no paid dependency may be reintroduced without a new decision. No product scope is affected — `16 §9` already requires the Slice to publish with the key unset | `AUTONOMY.md §4` · issue #18 |
 | 2026-07-30 | Transient panels are **set down in the room**, never bottom sheets. Sized to content, centred, pixel-bevelled, shared material with Tony's box and the champion panel | `components/scene/room-object.tsx` |
 | 2026-07-30 | **Body copy floor is 17px.** Size the container to the type, never the type to the container | `components/scene/tony-toy.tsx` |
 | 2026-07-30 | The Tonight board is **surface-rendered**: state line + one headliner on the board's own face, all four lines in the panel | `TONIGHT_FIELD` |
 | 2026-07-30 | The prediction sign gets a **wiped-board** treatment — chalk residue, no invented prediction | `PREDICTION_SLATE` |
+| 2026-07-30 | **The tray's destination is conditional.** Empty tray → `/counter`. Box on it → **opens in place**, no navigation. One object either way; the box is a *state of the tray*, never a ninth object | `components/scene/counter-tray.tsx` · issue #17 |
+| 2026-07-30 | Because of the above, **`/counter` must stay reachable in every tray state.** The reveal plate carries the onward step. A route reachable only sometimes is the same defect class as a link to a route that does not exist | `VISUAL_ACCEPTANCE.md §6` |
+| 2026-07-30 | `object-map` asserts **the whole map by marker identity** (`data-room-object` / `data-room-kind`), not a count of anchors. `banners` is the **only** partitioned object (`data-room-partition`) | `VISUAL_ACCEPTANCE.md §3` · `scripts/visual-qa.mts` |
+| 2026-07-30 | New **`glow` gate**: nothing in the room carries `drop-shadow` except the tray's box states and a rarity treatment | `VISUAL_ACCEPTANCE.md §3` |
+| 2026-07-30 | **`box_openings.box_id UNIQUE` is the idempotency mechanism** for opening — the operation has a natural key. No client-supplied idempotency key; that invariant belongs to `apply_token_delta`, where a delta has no natural key | `lib/db/schema.ts` |
+| 2026-07-30 | The reward table is **stored, versioned by content hash, and append-only**. A rebalance writes a new version; openings keep pointing at the version they rolled against. Weights ship `provisional = true` until the **P3 simulation** signs them off | `lib/counter/rewards.ts` |
+| 2026-07-30 | The **catalog is derived from the asset registry**, not duplicated in a table. Rarity and the item's name (its `alt`) have one home; `CATALOG_SIZE` is asserted so a registry edit cannot silently change the economy | `lib/counter/catalog.ts` |
+| 2026-07-30 | Randomness is **injected like the clock** — one override point, `crypto.randomInt`, never `Math.random` | `lib/counter/rng.ts` |
+| 2026-07-30 | **Rarity is the word first**, then frame geometry, then colour. Colour is an accent *inside* a house-material surface, never the surface's own border | `app/globals.css` |
+| 2026-07-30 | `PlaceholderSign` is for **surfaces**; small objects use `PlaceholderObject` via `AssetView … compact`. The wall sign does not shrink | `lib/assets/placeholder.tsx` |
+| 2026-07-30 | The revealed collectible **rests on the tray**, where the box was. Motion may lift it; geometry may not float it | `TRAY_REVEAL` |
+| 2026-07-30 | `apply_token_delta` is a **Postgres function**, not a service. The balance column has one write path, enforced by a trigger pair — a direct `UPDATE` of `token_balance` raises | `drizzle/0005_token_ledger.sql` |
+| 2026-07-30 | **A token delta needs a client-supplied idempotency key; opening a box does not.** A delta is an event with no natural key; a box opens once and has one. The two slices differ on purpose | `lib/counter/tokens.ts` |
+| 2026-07-30 | Reusing an idempotency key for a **different** delta raises rather than silently no-opping — a silent no-op would tell a caller it moved tokens that never moved | `apply_token_delta` |
+| 2026-07-30 | Overdraft is refused by `CHECK (token_balance >= 0)`, never by a read-then-check in a service. The Buy button is **never disabled on a client-read balance** | `lib/counter/boxes.ts` |
+| 2026-07-30 | Purchase debits **before** creating the box, so an unaffordable purchase creates nothing. One transaction; the box's `grant_key` is derived from the ledger key | `purchaseBox` |
+| 2026-07-30 | `apply_token_delta` refuses a **finalized season** (`03 §6` closes the books). 2024/2025 are finalized in every environment, so this is reachable | `drizzle/0005_token_ledger.sql` |
+| 2026-07-30 | The purchase idempotency key is **namespaced server-side** under the session's user id, so a client cannot craft a key that reaches another ledger row | `app/actions/counter.ts` |
+| 2026-07-30 | The token balance lives on the **receipt**, not in the utility bar — a balance bolted to the chrome is the first step toward the dashboard `16 §1` names as the failure mode | `app/page.tsx` |
+| 2026-07-30 | **New gate:** no Tailwind class may reference an undefined `--color-*` token. Four sites shipped invisible or accidentally-inherited text | `lib/design/colour-tokens.test.ts` |
+| 2026-07-30 | Body copy inside a cream `PixelPanel` is **`text-ink-700`**, never `text-paper-*`. Cream on cream shipped on three routes | `VISUAL_ACCEPTANCE.md §4` |
+| 2026-07-30 | `tray-reveal` is a **required** visual state now that a box can be bought per width | `VISUAL_ACCEPTANCE.md §1` |
+| 2026-07-30 | **`RoomBehind` was drawing the withdrawn two-tile room** behind every interior route since V1. Now the one approved shell. The `legacy` and `colour-fidelity` checks run on **every** state — a skip list is a place for defects to live | `components/scene/room-behind.tsx` |
+| 2026-07-30 | The `legacy` gate matches the withdrawn **root** `/collection`, anchored to a path boundary. `/counter/collection` is canonical and must not trip it | `scripts/visual-qa.mts` |
+| 2026-07-30 | The collection shows the **whole 24-item catalog**, unowned entries named and deliberately empty. Set progress is a statement about the gap | `app/counter/collection/page.tsx` |
+| 2026-07-30 | **Duplicates are counted, never converted.** `03 §12` defers salvage until after simulation; a salvage rate here would be a P3 decision taken early | `lib/counter/collection.ts` |
+| 2026-07-30 | Collection filters are **URLs, not client state**, and an unrecognised value means "everything" rather than an error | `parseFilter` |
+| 2026-07-30 | The Showcase is **one column on `users`**, no levels or clout (`16 §5.3`, `18 §4`). Ownership is enforced by a trigger — an FK can say "a collectible", not "*your* collectible" | `drizzle/0006_showcase.sql` |
+| 2026-07-30 | The Showcase wall lists **every manager including retired ones and those showing nothing** — omitting them makes "has not picked" look like "is not in this league" | `lib/counter/showcase.ts` |
+| 2026-07-30 | **Wearable equipping belongs to M3**, not M2. `03`'s 12 wearables / 5 slots need the character system to be equipped onto; the allowed M2 action is the Showcase | this file |
+| 2026-07-30 | The `users → collectibles` FK is declared in **SQL, not `schema.ts`** — the reverse reference makes the table types mutually recursive and TypeScript stops inferring both (TS7022). It also extends `TRUNCATE ... CASCADE` to reach `users` | `drizzle/0006_showcase.sql` |
 
 ---
 
-## 9. Current milestone — V1 Parlor
+## 9. Current milestone — M2 the loot-box slice
+
+**Slice 1 — the tray holds a real box, and opening it is the moment** (issue #17). Built on `claude/tonys-pizza-tech-lead-iq2n38`.
+
+| | Work | State |
+|---|---|---|
+| 1 | Ownership, openings and inventory schema — append-only, trigger-enforced | ✅ merged |
+| 2 | Stored versioned reward table, provisional until P3 | ✅ |
+| 3 | Server-authoritative, transactional, idempotent opening | ✅ |
+| 4 | The box on the tray; open-in-place; the reveal | ✅ |
+| 5 | `object-map` rewritten to markers · new `glow` gate · `tray-owned-box` state | ✅ |
+| 6 | `/counter` made truthful about what is owned | ✅ |
+
+Next slices, as separate issues: **token acquisition** through `apply_token_delta` (which also makes `tray-reveal` a required visual state), then **`/counter/collection`**, then **showcase and equip**.
+
+### The orchestrator is off, and the milestone is unaffected
+
+The model-driven loop never ran a single turn: both runs on 2026-07-30 exited on `Credit balance is too low` before the role file was read. Escalated as issue #18 — and the **commissioner answered that the league does not pay for API use.**
+
+So the loop is retired rather than repaired: `orchestrator.yml` is manual-dispatch only, `ANTHROPIC_API_KEY` comes out of Actions secrets, and #18 is closed as not-planned. Recorded in `§8` and `AUTONOMY.md §4`.
+
+This costs the project nothing that matters. The labels in `AUTONOMY.md §2` are the state machine and the `agents/*.md` files are the role contracts; the workflow was one possible actor reading them, not the mechanism itself. Turns are taken in a session — which is how slice 1 shipped, under exactly the gates the loop would have applied. The two gates that decide whether work is good, `ci.yml` and `visual-qa.yml`, were built to depend on nothing and are untouched.
+
+---
+
+## 10. Previous milestone — V1 Parlor
 
 Integration branch **`integration/v1-parlor-milestone`**, tracked by **PR #14**, which is also the visual gate.
 
@@ -170,7 +230,7 @@ Integration branch **`integration/v1-parlor-milestone`**, tracked by **PR #14**,
 | Newspaper rack | `(10, 224)` at 38 × 38 |
 | Layer cut | logical **y 292** |
 | Tony | `(64, 180)` at 72 × 197, visible band 112 units |
-| Tonight board text field | `TONIGHT_FIELD` `60, 93, 111, 74` — state line + one headliner |
+| Tonight board text field | `TONIGHT_FIELD` `66, 99, 99, 67` — inset 6 units in the cream; hero + one short fact, centred |
 | Prediction slate | `PREDICTION_SLATE` `154, 184, 37, 59` — chalk residue only |
 
 Board and banner row co-centre at `119.5`, delta `0.0`. Partitions clear WCAG 2.5.8 AA at 24.75 CSS px on a 360 px viewport.

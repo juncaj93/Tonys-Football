@@ -3,10 +3,11 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { roomObjectAttributes } from '@/components/scene/room-object';
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
 import { type Banner } from '@/lib/parlor/champions';
-import { BANNER, ROOM, bannerPartitions, place } from '@/lib/parlor/objects';
+import { BANNER, ROOM, bannerPartitions, place, roomObject } from '@/lib/parlor/objects';
 
 /**
  * The championship rail.
@@ -35,7 +36,7 @@ function Year({ label }: { label: string }) {
   return (
     <span
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 flex items-start justify-center font-display text-paper-light"
+      className="pointer-events-none absolute inset-0 flex items-start justify-center font-display text-paper-mid"
       style={{
         // Proportional to the room, so it scales with the art rather than
         // drifting off the fabric on a wider phone.
@@ -54,6 +55,9 @@ export function BannerRail({ banners }: { banners: readonly Banner[] }) {
   const triggers = useRef<(HTMLButtonElement | null)[]>([]);
   const partitions = bannerPartitions();
   const open = openSlot === null ? null : banners[openSlot];
+  // The rail's own entry in the object map. Every partition below reports as
+  // this one Display.
+  const rail = roomObject('banners');
 
   return (
     <>
@@ -80,6 +84,11 @@ export function BannerRail({ banners }: { banners: readonly Banner[] }) {
             }}
             style={place(partition)}
             className="room-shape absolute z-30 outline-none"
+            // The rail is ONE Display in the object map, rendered as one button
+            // per occupied slot. `data-room-partition` is what tells the
+            // `object-map` gate that these six share an identity on purpose, so
+            // it can keep rejecting genuine duplicates.
+            {...roomObjectAttributes(rail, index)}
           >
             {/*
               * The pennant itself, inside the hit region. The image carries its
@@ -157,7 +166,7 @@ function ChampionPanel({ banner, onClose }: { banner: Banner; onClose: () => voi
         aria-modal="true"
         aria-labelledby={headingId}
         tabIndex={-1}
-        className="pixel-edge relative w-full max-w-[300px] border-2 border-amber-mid bg-ink-900 px-5 pt-4 pb-5 text-paper-light outline-none"
+        className="pixel-edge relative w-full max-w-[300px] border-2 border-amber-mid bg-ink-900 px-5 pt-4 pb-5 text-paper-mid outline-none"
       >
         <h2 id={headingId} className="font-display text-[10px] text-amber-mid uppercase">
           {String(banner.year)} season
@@ -178,7 +187,7 @@ function ChampionPanel({ banner, onClose }: { banner: Banner; onClose: () => voi
         <div className="mt-4 flex items-center gap-3">
           <Link
             href={`/timeline#${String(banner.year)}`}
-            className="pixel-edge flex min-h-[44px] items-center border-2 border-amber-mid/60 px-3.5 font-display text-[10px] text-amber-light uppercase active:translate-y-px"
+            className="pixel-edge flex min-h-[44px] items-center border-2 border-amber-mid/60 px-3.5 font-display text-[10px] text-amber-glow uppercase active:translate-y-px"
           >
             View season
           </Link>

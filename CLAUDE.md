@@ -4,7 +4,8 @@ This repository contains the complete product specification for **Tony’s Pizza
 
 Before planning or implementing any feature, read:
 
-1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan. Start here.**
+0. `docs/PRODUCT_DELIVERY_MANDATE.md` — **the standing commissioner mandate. Read this first.** It defines what "complete" means, the permanent visual standard, the mandatory screenshot loop, demoability, specialist ownership, and the deterministic stats-fact layer.
+1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan.**
 2. `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` — **the approved implementation ordering**
 3. `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` — **how the room works. Read before touching any parlor object.**
 4. `docs/IMPLEMENTATION_HANDOFF.md` — **the current assignment**
@@ -83,7 +84,15 @@ Shipped: the Next.js foundation, the injected clock, the asset registry, the ide
 
 **V1 Doors Open** — shipped. Claim flow, 6-digit PIN, 90-day rolling session, derived tags, content engine v0 seeded from Group A, the six-zone parlor, Tonight at Tony's, the Counter Greeting, the receipt, and the offseason dressing.
 
-**Next assignment:** V2 Memory. See `docs/IMPLEMENTATION_HANDOFF.md`.
+**Autonomous delivery** — shipped. `AUTONOMY.md` is the operational contract, `VISUAL_ACCEPTANCE.md` is the second gate, and `npm run visual:qa` enforces the machine-checkable part of it on every pull request.
+
+**M2 slice 1 — the loot box on the tray** — shipped. An owned box sits on the tray, the tray Door glows for the first time, and tapping it **opens the box in place**: an anticipation beat, then the collectible on the tray and a plate naming it. The opening is server-authoritative, transactional and idempotent — `box_openings.box_id` is unique, so a box opens once whatever asks. The reward comes from a stored, content-hash-versioned, append-only reward table whose weights are **provisional until the P3 simulation**, and the recorded roll plus that version recompute the outcome exactly. The 24-item catalog is derived from the asset registry rather than copied into a table.
+
+**M2 slice 2 — token acquisition** — built. `apply_token_delta` is a Postgres function, the balance is a trigger-maintained column with `CHECK (balance >= 0)` and a guard that refuses any other write path, the ledger is append-only, and a replayed idempotency key is a no-op while a *reused* one raises. Managers start the season with a tab and buy boxes at the counter; the debit and the box commit together, so nobody holds an unpaid box. Every number is provisional until the P3 simulation.
+
+**Next assignment:** M2 slice 3 — `/counter/collection`, where a pulled collectible can be looked at. Until it exists the loop dead-ends, which is why M2 work merges to `integration/m2-loot-box` and not to `main`. See `docs/CHECKPOINT.md` for the durable state and `docs/IMPLEMENTATION_HANDOFF.md` for the record.
+
+**No paid API use** (commissioner decision, 2026-07-30). The orchestrator workflow is retired to manual dispatch only and `ANTHROPIC_API_KEY` is unset — nothing in this repository spends money. This affects no product scope: generative AI is limited to Tony's Tuesday Slice, and `16 §9` already requires the Slice to publish correctly with the key unset. Delivery runs on the label lifecycle in `AUTONOMY.md §2` plus the two unpaid gates, `npm run check` and `npm run visual:qa`. Do not reintroduce a paid dependency without a new decision.
 
 The engineer runs continuously inside a vertical slice and stops only at the conditions in `17 §8`. PR checkpoints are the six categories in `17 §7` — not every subtask.
 
@@ -108,7 +117,9 @@ Work the assignment in `docs/IMPLEMENTATION_HANDOFF.md`. Do not begin a slice th
 
 ## Source of Truth
 
-When requirements conflict, follow the source-of-truth hierarchy in `README.md`.
+`docs/PRODUCT_DELIVERY_MANDATE.md` is the latest commissioner ruling and sits above everything else. Below it, follow the source-of-truth hierarchy in `README.md` and `AUTONOMY.md §1`.
+
+**Do not preserve incorrect behaviour because an old Markdown file still describes it.** Correct the loser, and add a test so the contradiction cannot return.
 
 Prefer the most specialized canonical document for a system after applying that hierarchy.
 
