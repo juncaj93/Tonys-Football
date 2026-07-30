@@ -33,6 +33,17 @@ import { persistChain } from '@/lib/sleeper/persist';
 
 const DEFAULT_LEAGUE_ID = '1385016656425668608';
 
+/**
+ * Seasons whose official record is closed.
+ *
+ * A deliberate list, not a query. Sleeper flips a season to `complete` the
+ * moment its final game ends, while NFL stat corrections keep arriving for
+ * weeks — 2024's standings and its weekly points disagree to this day because
+ * of exactly that. Finalizing on Sleeper's word would freeze a record that was
+ * still moving, so a human names the years instead.
+ */
+const FINALIZED_SEASONS = [2024, 2025] as const;
+
 async function main(): Promise<void> {
   if ((process.env['DATABASE_URL'] ?? '') === '') {
     console.error('DATABASE_URL is not set. See .env.example.');
@@ -53,11 +64,24 @@ async function main(): Promise<void> {
       process.exit(1);
     }
 
-    const imported = await persistChain(db, chain, { sourceLabel: source.label });
+    const imported = await persistChain(db, chain, {
+      sourceLabel: source.label,
+      // Named explicitly, never derived from Sleeper's `complete` status. Both
+      // seasons are closed and their records are verified, so this is where the
+      // finalized-immutability guard actually engages in a real environment —
+      // without it the trigger exists and never protects anything.
+      //
+      // 2026 is deliberately absent: it will be finalized when somebody decides
+      // its books are closed, not automatically when Sleeper says so.
+      finalizeYears: FINALIZED_SEASONS,
+    });
     console.log(
       `History  ${String(imported.seasons.length)} seasons · ` +
         `${String(imported.recordsChanged)} records changed · status ${imported.status}`,
     );
+    for (const season of imported.seasons.filter((candidate) => candidate.finalized)) {
+      console.log(`         ${String(season.year)} finalized — official record now immutable`);
+    }
 
     // --- 2. The names Tony uses -------------------------------------------
     //

@@ -33,9 +33,15 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import { now } from '@/lib/clock';
 import { type Database } from '@/lib/db';
 import { seasonMemberships, seasons, syncRuns, users, type SyncRun } from '@/lib/db/schema';
+import {
+  loadManagerMappings,
+  mappingsBySleeperId,
+  type ManagerMappingFile,
+} from '@/lib/identity/mappings';
 
 import { championUserId, type ChainResult, type ImportedSeason } from './chain';
 import { hasRosterMetadata } from './metadata';
+import { toCents } from './reconcile';
 
 /**
  * More than one co-owner on a roster.
@@ -61,55 +67,59 @@ export class MultipleCoOwnersError extends Error {
   }
 }
 
-export interface SeasonImportSummary {
-  readonly year: number;
-  readonly leagueId: string;
-  readonly seasonCreated: boolean;
-  readonly membershipsCreated: number;
-  readonly membershipsUnchanged: number;
-  /** Existing seats whose record moved — a live season, or a stat correction. */
-  readonly membershipsUpdated: number;
-  readonly championUserId: string | null;
-  readonly conflicts: readonly string[];
-}
-
 /**
- * The season record Sleeper reports for one seat.
+ * One roster's official finalized record, as persisted.
  *
- * Split out because these fields, unlike display names and season titles, are
- * **not** seeded-once. Sleeper owns fantasy results, so a re-sync overwrites
- * them. That does not weaken "never overwrite": what is protected there is who
- * a seat belongs to, which this never touches.
+ * These fields come from `rosters[].settings` and never from recomputed weekly
+ * points. That is the ruling of 2026-07-29 §3, and it is the only choice
+ * consistent with the 2024 bracket: the playoff field and its seeding follow
+ * from these standings, so a record recomputed from today's corrected points
+ * would describe a postseason that never happened.
  */
-interface SeatRecord {
+interface OfficialRecord {
   readonly wins: number;
   readonly losses: number;
   readonly ties: number;
   readonly pointsFor: number;
   readonly pointsAgainst: number;
   readonly madePlayoffs: boolean;
+  readonly finalRank: number | null;
+  readonly teamName: string | null;
 }
 
-function seatRecord(seat: ImportedSeason['seats'][number], playoffRosterIds: readonly number[]): SeatRecord {
-  return {
-    wins: seat.wins,
-    losses: seat.losses,
-    ties: seat.ties,
-    pointsFor: seat.pointsFor,
-    pointsAgainst: seat.pointsAgainst,
-    madePlayoffs: playoffRosterIds.includes(seat.rosterId),
-  };
-}
-
-function sameRecord(a: SeatRecord, b: SeatRecord): boolean {
+/** Compared in integer cents so a float representation cannot fake a change. */
+function sameOfficialRecord(a: OfficialRecord, b: OfficialRecord): boolean {
   return (
     a.wins === b.wins &&
     a.losses === b.losses &&
     a.ties === b.ties &&
-    a.pointsFor === b.pointsFor &&
-    a.pointsAgainst === b.pointsAgainst &&
-    a.madePlayoffs === b.madePlayoffs
+    toCents(a.pointsFor) === toCents(b.pointsFor) &&
+    toCents(a.pointsAgainst) === toCents(b.pointsAgainst) &&
+    a.madePlayoffs === b.madePlayoffs &&
+    a.finalRank === b.finalRank &&
+    a.teamName === b.teamName
   );
+}
+
+function describeRecord(record: OfficialRecord): string {
+  return (
+    `${String(record.wins)}-${String(record.losses)}-${String(record.ties)}, ` +
+    `${record.pointsFor.toFixed(2)} PF, finish ${record.finalRank === null ? '—' : String(record.finalRank)}`
+  );
+}
+
+export interface SeasonImportSummary {
+  readonly year: number;
+  readonly leagueId: string;
+  readonly seasonCreated: boolean;
+  readonly membershipsCreated: number;
+  readonly membershipsUnchanged: number;
+  /** Existing seats whose record moved. Only ever on a season not yet finalized. */
+  readonly membershipsUpdated: number;
+  /** True when this run froze the season's official record. */
+  readonly finalized: boolean;
+  readonly championUserId: string | null;
+  readonly conflicts: readonly string[];
 }
 
 export interface ImportSummary {
@@ -125,6 +135,18 @@ export interface ImportSummary {
 export interface PersistOptions {
   /** Identifies the data source in the audit record, e.g. `fixtures(…)`. */
   readonly sourceLabel: string;
+  /**
+   * Seasons to freeze as part of this run.
+   *
+   * **Explicit by design.** Sleeper's `complete` status is not sufficient —
+   * it flips the moment the final game ends, while NFL stat corrections keep
+   * arriving for weeks. Finalizing on that signal would freeze a record that
+   * is still moving, which is precisely how 2024 ended up with standings and
+   * weekly points that disagree.
+   */
+  readonly finalizeYears?: readonly number[];
+  /** Injectable so a test can supply mappings without touching the real file. */
+  readonly mappings?: ManagerMappingFile;
 }
 
 /** Sleeper's lifecycle seeds ours; the season service owns it from then on. */
@@ -183,6 +205,12 @@ export async function persistChain(
 
   assertSingleCoOwners(chain.seasons);
 
+  // Loaded before the sync run opens: a malformed mapping file is a
+  // configuration error, not a failed import, and should not leave a FAILED
+  // run behind.
+  const mappingFile = options.mappings ?? loadManagerMappings();
+  const finalizeYears = new Set(options.finalizeYears ?? []);
+
   // Written first and committed on its own, so a failure below still leaves a
   // record that an import was attempted.
   const [run] = await db
@@ -201,12 +229,19 @@ export async function persistChain(
       // ---- People ----------------------------------------------------------
       const people = collectPeople(chain.seasons);
       const sleeperIds = [...people.keys()];
+      const canonical = mappingsBySleeperId(mappingFile);
 
       const existing =
         sleeperIds.length === 0
           ? []
           : await tx
-              .select({ id: users.id, sleeperUserId: users.sleeperUserId })
+              .select({
+                id: users.id,
+                sleeperUserId: users.sleeperUserId,
+                displayName: users.displayName,
+                sleeperUsername: users.sleeperUsername,
+                isRetired: users.isRetired,
+              })
               .from(users)
               .where(inArray(users.sleeperUserId, sleeperIds));
 
@@ -220,12 +255,19 @@ export async function persistChain(
         const inserted = await tx
           .insert(users)
           .values(
-            missing.map((sleeperUserId) => ({
-              // Seeded from Sleeper once. Tony's Pizza owns it from here —
-              // a commissioner rename must survive every future re-sync.
-              displayName: people.get(sleeperUserId) ?? sleeperUserId,
-              sleeperUserId,
-            })),
+            missing.map((sleeperUserId) => {
+              const mapping = canonical.get(sleeperUserId);
+              const sleeperName = people.get(sleeperUserId) ?? sleeperUserId;
+              return {
+                // The canonical league name where one is approved; the Sleeper
+                // handle otherwise, so an unmapped person is visibly unmapped
+                // rather than silently named something invented.
+                displayName: mapping?.displayName ?? sleeperName,
+                sleeperUserId,
+                sleeperUsername: sleeperName,
+                isRetired: mapping?.retired ?? false,
+              };
+            }),
           )
           .returning({ id: users.id, sleeperUserId: users.sleeperUserId });
 
@@ -234,16 +276,79 @@ export async function persistChain(
         }
       }
 
+      for (const sleeperUserId of missing) {
+        if (!canonical.has(sleeperUserId)) {
+          conflicts.push(
+            `Sleeper account ${people.get(sleeperUserId) ?? sleeperUserId} ` +
+              `(${sleeperUserId}) has no entry in content/manager-mappings.json. ` +
+              `It keeps its Sleeper display name until a canonical name is approved.`,
+          );
+        }
+      }
+
+      // Existing people: the mapping file is the authority on the canonical
+      // name and on retirement, so a change there lands here. Sleeper still
+      // never overwrites a name — an account with no mapping is left alone,
+      // which is what preserves a commissioner rename across a re-sync.
+      let peopleUpdated = 0;
+
+      for (const row of existing) {
+        if (row.sleeperUserId === null) continue;
+        const mapping = canonical.get(row.sleeperUserId);
+        const sleeperName = people.get(row.sleeperUserId) ?? null;
+
+        const nextDisplayName = mapping?.displayName ?? row.displayName;
+        const nextRetired = mapping?.retired ?? row.isRetired;
+        const nextUsername = sleeperName ?? row.sleeperUsername;
+
+        if (
+          nextDisplayName === row.displayName &&
+          nextRetired === row.isRetired &&
+          nextUsername === row.sleeperUsername
+        ) {
+          continue;
+        }
+
+        if (mapping !== undefined && nextDisplayName !== row.displayName) {
+          conflicts.push(
+            `${row.displayName} is renamed to ${nextDisplayName} by ` +
+              `content/manager-mappings.json (${mapping.source}).`,
+          );
+        }
+        if (mapping !== undefined && nextRetired !== row.isRetired) {
+          conflicts.push(
+            `${nextDisplayName} is marked ${nextRetired ? 'retired' : 'active'} by ` +
+              `content/manager-mappings.json. Retirement preserves every membership, ` +
+              `team name, record, and finish.`,
+          );
+        }
+
+        await tx
+          .update(users)
+          .set({
+            displayName: nextDisplayName,
+            isRetired: nextRetired,
+            sleeperUsername: nextUsername,
+            updatedAt: now(),
+          })
+          .where(eq(users.id, row.id));
+        peopleUpdated++;
+      }
+
       // ---- Seasons and memberships ----------------------------------------
       // Oldest first, so history accumulates forward the way it happened.
       const ordered = [...chain.seasons].sort((a, b) => a.year - b.year);
       const seasonSummaries: SeasonImportSummary[] = [];
-      let recordsChanged = missing.length;
+      let recordsChanged = missing.length + peopleUpdated;
       let recordsSkipped = 0;
 
       for (const season of ordered) {
         const [existingSeason] = await tx
-          .select({ id: seasons.id })
+          .select({
+            id: seasons.id,
+            finalizedAt: seasons.finalizedAt,
+            snapshotCapturedAt: seasons.snapshotCapturedAt,
+          })
           .from(seasons)
           .where(eq(seasons.year, season.year));
 
@@ -265,6 +370,7 @@ export async function persistChain(
               // Only set on insert. A season we watched live keeps
               // `is_historical = false` forever, even after it closes.
               isHistorical: season.isComplete,
+              snapshotCapturedAt: season.capturedAt,
             })
             .returning({ id: seasons.id });
 
@@ -275,6 +381,11 @@ export async function persistChain(
         } else {
           seasonId = existingSeason.id;
         }
+
+        // Is this season's official record already frozen? Read before any
+        // write, because every membership decision below turns on it.
+        const wasFinalized =
+          existingSeason !== undefined && existingSeason.finalizedAt !== null;
 
         const existingMemberships = await tx
           .select({
@@ -287,6 +398,8 @@ export async function persistChain(
             pointsFor: seasonMemberships.pointsFor,
             pointsAgainst: seasonMemberships.pointsAgainst,
             madePlayoffs: seasonMemberships.madePlayoffs,
+            finalRank: seasonMemberships.finalRank,
+            teamName: seasonMemberships.teamName,
           })
           .from(seasonMemberships)
           .where(eq(seasonMemberships.seasonId, seasonId));
@@ -321,8 +434,23 @@ export async function persistChain(
           const coOwnerUserId =
             coOwnerSleeperId === undefined ? null : (userIdBySleeperId.get(coOwnerSleeperId) ?? null);
 
-          const record = seatRecord(seat, season.placements.playoffRosterIds);
           const already = membershipByRoster.get(seat.rosterId);
+
+          // The complete finish, 1..N — the consolation bracket settles 7th
+          // through 10th, so nobody is recorded as "no finish" when the answer
+          // exists.
+          const rank = season.fullPlacements.rankByRoster[seat.rosterId];
+
+          const record: OfficialRecord = {
+            wins: seat.wins,
+            losses: seat.losses,
+            ties: seat.ties,
+            pointsFor: seat.pointsFor,
+            pointsAgainst: seat.pointsAgainst,
+            madePlayoffs: season.fullPlacements.playoffRosterIds.includes(seat.rosterId),
+            finalRank: rank ?? null,
+            teamName: seat.teamName,
+          };
 
           if (already !== undefined) {
             if (already.userId !== userId) {
@@ -334,27 +462,40 @@ export async function persistChain(
                   `different manager than Sleeper now reports. Left unchanged — resolve manually.`,
               );
               recordsSkipped++;
-            } else if (sameRecord(already, record)) {
-              membershipsUnchanged++;
-            } else {
-              // The seat is the same person; only the fantasy result moved.
-              // Sleeper owns that number, so it wins here — this is how a live
-              // season's record advances and how a stat correction lands. For
-              // the two completed seasons nothing ever differs, which is why
-              // re-importing history stays a no-op.
-              await tx
-                .update(seasonMemberships)
-                .set({ ...record, updatedAt: now() })
-                .where(eq(seasonMemberships.id, already.id));
-              membershipsUpdated++;
-              recordsChanged++;
+              continue;
             }
+
+            if (sameOfficialRecord(already, record)) {
+              membershipsUnchanged++;
+              continue;
+            }
+
+            if (wasFinalized) {
+              // The whole point of finalization. Sleeper now disagrees with a
+              // record the league already closed the books on — most likely a
+              // stat correction landing months later. It does not get to
+              // rewrite history quietly; it gets reported and dropped. The
+              // database trigger would refuse the write anyway, so this is the
+              // readable half of a guard that exists in two places.
+              conflicts.push(
+                `${String(season.year)} roster ${String(seat.rosterId)} is finalized and its ` +
+                  `official record is immutable. Sleeper now reports ${describeRecord(record)}; ` +
+                  `the finalized record (${describeRecord(already)}) stands and nothing was ` +
+                  `written. Un-finalize the season deliberately if this correction should apply.`,
+              );
+              recordsSkipped++;
+              continue;
+            }
+
+            // An open season: the record is supposed to move week to week.
+            await tx
+              .update(seasonMemberships)
+              .set({ ...record, updatedAt: now() })
+              .where(eq(seasonMemberships.id, already.id));
+            membershipsUpdated++;
+            recordsChanged++;
             continue;
           }
-
-          const finalRank = Object.entries(season.placements.byPosition).find(
-            ([, rosterId]) => rosterId === seat.rosterId,
-          )?.[0];
 
           await tx.insert(seasonMemberships).values({
             seasonId,
@@ -362,12 +503,37 @@ export async function persistChain(
             rosterId: seat.rosterId,
             coOwnerUserId,
             sleeperMetadata: hasRosterMetadata(seat.metadata) ? seat.metadata : null,
-            finalRank: finalRank === undefined ? null : Number(finalRank),
             ...record,
           });
 
           membershipsCreated++;
           recordsChanged++;
+        }
+
+        // Freezing happens last, after this season's rows are written — a
+        // season finalized earlier in the same pass would refuse its own
+        // inserts' sibling updates.
+        let finalized = false;
+        if (finalizeYears.has(season.year) && !wasFinalized) {
+          await tx
+            .update(seasons)
+            .set({ finalizedAt: now(), updatedAt: now() })
+            .where(eq(seasons.id, seasonId));
+          finalized = true;
+          recordsChanged++;
+        }
+
+        // The scoring snapshot moves upstream even when the official record
+        // does not, so record when we last looked regardless of finalization.
+        if (
+          season.capturedAt !== null &&
+          existingSeason !== undefined &&
+          existingSeason.snapshotCapturedAt?.getTime() !== season.capturedAt.getTime()
+        ) {
+          await tx
+            .update(seasons)
+            .set({ snapshotCapturedAt: season.capturedAt })
+            .where(eq(seasons.id, seasonId));
         }
 
         const championSleeperId = championUserId(season);
@@ -379,6 +545,7 @@ export async function persistChain(
           membershipsCreated,
           membershipsUnchanged,
           membershipsUpdated,
+          finalized,
           championUserId:
             championSleeperId === null ? null : (userIdBySleeperId.get(championSleeperId) ?? null),
           conflicts: conflicts.filter((c) => c.startsWith(String(season.year))),
@@ -429,6 +596,58 @@ export async function persistChain(
 
     throw error;
   }
+}
+
+/**
+ * Freeze a season's official record.
+ *
+ * Explicit and separate from the importer on purpose. Sleeper's `complete`
+ * status is not a finalization signal — it flips when the last game ends,
+ * while stat corrections keep arriving afterwards, which is exactly how 2024's
+ * standings and its weekly points came to disagree. Somebody decides the books
+ * are closed; the API does not get a vote.
+ *
+ * Returns false when the season does not exist or was already finalized, so
+ * calling it twice is safe.
+ */
+export async function finalizeSeason(db: Database, year: number): Promise<boolean> {
+  const [season] = await db
+    .select({ id: seasons.id, finalizedAt: seasons.finalizedAt })
+    .from(seasons)
+    .where(eq(seasons.year, year));
+
+  if (season === undefined || season.finalizedAt !== null) return false;
+
+  await db
+    .update(seasons)
+    .set({ finalizedAt: now(), updatedAt: now() })
+    .where(eq(seasons.id, season.id));
+
+  return true;
+}
+
+/**
+ * Reopen a finalized season.
+ *
+ * Deliberately possible, deliberately explicit. A correction that genuinely
+ * should apply to a closed season needs a way in, and the alternative — a
+ * record nobody can ever repair — is worse than the risk. This is the one
+ * documented route past the immutability trigger.
+ */
+export async function unfinalizeSeason(db: Database, year: number): Promise<boolean> {
+  const [season] = await db
+    .select({ id: seasons.id, finalizedAt: seasons.finalizedAt })
+    .from(seasons)
+    .where(eq(seasons.year, year));
+
+  if (season === undefined || season.finalizedAt === null) return false;
+
+  await db
+    .update(seasons)
+    .set({ finalizedAt: null, updatedAt: now() })
+    .where(eq(seasons.id, season.id));
+
+  return true;
 }
 
 /**
