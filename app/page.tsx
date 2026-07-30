@@ -123,18 +123,21 @@ export default async function ParlorPage() {
     <Page oneScreen>
       <Arriving>
         {/*
-          * The utility bar. Deliberately the smallest thing on the screen: the
-          * day and who you are, and nothing else. The "what's open?" control
-          * that used to live here is gone — `18 §7` makes that assist optional
-          * and off by default rather than persistent chrome, and it was also
-          * where the visible rectangles around room objects came from.
+          * The utility bar. Deliberately the smallest thing on the screen:
+          * **who you are, and nothing else.** The "what's open?" control that
+          * used to live here is gone — `18 §7` makes that assist optional and
+          * off by default rather than persistent chrome, and it was also where
+          * the visible rectangles around room objects came from.
+          *
+          * The countdown that sat on the left is gone too. Once the board
+          * started saying `WEEK ONE / 42 days out` in 20px type, the bar was
+          * printing the same fact a second time in 9px, a few hundred pixels
+          * above it — the "same thing rendered twice" reviewer gate, and the
+          * chrome losing the comparison badly. The room says when it is; the
+          * Tonight panel behind the board still carries it in prose, which is
+          * where a screen reader gets it.
           */}
-        <header className="flex h-11 shrink-0 items-center justify-between gap-1 overflow-hidden bg-ink-900 pr-1 pl-3">
-          <span className="shrink-0 font-display text-[9px] whitespace-nowrap text-ink-100/55 uppercase">
-            {clock.daysUntilKickoff === null
-              ? 'Week one'
-              : `${String(clock.daysUntilKickoff)} days out`}
-          </span>
+        <header className="flex h-11 shrink-0 items-center justify-end gap-1 overflow-hidden bg-ink-900 pr-1 pl-3">
           <Link
             href="/profile"
             className="flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-display text-[9px] whitespace-nowrap text-paper-mid/75"

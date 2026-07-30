@@ -25,6 +25,21 @@
  *
  * Layer 1 is the one that never sleeps, so it carries the most weight here.
  * `VISUAL_ACCEPTANCE.md` is the specification it implements.
+ *
+ * ## This driver needs a *freshly seeded* database, and is not re-runnable
+ *
+ * It opens Alex's welcome box, and a box opens **once, ever** — that is the
+ * whole point of `box_openings.box_id UNIQUE`. Re-seeding does not give it
+ * back either, because the welcome grant is idempotent on a stable
+ * `grant_key`. So a second run against the same database finds a manager with
+ * no box, the tray states go looking for something that is gone, and the
+ * failure surfaces somewhere unrelated and geometric — a room object reported
+ * "outside of the viewport" — which reads like a layout regression and is not
+ * one. CI is immune because every run gets a new database. Locally:
+ *
+ *   dropdb tonys_dev && createdb tonys_dev && npm run db:migrate && npm run db:seed
+ *
+ * before each run. A green result on a used database means nothing.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
