@@ -8,7 +8,7 @@
  *   1. import the league chain from recorded fixtures
  *   2. apply the names Tony uses, from `content/managers.md`
  *   3. seed the Counter Greetings from `content/counter-greetings.md`
- *   4. store the reward table and put one box on each manager's tray
+ *   4. open each manager's token tab and put one box on their tray
  *   5. grant admin to the commissioner named in the environment
  *
  * Fixtures rather than the live API, deliberately (`16 §12`): the import is
@@ -22,6 +22,7 @@ import { eq } from 'drizzle-orm';
 import { now } from '@/lib/clock';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import { ensureRewardTable, grantBox } from '@/lib/counter/boxes';
+import { applyTokenDelta, ensureEconomyConfig, openSeason } from '@/lib/counter/tokens';
 import { CATALOG_SIZE } from '@/lib/counter/catalog';
 import { standardRewardTable } from '@/lib/counter/rewards';
 import {
@@ -30,7 +31,7 @@ import {
   seedCounterGreetings,
 } from '@/lib/content/seed';
 import { closePool, getDb } from '@/lib/db';
-import { users } from '@/lib/db/schema';
+import { seasonMemberships, users } from '@/lib/db/schema';
 import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
 import { persistChain } from '@/lib/sleeper/persist';
@@ -143,6 +144,47 @@ async function main(): Promise<void> {
         `the catalog holds ${String(table.entries.length)} items, not ${String(CATALOG_SIZE)}. ` +
           'If the change is intended, update CATALOG_SIZE and say so in the pull request. ' +
           'Never delete an approved slug to satisfy an older count.',
+      );
+    }
+
+    /*
+     * The season's opening balance.
+     *
+     * `03 §4` names 250 as the first-season starting balance, and it is the only
+     * token source that can honestly exist today: matchup wins and weekly high
+     * scores need a season that has been played, and the two cron jobs that would
+     * award them are not built (`16 §4.3`). Inventing a weekly reward that fires
+     * on nothing would be fabricated data.
+     *
+     * Idempotent through the ledger's own key, so every deploy grants it once
+     * and never again — including after it has been spent, which is the case that
+     * matters. The amount is provisional until the P3 simulation.
+     */
+    const open = await openSeason(db);
+    if (open === null) {
+      console.log('Tokens   no open season, so no wallets to open.');
+    } else {
+      const economy = await ensureEconomyConfig(db, open.id);
+      const seated = await db
+        .select({ userId: seasonMemberships.userId })
+        .from(seasonMemberships)
+        .where(eq(seasonMemberships.seasonId, open.id));
+
+      for (const seat of seated) {
+        await applyTokenDelta(db, {
+          userId: seat.userId,
+          seasonId: open.id,
+          amount: economy.values.seasonStartTokens,
+          reason: 'SEASON_START',
+          description: `Tony opens a tab for the ${String(open.year)} season.`,
+          idempotencyKey: `season-start:${open.id}:${seat.userId}`,
+        });
+      }
+
+      console.log(
+        `Tokens   ${String(open.year)} · config ${economy.version} · ` +
+          `${String(economy.values.seasonStartTokens)} opening tokens x ${String(seated.length)} seats · ` +
+          `box ${String(economy.values.standardBoxPriceTokens)} · PROVISIONAL until the P3 simulation`,
       );
     }
 

@@ -48,8 +48,8 @@ export default async function TimelinePage() {
 
                     {banner.champion === null ? (
                       <>
-                        <p className="mt-1.5 font-display text-[15px] text-paper-light">TBD</p>
-                        <p className="mt-1.5 text-[15px] leading-[1.45] text-paper-mid/70">
+                        <p className="mt-1.5 font-display text-[15px] text-paper-mid">TBD</p>
+                        <p className="mt-1.5 text-[15px] leading-[1.45] text-ink-700">
                           {banner.current
                             ? 'Still being played. Nobody has won it yet.'
                             : 'Not finalized, so there is no champion on record.'}
@@ -57,7 +57,7 @@ export default async function TimelinePage() {
                       </>
                     ) : (
                       <>
-                        <p className="mt-1.5 font-display text-[15px] text-paper-light">
+                        <p className="mt-1.5 font-display text-[15px] text-paper-mid">
                           {banner.champion}
                         </p>
                         <p className="mt-1.5 font-display text-[9px] text-amber-mid/70 uppercase">

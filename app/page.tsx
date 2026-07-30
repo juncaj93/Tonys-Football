@@ -13,6 +13,7 @@ import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
 import { ownedBox } from '@/lib/counter/boxes';
+import { openSeason, wallet } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
 import { championBanners } from '@/lib/parlor/champions';
 import {
@@ -81,13 +82,19 @@ export default async function ParlorPage() {
   const db = getDb();
   const clock = seasonClock();
 
-  const [tags, managers, tonight, banners, box] = await Promise.all([
+  const [tags, managers, tonight, banners, box, season] = await Promise.all([
     loadTags(db),
     listDoorManagers(db),
     tonightBoard(db),
     championBanners(db),
     ownedBox(db, user.id),
+    openSeason(db),
   ]);
+
+  // Null when this manager holds no seat this season — a co-owner, or somebody not
+  // seated yet. A zero would make "no tab" and "spent everything" look the same.
+  const purse =
+    season === null ? null : await wallet(db, { userId: user.id, seasonId: season.id });
 
   const greeting = await greetingFor(db, {
     userId: user.id,
@@ -294,8 +301,23 @@ export default async function ParlorPage() {
               </p>
             </RoomDisplay>
 
+            {/*
+              * The receipt: the manager's own record.
+              *
+              * The token balance belongs here rather than in the utility bar. The
+              * homepage has exactly eight interactive objects (`18 §3`) and a
+              * balance readout bolted to the chrome is the first step toward the
+              * dashboard `16 §1` names as the failure mode — while "what have I
+              * got" is precisely what a receipt answers.
+              */}
             <RoomDisplay spec={roomObject('receipt')} title="Your record">
-              <p className="pb-3 text-[19px] leading-[1.45] text-ink-700">{user.displayName}</p>
+              <p className="text-[19px] leading-[1.45] text-ink-700">{user.displayName}</p>
+              {purse !== null && (
+                <p className="mt-2 pb-3 text-[17px] leading-[1.45] text-ink-700">
+                  {String(purse.balance)} Tony Tokens on your tab this season.
+                </p>
+              )}
+              {purse === null && <p className="pb-3" />}
             </RoomDisplay>
 
             {/* The Toy. */}

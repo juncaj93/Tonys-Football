@@ -64,6 +64,21 @@ export function getDb() {
  */
 export type Database = ReturnType<typeof getDb>;
 
+/**
+ * A handle that can run queries — the pool **or** an open transaction.
+ *
+ * Derived from `Database['transaction']` rather than written out, so it tracks
+ * drizzle's own type instead of drifting from it.
+ *
+ * Services that must be composable into a larger transaction take this instead
+ * of `Database`. That matters for correctness, not tidiness: buying a box debits
+ * tokens and creates the box, and those two must commit together or not at all —
+ * so the token service has to be callable with the caller's `tx`. A service typed
+ * to `Database` forces the caller to pass the pool, and the write silently escapes
+ * the transaction it was supposed to be inside.
+ */
+export type Queryable = Database | Parameters<Parameters<Database['transaction']>[0]>[0];
+
 /** Close the pool. Tests and graceful shutdown only. */
 export async function closePool(): Promise<void> {
   if (globalThis.__tonysPool !== undefined) {

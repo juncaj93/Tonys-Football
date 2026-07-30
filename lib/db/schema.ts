@@ -316,6 +316,28 @@ export const seasonMemberships = pgTable(
     isActive: boolean('is_active').notNull().default(true),
 
     /**
+     * Tony Tokens held this season.
+     *
+     * ## Read this column; never write it
+     *
+     * `16 §5.4`: the balance is written **only** by an AFTER-INSERT trigger on
+     * `token_transactions`, with `CHECK (balance >= 0)`, so an overdraft fails at
+     * the database and the balance physically cannot drift from the ledger. **No
+     * feature gets its own balance-writing path** — and that is not left to
+     * discipline: a second trigger rejects any UPDATE that changes this column
+     * unless the ledger trigger is the one making it.
+     *
+     * So the only way to move tokens is `apply_token_delta()`. An `UPDATE
+     * season_memberships SET token_balance = …` raises, whoever issues it.
+     *
+     * It lives on the membership rather than on `users` because **tokens are
+     * seasonal and do not carry over** (`03 §6`) — a season's wallet belongs to a
+     * season's seat. Collectibles are the opposite and hang off `users.id`.
+     * `16 §5.3` collapses the `season_wallets` table into exactly this column.
+     */
+    tokenBalance: integer('token_balance').notNull().default(0),
+
+    /**
      * Final league placement, 1..N.
      *
      * Covers the whole league, not just the playoff field: the winners bracket
@@ -329,6 +351,17 @@ export const seasonMemberships = pgTable(
   (table) => [
     unique('season_memberships_season_roster_unique').on(table.seasonId, table.rosterId),
     unique('season_memberships_season_user_unique').on(table.seasonId, table.userId),
+    /*
+     * Overdraft is impossible, and it is impossible *here* rather than in a
+     * service that remembers to check.
+     *
+     * `16 §5.4` and the P3 release gate both state it as a property of the
+     * database. A balance check in application code is a race: two purchases
+     * arriving together both read 100, both decide 100 >= 100, and both spend.
+     * This constraint is evaluated inside the same statement that changes the
+     * balance, so the second one fails.
+     */
+    check('season_memberships_token_balance_non_negative', sql`${table.tokenBalance} >= 0`),
   ],
 );
 
@@ -651,6 +684,161 @@ export const adminAuditLogs = pgTable(
 );
 
 // ---------------------------------------------------------------------------
+// Tony Tokens
+// ---------------------------------------------------------------------------
+
+/**
+ * Why a balance moved.
+ *
+ * `03 §5` requires every balance change to record a reason code, and the point
+ * of an enum rather than free text is that "how did this manager get 400 tokens"
+ * has a finite, auditable set of answers. Adding a value is a one-line
+ * migration.
+ *
+ * Only the two that can actually happen today are used by application code:
+ *
+ *   - `SEASON_START` — the opening balance. `03 §4` names 250 as a baseline; the
+ *     value lives in `economy_configs` and is provisional until P3.
+ *   - `BOX_PURCHASE` — spending at the counter.
+ *
+ * The rest are declared because they are named in `03 §4` and the ledger should
+ * not need a migration the first Tuesday of the season. They are deliberately
+ * **not** wired to anything: there is no cron yet (`16 §4.3` allows exactly two
+ * jobs and neither is built), and inventing a weekly reward that fires on
+ * nothing would be fabricated data.
+ */
+export const tokenReason = pgEnum('token_reason', [
+  'SEASON_START',
+  'BOX_PURCHASE',
+  'MATCHUP_WIN',
+  'WEEKLY_HIGH_SCORE',
+  'SEASON_AWARD',
+  'COMMISSIONER_ADJUSTMENT',
+]);
+
+/**
+ * The token ledger. Append-only, and the only way a balance moves.
+ *
+ * `16 §5.4` is the whole contract:
+ *
+ * ```
+ * apply_token_delta(user_id, season_id, amount, reason_code,
+ *                   idempotency_key, source_ref, actor_id)
+ * ```
+ *
+ * ## Why the idempotency key is genuinely needed here
+ *
+ * Slice 1 argued *against* a client-supplied key for opening a box, because a
+ * box opens once and the operation therefore has a natural key. A token delta is
+ * the opposite: it is an **event**, not a thing. "Add 150 tokens" has no natural
+ * key — the same delta may legitimately happen twice, so nothing about the row
+ * itself can tell a retry from a second genuine award. The caller has to name the
+ * occasion, and `UNIQUE(idempotency_key)` makes a replay a no-op.
+ *
+ * That is why the two slices differ, and the difference is the point rather than
+ * an inconsistency.
+ *
+ * ## Seasonal, so it hangs off the membership
+ *
+ * `16 §5.1`: permanent things FK to `users.id`, seasonal things to
+ * `season_memberships.id`. Tokens do not carry over (`03 §6`), so the ledger is
+ * seasonal — while collectibles bought with them are permanent. A manager keeps
+ * what they pulled and loses what they did not spend.
+ */
+export const tokenTransactions = pgTable(
+  'token_transactions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonMembershipId: uuid('season_membership_id')
+      .notNull()
+      // Never delete a seat out from under its own financial history.
+      .references(() => seasonMemberships.id, { onDelete: 'restrict' }),
+
+    /** Signed. Negative is a spend. Never zero — a no-op is not a transaction. */
+    amount: integer('amount').notNull(),
+
+    reasonCode: tokenReason('reason_code').notNull(),
+
+    /**
+     * Human-readable, required by `03 §5`.
+     *
+     * Curated or templated, never generated — `16 §10` limits generative text to
+     * the Slice. This is what a manager reads on their own statement, so it says
+     * what happened in the shop's voice rather than naming an enum value.
+     */
+    description: text('description').notNull(),
+
+    /**
+     * The caller's name for this occasion. A replay is a no-op.
+     *
+     * Not nullable and not defaulted: a caller that cannot name the occasion has
+     * not thought about what happens when its request is retried.
+     */
+    idempotencyKey: text('idempotency_key').notNull().unique(),
+
+    /** The thing this was about — a box id, a matchup, an auction lot. */
+    sourceRef: text('source_ref'),
+
+    /** The commissioner, on a manual adjustment. Null means the system did it. */
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'restrict' }),
+
+    /** From the injected clock — a statement's dates are business dates. */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index('token_transactions_membership_idx').on(table.seasonMembershipId, table.createdAt),
+    /*
+     * A zero-amount row would pass every other check and mean nothing, while
+     * still consuming an idempotency key — so a genuine later delta under the
+     * same key would be silently swallowed.
+     */
+    check('token_transactions_amount_non_zero', sql`${table.amount} <> 0`),
+  ],
+);
+
+/**
+ * Versioned economy configuration, per season.
+ *
+ * `03 §11`: *"Exact costs and probabilities belong in database configuration, not
+ * hardcoded frontend logic."* And `16 §8` gates every value on the P3
+ * multi-season simulation. Both are satisfied the same way the reward table is:
+ * the row is **immutable and versioned**, so a rebalance writes a new version and
+ * every historical transaction stays interpretable against the numbers that were
+ * live when it happened.
+ *
+ * `provisional` records whether the simulation has signed the values off, so
+ * "has this been simulated" is a query rather than a memory. Clearing it is the
+ * one legitimate update to an existing row.
+ */
+export const economyConfigs = pgTable(
+  'economy_configs',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    /** Content hash of `values`. Two environments seeding the same numbers agree. */
+    version: text('version').notNull(),
+
+    /** `{ seasonStartTokens, standardBoxPriceTokens }`, and more as systems land. */
+    values: jsonb('values').$type<Record<string, number>>().notNull(),
+
+    /** True until the P3 simulation signs these numbers off. */
+    provisional: boolean('provisional').notNull().default(true),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    // One row per (season, version): a season may carry several versions over
+    // time, and the same numbers must not be stored twice for one season.
+    unique('economy_configs_season_version_unique').on(table.seasonId, table.version),
+  ],
+);
+
+// ---------------------------------------------------------------------------
 // The collectible economy
 // ---------------------------------------------------------------------------
 
@@ -933,6 +1121,10 @@ export type ContentUsage = typeof contentUsageLog.$inferSelect;
 export type NewContentUsage = typeof contentUsageLog.$inferInsert;
 export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type NewAdminAuditLog = typeof adminAuditLogs.$inferInsert;
+export type TokenTransaction = typeof tokenTransactions.$inferSelect;
+export type NewTokenTransaction = typeof tokenTransactions.$inferInsert;
+export type EconomyConfig = typeof economyConfigs.$inferSelect;
+export type NewEconomyConfig = typeof economyConfigs.$inferInsert;
 export type RewardTable = typeof rewardTables.$inferSelect;
 export type NewRewardTable = typeof rewardTables.$inferInsert;
 export type LootBox = typeof lootBoxes.$inferSelect;
