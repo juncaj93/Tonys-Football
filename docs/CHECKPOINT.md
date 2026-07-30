@@ -8,6 +8,24 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Execution status — who is actually doing what
+
+**Commissioner ruling, 2026-07-30:** a workstream is only *running* if an actor is implementing it. An issue, a label, a role contract or an `IMPLEMENTATION TASK` comment is **not** execution. Nothing sits in an ambiguous "assigned" state.
+
+| Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
+|---|---|---|---|---|
+| **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #36 | The remaining reveal beats (visual debt 2 and 5) |
+| **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36 | `/counter` furniture (visual debt 3) |
+| **Stats & Data** | `TECH_LEAD_IMPLEMENTING`, independently verified | `main` | #33 | The deterministic Slice, consuming typed facts only |
+| **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **blocked on the commissioner** | — | — | Supply the files; the slot is enforced |
+| **M3 character identity** | `QUEUED_NOT_ACTIVE` | — | — | Issue #24 |
+
+**No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
+
+**Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
 ## Read this first
 
 `docs/PRODUCT_DELIVERY_MANDATE.md` is a **standing commissioner ruling** and sits above every other document. It defines what "complete" means (§5), the permanent visual standard (§6), the mandatory screenshot loop (§7), demoability as a product requirement (§8), specialist ownership (§9), and the deterministic typed-fact layer that must precede any narrative copy (§10).
@@ -17,6 +35,15 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 ## Where the product is — 2026-07-30 (second session)
 
 **Five pull requests landed this session.** In order: **#31** the demo-state catalog and its two isolation guards · **#32** the appliers, the CLI, the one-command database and four demo-backed visual states · **#33** Stats Intelligence — persisted weekly matchups, typed facts, the calibrated significance policy, the board socket · **#34** seatless managers through their own door · **#35** the Collection and Showcase shelf. **#36** carries the art-slot contract and this checkpoint.
+
+### Corrections applied after the first report
+
+Four commissioner rulings arrived after the six PRs merged, and one **reverses a decision shipped that day**:
+
+- **Retired managers are never product participants.** #34 put Armen, Berardo and Shant on the door; the ruling is that they appear in **no** structured surface, with no label and no alumni page. Corrected in #37. The reasoning that lost is kept in `lib/league/membership.ts`: permanent identity is separate from a seasonal roster, but that separation is a *storage* property — it keeps a row joinable and confers nothing visible.
+- **Membership derives from an active seat**, through one canonical boundary, never scattered exclusions.
+- **A workstream is only running if an actor is implementing it** — see the table at the top of this file.
+- **Readability wins over styling, always** — `VISUAL_ACCEPTANCE.md §7`–`§8`, with `docs/VISUAL_DEBT.md` for what is not worth stopping for.
 
 ### The one thing that needs the commissioner
 

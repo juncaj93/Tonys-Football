@@ -123,20 +123,20 @@ describe.skipIf(!hasDatabase)('authentication', () => {
     });
 
     /*
-     * This test used to assert the opposite, and the opposite was a bug.
+     * Ruled twice, and this is the commissioner's version.
      *
-     * Keying the door on the current season's roster put Armen, Berardo and
-     * Shant — a co-owner and two managers from 2024 and 2025 — behind a **404 at
-     * their own door**, while the seed still granted each of them a welcome box
-     * they could never reach. `CLAUDE.md` separates permanent manager identity
-     * from seasonal roster identity and keeps collectibles permanent while
-     * tokens reset; a door that conflates the two tells a person who owns things
-     * in this league that they are not in it.
+     * It first asserted a seatless manager was *absent*. PR #34 inverted it,
+     * because keying the door on the current roster put Armen, Berardo and
+     * Shant behind a 404 at their own key and that read as a broken site. The
+     * commissioner then ruled absolutely: a retired manager never appears in a
+     * structured surface — not labelled, not disabled, not behind an alumni
+     * page — and their only permitted existence is a name in Tony's dialogue.
      *
-     * What they cannot do is spend. That is a seasonal tab, and the counter says
-     * so plainly rather than hiding a control.
+     * So it is back, kept as three assertions rather than one, because the
+     * failure mode that matters is not "the list is wrong" but "they can still
+     * get in another way".
      */
-    it('offers a manager who holds no seat this season, marked as such', async () => {
+    it('does not offer a manager who holds no seat this season', async () => {
       await league();
       const [departed] = await db!
         .insert(users)
@@ -144,28 +144,10 @@ describe.skipIf(!hasDatabase)('authentication', () => {
         .returning();
 
       const managers = await listDoorManagers(db!);
-      const entry = managers.find((manager) => manager.id === departed!.id);
-
-      expect(entry).toBeDefined();
-      expect(entry?.seated).toBe(false);
-      expect(entry?.rosterId).toBeNull();
-      // Never played a season of their own — a co-owner's shape.
-      expect(entry?.lastSeatedYear).toBeNull();
+      expect(managers.some((manager) => manager.id === departed!.id)).toBe(false);
     });
 
-    it('records the last season a former manager did hold a seat', async () => {
-      const { season } = await league();
-      const [former] = await db!.insert(users).values({ displayName: 'Shant' }).returning();
-      await db!
-        .insert(seasonMemberships)
-        .values({ seasonId: season.id, userId: former!.id, rosterId: 9, isActive: false });
-
-      const entry = (await listDoorManagers(db!)).find((m) => m.id === former!.id);
-      expect(entry?.seated).toBe(false);
-      expect(entry?.lastSeatedYear).toBe(season.year);
-    });
-
-    it('lets a seatless manager through their own door', async () => {
+    it('does not let them through their own door either', async () => {
       await league();
       const [departed] = await db!
         .insert(users)
@@ -173,11 +155,22 @@ describe.skipIf(!hasDatabase)('authentication', () => {
         .returning();
 
       // `doorManager` is what `/door/[userId]` and `claimManager` both gate on.
-      // Returning null here is what produced the 404.
-      expect(await doorManager(db!, departed!.id)).not.toBeNull();
+      // Hiding the row from a list is not the rule; being unable to claim is.
+      expect(await doorManager(db!, departed!.id)).toBeNull();
 
       const claimed = await claimManager(db!, { userId: departed!.id, pin: GOOD_PIN }, CONTEXT);
-      expect(claimed.ok).toBe(true);
+      expect(claimed.ok).toBe(false);
+    });
+
+    it('does not offer a manager whose seat was deactivated', async () => {
+      const { season } = await league();
+      const [former] = await db!.insert(users).values({ displayName: 'Shant' }).returning();
+      await db!
+        .insert(seasonMemberships)
+        .values({ seasonId: season.id, userId: former!.id, rosterId: 9, isActive: false });
+
+      // A row in the current season is not a seat. `is_active` is.
+      expect((await listDoorManagers(db!)).some((m) => m.id === former!.id)).toBe(false);
     });
   });
 

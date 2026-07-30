@@ -79,6 +79,7 @@ It also missed real regressions: nothing checked the four Displays, and a Door b
 
 One object may legitimately be several targets. The banner rail is a single Display divided into one button per occupied slot; those buttons additionally carry `data-room-partition`, which is how the gate tells six partitions from five duplicates. **`banners` is the only partitioned object**; any other repeated id is a defect, because a duplicate doubles a tap target where nobody can see it.
 
+
 ---
 
 ## 4. Reviewer gates — judgement, and a rejection creates a repair task
@@ -132,3 +133,69 @@ Reject, with a concrete repair task, for any of:
 3 Doors · 4 Displays · 1 Toy · no `/collection` · `/counter`, `/back-hall`, `/timeline` exist · banners fill from the left, oldest first · completed seasons plus the current one · no future placeholders · current unresolved season reveals `TBD` · six most recent on overflow · 2024 → Alex · 2025 → Matty B · receipt and prediction sign trigger-only · banners are individually selectable real DOM buttons · locked destinations answer in-world and **never link to an unbuilt route**.
 
 **The tray.** An owned box **opens at the tray, in place** — never after a navigation. The box is a *state of the tray*, not a ninth object, and the tray Door glows only while it holds one. The tray's destination is therefore conditional, so `/counter` must stay reachable from the room in every state: with an empty tray by tapping it, and with a box on it from the reveal plate. A route reachable only sometimes is the same class of defect as a link to a route that does not exist.
+
+---
+
+## 7. The polish standard — a standing commissioner ruling
+
+**2026-07-30.** The objective is that Tony's *"should eventually feel like a polished Nintendo-quality game, not a functional web application wearing pixel art."* This applies to every current and future surface, continuously, not as final cleanup.
+
+### Readability wins
+
+Whenever styling conflicts with readability, **readability wins**. A beautiful colour combination that takes effort to read is a product defect. If somebody opening the site on an iPhone has to focus to read something, it is wrong.
+
+Named examples, all of which shipped: gold `LEGENDARY` on warm tan · cream text on parchment · pale yellow on cream · light grey on wood · a rarity colour disappearing into its background · small type competing with heavy dither.
+
+The machine half is the `rarity-contrast` gate above. The rest is judgement, and the judgement is not optional.
+
+### Judge at real size
+
+Never tune typography at 400%. Every visual decision is judged **at actual iPhone size, at handheld distance, at realistic brightness.** Most of these defects are invisible zoomed in and obvious at true scale — which is how three of them shipped.
+
+### Preserve theme without sacrificing contrast
+
+When foreground and ground collide, pick whichever fix is cleanest: darker text · lighter text · darker ground · lighter ground · a subtle shadow · a 1px outline · a small hue shift · simplifying the texture under the text · reducing nearby noise.
+
+**Do not** default to neon glows, heavy outlines, exaggerated drop shadows or bright strokes. The room stays warm and atmospheric.
+
+### Readability outranks palette purity
+
+Do not keep a shade because it matches the palette if that shade destroys legibility. Rarity, ownership, buttons, labels, item names, board text, dialogue, navigation and statistics must all be immediately understandable. **The theme exists to support comprehension, not to replace it.** — this is why `legendary` on paper is the wood ink rather than the gold.
+
+### Every visual milestone gets a polish pass
+
+Separate from implementation, before the milestone is called complete. Do not merely verify that it works. **Verify that it feels finished.**
+
+---
+
+## 8. The polish checklist
+
+Run before declaring any major visual milestone complete.
+
+**Typography** — size · readability · weight · spacing · hierarchy · contrast · wrapping · truncation · alignment · line height · tracking. Look specifically for light-on-light, dark-on-dark, patterned grounds interfering with text, dither under small type, labels disappearing into artwork.
+
+**Colour** — rarity · collectible · interaction · success and error · hover and selected · disabled · nighttime and offseason palettes. Colour must carry meaning *without* costing readability.
+
+**Composition** — balance · spacing · alignment · rhythm · breathing room · crowding · empty states · whitespace. Every screen should feel intentional; nothing should feel squeezed in.
+
+**Pixel art** — clipping · scaling · blurry resampling · palette drift · halos · transparency · alpha edges · layer order · animation alignment · sprite anchoring. **If an object feels "slightly off", measure it.** Do not eyeball pixel geometry — that is how the board ended up five units off-centre and how a 46-unit slot ended up holding 32-pixel art.
+
+**Interaction** — touch targets · discoverability · hover and selected · pressed feedback · animation timing · transition pacing · interruption · transient-state priority. Only one primary interaction may dominate attention at a time.
+
+**Hierarchy** — the current goal, then the current reward, then the important information, then optional detail. Nothing competes equally.
+
+**Atmosphere** — *does this feel like software, or like part of the restaurant?* Prefer the restaurant.
+
+**Mobile comfort** — every major screen at 390 · 375 · 360. Cramped layouts, tiny targets, unreadable text, clipped animation, overlapping panels, excessive scrolling, accidental density.
+
+**Accessibility** — meet or exceed the requirements, and understand that passing WCAG is **not sufficient**. The goal is effortless reading, not a passing score.
+
+### The test
+
+> If this were in a Nintendo first-party game, would it survive a final art review?
+
+If the honest answer is *"almost"* or *"good enough"*, keep polishing.
+
+### Visual debt
+
+Anything minor, cosmetic and non-blocking goes to `docs/VISUAL_DEBT.md` rather than being lost. That list is meant to shrink.

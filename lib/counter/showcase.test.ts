@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
 import { closePool, getDb } from '@/lib/db';
-import { users } from '@/lib/db/schema';
+import { seasonMemberships, seasons, users } from '@/lib/db/schema';
 import { PG_ERROR, expectPgError, resetDatabase } from '@/lib/db/test-helpers';
 
 import { ensureRewardTable, grantBox, openBox, ownedBox } from './boxes';
@@ -49,10 +49,33 @@ describe.skipIf(!hasDatabase)('the showcase', () => {
     if (hasDatabase) await closePool();
   });
 
-  async function manager(displayName: string) {
+  /**
+   * A manager **with a seat**, because that is what membership is.
+   *
+   * It used to insert a bare `users` row, which was enough while the Showcase
+   * wall selected from `users`. The commissioner's retired-manager ruling makes
+   * the wall derive from an active season seat, so a person with no seat is
+   * correctly invisible — and these tests were asserting the old behaviour.
+   */
+  async function manager(displayName: string, active = true) {
     const [row] = await db!.insert(users).values({ displayName }).returning();
+    const [season] = await db!
+      .select()
+      .from(seasons)
+      .where(eq(seasons.year, 2026))
+      .limit(1);
+    const year =
+      season ?? (await db!.insert(seasons).values({ year: 2026 }).returning())[0]!;
+    await db!.insert(seasonMemberships).values({
+      seasonId: year.id,
+      userId: row!.id,
+      rosterId: nextRoster++,
+      isActive: active,
+    });
     return row!;
   }
+
+  let nextRoster = 1;
 
   /** Open one box with a forced roll and return the collectible id. */
   async function pull(userId: string, roll: number, key: string): Promise<string> {
@@ -204,16 +227,29 @@ describe.skipIf(!hasDatabase)('the showcase', () => {
       expect(wall.map((e) => e.displayName)).toEqual(['Alex', 'Matty B', 'Zack']);
     });
 
-    it('keeps a retired manager on the wall', async () => {
-      // `16 §5.1` retires rather than deletes so history survives, and what somebody
-      // was showing when they left is part of that history.
-      const gone = await manager('Departed');
+    it('takes a retired manager off the wall, and keeps their shelf', async () => {
+      /*
+       * This asserted the opposite until the commissioner ruled on it.
+       *
+       * The old reasoning: `16 §5.1` retires rather than deletes so history
+       * survives, and what somebody was showing when they left is part of that
+       * history. True about *storage*, wrong about the wall — a retired manager
+       * is never a browsable identity in the current product, with or without a
+       * label.
+       *
+       * So both halves are asserted: gone from the wall, and their collectible
+       * and their choice still in the database.
+       */
+      const gone = await manager('Departed', false);
       const id = await pull(gone.id, 0, 'a');
       await setShowcase(db!, { userId: gone.id, collectibleId: id });
       await db!.update(users).set({ isRetired: true }).where(eq(users.id, gone.id));
 
       const wall = await leagueShowcase(db!);
-      expect(wall.find((e) => e.displayName === 'Departed')?.item).not.toBeNull();
+      expect(wall.some((e) => e.displayName === 'Departed')).toBe(false);
+
+      // Preserved, not deleted. The ruling hides people; it does not drop rows.
+      expect(await showcaseFor(db!, gone.id)).not.toBeNull();
     });
   });
 });

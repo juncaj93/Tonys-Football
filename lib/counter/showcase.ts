@@ -2,8 +2,8 @@ import { and, asc, eq, isNotNull } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { type Queryable } from '@/lib/db';
-import { collectibles, users } from '@/lib/db/schema';
-import { notADemoSeat } from '@/lib/demo/boundary';
+import { collectibles, seasonMemberships, seasons, users } from '@/lib/db/schema';
+import { activeSeat, currentSeasonYear } from '@/lib/league/membership';
 
 import { catalogItem, type Rarity } from './catalog';
 
@@ -76,18 +76,27 @@ export async function showcaseFor(
 }
 
 /**
- * Everybody's Showcase, in league name order.
+ * The league's Showcase, in name order.
  *
- * **Retired managers are included.** A departed manager is retired rather than
- * deleted precisely so their history survives (`16 §5.1`), and their shelf is part
- * of that history — the league remembers what somebody was showing when they left.
+ * **Retired managers are excluded**, and this comment used to say the opposite.
+ * The old reasoning — a departed manager is retired rather than deleted so their
+ * history survives, and their shelf is part of that history — is true about
+ * *storage* and was wrong about the wall. The commissioner's ruling is absolute:
+ * a retired manager is not a browsable identity anywhere in the current product,
+ * with or without a label. Their shelf still exists in the database; it is not
+ * on this wall.
  *
- * Managers who have chosen nothing are returned with a null item rather than
- * omitted, so the wall shows the whole league and the gaps are visible. Omitting
- * them would make an empty shelf indistinguishable from a manager who is not
- * there.
+ * Managers who have chosen nothing are still returned with a null item rather
+ * than omitted, so the gaps in the *league* are visible. That distinction
+ * survives and is the reason this returns rows at all: omitting somebody who has
+ * not picked would make an empty shelf indistinguishable from a person who is
+ * not here — which is precisely the confusion the retired-manager ruling exists
+ * to prevent, arriving from the other direction.
  */
 export async function leagueShowcase(db: Queryable): Promise<LeagueShowcase[]> {
+  const year = await currentSeasonYear(db);
+  if (year === null) return [];
+
   const rows = await db
     .select({
       userId: users.id,
@@ -97,13 +106,21 @@ export async function leagueShowcase(db: Queryable): Promise<LeagueShowcase[]> {
       rarity: collectibles.rarity,
       acquiredAt: collectibles.acquiredAt,
     })
-    .from(users)
+    .from(seasonMemberships)
+    .innerJoin(seasons, eq(seasonMemberships.seasonId, seasons.id))
+    .innerJoin(users, eq(seasonMemberships.userId, users.id))
     // LEFT join: a manager with no pick is still a manager.
     .leftJoin(collectibles, eq(collectibles.id, users.showcaseCollectibleId))
-    // A demo seat is not a manager. The wall is a claim about who the league is,
-    // and `MANDATE §8` keeps the demo system out of those — see
-    // `lib/demo/boundary.ts`.
-    .where(notADemoSeat())
+    /*
+     * The wall is the league, and the league is an **active seat**.
+     *
+     * It selected from `users`, which meant every row that had ever existed —
+     * three retired managers and, until the demo boundary landed, every demo
+     * seat. The commissioner's ruling is absolute that a retired manager never
+     * appears in a structured surface, so this is derived from
+     * `lib/league/membership.ts` rather than filtered here.
+     */
+    .where(activeSeat(year))
     .orderBy(asc(users.displayName));
 
   return rows.map((row) => ({

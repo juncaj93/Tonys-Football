@@ -1,18 +1,17 @@
-import { and, desc, eq, gt, isNull, max, sql } from 'drizzle-orm';
+import { and, desc, eq, gt, isNull, sql } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { type Database } from '@/lib/db';
 import {
   adminAuditLogs,
   authAttempts,
-  seasonMemberships,
   seasons,
   sessions,
   users,
   type Session,
   type User,
 } from '@/lib/db/schema';
-import { notADemoSeat } from '@/lib/demo/boundary';
+import { signInEligibleManagers } from '@/lib/league/membership';
 
 import { hashPin, validatePin, verifyPin } from './pin';
 import {
@@ -46,14 +45,9 @@ import {
 export interface DoorManager {
   readonly id: string;
   readonly displayName: string;
-  /** Null for a manager who holds no seat this season. Seasonal, never permanent. */
-  readonly rosterId: number | null;
+  readonly rosterId: number;
   /** Has set a PIN. Unclaimed managers are the ones the door is for. */
   readonly claimed: boolean;
-  /** Holds a seat in the current season. */
-  readonly seated: boolean;
-  /** The last season they did hold one. Null for a co-owner who never has. */
-  readonly lastSeatedYear: number | null;
 }
 
 /** The newest season on record — the one whose managers are current. */
@@ -67,7 +61,7 @@ export async function currentSeasonYear(db: Database): Promise<number | null> {
 }
 
 /**
- * Everyone the door opens for.
+ * The managers on the door: the league, and only the league.
  *
  * `16 §11`: "pick your name from ten, enter PIN. Two taps."
  *
@@ -76,97 +70,46 @@ export async function currentSeasonYear(db: Database): Promise<number | null> {
  * hiding it would buy nothing and cost the two-tap login the plan asks for.
  * Guessing is stopped by the rate limiter, not by secrecy about who plays.
  *
- * ## Former managers are on the door too, and this was a bug
+ * ## Retired managers are not on the door, and this was ruled twice
  *
- * It used to return only current seat-holders. That put Armen, Berardo and
- * Shant — a co-owner and two managers from 2024 and 2025 — behind a **404 at
- * their own door**, while the seed still granted each of them a welcome box
- * they could never reach.
+ * It listed only current seat-holders; PR #34 widened it to the whole permanent
+ * record so Armen, Berardo and Shant could reach their own key; the commissioner
+ * then ruled — absolutely — that a retired manager **never** appears in a
+ * structured product surface, not labelled, not disabled, not behind an alumni
+ * page. So it is narrow again, and now derives from
+ * `lib/league/membership.ts` rather than repeating the rule.
  *
- * `CLAUDE.md` is explicit that **permanent manager identity is separate from
- * seasonal roster identity**, and that collectibles persist across seasons while
- * tokens reset. A door keyed on this season's roster collapses exactly that
- * distinction: it tells a person who is in the league's permanent record, and
- * who owns things in it, that they are not in this league. That is false, and it
- * is the sort of false that reads as a broken site.
+ * The reasoning that lost is worth keeping visible: permanent manager identity
+ * *is* separate from a seasonal roster (`CLAUDE.md`), but that separation is a
+ * **storage** property. It keeps a row joinable and an audit trail intact. It
+ * confers nothing visible, and reading it as membership is what put three
+ * retired people on the front door.
  *
- * So the door lists them, marked for what they are. What they *cannot* do is
- * spend — that is a seasonal tab, and the surfaces say so plainly rather than
- * hiding a control (`app/counter/page.tsx`).
- *
- * Demo seats are excluded from the unseated group. A live demo seat holds a
- * current-season seat and comes through the first query, which is what makes it
- * signable-in-as; a **retired** one is unseated, and a retired fixture is not a
- * person the door should offer.
+ * A retired manager therefore cannot sign in. That is the intended outcome, not
+ * a side effect: they are not in this league, and the door is the league's.
  */
 export async function listDoorManagers(db: Database): Promise<readonly DoorManager[]> {
-  const year = await currentSeasonYear(db);
-  if (year === null) return [];
-
-  const seated = await db
-    .select({
-      id: users.id,
-      displayName: users.displayName,
-      rosterId: seasonMemberships.rosterId,
-      pinUpdatedAt: users.pinUpdatedAt,
-    })
-    .from(seasonMemberships)
-    .innerJoin(seasons, eq(seasonMemberships.seasonId, seasons.id))
-    .innerJoin(users, eq(seasonMemberships.userId, users.id))
-    .where(and(eq(seasons.year, year), eq(seasonMemberships.isActive, true)))
-    .orderBy(users.displayName);
-
-  const seatedIds = new Set(seated.map((row) => row.id));
-
-  // Everyone else in the permanent record, with the last season they played.
-  // `max(year)` rather than a join to the newest membership, so a co-owner who
-  // never held a seat of their own comes back with null instead of vanishing.
-  const rest = await db
-    .select({
-      id: users.id,
-      displayName: users.displayName,
-      pinUpdatedAt: users.pinUpdatedAt,
-      lastSeatedYear: max(seasons.year),
-    })
-    .from(users)
-    .leftJoin(seasonMemberships, eq(seasonMemberships.userId, users.id))
-    .leftJoin(seasons, eq(seasonMemberships.seasonId, seasons.id))
-    /*
-     * Demo seats only. **Not** `is_retired`.
-     *
-     * Filtering on `is_retired` here was the first attempt and it excluded
-     * exactly the three people this change is for. `content/manager-mappings.json`
-     * says it outright: *"retirement is not deletion ... `users.is_retired` hides
-     * nobody from history; it records that they are not playing now."* Not
-     * playing now is the definition of this group, not a reason to omit it.
-     */
-    .where(notADemoSeat())
-    .groupBy(users.id, users.displayName, users.pinUpdatedAt)
-    .orderBy(users.displayName);
-
-  return [
-    ...seated.map((row) => ({
-      id: row.id,
-      displayName: row.displayName,
-      rosterId: row.rosterId,
-      claimed: row.pinUpdatedAt !== null,
-      seated: true,
-      lastSeatedYear: year,
-    })),
-    ...rest
-      .filter((row) => !seatedIds.has(row.id))
-      .map((row) => ({
-        id: row.id,
-        displayName: row.displayName,
-        rosterId: null,
-        claimed: row.pinUpdatedAt !== null,
-        seated: false,
-        lastSeatedYear: row.lastSeatedYear,
-      })),
-  ];
+  /*
+   * `signInEligibleManagers`, not `activeLeagueManagers`.
+   *
+   * The door is a list of **ways in**, not a claim about who the league is, so
+   * it is the one surface that also carries demo seats — which exist only
+   * outside production, and only so preview QA can sign in and photograph a
+   * state. In production the two lists are identical, because a demo seat
+   * cannot be created there.
+   *
+   * Retired managers are excluded by both: they hold no live seat at all.
+   */
+  const managers = await signInEligibleManagers(db);
+  return managers.map((manager) => ({
+    id: manager.id,
+    displayName: manager.displayName,
+    rosterId: manager.rosterId,
+    claimed: manager.claimed,
+  }));
 }
 
-/** One manager from the door list, or null if they are not in the league's record. */
+/** One manager from the door list, or null if they are not in this league. */
 export async function doorManager(db: Database, userId: string): Promise<DoorManager | null> {
   const managers = await listDoorManagers(db);
   return managers.find((manager) => manager.id === userId) ?? null;
