@@ -41,6 +41,7 @@
  *
  * before each run. A green result on a used database means nothing.
  */
+import { execFileSync } from 'node:child_process';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -110,7 +111,71 @@ type StateName =
   | 'collection'
   | 'collection-filtered'
   | 'showcase'
-  | 'showcase-chosen';
+  | 'showcase-chosen'
+  | 'demo-tray-empty'
+  | 'demo-collection-full'
+  | 'demo-counter-broke'
+  | 'demo-showcase-chosen';
+
+/**
+ * States photographed on a demo seat rather than on a manager.
+ *
+ * `MANDATE §8` asks for the important states to be reachable without hand-edited
+ * SQL, and this is the payoff: four states the driver **could not photograph at
+ * all** before, because reaching them from a seeded manager meant destroying the
+ * state a later capture needed.
+ *
+ * The calm room is the clearest example. Every seeded manager owns a welcome
+ * box, so `idle` has always had a box on the tray and the box-free room — what
+ * the parlor looks like for most of a season — had never once been captured.
+ *
+ * Each seat is reserved, `demo:`-prefixed and unreachable from production
+ * (`lib/demo/guard.ts`), and each state is idempotent, so a re-run photographs
+ * the same database. That last property is what the rest of this driver still
+ * lacks: see the header note about `tray-reveal` consuming a box.
+ */
+const DEMO_BACKED: Partial<Record<StateName, string>> = {
+  'demo-tray-empty': 'no-box',
+  'demo-collection-full': 'collection-full',
+  'demo-counter-broke': 'broke',
+  'demo-showcase-chosen': 'showcased',
+};
+
+interface DemoApplied {
+  readonly doorPath: string;
+  readonly pin: string;
+  readonly route: string;
+}
+
+/**
+ * Put the database into a demo state and hand back where to sign in.
+ *
+ * Shells out to the same CLI a person runs, rather than importing the appliers,
+ * for one reason: it keeps the guards on the path. A driver that called
+ * `applyDemoState` directly would be a second caller that could forget to pass
+ * an environment, and the guard would then be protecting only the humans.
+ *
+ * `DEMO_FIXTURES` is read from this process's own environment and passed
+ * through unchanged — never injected. The opt-in exists so that whoever starts
+ * a run has said which database it is pointing at, and a driver that opted in
+ * on their behalf would have removed the only thing the opt-in does.
+ */
+function applyDemo(stateKey: string): DemoApplied {
+  if ((process.env['DEMO_FIXTURES'] ?? '') !== '1') {
+    throw new Error(
+      `the demo-backed states need DEMO_FIXTURES=1 in this shell, confirming DATABASE_URL ` +
+        `points at a local or preview database. Run:\n` +
+        `  DEMO_FIXTURES=1 npm run visual:qa`,
+    );
+  }
+
+  const raw = execFileSync('npx', ['tsx', 'scripts/demo.ts', 'apply', stateKey, '--json'], {
+    encoding: 'utf8',
+    env: process.env,
+  });
+
+  return JSON.parse(raw) as DemoApplied;
+}
 
 async function dismissTony(page: Page): Promise<void> {
   const x = page.getByRole('button', { name: /Dismiss what Tony said/i });
@@ -134,12 +199,22 @@ async function signIn(page: Page): Promise<void> {
   await page.goto(`${BASE}/door`, { waitUntil: 'networkidle' });
   await page.getByRole('link', { name: /Alex/ }).first().click();
   await page.waitForURL(/\/door\/[0-9a-f-]{36}/, { timeout: 20_000 });
-  const door = page.url();
+  await enterPin(page, page.url(), PIN);
+}
 
+/**
+ * Sign in at a specific door.
+ *
+ * Split out of `signIn` so a demo seat — which is reached by the URL the applier
+ * prints, never by picking a name off the board — uses exactly the same form and
+ * the same submission as a manager does. A demo that authenticated by a side
+ * door would stop being evidence that the front one works.
+ */
+async function enterPin(page: Page, doorUrl: string, pin: string): Promise<void> {
   const submit = async (): Promise<void> => {
-    await page.fill('input[name="pin"]', PIN);
+    await page.fill('input[name="pin"]', pin);
     if ((await page.locator('input[name="confirm"]').count()) > 0) {
-      await page.fill('input[name="confirm"]', PIN);
+      await page.fill('input[name="confirm"]', pin);
     }
     await page.click('button[type="submit"]');
     await page.waitForTimeout(2500);
@@ -148,11 +223,11 @@ async function signIn(page: Page): Promise<void> {
   await submit();
   if (new URL(page.url()).pathname !== '/') {
     // Already claimed on an earlier run: the same form is now sign-in.
-    await page.goto(door, { waitUntil: 'networkidle' });
+    await page.goto(doorUrl, { waitUntil: 'networkidle' });
     await submit();
   }
   if (new URL(page.url()).pathname !== '/') {
-    throw new Error(`could not sign in; stuck at ${page.url()}`);
+    throw new Error(`could not sign in at ${doorUrl}; stuck at ${page.url()}`);
   }
 }
 
@@ -344,7 +419,57 @@ async function reach(page: Page, state: StateName): Promise<void> {
       // The anticipation beat is 1100ms and the rise is 420ms.
       await page.waitForTimeout(2200);
       return;
+
+    /*
+     * The demo-backed states.
+     *
+     * Each one is signed in as its own reserved seat before it is photographed —
+     * see `reachDemo`. The navigation is all these cases have to do, because the
+     * *state* was put into the database by the applier rather than by driving the
+     * browser to it.
+     */
+    case 'demo-tray-empty':
+      await home(page);
+      await dismissTony(page);
+      await page.waitForTimeout(600);
+      return;
+
+    case 'demo-collection-full':
+      await page.goto(`${BASE}/counter/collection`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    case 'demo-counter-broke':
+      await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    case 'demo-showcase-chosen':
+      await page.goto(`${BASE}/counter/showcase`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
   }
+}
+
+/**
+ * Apply a demo state, sign in as its seat, then reach it.
+ *
+ * The applier runs once per width on purpose. It is idempotent, so the second
+ * and third widths find the state already applied and photograph the same
+ * database — which is the property the manager-backed states do not have, and
+ * the reason `tray-reveal` has to buy a fresh box at every width.
+ */
+async function reachDemo(page: Page, state: StateName, demoKey: string): Promise<void> {
+  const applied = applyDemo(demoKey);
+
+  // The door redirects to the room when a session already exists, so signing in
+  // as a second seat means being nobody first. Without this the PIN field is
+  // simply not on the page and the failure reads as a broken door.
+  await page.context().clearCookies();
+
+  await page.goto(`${BASE}${applied.doorPath}`, { waitUntil: 'networkidle' });
+  await enterPin(page, `${BASE}${applied.doorPath}`, applied.pin);
+  await reach(page, state);
 }
 
 const ALL_STATES: readonly StateName[] = [
@@ -367,6 +492,14 @@ const ALL_STATES: readonly StateName[] = [
   'collection-filtered',
   'showcase',
   'showcase-chosen',
+  /*
+   * Last, and deliberately so: each signs in as a different seat, and the
+   * manager-backed states above expect to still be Alex.
+   */
+  'demo-tray-empty',
+  'demo-collection-full',
+  'demo-counter-broke',
+  'demo-showcase-chosen',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
@@ -672,7 +805,10 @@ async function run(): Promise<void> {
       await signIn(page);
 
       for (const state of states) {
-        await reach(page, state);
+        const demoKey = DEMO_BACKED[state];
+        if (demoKey === undefined) await reach(page, state);
+        else await reachDemo(page, state, demoKey);
+
         await page.waitForTimeout(300);
         await page.screenshot({ path: path.join(OUT, `${String(width)}-${state}.png`) });
 
@@ -718,6 +854,20 @@ async function run(): Promise<void> {
            * two ways this slice could have broken the room's grammar.
            */
           if (state === 'tray-owned-box') {
+            await checkTargets(page, width);
+            await checkObjectMap(page, width);
+            await checkOnlyTheTrayGlows(page, width);
+          }
+
+          /*
+           * The room with nothing on the tray — the third state where every
+           * object is live, and until the demo seats existed, one this driver
+           * could not produce at all. Every seeded manager owns a welcome box,
+           * so `idle` has always been the *owned* room wearing the calm room's
+           * name, and the glow gate there has never once had to prove a
+           * negative. Here it does: eight objects, and nothing glowing.
+           */
+          if (state === 'demo-tray-empty') {
             await checkTargets(page, width);
             await checkObjectMap(page, width);
             await checkOnlyTheTrayGlows(page, width);

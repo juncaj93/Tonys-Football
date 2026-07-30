@@ -108,8 +108,15 @@ jobs:
           done
           echo "server never became ready"; cat server.log; exit 1
 
+      # `DEMO_FIXTURES=1` is the demo system's opt-in (`lib/demo/guard.ts`). It is
+      # set here rather than inside the driver on purpose: the opt-in exists so
+      # that whoever starts a run has said which database it points at, and this
+      # is that statement. `DATABASE_URL` above is the throwaway service
+      # container, destroyed with the runner.
       - name: Visual QA
         run: npm run visual:qa
+        env:
+          DEMO_FIXTURES: '1'
 
       # Uploaded on failure too — a failing gate is exactly when somebody wants
       # to see the pixels.

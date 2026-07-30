@@ -60,7 +60,7 @@ Repaired and deployed in **#28** (`9fd4f6f`): Tony cut through the hands · the 
 |---|---|
 | 1 | **Tony's dialogue still reads as web UI.** Only the *collision* is fixed. It needs to belong to Tony, use the parlor's language, and stop being a dark rectangle across the bottom. |
 | 2 | **The reveal is composed but not celebratory.** Anticipation, movement, rarity treatment and "PUT IT ON THE SHELF" are all still the functional version. |
-| 3 | **Demo fixtures for the twenty enumerated states** (`MANDATE §8`) — first box, no box, each rarity, duplicate, interrupted, resumed, already-opened, empty/populated collection, insufficient balance, failed purchase, network retry. None exist; every one currently needs hand-edited SQL, which the mandate forbids. |
+| 3 | ✅ **Demo fixtures — done.** The catalog and isolation landed in **#31**; the appliers, the CLI and the visual-QA wiring in **#32**. Twenty of twenty-one states apply, idempotently, by name. `equipped-wearable` stays named and blocked on M3. |
 | 4 | **Art batches A–C are specified, not generated.** `docs/art/ART_PRODUCTION_BACKLOG.md`. |
 | 5 | **The menus are still harsh.** The commissioner's standard is Stardew Valley: pixel-art *and* easy to read. Contrast is fixed; density, framing and rhythm are not. |
 
@@ -71,7 +71,18 @@ Repaired and deployed in **#28** (`9fd4f6f`): Tony cut through the hands · the 
 
 ### Exact next task
 
-**The commissioner's roadmap re-orders the queue.** M2 is to be *completed and visually polished* before the Slice foundation; Stats runs in parallel rather than strictly first. So: items 1–3 in the table above, then **#26**, then **#24 (M3)**.
+**The commissioner's roadmap re-orders the queue.** M2 is to be *completed and visually polished* before the Slice foundation; Stats runs in parallel rather than strictly first.
+
+Item 3 is done. What the demo fixtures immediately exposed, and what is next:
+
+| | Work |
+|---|---|
+| **D** | **Collection, Counter and Showcase density and rhythm.** `demo-collection-full` is the evidence: unowned spots are near-black cards with a grey dash and read as *failed to load* rather than deliberately empty; set progress is a cream slab eating a third of the screen above the shelf; the filters are generic dark rectangles. This is the commissioner's "generic dashboard cards" defect, now photographed. |
+| **C** | **Art slots.** Every owned collectible draws the same beige carton, because the collectible art is placeholder. Each is a registry row, never a code change — but the placeholder must stop being a box-shaped stand-in for twenty-four different objects. |
+| **B** | **The reveal.** Anticipation, rarity treatment and the continuation action. See the note below about photographing a *specific* rarity. |
+| **E** | **Seatless managers** — Armen, Berardo and Shant hold no 2026 seat, so `doorManager()` returns null and `/door/<id>` is a **404 at their own door**. The seed still grants them a welcome box they cannot reach. |
+
+**A known gap in the demo system, recorded rather than papered over:** the *reveal* cannot yet be demoed at a chosen rarity. The roll is injected through `lib/counter/rng.ts`, which is process-global, and the CLI runs in a different process from the server — so a pre-applied `pull-legendary` leaves the box already opened and the tray empty. Photographing a rarity-specific reveal needs an isolated component state, which `MANDATE §8` explicitly permits, and belongs with **B**.
 
 **#26 — the Stats Intelligence deterministic fact layer** is still specified, scoped by a `TECH LEAD RULING` onto `ImportedWeek`, and still gates every piece of narrative copy.
 
@@ -85,7 +96,7 @@ Open a branch off `main` (M2's integration branch is closed; a new milestone get
 |---|---|---|
 | 1 | **Stats Intelligence — the deterministic fact layer.** Everything narrative depends on it and nothing may guess in its absence | **#26** |
 | 2 | **M3 — modular character identity.** Constrained and dependable: canonical base bodies, fixed layer set, saved configuration, reliable layering. Wearable equip slots land here, with something to attach to | **#24** |
-| 3 | **The demo system** (`MANDATE §8`) — deterministic, preview-only, never touching production league data. A feature is not demo-ready if showing its states needs hand-edited SQL |  |
+| 3 | ✅ **The demo system** (`MANDATE §8`) — landed in #31 and #32 | — |
 | 4 | **The deterministic Slice**, consuming typed facts only |  |
 | 5 | M4 Back Hall / Rooms · M5 one polished casino game |  |
 
@@ -97,8 +108,8 @@ Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requi
 
 | Gate | Result | Where |
 |---|---|---|
-| `npm run check` | green — **555 tests, 34 files** | local, throwaway Postgres |
-| `npm run visual:qa` | green — **18 states × 3 widths**, production build | local |
+| `npm run check` | green — **617 tests, 38 files** | local, throwaway Postgres |
+| `npm run visual:qa` | green — **22 states × 3 widths**, production build | local |
 | `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
 | PR #23 (integration → `main`) | green on final head `c91548c`; **merged** as `238dfca` | PR #23 |
 | Live production URL | ❌ **never loaded.** Proxy denies CONNECT to `*.vercel.app` | — |
@@ -140,7 +151,7 @@ Precedence when they conflict: commissioner ruling → Technical Lead ruling →
 - **The injected clock and the injected RNG.** `new Date()` / `Date.now()` are lint errors outside `lib/clock.ts`; randomness only via `lib/counter/rng.ts`.
 - **Never delete an approved slug, record or asset to satisfy an older count.** Recalculate the count.
 - **Body copy is 16–18px, adjusted upward wherever legibility needs it** (`MANDATE §6`, superseding the bare 17px floor). Size the container to the type, never the type to the container.
-- **`npm run visual:qa` needs a freshly created database and is not re-runnable.** It opens the welcome box, and a box opens once ever; re-seeding does not restore it. A second run against the same database fails *geometrically* — an object reported "outside of the viewport" — which reads like a layout regression and is not one. `dropdb tonys_dev && createdb tonys_dev && npm run db:migrate && npm run db:seed` first. **A green result on a used database means nothing.** CI is immune; it gets a new database every run.
+- **`npm run visual:qa` needs a freshly created database and is not re-runnable** — for the *manager-backed* states. The four demo-backed states are repeatable; the rest are not, because `tray-reveal` consumes a box. It opens the welcome box, and a box opens once ever; re-seeding does not restore it. A second run against the same database fails *geometrically* — an object reported "outside of the viewport" — which reads like a layout regression and is not one. Run `npm run db:reset` first. **A green result on a used database means nothing.** CI is immune; it gets a new database every run.
 - **The driver does not start a server.** It expects one already on `:3111`. A *stale* `next-server` left from an earlier session will happily serve old code and hand you a confident, wrong green — check `ps -eo pid,args | grep -F next-server` before trusting a local run. (`ss -ltnp` returns nothing useful in this sandbox; an `EADDRINUSE` is the reliable signal.)
 - **`PlaceholderSign` is for surfaces.** Small objects use `AssetView … compact`, or a 44-unit slot becomes a 133px slab.
 - **The Showcase is one column with no score.** `16 §5.3` and `18 §4`: no levels, prestige or clout, ever. Ownership is trigger-enforced — an FK cannot say "*your* collectible".
@@ -158,21 +169,30 @@ Precedence when they conflict: commissioner ruling → Technical Lead ruling →
 
 ## Local environment recipe
 
-The sandbox has no Docker. Postgres 16 binaries are at `/usr/lib/postgresql/16/bin` and `initdb` refuses to run as root:
+**One command.** `scripts/dev-db.sh` replaces the recipe that used to live here — twice a session lost local Postgres and spent real time retyping it, and a recipe in Markdown is not a workflow: it drifts and it is only ever as good as whoever last remembered to update it.
 
 ```bash
-export PGDATA=/tmp/tonyspg
-mkdir -p $PGDATA /tmp/pgsock && chown postgres:postgres $PGDATA /tmp/pgsock
-su postgres -s /bin/bash -c "/usr/lib/postgresql/16/bin/initdb -D $PGDATA -A trust -U tonys"
-su postgres -s /bin/bash -c "/usr/lib/postgresql/16/bin/pg_ctl -D $PGDATA -l /tmp/pg.log \
-  -o '-p 5432 -k /tmp/pgsock -c listen_addresses=127.0.0.1' start"
-su postgres -s /bin/bash -c "/usr/lib/postgresql/16/bin/createdb -h /tmp/pgsock -U tonys tonys_dev"
-
-export DATABASE_URL=postgres://tonys@127.0.0.1:5432/tonys_dev
-export SESSION_SECRET=local_throwaway_secret_thirty_two_chars_min
-export SLEEPER_LEAGUE_ID=1385016656425668608
-npm ci && npm run db:migrate && npm run db:seed
+npm ci
+npm run db:reset      # start Postgres · drop · create · migrate · seed
+npm run db:fresh      # the above, then apply every demo state
+npm run db:status     # is it up, and what is in it
 ```
+
+It uses `docker compose` where Docker exists and falls back to the Postgres 16 binaries otherwise — including the part that catches everybody, which is that `initdb` refuses to run as root and has to be driven through the `postgres` user. `reset` refuses outright if `DATABASE_URL` looks hosted; it drops a database, and the rule it protects was broken once already.
+
+Environment defaults are baked in (`DATABASE_URL`, `SESSION_SECRET`, `SLEEPER_LEAGUE_ID`), so nothing has to be exported by hand.
+
+### Demo states
+
+```bash
+npm run demo -- list                          # the 21 states and how each is reached
+DEMO_FIXTURES=1 npm run demo -- apply broke   # prints a door URL and a PIN
+DEMO_FIXTURES=1 npm run demo -- reset         # retire the live generation
+```
+
+Two guards, both required (`lib/demo/guard.ts`): production is refused outright, and everywhere else needs `DEMO_FIXTURES=1`. Every write lands on a reserved `demo:`-prefixed seat that no real manager's Sleeper id can match.
+
+**A retire never deletes.** `token_transactions` refuses `DELETE` for everyone, demos included — a demo able to erase its own ledger would be no evidence that a manager's cannot. `npm run db:reset` is the clean slate.
 
 Visual QA needs a **production build** on port 3111:
 
@@ -192,9 +212,7 @@ Gotchas that have cost time:
 - `visual-qa-*/` and `visual-qa/` are gitignored. Screenshots belong to a workflow run, not to git history.
 - `capturing tray-reveal consumes the box.` Restore with:
   ```bash
-  psql "$DATABASE_URL" -c "truncate table collectibles, box_openings, loot_boxes, \
-    token_transactions, economy_configs cascade"
-  npm run db:seed          # the cascade also empties users/sessions — re-seeding is required
+  npm run db:reset         # drop · create · migrate · seed, in one command
   ```
   Then re-add the three preview seasons for `six-banners` (the SQL block is in `.github/workflows/visual-qa.yml`).
 
