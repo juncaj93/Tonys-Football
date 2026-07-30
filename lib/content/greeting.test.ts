@@ -66,7 +66,19 @@ describe.skipIf(!hasDatabase)('the Counter Greeting', () => {
     await seedManagerNames(db!, readManagerNames());
     await seedCounterGreetings(db!, readCounterGreetings());
 
-    managers = await listDoorManagers(db!);
+    /*
+     * The seated ten.
+     *
+     * `listDoorManagers` returns the whole permanent record now — a co-owner and
+     * two former managers are on the door as well, because a door keyed on this
+     * season's roster had been 404-ing them at their own key. This file is about
+     * the greetings the *league* gets, which is the ten seats, so it filters.
+     *
+     * Seatless managers still get a greeting; they draw from the generic pool,
+     * which is a content question rather than a code one and is tracked with the
+     * one remaining shared pair.
+     */
+    managers = (await listDoorManagers(db!)).filter((manager) => manager.seated);
     tags = await loadTags(db!);
   });
 

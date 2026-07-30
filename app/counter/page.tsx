@@ -70,6 +70,12 @@ export default async function CounterPage() {
    */
   const purse = season === null ? null : await purseFor(db, user.id, season.id);
 
+  // Whether they hold a seat at all, as opposed to holding one with no stored
+  // prices. `purseFor` collapses both to null on purpose — the *page* needs the
+  // difference only to say the right sentence.
+  const seated =
+    season === null ? false : (await wallet(db, { userId: user.id, seasonId: season.id })) !== null;
+
   return (
     <>
       <RoomBehind />
@@ -108,8 +114,22 @@ export default async function CounterPage() {
               </p>
 
               {purse === null ? (
+                /*
+                 * Two genuinely different situations used to share this line,
+                 * and one of them was told something untrue: a manager with no
+                 * seat was shown *"Tony hasn't put a price on it yet"* when the
+                 * price is set and it is the tab they do not have.
+                 *
+                 * A wrong reason is worse than a blunt one. So they are told
+                 * apart now — the seatless case is a real, supported state and
+                 * says what it is, and the no-config case keeps the vaguer line
+                 * because it is a seeding failure nobody but an operator can act
+                 * on (and it is still loud in the log).
+                 */
                 <p className="mt-3 text-[17px] leading-[1.5] text-ink-700">
-                  Tony hasn&rsquo;t put a price on it yet. Nothing to buy with today.
+                  {seated
+                    ? 'Tony hasn’t put a price on it yet. Nothing to buy with today.'
+                    : 'No seat this season, so no tab to run one up on. The shelf behind you is still yours.'}
                 </p>
               ) : (
                 <BuyBox

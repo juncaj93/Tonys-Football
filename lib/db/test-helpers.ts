@@ -51,6 +51,13 @@ export async function resetDatabase(db: Database): Promise<void> {
       box_openings,
       loot_boxes,
       reward_tables,
+      -- Listed rather than left to the cascade. fantasy_matchups is reached
+      -- transitively through seasons, so omitting it happened to work; and
+      -- significance_policies has no foreign key at all, so it would have
+      -- survived every reset. A table that empties only by accident is a table
+      -- that stops emptying the moment its constraints change.
+      fantasy_matchups,
+      significance_policies,
       token_transactions,
       economy_configs,
       season_memberships,

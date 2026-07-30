@@ -363,6 +363,23 @@ export default async function ParlorPage() {
                 </p>
               )}
               {/*
+                * No seat this season — a co-owner, or somebody who played a
+                * previous year and is not in this one.
+                *
+                * The balance line simply vanished before, which reads as a
+                * component that failed rather than as a fact about them.
+                * `VISUAL_ACCEPTANCE.md §4`: everything empty in this room has to
+                * be *visibly* empty on purpose. And the second sentence is the
+                * one that matters — `CLAUDE.md` keeps collectibles permanent
+                * while tokens reset, so their shelf is untouched and the receipt
+                * should say so rather than leaving them to wonder.
+                */}
+              {purse === null && (
+                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
+                  No tab this season. What you collected is still on your shelf.
+                </p>
+              )}
+              {/*
                 * What the league can see of you.
                 *
                 * Milestone item 10 — returning to the parlor reflects the result.
