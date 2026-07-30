@@ -321,8 +321,16 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
     <li
       className={`rarity-frame rarity-${entry.rarity} pixel-edge relative flex h-full flex-col items-center gap-1 border-2 border-wood-dark bg-paper-mid px-1.5 pt-2 pb-1.5`}
     >
-      <span aria-hidden="true" className="flex h-12 w-full items-center justify-center">
-        <span className="block h-12 w-12">
+      {/*
+        * 46px, which is the source's own size.
+        *
+        * It was 48. The registry now authors every collectible at 46 x 46 — the
+        * reveal slot's exact dimensions — and 48 into 46 is a 1.043x resample
+        * that blurs the hard edges the quantizer exists to guarantee. Native
+        * size, or a whole multiple of it, and nothing in between.
+        */}
+      <span aria-hidden="true" className="flex h-[46px] w-full items-center justify-center">
+        <span className="block h-[46px] w-[46px]">
           {/* `compact`: object scale, so the wall-sized placeholder is wrong here. */}
           <AssetView resolution={resolveAsset(entry.slug)} compact placeholder="collectible" />
         </span>

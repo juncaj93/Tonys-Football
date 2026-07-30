@@ -91,6 +91,7 @@ function parseRecord(slug: string, group: string, raw: unknown): AssetRecord {
   const path = typeof pathValue === 'string' && pathValue !== '' ? pathValue : null;
 
   const rarity = readOptionalString(raw, 'rarity');
+  const anchor = readOptionalString(raw, 'anchor');
   const slot = readOptionalString(raw, 'slot');
   const safeArea = readSafeArea(raw);
   const suppresses = readSuppresses(raw);
@@ -108,6 +109,7 @@ function parseRecord(slug: string, group: string, raw: unknown): AssetRecord {
     group,
     path,
     ...(rarity !== undefined ? { rarity } : {}),
+    ...(anchor !== undefined ? { anchor } : {}),
     ...(slot !== undefined ? { slot } : {}),
     ...(safeArea !== undefined ? { safeArea } : {}),
     ...(suppresses !== undefined ? { suppresses } : {}),
