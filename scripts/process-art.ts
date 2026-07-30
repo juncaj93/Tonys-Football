@@ -262,6 +262,24 @@ async function main(): Promise<void> {
   for (const file of files.sort()) {
     await processOne(file, palette);
   }
+
+  // A signpost, not a stage.
+  //
+  // `zone_parlor_shell` carries a one-time correction that was applied to its
+  // output and cannot be expressed in its source — the Tonight board sits five
+  // logical units left of where the championship rail needs it, and five units
+  // is 14.7 source pixels. Reprocessing reverts it.
+  //
+  // Running the correction from here would make it a pipeline stage, and the
+  // one-source-one-output property is worth more than the convenience. So this
+  // says what happened instead, and the test says it again, louder, if the
+  // reverted asset is ever committed.
+  if (files.some((file) => slugFromFilename(file) === 'zone_parlor_shell')) {
+    console.log(
+      `\nzone_parlor_shell was rewritten from source, which reverts the Tonight board.\n` +
+        `  Re-apply the correction:  npx tsx scripts/shift-tonight-board.ts`,
+    );
+  }
 }
 
 // Only when run as a command. `nearest` is asserted directly by

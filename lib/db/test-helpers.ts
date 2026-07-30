@@ -30,6 +30,14 @@ import { type Database } from './index';
  *
  * **Add new tables to this list.** A missing table means a test starting from
  * a state some earlier file left behind.
+ *
+ * On finalized seasons: `TRUNCATE` does not fire the row-level triggers that
+ * make a finalized season's memberships immutable, so this works without
+ * un-finalizing anything first. That is not a hole in the guarantee —
+ * `TRUNCATE` needs table ownership, which no application code path holds, and
+ * the guard exists to stop an UPDATE or DELETE that an importer, a script, or a
+ * hand-run statement could plausibly issue. A test harness that owns the
+ * database is outside that threat model by construction.
  */
 export async function resetDatabase(db: Database): Promise<void> {
   await db.execute(

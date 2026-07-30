@@ -44,9 +44,19 @@ export interface SleeperLeague {
   /** Starting slots plus bench, e.g. `QB RB RB WR WR WR TE FLEX FLEX DEF BN…`. */
   readonly rosterPositions: readonly string[];
   readonly scoringSettings: Readonly<Record<string, number>>;
+  /** How many rosters reach the winners bracket. 6 in every recorded season. */
+  readonly playoffTeams: number | null;
   readonly playoffWeekStart: number | null;
   /** Sleeper's week counter for the season; 17 on a completed season. */
   readonly leg: number | null;
+  /**
+   * The last week the league actually scored.
+   *
+   * 17 on both completed seasons, absent before a season starts. This is what
+   * separates a real playoff week from the week-18 points that keep accruing
+   * after the league has stopped playing — see `weeks.ts`.
+   */
+  readonly lastScoredLeg: number | null;
 }
 
 /** One roster slot in one season. */

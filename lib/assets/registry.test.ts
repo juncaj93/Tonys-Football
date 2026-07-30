@@ -187,6 +187,27 @@ describe('the committed inventory', () => {
   });
 
   /**
+   * Retired slugs are not placeholders waiting for art — they are decisions
+   * that were reversed, and they keep their records forever so archived issues
+   * and past seasons still resolve (`ASSET_PIPELINE.md §3`).
+   *
+   * This began life on the navigation branch as "every live asset is a
+   * placeholder — no art exists yet". That sentence was true when it was
+   * written and is not true now: the shell, Tony, the rack and the champion
+   * banner are on disk. The half worth keeping is the distinction between
+   * *retired* and *awaiting art*, so that is what it asserts.
+   */
+  it('counts a retired slug as neither placeholder nor art', () => {
+    const retired = assetRegistry.all().filter((record) => record.artStatus === 'retired');
+    expect(retired.length, 'the reversed decisions should still be on record').toBeGreaterThan(0);
+
+    for (const record of retired) {
+      expect(assetRegistry.byStatus('placeholder'), record.slug).not.toContain(record);
+      expect(assetRegistry.byStatus('generated'), record.slug).not.toContain(record);
+    }
+  });
+
+  /**
    * An asset claiming to have art must actually have the file. Registering a
    * path before the image lands is the one way the placeholder-first contract
    * can break: the fallback stops rendering and nothing replaces it.
@@ -201,9 +222,18 @@ describe('the committed inventory', () => {
     }
   });
 
-  it('leaves everything without art on the placeholder tier', () => {
+  it('accounts for every slug — placeholder, art, or a reversed decision', () => {
+    // This used to read `placeholder === size - generated`, which held only
+    // while nothing had ever been retired. The navigation ruling retired the
+    // superseded zone tiles rather than deleting them, so there is now a third
+    // tier and the arithmetic has to name it.
     const withArt = assetRegistry.byStatus('generated').length;
-    expect(assetRegistry.byStatus('placeholder')).toHaveLength(assetRegistry.size - withArt);
+    const retired = assetRegistry.byStatus('retired').length;
+
+    expect(assetRegistry.byStatus('placeholder')).toHaveLength(
+      assetRegistry.size - withArt - retired,
+    );
+    expect(assetRegistry.byStatus('approved'), 'nothing is approved yet').toHaveLength(0);
   });
 
   it('uses only known families', () => {
@@ -236,33 +266,76 @@ describe('the committed inventory', () => {
     );
   });
 
-  it('contains the six shop zones', () => {
-    const zones = assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'));
+  /**
+   * The room is **one portrait shell plus transparent overlays**, not six
+   * composed landscape tiles (`18_PARLOR_NAVIGATION_MAP.md` v2.0 §8).
+   *
+   * Both branches asserted a zone manifest and both are now partly wrong. The
+   * navigation branch listed `zone_parlor_counter_front` as a live shell — it
+   * has since been **withdrawn**, because the shell is one image cut at logical
+   * y 292 whose lower half *is* the foreground layer. And it expected
+   * `zone_parlor_shell` to be a placeholder, which it stopped being when the
+   * art landed.
+   *
+   * The old six are kept rather than deleted. A retired asset keeps its record
+   * so past Slice issues and archived seasons render exactly as published, and
+   * deleting an approved slug to tidy a count is the one thing the
+   * reconciliation principles forbid outright.
+   */
+  it('has the shell, and keeps the superseded zone tiles on record', () => {
+    expect(assetRegistry.get('zone_parlor_shell')?.artStatus).toBe('generated');
+    expect(assetRegistry.get('zone_back_hall_shell')?.artStatus).toBe('placeholder');
 
-    expect(zones.map((r) => r.slug)).toEqual(
-      expect.arrayContaining([
-        'zone_front_counter',
-        'zone_tonight_board',
-        'zone_menu_board',
-        'zone_newspaper_rack',
-        'zone_display_case',
-        'zone_wall',
-      ]),
-    );
+    // Withdrawn, not deleted — the foreground counter is a render step, not an asset.
+    expect(assetRegistry.get('zone_parlor_counter_front')?.artStatus).toBe('retired');
+
+    for (const slug of [
+      'zone_tonight_board',
+      'zone_chalkboard',
+      'zone_newspaper_rack',
+      'zone_display_case',
+      'zone_trophy_wall',
+      'zone_menu_board',
+      'zone_wall',
+    ]) {
+      expect(assetRegistry.get(slug), `${slug} was deleted rather than retired`).toBeDefined();
+      expect(assetRegistry.get(slug)?.artStatus, slug).toBe('retired');
+    }
   });
 
   /**
    * `ART_SPEC §2.1` left the zone canvas provisional until the B0 composite ran
-   * on a real phone. It has now run. What settled is the **width**: every zone
-   * tile is 320, which is the one-column measure the layout is built on. Height
-   * is whatever the tile contains, because the parlor turned out to be one tall
-   * portrait room rather than a set of equal panels.
+   * on a real phone. It has now run, and what settled is the **width**: 320, the
+   * one-column measure the layout is built on. Height is whatever the tile
+   * contains, because the parlor turned out to be one tall portrait room rather
+   * than a set of equal panels.
+   *
+   * **The shell is the documented exception.** `18 §8` authors it at 960 × 1707
+   * — exactly 3× the 320 × 569 logical room — because a shell downsampled from
+   * 3× keeps its one-pixel bevels and a shell authored at 1× does not. It is
+   * still 320 in logical space; 960 is the *source* measure.
    */
-  it('holds one width across every zone tile', () => {
-    const zones = assetRegistry.byFamily('zone').filter((r) => r.slug.startsWith('zone_'));
-    const widths = new Set(zones.map((r) => r.canvas.split('x')[0]));
+  it('holds one width across every zone tile, and 3× only for the shell', () => {
+    // Retired records are history, not live assets. `zone_parlor_counter_front`
+    // was authored at 3× before it was withdrawn, and holding a reversed
+    // decision to the current rule would force it to be edited or deleted —
+    // and deleting it is what the reconciliation principles forbid.
+    const zones = assetRegistry
+      .byFamily('zone')
+      .filter((r) => r.slug.startsWith('zone_') && r.artStatus !== 'retired');
+    const wide = zones.filter((r) => r.canvas.split('x')[0] !== '320');
 
-    expect([...widths]).toEqual(['320']);
+    for (const record of zones) {
+      expect(['320', '960'], `${record.slug} is ${record.canvas}`).toContain(
+        record.canvas.split('x')[0],
+      );
+    }
+
+    // Only the shells may take the 3× measure, and 960 must be exactly 3 × 320.
+    for (const record of wide) {
+      expect(record.slug, 'only a shell may be authored at 3×').toMatch(/shell/);
+      expect(record.canvas.split('x')[0]).toBe(String(320 * 3));
+    }
   });
 
   /**

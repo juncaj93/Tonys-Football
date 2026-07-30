@@ -156,8 +156,10 @@ export function decodeLeague(payload: unknown, endpointKey = 'league'): Decoded<
       previousLeagueId: str(raw, 'previous_league_id'),
       rosterPositions,
       scoringSettings,
+      playoffTeams: num(settings, 'playoff_teams'),
       playoffWeekStart: num(settings, 'playoff_week_start'),
       leg: num(settings, 'leg'),
+      lastScoredLeg: num(settings, 'last_scored_leg'),
     },
     warnings,
   };

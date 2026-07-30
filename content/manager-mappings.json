@@ -1,0 +1,120 @@
+{
+  "version": 1,
+  "approvedOn": "2026-07-29",
+  "note": [
+    "Canonical league names — the name Tony uses when he speaks to somebody.",
+    "",
+    "This file is the authority for `users.display_name`. Sleeper seeds nothing here:",
+    "a Sleeper handle is provenance (`users.sleeper_username`), the Sleeper user ID is",
+    "the durable external key (`users.sleeper_user_id`), and the canonical name is a",
+    "league decision recorded here. Changing a name is an edit to this file plus a",
+    "re-import, which makes every change reviewable in git and auditable in sync_runs.",
+    "",
+    "`source` records who approved each mapping. Do not add an entry without one.",
+    "An account with no entry keeps its Sleeper display name and is reported at import,",
+    "so an unmapped person is visible rather than silently wrong.",
+    "",
+    "RETIREMENT IS NOT DELETION. A retired manager keeps every membership, team name,",
+    "record, finish, and co-owner relationship. `users.is_retired` hides nobody from",
+    "history; it records that they are not playing now. History may name them freely",
+    "when discussing the seasons they played."
+  ],
+  "managers": [
+    {
+      "sleeperUserId": "450049619838103552",
+      "sleeperUsername": "BigJuncer",
+      "displayName": "Alex",
+      "retired": false,
+      "source": "content/counter-greetings.md — confidently mapped"
+    },
+    {
+      "sleeperUserId": "1113259910768238592",
+      "sleeperUsername": "NateyDee",
+      "displayName": "Nathan",
+      "retired": false,
+      "source": "content/counter-greetings.md — confidently mapped"
+    },
+    {
+      "sleeperUserId": "963870811994046464",
+      "sleeperUsername": "jfletcher433",
+      "displayName": "Joe",
+      "retired": false,
+      "source": "Technical Lead ruling 2026-07-29 §8"
+    },
+    {
+      "sleeperUserId": "690209715904417792",
+      "sleeperUsername": "Anthonyberardo",
+      "displayName": "Berardo",
+      "retired": true,
+      "retiredNote": "Held 2024 roster 4 as 'Injury Prone', 6-8-0, finished 6th. Absent from 2025 and 2026. Absence is not deletion and not reassignment: the 2024 membership, team name, record, and finish stay attached to this user, and roster 4's later occupants (Shant in 2025, Zack in 2026) inherit none of it.",
+      "source": "Technical Lead identity correction 2026-07-29"
+    },
+    {
+      "sleeperUserId": "1113354275289223168",
+      "sleeperUsername": "SuggMyNick",
+      "displayName": "Nick",
+      "retired": false,
+      "source": "content/counter-greetings.md — confidently mapped"
+    },
+    {
+      "sleeperUserId": "705813167879553024",
+      "sleeperUsername": "RonJonathan",
+      "displayName": "Ryan",
+      "retired": false,
+      "canonNote": "Ryan and 'Ron' are the same person; there is no separate Ron identity. The Ryan profile canon in PROJECT_SPEC/11 belongs to this account — league_overload, competitive_rage, lions_fan, tony_respects. Recorded here so the content engine attaches those tags to this Sleeper user ID rather than to a name it has to guess at. Phase A reads none of them.",
+      "source": "Technical Lead identity correction 2026-07-29"
+    },
+    {
+      "sleeperUserId": "1113986962647654400",
+      "sleeperUsername": "imbrickedup22",
+      "displayName": "Brandon",
+      "retired": false,
+      "source": "Technical Lead ruling 2026-07-29 §8"
+    },
+    {
+      "sleeperUserId": "729470601756037120",
+      "sleeperUsername": "cheeseking",
+      "displayName": "Cheese",
+      "retired": false,
+      "source": "content/counter-greetings.md — confidently mapped"
+    },
+    {
+      "sleeperUserId": "1119321313341976576",
+      "sleeperUsername": "MattLee04",
+      "displayName": "Matt Lee",
+      "retired": false,
+      "source": "content/counter-greetings.md — confidently mapped"
+    },
+    {
+      "sleeperUserId": "993992889480904704",
+      "sleeperUsername": "MattyB2317",
+      "displayName": "Matty B",
+      "retired": false,
+      "source": "content/counter-greetings.md — confidently mapped"
+    },
+    {
+      "sleeperUserId": "1251952575964524544",
+      "sleeperUsername": "Tupaz11",
+      "displayName": "Shant",
+      "retired": true,
+      "retiredNote": "Held 2025 roster 4 as 'Ceedeez Nuts', 9-5-0, finished 6th, with Armen as co-owner. Retired, never deleted: the membership, team name, record, finish, and the co-owner link to Armen are all preserved. Distinct person from Armen — no history moves between them.",
+      "source": "Technical Lead ruling 2026-07-29 §8"
+    },
+    {
+      "sleeperUserId": "604375476017885184",
+      "sleeperUsername": "topouzzz",
+      "displayName": "Armen",
+      "retired": true,
+      "retiredNote": "Verified co-owner of 2025 roster 4 alongside Shant. Holds no season membership of his own by commissioner decision 2026-07-28, which is what keeps UNIQUE(season_id, roster_id) intact — his presence in league history is the co_owner_user_id link on Shant's 2025 membership. A distinct permanent user: never merged with Shant, and no history transfers in either direction.",
+      "source": "Technical Lead identity correction 2026-07-29"
+    },
+    {
+      "sleeperUserId": "1385054341806686208",
+      "sleeperUsername": "zackstephens54",
+      "displayName": "Zack",
+      "retired": false,
+      "source": "PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md §5.1 — named in the approved plan"
+    }
+  ],
+  "unmapped": []
+}

@@ -159,17 +159,64 @@ asset — a source that needs either is usually a source that needs revising.
 
 Remove background, harden edges, eliminate anti-aliasing fringe. Pixel art has no partial alpha except where deliberately authored.
 
+**For room objects (`object_*`) the alpha channel is load-bearing, not incidental.** It is the
+silhouette the affordance is derived from — see Step 5. A fringe, a stray pixel, or a stub of
+leftover floor plate becomes a visible defect in the glow. Objects ship on a fully transparent
+background with **no cast shadow and no ground plate**.
+
 ### Step 4 — Trim and anchor
 
 Trim to the declared canvas. For avatar layers, verify each attachment anchor and record the offset. **A layer that does not land on its anchor is regenerated — the renderer is never adjusted to compensate.**
+
+**Room objects are trimmed hard to the object.** The transparent margin is what makes a tap land
+on the object rather than on the wall beside it.
 
 ### Step 5 — Emit
 
 Sprite sheet plus JSON metadata into `/public/assets/<family>/`.
 
+**Silhouettes are alpha-derived. No authored paths.** The affordance glow is
+`filter: drop-shadow()` applied to the overlay's **own alpha channel**, so it follows the
+outline exactly, never covers the wall beside the object, and updates automatically the moment
+a placeholder is swapped for final art.
+
+**Nothing is emitted for this step** — no SVG polygon, no mask, no hit-map image. The authored
+`needsSilhouette` path requirement of the earlier ruling is withdrawn
+(`PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md §0`, §9.4), and `needsSilhouette` is no longer a
+field in `assets.inventory.json`.
+
+A rectangle around an irregular pixel object swallows the empty wall beside it, so taps land
+on nothing and the highlight covers scenery — that is the failure the navigation map exists to
+prevent. Alpha derivation solves it mechanically rather than by hand, which also removes the
+class of bug where the art changes and the traced polygon does not.
+
+The **hit region** is the tightly-cropped overlay's bounding box expanded to a **44px minimum**
+effective target. Expand the hit region, never the glow.
+
 ### Step 6 — Register
 
 Write the registry row: source, prompt reference, rights status, version, alt text. Flip `art_status` to `generated`, then `approved` after review.
+
+---
+
+## 4a. The one recorded correction — and why there is no Step 7
+
+**The pipeline has six steps. Every asset is a pure function of its source file, and that property is not negotiable** — one source, one command, one output, a regeneration that cannot drift.
+
+**`zone_parlor_shell` carries one exception, applied once and recorded.** Its Tonight board sits five logical units left of where the championship rail needs it. The correction could not be made in the source: 5 logical units is **14.7 source pixels** at the shell's 2.9406:1 ratio, and moving a painted board by a fractional pixel then downsampling resamples the frame's one-pixel bevel into mush. It had to happen after quantization, on the 320 × 569 grid, where a unit is a unit. `art/incoming/` was not touched.
+
+`scripts/shift-tonight-board.ts` is the record of what was done. **It is not a pipeline stage and must not become one.**
+
+That is a deliberate choice with a cost, and the cost is stated plainly: **reprocessing the shell from source reverts the board.** Wiring the correction into `art:process` would fix that and would also turn a one-off into architecture — a registry, a concept, and an invitation to add a second entry rather than fix the second asset's source. The trade taken is the other one.
+
+So the revert is caught rather than prevented, in two places:
+
+- `art:process` **prints a notice** naming the script whenever it rewrites that slug.
+- `scripts/shift-tonight-board.test.ts` **fails**, with the command in the failure message, if a reverted shell is ever committed.
+
+The correction also **cannot double-apply**, which matters more than it sounds: a blind "copy the block right by 5" run twice slides the board ten units into the wall with no exception and no failed check — just a room that is quietly wrong. It measures instead. It finds the board's right edge by walking in from the lit wall (the only side that moves with the board — the dark panel on the left is architecture that stays put), confirms the frame's own colour profile is there, then decides: **180 shifts, 185 is already done, anything else is an error.**
+
+**If a second asset ever seems to need this, fix its source instead.** Almost always it can be fixed there, and then it should be.
 
 ---
 
@@ -180,7 +227,7 @@ Ordered by visible return, so the product looks better earlier.
 | Batch | Contents | Effect |
 |---|---|---|
 | **B0** | Test set (7) | **Locks `ART_SPEC.md`.** Approved as one composite, not individually. |
-| **B1** | Tony (3) + zone tiles (6) | The shop becomes a place |
+| **B1** | Tony (3) + parlor shell + counter-front + 6 parlor overlays + Back Hall shell + 4 Back Hall overlays (15) | The shop becomes a place |
 | **B2** | Avatar layers + wearables (22) | Managers become themselves |
 | **B3** | Collectibles (12 priority of 24) | Pulls feel worth the tokens |
 | **B4** | Surfaces, frames, placeholders, UI | Dressings and rarity go live |
@@ -232,6 +279,9 @@ Swapping an asset is a commit that auto-deploys in about a minute. Free, version
 | Banding across a wall | Too many source colors for the palette | Re-quantize; if it persists, simplify the source |
 | Rarity indistinguishable in greyscale | Frames differ by color only | Regenerate with distinct geometry per tier |
 | Model bakes text into a blank surface | Most common surface failure | Regenerate. Strengthen the NO TEXT instruction. |
+| Glow bleeds onto the wall beside an object | Leftover ground plate or alpha fringe | **Re-run alpha cleanup, then re-trim.** Never hand-author a mask to compensate. |
+| An overlay floats above its prepared spot | Shell recess has no interior shadow | Regenerate the shell with the shadow; do not add a drop shadow in CSS |
+| The model fills a prepared empty recess | "Prepared places" instruction was weakened | Regenerate with the negative block verbatim |
 
 ---
 

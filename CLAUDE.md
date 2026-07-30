@@ -6,10 +6,11 @@ Before planning or implementing any feature, read:
 
 1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan. Start here.**
 2. `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` — **the approved implementation ordering**
-3. `docs/IMPLEMENTATION_HANDOFF.md` — **the current assignment**
-4. `README.md`
-5. Every numbered file inside `PROJECT_SPEC/`, in order
-6. `CLAUDE_FIRST_PROMPT.md`
+3. `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` — **how the room works. Read before touching any parlor object.**
+4. `docs/IMPLEMENTATION_HANDOFF.md` — **the current assignment**
+5. `README.md`
+6. Every numbered file inside `PROJECT_SPEC/`, in order
+7. `CLAUDE_FIRST_PROMPT.md`
 
 The files inside `PROJECT_SPEC/` are the canonical product specification.
 
@@ -64,6 +65,10 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 - Two cron jobs, no more: Sunday pre-Monday snapshot, Tuesday finalize. **No live in-game score sync, ever.**
 - 6-digit PINs, 90-day rolling sessions.
 - The Slice must publish correctly with the AI API key unset.
+- **The room is not a grid of hotspots.** It is **one portrait shell plus transparent overlays** (`18 §8`). Every parlor object is exactly one of Door, Display, Toy, or Scenery. An object earns a destination only if a manager can guess where it goes before tapping it — if a label is needed to explain why, the mapping is wrong. Most of the room is scenery, permanently.
+- **The homepage has exactly eight interactive objects** — **3 Doors, 4 Displays, 1 Toy** (`18 §3`). A Door **glows only when it has something to say**; typically one or two at once, and **only Doors ever glow**. There is **no basement door, no Underground door, no display case, no second door, and no floor hatch** on the homepage.
+- **`/counter` is the collectible-economy route** (`/counter/collection`, `/counter/showcase` beneath it). `/collection` is not a route. **One rear doorway → `/back-hall`**, and Rooms (`/rooms`) and Underground (`/underground`) exist **only inside the Back Hall**. An owned loot box **opens at the tray, in place** — never after a navigation.
+- **Silhouettes are alpha-derived** — `filter: drop-shadow()` on the overlay's own alpha. No authored masks, polygons, or hit-map images. All changing text is runtime HTML over blank baked surfaces.
 - Reward pacing and pricing are **simulation-gated** — no values are locked until the multi-season simulation runs in P3.
 
 **Art:** placeholder-first. Every asset is referenced by slug through the registry; swapping a placeholder for final art is a registry row, never a code change. See `art/ASSET_PIPELINE.md`.
