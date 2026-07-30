@@ -3,12 +3,20 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
 import { closePool, getDb } from '@/lib/db';
-import { boxOpenings, collectibles, lootBoxes, rewardTables, users } from '@/lib/db/schema';
+import {
+  boxOpenings,
+  collectibles,
+  lootBoxes,
+  rewardTables,
+  seasons,
+  users,
+} from '@/lib/db/schema';
 import { PG_ERROR, expectPgError, resetDatabase } from '@/lib/db/test-helpers';
 
 import { counterState, ensureRewardTable, grantBox, openBox, ownedBox } from './boxes';
 import { standardRewardTable } from './rewards';
 import { clearRandomSource, setFixedRoll } from './rng';
+import { applyTokenDelta, ensureEconomyConfig, wallet } from './tokens';
 
 /**
  * Integration tests for opening a box, against a real Postgres.
@@ -437,6 +445,63 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const owned = await db!.select().from(collectibles).where(eq(collectibles.userId, alex.id));
       expect(owned).toHaveLength(2);
       expect(owned[0]!.slug).toBe(owned[1]!.slug);
+    });
+  });
+
+  /*
+   * A manager with no seat this season — Armen, Berardo and Shant in the real
+   * league: a co-owner and two people who played 2024 or 2025.
+   *
+   * `CLAUDE.md` separates **permanent manager identity** from seasonal roster
+   * identity, and keeps collectibles permanent while tokens reset. So the split
+   * is exact and worth pinning: **they own, they open, they showcase — and they
+   * cannot spend.** The failure mode this guards against is the tempting one,
+   * which is granting a seatless manager tokens so the surfaces stop looking
+   * broken. That would invent a balance nothing awarded.
+   */
+  describe('a manager with no seat this season', () => {
+    it('owns and opens a box, because a box is not seasonal', async () => {
+      const departed = await makeManager('Berardo');
+      const box = await grantOne(departed.id, 'test:seatless:box');
+
+      setFixedRoll(0);
+      const opened = await openBox(db!, { userId: departed.id, boxId: box.id });
+
+      expect(opened.status).toBe('opened');
+      const owned = await db!
+        .select()
+        .from(collectibles)
+        .where(eq(collectibles.userId, departed.id));
+      expect(owned).toHaveLength(1);
+    });
+
+    it('has no wallet at all, rather than a wallet reading zero', async () => {
+      const departed = await makeManager('Berardo');
+      const [season] = await db!.insert(seasons).values({ year: 2026 }).returning();
+
+      // Null, not 0. A zero balance and "no tab" are different facts, and a
+      // surface that cannot tell them apart says the wrong thing to somebody.
+      expect(await wallet(db!, { userId: departed.id, seasonId: season!.id })).toBeNull();
+    });
+
+    it('cannot be given tokens, because there is no seat to give them to', async () => {
+      const departed = await makeManager('Berardo');
+      const [season] = await db!.insert(seasons).values({ year: 2026 }).returning();
+      await ensureEconomyConfig(db!, season!.id);
+
+      // The database refuses at the seat, not a service at the surface. This is
+      // what makes "grant them 250 so it looks right" impossible rather than
+      // merely discouraged.
+      await expect(
+        applyTokenDelta(db!, {
+          userId: departed.id,
+          seasonId: season!.id,
+          amount: 250,
+          reason: 'SEASON_START',
+          description: 'Tony opens a tab.',
+          idempotencyKey: 'test:seatless:tab',
+        }),
+      ).rejects.toThrow();
     });
   });
 

@@ -338,15 +338,37 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * something to offer. Picking it is the last step of the milestone's loop — the
      * point at which a pull becomes something the league can see.
      */
-    case 'showcase-chosen':
+    case 'showcase-chosen': {
       await page.goto(`${BASE}/counter/showcase`, { waitUntil: 'networkidle' });
-      await page.getByRole('button', { name: /Show this one/i }).first().click();
+
+      /*
+       * The state is *the Showcase with something in it*, and by this point it
+       * may already be in that state.
+       *
+       * Each width signs in as the same manager and `tray-reveal` buys and opens
+       * a fresh box — but the roll is real randomness, so the second width can
+       * pull a **duplicate** of what the first width already put on the shelf.
+       * `showcaseChoices` is one entry per *distinct* item, so the picker then
+       * offers exactly one choice, already chosen, and there is no
+       * "Show this one" to click. The driver waited thirty seconds for a button
+       * that correctly did not exist.
+       *
+       * A latent flake rather than a new one: it needs two widths to draw the
+       * same slug out of twenty-four, which is likely enough to happen and rare
+       * enough to look like whatever change was in flight when it did. Waiting
+       * on the *outcome* instead of on the click is what makes it stable — and
+       * it is the more honest assertion anyway.
+       */
+      const pick = page.getByRole('button', { name: /Show this one/i }).first();
+      if ((await pick.count()) > 0) await pick.click();
+
       // The pick is confirmed by a server round trip and a refresh, not optimistically.
       await page.getByRole('button', { name: /take it off the shelf/i }).waitFor({
         timeout: 15_000,
       });
       await page.waitForTimeout(400);
       return;
+    }
 
     case 'back-hall':
       await home(page);

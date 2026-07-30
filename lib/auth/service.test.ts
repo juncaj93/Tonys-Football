@@ -16,6 +16,7 @@ import {
 import {
   claimManager,
   listDevices,
+  doorManager,
   listDoorManagers,
   resetPin,
   resolveSession,
@@ -121,7 +122,21 @@ describe.skipIf(!hasDatabase)('authentication', () => {
       expect(managers.find((manager) => manager.id === alex.id)?.claimed).toBe(true);
     });
 
-    it('does not offer a manager who holds no seat this season', async () => {
+    /*
+     * This test used to assert the opposite, and the opposite was a bug.
+     *
+     * Keying the door on the current season's roster put Armen, Berardo and
+     * Shant — a co-owner and two managers from 2024 and 2025 — behind a **404 at
+     * their own door**, while the seed still granted each of them a welcome box
+     * they could never reach. `CLAUDE.md` separates permanent manager identity
+     * from seasonal roster identity and keeps collectibles permanent while
+     * tokens reset; a door that conflates the two tells a person who owns things
+     * in this league that they are not in it.
+     *
+     * What they cannot do is spend. That is a seasonal tab, and the counter says
+     * so plainly rather than hiding a control.
+     */
+    it('offers a manager who holds no seat this season, marked as such', async () => {
       await league();
       const [departed] = await db!
         .insert(users)
@@ -129,7 +144,40 @@ describe.skipIf(!hasDatabase)('authentication', () => {
         .returning();
 
       const managers = await listDoorManagers(db!);
-      expect(managers.some((manager) => manager.id === departed!.id)).toBe(false);
+      const entry = managers.find((manager) => manager.id === departed!.id);
+
+      expect(entry).toBeDefined();
+      expect(entry?.seated).toBe(false);
+      expect(entry?.rosterId).toBeNull();
+      // Never played a season of their own — a co-owner's shape.
+      expect(entry?.lastSeatedYear).toBeNull();
+    });
+
+    it('records the last season a former manager did hold a seat', async () => {
+      const { season } = await league();
+      const [former] = await db!.insert(users).values({ displayName: 'Shant' }).returning();
+      await db!
+        .insert(seasonMemberships)
+        .values({ seasonId: season.id, userId: former!.id, rosterId: 9, isActive: false });
+
+      const entry = (await listDoorManagers(db!)).find((m) => m.id === former!.id);
+      expect(entry?.seated).toBe(false);
+      expect(entry?.lastSeatedYear).toBe(season.year);
+    });
+
+    it('lets a seatless manager through their own door', async () => {
+      await league();
+      const [departed] = await db!
+        .insert(users)
+        .values({ displayName: 'Anthonyberardo' })
+        .returning();
+
+      // `doorManager` is what `/door/[userId]` and `claimManager` both gate on.
+      // Returning null here is what produced the 404.
+      expect(await doorManager(db!, departed!.id)).not.toBeNull();
+
+      const claimed = await claimManager(db!, { userId: departed!.id, pin: GOOD_PIN }, CONTEXT);
+      expect(claimed.ok).toBe(true);
     });
   });
 
