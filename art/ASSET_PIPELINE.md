@@ -81,6 +81,80 @@ The prompt gets close. **The pipeline makes it exact.**
 
 Also strips `#000000` and `#FFFFFF`, which are common model defaults and are prohibited by the palette.
 
+#### The colour metric: plain Euclidean RGB. Ruled 2026-07-29.
+
+Nearest-palette matching uses **plain Euclidean distance on raw sRGB channel
+differences**:
+
+```ts
+const dr = r - colour[0];
+const dg = g - colour[1];
+const db = b - colour[2];
+const distance = dr * dr + dg * dg + db * db;
+```
+
+No weights, no linear-light conversion, no tuning constants.
+
+**Do not reintroduce luma weighting.** The reason is not stylistic preference — it
+shipped, and it broke assets.
+
+##### What went wrong
+
+The original implementation applied luma coefficients to each channel **before**
+squaring:
+
+```ts
+const db = (b - colour[2]) * 0.11;   // then db * db
+```
+
+Squaring a 0.11 coefficient leaves blue contributing **1.21%** of the total
+distance. Green, at 0.59² = 34.8%, dominates. The metric therefore ranks
+candidates almost entirely by brightness and is nearly blind to hue.
+
+That is the wrong tool for this job. `palette.json` is not a greyscale ramp — it
+is 32 colours across **ten deliberately separated hue families**, and the
+matcher's first job is to choose the right family. Luma weighting is appropriate
+for converting colour to grey. It is not appropriate for a cross-ramp palette
+matcher.
+
+##### The failure mode: warm browns turn violet
+
+**Blue is the axis that separates the warm dark woods from `violet.violet-deep
+#3B2050`.** The two are close in red and green and far apart only in blue —
+exactly the channel that had been discounted to near-nothing.
+
+Backsplash tile `#500E01`, a dark warm red-brown:
+
+| Candidate | Weighted | Euclidean |
+|---|---|---|
+| `#3B2050` violet-deep | **15 — chosen** | 84 |
+| `#4A2E1C` wood-dark | 19 | **42 — chosen** |
+
+Across `zone_parlor_shell` the weighted metric painted **8.48% of the image
+violet** — the checkerboard backsplash, the doorway recess and the carpet. It
+also mapped Tony's **blue jersey to `#C99A63`, a tan**, for the same reason.
+
+It survived two batches unnoticed because the earlier assets' dark areas were
+near-black and landed on the `ink` ramp under either metric. `zone_parlor_shell`
+was the first asset with large mid-dark warm-brown fields.
+
+##### Why plain Euclidean specifically
+
+Measured, simple, and free of tuning constants. It maps 0% of the shell to
+violet-deep. A linear-light variant scores the same on that measure and was not
+chosen: the extra conversion buys nothing observable here and adds a step to
+reason about. Any coefficient placed in front of a channel is a thumb on the
+scale that will eventually drag some other hue across a ramp boundary — silently,
+in an asset nobody happens to be looking at.
+
+##### Remediation rule
+
+If an asset comes out with a wrong-hue cast, **count the pixels before adjusting
+anything.** `scripts/process-art.test.ts` asserts palette closure and the shell's
+violet share on every run; extend it with the new asset rather than eyeballing
+the output. Do not add palette colours or reweight the metric to fix a single
+asset — a source that needs either is usually a source that needs revising.
+
 ### Step 3 — Alpha cleanup
 
 Remove background, harden edges, eliminate anti-aliasing fringe. Pixel art has no partial alpha except where deliberately authored.
@@ -125,6 +199,27 @@ Write the registry row: source, prompt reference, rights status, version, alt te
 
 ---
 
+## 4a. The one recorded correction — and why there is no Step 7
+
+**The pipeline has six steps. Every asset is a pure function of its source file, and that property is not negotiable** — one source, one command, one output, a regeneration that cannot drift.
+
+**`zone_parlor_shell` carries one exception, applied once and recorded.** Its Tonight board sits five logical units left of where the championship rail needs it. The correction could not be made in the source: 5 logical units is **14.7 source pixels** at the shell's 2.9406:1 ratio, and moving a painted board by a fractional pixel then downsampling resamples the frame's one-pixel bevel into mush. It had to happen after quantization, on the 320 × 569 grid, where a unit is a unit. `art/incoming/` was not touched.
+
+`scripts/shift-tonight-board.ts` is the record of what was done. **It is not a pipeline stage and must not become one.**
+
+That is a deliberate choice with a cost, and the cost is stated plainly: **reprocessing the shell from source reverts the board.** Wiring the correction into `art:process` would fix that and would also turn a one-off into architecture — a registry, a concept, and an invitation to add a second entry rather than fix the second asset's source. The trade taken is the other one.
+
+So the revert is caught rather than prevented, in two places:
+
+- `art:process` **prints a notice** naming the script whenever it rewrites that slug.
+- `scripts/shift-tonight-board.test.ts` **fails**, with the command in the failure message, if a reverted shell is ever committed.
+
+The correction also **cannot double-apply**, which matters more than it sounds: a blind "copy the block right by 5" run twice slides the board ten units into the wall with no exception and no failed check — just a room that is quietly wrong. It measures instead. It finds the board's right edge by walking in from the lit wall (the only side that moves with the board — the dark panel on the left is architecture that stays put), confirms the frame's own colour profile is there, then decides: **180 shifts, 185 is already done, anything else is an error.**
+
+**If a second asset ever seems to need this, fix its source instead.** Almost always it can be fixed there, and then it should be.
+
+---
+
 ## 5. Batch order
 
 Ordered by visible return, so the product looks better earlier.
@@ -146,7 +241,8 @@ Ordered by visible return, so the product looks better earlier.
 
 - **Budget a 50–70% cull rate.** Roughly four candidates per needed asset — about 150 generations for twelve sheets. Generation is cheap; **reviewing is the real cost.** Cull hard and early rather than trying to rescue a near-miss.
 - **Reuse the style preamble verbatim.** Never paraphrase between batches. Paraphrasing is how drift starts, and it is invisible until assets sit side by side.
-- **Every prompt carries the negative block.** No team logos, no real player likenesses, no real signatures, no brand marks, no Mario, no existing game characters. This enforces `06 §17` and the publicity-rights concerns at the prompt level rather than at review.
+- **Every prompt carries the negative block.** No third-party trademarks, no team logos, no real player likenesses, no real signatures, no copied restaurant branding, no unapproved brand marks, no Mario, no existing game characters. This enforces `06 §17` and the publicity-rights concerns at the prompt level rather than at review.
+  - **Tony's Pizza's own marks are exempt on first-party assets** (`ART_SPEC.md §10`, ruled 2026-07-29) — the house wordmark and logo treatment, no TM symbol, and nothing beyond Tony's own branding. `zone_parlor_shell.png` stays excluded: shop signage is an overlay, never baked into the room.
 - **Never prompt for final pixel dimensions.** Always generate large and downscale.
 
 ---
@@ -179,6 +275,7 @@ Swapping an asset is a commit that auto-deploys in about a minute. Free, version
 | Hat floats above the head | Layer not authored to anchors | **Regenerate the layer.** Never adjust the renderer. |
 | Collectible unreadable in inventory | Designed for 96px, not 16px | Regenerate with a simpler silhouette and lower detail budget |
 | Text illegible on a poster | Safe area has interior detail | Regenerate the surface with a flatter center |
+| **Warm dark browns map to violet** | **Colour metric discounts blue** | **Use plain Euclidean RGB distance; do not reintroduce luma weighting** |
 | Banding across a wall | Too many source colors for the palette | Re-quantize; if it persists, simplify the source |
 | Rarity indistinguishable in greyscale | Frames differ by color only | Regenerate with distinct geometry per tier |
 | Model bakes text into a blank surface | Most common surface failure | Regenerate. Strengthen the NO TEXT instruction. |

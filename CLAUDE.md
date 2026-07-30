@@ -66,7 +66,7 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 - 6-digit PINs, 90-day rolling sessions.
 - The Slice must publish correctly with the AI API key unset.
 - **The room is not a grid of hotspots.** It is **one portrait shell plus transparent overlays** (`18 §8`). Every parlor object is exactly one of Door, Display, Toy, or Scenery. An object earns a destination only if a manager can guess where it goes before tapping it — if a label is needed to explain why, the mapping is wrong. Most of the room is scenery, permanently.
-- **The homepage has exactly eight interactive objects** — 4 Doors, 3 Displays, 1 Toy (`18 §3`). A Door **glows only when it has something to say**; typically one or two at once. There is **no basement door, no Underground door, no display case, no second door, and no floor hatch** on the homepage.
+- **The homepage has exactly eight interactive objects** — **3 Doors, 4 Displays, 1 Toy** (`18 §3`). A Door **glows only when it has something to say**; typically one or two at once, and **only Doors ever glow**. There is **no basement door, no Underground door, no display case, no second door, and no floor hatch** on the homepage.
 - **`/counter` is the collectible-economy route** (`/counter/collection`, `/counter/showcase` beneath it). `/collection` is not a route. **One rear doorway → `/back-hall`**, and Rooms (`/rooms`) and Underground (`/underground`) exist **only inside the Back Hall**. An owned loot box **opens at the tray, in place** — never after a navigation.
 - **Silhouettes are alpha-derived** — `filter: drop-shadow()` on the overlay's own alpha. No authored masks, polygons, or hit-map images. All changing text is runtime HTML over blank baked surfaces.
 - Reward pacing and pricing are **simulation-gated** — no values are locked until the multi-season simulation runs in P3.
@@ -79,7 +79,11 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 
 Shipped: the Next.js foundation, the injected clock, the asset registry, the identity schema, the Sleeper adapter, and the idempotent historical import with recorded 2024–2026 fixtures.
 
-**Current assignment: V0 Pipeline + V1 Doors Open.** See `docs/IMPLEMENTATION_HANDOFF.md`.
+**V0 Pipeline** — shipped. Neon production and sandbox, Vercel on `main`, migrations and seeding as a deploy step, a live `*.vercel.app` URL. See `docs/DEPLOYMENT.md`.
+
+**V1 Doors Open** — shipped. Claim flow, 6-digit PIN, 90-day rolling session, derived tags, content engine v0 seeded from Group A, the six-zone parlor, Tonight at Tony's, the Counter Greeting, the receipt, and the offseason dressing.
+
+**Next assignment:** V2 Memory. See `docs/IMPLEMENTATION_HANDOFF.md`.
 
 The engineer runs continuously inside a vertical slice and stops only at the conditions in `17 §8`. PR checkpoints are the six categories in `17 §7` — not every subtask.
 

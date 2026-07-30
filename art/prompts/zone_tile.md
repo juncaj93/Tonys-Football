@@ -227,7 +227,12 @@ glance and from across the room.
 
 Sits in the shell's left arched alcove. Glows when a Slice is unread.
 
-### `object_banner` — Door → `/timeline`
+### `object_champion_banner` — Display · 18 × 15 · **generated and registered**
+
+> **Superseded and delivered.** This section described `object_banner`, a Door to
+> `/timeline` whose banners scaled together from the seventh season. Both are
+> withdrawn. The asset exists, at `/assets/zone/object_champion_banner.png`, and
+> needs no further generation — it is kept here as the record of what was asked for.
 
 ```
 SUBJECT: A single felt championship pennant banner hanging from its top edge, with a
@@ -235,9 +240,19 @@ scalloped bottom edge and a contrasting border stripe. The face is completely bl
 letters, no numerals, no emblem. Slight fabric sag along the top.
 ```
 
-One reusable overlay; one instance rendered per season on the shell's bare rail. **The year and the champion's name are runtime text.** Baked lettering is rejected — it would force regeneration every January and make historical names unfixable. The rail holds **six at full size**; from the seventh they scale together on a shared rail geometry.
+One reusable pennant serves **every championship, forever**. **Only the two-digit year is
+runtime text**, composited onto the red field; the champion's name is *not* on the fabric —
+18 × 15 cannot hold it — and appears in the panel that opens on activation, with **View
+season** routing to `/timeline`. Baked lettering is rejected: it would force regeneration
+every January and make historical names unfixable.
 
-**Never glows persistently.** The banners are their own affordance.
+The rail holds **exactly six fixed slots** at `x 56 · 78 · 100 · 122 · 144 · 166`, gap 4.
+**They never scale and never move between visits** — gap 4 is load-bearing, because narrowing
+it to 3 drops the hit pitch to 23.6 CSS px on a 360 px viewport, below the WCAG 2.5.8 AA floor.
+Slots fill from the left; the current season reveals `TBD`; empty slots render nothing.
+
+**A Display, not a Door, and it never glows.** The banners are their own affordance. Full
+geometry in `art/B2_CHAMPION_BANNER.md`.
 
 ### `object_box_standard` · `object_box_rare` · `object_box_legendary` · `object_box_owned`
 

@@ -1,6 +1,6 @@
 # 18 — The Parlor's Environmental Navigation Map
 
-**Version:** 2.0 — Counter Shop and Back Hall
+**Version:** 2.1 — Counter Shop and Back Hall
 **Status:** ✅ Approved — canonical. Governs every interactable object in the parlor.
 **Approved:** 2026-07-29
 **Supersedes:** version 1.0 of this document in its entirety. See §0.
@@ -18,7 +18,7 @@ Version 1.0 of this document is **withdrawn**, not amended. The following decisi
 | A separate homepage **Underground / back door** | The single rear doorway → Back Hall → `/underground` |
 | The homepage **display case** as the Collection entrance | The **countertop tray** → `/counter` |
 | **`/collection`** as the primary collectible route | **`/counter`**, with `/counter/collection` beneath it |
-| The **five-Door** homepage manifest (3 open + 2 locked) | **Four Doors**, three Displays, one Toy |
+| The **five-Door** homepage manifest (3 open + 2 locked) | **Three Doors**, four Displays, one Toy |
 | The **"exactly three objects are highlighted"** rule | A Door glows **only when it has something to say** (§3.1) |
 | The **nine-object** verification list | The **eight-object** list in §10 |
 | Separate **basement** and **Underground** prepared openings in the shell | **One** plain rear doorway |
@@ -26,6 +26,17 @@ Version 1.0 of this document is **withdrawn**, not amended. The following decisi
 | **Six landscape zone tiles** composed into a room | **One portrait shell** at 960×1707 plus transparent overlays (§8) |
 
 Also retired and not to reappear anywhere: **the second homepage door**, **the floor hatch**, **the clipboard**, **`zone_menu_board`**, **"Keys"** and **"Office"** as parlor objects.
+
+### Version 2.1 — four rulings that postdate version 2.0
+
+Folded in 2026-07-30. These amend 2.0 rather than withdrawing it; everything not listed here stands.
+
+| Ruling | What changed in this document |
+|---|---|
+| **The banner rail is a Display, not a Door** | §3, §3.1, §10 · the homepage is **3 Doors · 4 Displays · 1 Toy**, still eight objects. The rail was the one Door that never glowed, so the glow rule is now uniform: every Door glows conditionally, nothing else ever glows. |
+| **The champion banner** | §9.1, §9.3, §9.5 · `object_champion_banner` at 18 × 15, **year only**, six fixed slots that never move or scale. The champion's name lives in the panel and `/timeline`, never on the fabric. §9.5's "from the seventh they scale together" is **withdrawn** — gap 4 is load-bearing for WCAG 2.5.8 AA. |
+| **The receipt is trigger-only** | §3.3, §9.3, §10 · the paper is 19 × 14 logical and cannot hold the record. Tapping opens a panel; nothing is printed on it. The small sign is trigger-only for the same reason. |
+| **`zone_parlor_counter_front` is withdrawn** | §9.1 · the shell is one image cut at logical **y 292** and its lower half *is* the foreground layer. A render step, not an asset. |
 
 **Retained unchanged from version 1.0:**
 
@@ -68,14 +79,14 @@ Every object in the room is exactly one of these. This taxonomy is what dissolve
 |---|---|---|---|---|
 | ① | **Left arched nook** — newspaper rack | The Slice | `/slice` | Door |
 | ② | **Large wall board** | Tonight at Tony's | Expands in place | Display |
-| ③ | **Banner rail** | Champions & History | `/timeline` | Door |
+| ③ | **Banner rail** | Champions & History | Reveals the champion in place; **View season** routes to `/timeline` | Display |
 | ④ | **Small sign right of Tony** | Prediction (V1); Tony's Line (flagged) | Expands in place | Display |
-| ⑤ | **Receipt in front of Tony** | Manager record | Expands in place | Display |
+| ⑤ | **Receipt in front of Tony** | Manager record | **Trigger-only** — opens a panel; nothing is printed on the paper | Display |
 | ⑥ | **Countertop tray** | Tony's Counter | `/counter` | Door |
 | ⑦ | **Right-rear doorway** | Back Hall | `/back-hall` | Door |
 | ⑧ | **Tony** | Dialogue | No route | Toy |
 
-**Four Doors, three Displays, one Toy.**
+**Three Doors, four Displays, one Toy.**
 
 **There is no basement door, no Underground door, and no display case on the homepage.**
 
@@ -92,9 +103,10 @@ A Door glows **only when it has something meaningful to say**. This replaces the
 | **Newspaper rack** | A Slice is unread |
 | **Countertop tray** | A box is owned, purchasable, or meaningfully available |
 | **Back Hall** | Something beyond it is available or newly relevant |
-| **Banner rail** | **Never persistently.** Visibly tappable; the banners are their own affordance. |
 
 Typically **one or two** objects glow at once. Locked and quiet destinations stay calm.
+
+**The rule is now uniform: every Door glows conditionally, and nothing that is not a Door ever glows.** That is what the rail's reclassification bought — it was the one Door that never glowed, and a rule with a single permanent exception in it is a rule people have to remember rather than one they can apply.
 
 A glow that is always on is wallpaper. A glow that appears when something changed is information — that is the whole reason the rule moved from a fixed count to a condition.
 
@@ -130,7 +142,7 @@ The switch trigger is **the first finalized week of the current season**, not th
 
 Records come from finalized `rosters.settings`, never recomputed from corrected weekly scores, per the Stats & Data ruling. Regular season only; playoff records are separate and labelled.
 
-The receipt expands in place. It has the manager's own name on it — it needs no glow and no route.
+The receipt is **trigger-only**. It has the manager's own name on it, so it needs no glow and no route — but the record is *not* rendered onto the paper. The usable paper is **19 × 14 logical units**, 57 × 42 device pixels at 3×, and no arrangement of a name, a record and a streak fits there legibly. Tapping opens the expanded panel, and the panel carries the words. The paper stays blank, which is also what the shell brief asks the art for.
 
 ### 3.4 The small sign — V1 versus flagged
 
@@ -289,12 +301,12 @@ Four things are deliberately kept apart, and confusing any two of them is how ve
 | Asset | Purpose | Variants |
 |---|---|---|
 | `object_newspaper_rack` | Door → `/slice`; sits in the left alcove | 1 |
-| `object_banner` | Reusable; one instance rendered per season | 1 |
+| `object_champion_banner` | Reusable pennant, 18 × 15; one instance per occupied slot, year composited at runtime | 1 |
 | `object_box_standard` | Tray state | 1 |
 | `object_box_rare` | Tray state | 1 |
 | `object_box_legendary` | Tray state | 1 |
 | `object_box_owned` | Tray state — unopened, owned | 1 |
-| `zone_parlor_counter_front` | Foreground counter layer, overlaps Tony's lower body | 1 |
+| ~~`zone_parlor_counter_front`~~ | **WITHDRAWN.** The shell is one image cut at logical **y 292**; its lower half *is* the foreground layer. A render step, not an asset — which removes the class of defect where two independently generated images must stay pixel-aligned across every regeneration. | — |
 | `character_tony_neutral` | Tony | **Exists** — rescale to 3× |
 
 ### 9.2 Back Hall
@@ -309,7 +321,9 @@ Four things are deliberately kept apart, and confusing any two of them is how ve
 
 ### 9.3 Runtime HTML/CSS — never baked into art
 
-Tonight board text · the prediction · Tony's Line when flagged · the manager receipt · banner champion name and year · box price and availability · **every glow and rarity treatment**.
+Tonight board text · the prediction · Tony's Line when flagged · **the banner's two-digit year** · box price and availability · **every glow and rarity treatment**.
+
+**Not on a surface:** the champion's name and the manager's record. Both were listed here in version 2.0 and both are wrong — the banner is 18 × 15 and the receipt's usable paper is 19 × 14 logical. Neither can hold text. They are **trigger-only**: tapping opens a panel, and the panel carries the words.
 
 ### 9.4 Affordance implementation — alpha-derived
 
@@ -323,9 +337,31 @@ It follows the silhouette exactly, never covers the wall beside the object, and 
 
 ### 9.5 Banner expansion
 
-The rail holds **six banners at full size**. From the seventh, banners scale together on a shared rail geometry.
+**Superseded 2026-07-30.** Version 2.0 said the rail holds six banners and that from the
+seventh they scale together on a shared rail geometry. They do not scale.
 
-Seasons 1–6 require no new art beyond the single reusable `object_banner` overlay. **Baked lettering is rejected** — it would force regeneration every January and make historical names unfixable.
+The rail holds **exactly six fixed slots** at `x 56 · 78 · 100 · 122 · 144 · 166`, each 18 × 15,
+gap 4, pitch 22. **Banners never move between visits** and never resize — a banner that shifts
+because a season ended is a banner you have to find again. At season seven the six-season
+window **shifts left once** and shows the six most recent seasons.
+
+Scaling was rejected on measurement rather than taste: gap 4 is load-bearing. Narrowing it to 3
+drops the pitch to 21 units — **23.6 CSS px on a 360 px viewport, below the WCAG 2.5.8 AA floor
+of 24**. If the rod is ever re-measured narrower than 128 units the answer is **five slots at
+gap 4, never six at gap 3.**
+
+Slots fill **from the left, oldest to newest**, covering completed seasons plus the current one.
+There are **no future placeholders** — an empty slot renders nothing and is not interactive, so
+there is no empty button to tab into.
+
+The asset is `object_champion_banner`, **one reusable pennant, forever**. It carries **the
+two-digit year only**, composited at runtime; no name, logo, emblem, trophy or glow is baked in.
+**Baked lettering is rejected** — it would force regeneration every January and make historical
+names unfixable. The champion's name is not on the fabric at all: it appears in the panel that
+opens on first activation, alongside **View season**, which routes to `/timeline`. The current
+season reveals **`TBD`** in its panel until it is finalized.
+
+Full geometry, hit partitions and interaction record: `art/B2_CHAMPION_BANNER.md`.
 
 ---
 
@@ -333,9 +369,10 @@ Seasons 1–6 require no new art beyond the single reusable `object_banner` over
 
 On an iPhone, one-handed:
 
-- [ ] Exactly **eight** interactive objects: **4 Doors, 3 Displays, 1 Toy**
+- [ ] Exactly **eight** interactive objects: **3 Doors, 4 Displays, 1 Toy**
 - [ ] **No** basement door, **no** Underground door, **no** display case, **no** second doorway, **no** floor hatch on the homepage
-- [ ] Typically **one or two** objects glow; the banner rail never glows persistently
+- [ ] Typically **one or two** objects glow, and **only Doors ever glow**
+- [ ] Six banner slots, filled from the left; the current season reveals `TBD`; empty slots render nothing and are not tabbable
 - [ ] Every glowing object is guessable **before** tapping
 - [ ] Tapping an owned box opens it **at the tray**, in place — no navigation first
 - [ ] The rear doorway is unlabeled and calm in V1
@@ -345,6 +382,7 @@ On an iPhone, one-handed:
 - [ ] Tapping a booth, poster, or wall frame does nothing at all
 - [ ] Every tap lands on the object, never on the wall beside it
 - [ ] All changing text is HTML over blank surfaces — **none baked into art**
+- [ ] The receipt and the small sign open panels; **no text is printed onto either**
 - [ ] Reduced motion replaces every pulse with a static outline
 - [ ] One iPhone screen; no scrolling required to reach any destination
 

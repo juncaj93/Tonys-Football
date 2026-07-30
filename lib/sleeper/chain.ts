@@ -30,6 +30,13 @@ import {
 } from './codec';
 import { endpointKey, MAX_WEEK, type SleeperEndpoint } from './endpoints';
 import { type RosterMetadata } from './metadata';
+import {
+  deriveFullPlacements,
+  losersBracket,
+  winnersBracket,
+  type FullPlacements,
+} from './placements';
+import { reconcileSeason, type SeasonReconciliation } from './reconcile';
 import { type SleeperSource } from './transport';
 import {
   SleeperDecodeError,
@@ -38,6 +45,15 @@ import {
   type SleeperTransaction,
   type SleeperUser,
 } from './types';
+import {
+  classifyWeek,
+  deriveWeekShape,
+  explainUnpaired,
+  isScoredEntry,
+  type SeasonWeekShape,
+  type UnpairedReason,
+  type WeekType,
+} from './weeks';
 
 // --------------------------------------------------------------------------
 // League shape
@@ -133,12 +149,53 @@ export interface SeasonPlacements {
   readonly thirdPlaceRosterId: number | null;
   /** Placement position (1-based) → roster ID, for every position derivable. */
   readonly byPosition: Readonly<Record<number, number>>;
+  /**
+   * Every roster that appears anywhere in the winners bracket, ascending.
+   *
+   * This is the only honest answer to "did they make the playoffs". Seed and
+   * record cannot answer it — a bye, a tiebreak, or a format change would each
+   * make that inference wrong — and being told you missed January when you did
+   * not is precisely the kind of false claim `16 §12` forbids.
+   *
+   * Empty on a season whose bracket has not been drawn yet.
+   */
+  readonly playoffRosterIds: readonly number[];
   readonly warnings: readonly string[];
 }
 
 export function derivePlacements(bracket: readonly SleeperBracketMatch[]): SeasonPlacements {
   const byPosition: Record<number, number> = {};
   const warnings: string[] = [];
+
+  // Sleeper fills `t1`/`t2` with a reference object until the feeding match is
+  // decided; the decoder normalizes those to null, so only real entrants land
+  // here.
+  //
+  // A drawn bracket is NOT a played bracket. Sleeper publishes the 2026
+  // bracket during the preseason with first-round slots already filled in,
+  // before a single game exists — reading that as "these six made the
+  // playoffs" would have Tony congratulating people on a January they have not
+  // reached. So participation counts only once the bracket has decided
+  // something. Mid-playoffs this under-claims for a few days and then corrects
+  // itself, which is the right direction to be wrong in (`16 §12`).
+  const hasBeenPlayed = bracket.some((match) => match.winnerRosterId !== null);
+
+  const entrants = [
+    ...new Set(
+      bracket
+        .flatMap((match) => [match.team1RosterId, match.team2RosterId])
+        .filter((rosterId): rosterId is number => rosterId !== null),
+    ),
+  ].sort((a, b) => a - b);
+
+  const playoffRosterIds = hasBeenPlayed ? entrants : [];
+
+  if (!hasBeenPlayed && entrants.length > 0) {
+    warnings.push(
+      `The winners bracket names ${String(entrants.length)} rosters but no game has been ` +
+        `decided; playoff participation is not derivable yet and was left unclaimed.`,
+    );
+  }
 
   for (const match of bracket) {
     if (match.placement === null) continue;
@@ -175,6 +232,7 @@ export function derivePlacements(bracket: readonly SleeperBracketMatch[]): Seaso
     runnerUpRosterId: byPosition[2] ?? null,
     thirdPlaceRosterId: byPosition[3] ?? null,
     byPosition,
+    playoffRosterIds,
     warnings,
   };
 }
@@ -203,6 +261,19 @@ export interface RosterSeat {
   /** Null on a vacant seat. */
   readonly primaryUserId: string | null;
   readonly coOwnerUserIds: readonly string[];
+  /**
+   * The team name this manager ran under **in this season**.
+   *
+   * Sourced from `users[].metadata.team_name`, which is where Sleeper actually
+   * keeps it — the roster's own `metadata` carries only nicknames, record, and
+   * streak, verified across every recorded season. Sleeper overwrites the name
+   * when a manager renames, so a season's name is unrecoverable once it
+   * changes: "Cadillac of Novi HR" survives only because it was captured.
+   *
+   * Permanent identity and seasonal team name are separate facts. Describing
+   * 2024 with a 2026 team name is the error this field exists to prevent.
+   */
+  readonly teamName: string | null;
   readonly wins: number;
   readonly losses: number;
   readonly ties: number;
@@ -238,8 +309,28 @@ export interface ImportedPairing {
 
 export interface ImportedWeek {
   readonly week: number;
+  /**
+   * Whether this week produced fantasy results, and of what kind.
+   *
+   * Derived from the league's own `playoff_week_start` and `last_scored_leg`,
+   * never from a hardcoded week number. See `weeks.ts` for why week 18 is
+   * `unscored` even though every roster has points in it.
+   */
+  readonly type: WeekType;
+  /**
+   * When this week's payload was fetched.
+   *
+   * The weekly scoring snapshot is mutable upstream — stat corrections keep
+   * landing on old weeks — so a week's points are only meaningful alongside
+   * the moment they were captured (ruling §3).
+   */
+  readonly capturedAt: Date | null;
   readonly entries: readonly SleeperMatchupEntry[];
   readonly pairings: readonly ImportedPairing[];
+  /** Rows that count as fantasy results: a scored week, and a paired roster. */
+  readonly scoredRosterIds: readonly number[];
+  /** Why each unpaired roster has points but no game. */
+  readonly unpairedReasons: Readonly<Record<number, UnpairedReason>>;
   /**
    * Rosters that scored points but played no matchup.
    *
@@ -315,6 +406,9 @@ export interface ImportedSeason {
   readonly isComplete: boolean;
   readonly playoffWeekStart: number | null;
   /** Every person Sleeper lists in the league, roster-holding or not. */
+  /** When the league payload was fetched. See `ImportedWeek.capturedAt`. */
+  readonly capturedAt: Date | null;
+  readonly weekShape: SeasonWeekShape;
   readonly users: readonly SleeperUser[];
   readonly seats: readonly RosterSeat[];
   /**
@@ -324,7 +418,22 @@ export interface ImportedSeason {
   readonly rosterlessUserIds: readonly string[];
   readonly shape: LeagueShapeReport;
   readonly placements: SeasonPlacements;
+  /**
+   * The complete 1..N finish, from both brackets.
+   *
+   * `placements` above covers only the winners bracket and stops at 6th.
+   * This covers everybody, so no manager is recorded as "no finish" when the
+   * consolation bracket settled their position months ago.
+   */
+  readonly fullPlacements: FullPlacements;
   readonly weeks: readonly ImportedWeek[];
+  /**
+   * Finalized standings versus the weekly scoring snapshot.
+   *
+   * Null when weeks were not imported, so there was nothing to compare. Never
+   * resolves a disagreement — see `reconcile.ts`.
+   */
+  readonly reconciliation: SeasonReconciliation | null;
   readonly warnings: readonly string[];
 }
 
@@ -344,24 +453,33 @@ async function fetchDecoded<T>(
   endpoint: SleeperEndpoint,
   decode: (payload: unknown, key: string) => { value: T; warnings: readonly string[] },
   onEmpty: () => T,
-): Promise<{ value: T; warnings: readonly string[]; error: string | null }> {
+): Promise<{
+  value: T;
+  warnings: readonly string[];
+  error: string | null;
+  capturedAt: Date | null;
+}> {
   const key = endpointKey(endpoint);
   const result = await source.fetch(endpoint);
+  // Every result carries the moment it was produced — real time from the live
+  // source, the recording time from a fixture. That is what makes a weekly
+  // snapshot datable rather than merely present.
+  const capturedAt = result.fetchedAt;
 
   if (result.kind === 'error') {
-    return { value: onEmpty(), warnings: [], error: result.message };
+    return { value: onEmpty(), warnings: [], error: result.message, capturedAt };
   }
   if (result.kind === 'empty') {
-    return { value: onEmpty(), warnings: [], error: null };
+    return { value: onEmpty(), warnings: [], error: null, capturedAt };
   }
 
   try {
     const decoded = decode(result.payload, key);
-    return { value: decoded.value, warnings: decoded.warnings, error: null };
+    return { value: decoded.value, warnings: decoded.warnings, error: null, capturedAt };
   } catch (error: unknown) {
     const message =
       error instanceof SleeperDecodeError ? error.message : `${key}: ${String(error)}`;
-    return { value: onEmpty(), warnings: [], error: message };
+    return { value: onEmpty(), warnings: [], error: message, capturedAt };
   }
 }
 
@@ -416,13 +534,71 @@ export async function importSeason(
   warnings.push(...bracket.warnings);
   if (bracket.error !== null) warnings.push(bracket.error);
 
+  // The consolation bracket settles 7th through 10th. It has always been
+  // recorded; until now nothing read it, and four managers a season carried no
+  // finish as a result.
+  const consolation = await fetchDecoded(
+    source,
+    { kind: 'losers_bracket', leagueId },
+    (payload, key) => decodeBracket(payload, key),
+    () => [] as readonly SleeperBracketMatch[],
+  );
+  warnings.push(...consolation.warnings);
+  if (consolation.error !== null) warnings.push(consolation.error);
+
   const placements = derivePlacements(bracket.value);
   warnings.push(...placements.warnings);
+
+  const playoffTeams = league.value.playoffTeams;
+  const totalRosters =
+    league.value.totalRosters > 0 ? league.value.totalRosters : rosters.value.length;
+
+  let fullPlacements: FullPlacements;
+  if (playoffTeams === null || playoffTeams <= 0 || totalRosters <= 0) {
+    // Without the league's playoff size the consolation bracket's relative
+    // placements cannot be offset into league positions. Fall back to the
+    // winners bracket alone rather than guessing an offset.
+    fullPlacements = {
+      byPosition: placements.byPosition,
+      rankByRoster: Object.fromEntries(
+        Object.entries(placements.byPosition).map(([position, rosterId]) => [
+          rosterId,
+          Number(position),
+        ]),
+      ),
+      championRosterId: placements.championRosterId,
+      runnerUpRosterId: placements.runnerUpRosterId,
+      thirdPlaceRosterId: placements.thirdPlaceRosterId,
+      playoffRosterIds: [],
+      byeRosterIds: [],
+      isComplete: false,
+      warnings: [
+        'playoff_teams is unavailable, so 7th place onward could not be derived from the ' +
+          'consolation bracket.',
+      ],
+    };
+  } else {
+    fullPlacements = deriveFullPlacements(
+      winnersBracket(bracket.value),
+      losersBracket(consolation.value),
+      { totalRosters, playoffTeams },
+    );
+  }
+  warnings.push(...fullPlacements.warnings);
+
+  const weekShape = deriveWeekShape(league.value, bracket.value);
+
+  const teamNameByUserId = new Map(
+    users.value.map((user) => [user.userId, user.teamName] as const),
+  );
 
   const seats: RosterSeat[] = rosters.value.map((roster) => ({
     rosterId: roster.rosterId,
     primaryUserId: roster.ownerId,
     coOwnerUserIds: roster.coOwnerIds,
+    // Sleeper keeps the team name on the *user*, not the roster. The roster's
+    // own metadata carries nicknames, record, and streak — never a team name.
+    teamName: roster.ownerId === null ? null : (teamNameByUserId.get(roster.ownerId) ?? null),
     wins: roster.wins,
     losses: roster.losses,
     ties: roster.ties,
@@ -476,6 +652,26 @@ export async function importSeason(
         warnings: pairingWarnings,
       } = derivePairings(matchups.value);
 
+      const type = classifyWeek(week, weekShape);
+
+      const scoredRosterIds = matchups.value
+        .filter((entry) => isScoredEntry(entry, type))
+        .map((entry) => entry.rosterId)
+        .sort((a, b) => a - b);
+
+      const unpairedReasons: Record<number, UnpairedReason> = {};
+      for (const rosterId of unpairedRosterIds) {
+        unpairedReasons[rosterId] = explainUnpaired(
+          rosterId,
+          type,
+          {
+            byeRosterIds: fullPlacements.byeRosterIds,
+            playoffWeekStart: weekShape.playoffWeekStart,
+          },
+          week,
+        );
+      }
+
       const weekWarnings = [
         ...matchups.warnings,
         ...transactions.warnings,
@@ -486,14 +682,46 @@ export async function importSeason(
 
       weeks.push({
         week,
+        type,
+        capturedAt: matchups.capturedAt,
         entries: matchups.value,
         pairings,
+        scoredRosterIds,
+        unpairedReasons,
         unpairedRosterIds,
         transactions: transactions.value,
         warnings: weekWarnings,
       });
     }
   }
+
+  const reconciliation =
+    includeWeeks && weeks.length > 0
+      ? reconcileSeason({
+          year: league.value.season,
+          capturedAt: leagueResult.fetchedAt,
+          seats: seats.map((seat) => ({
+            rosterId: seat.rosterId,
+            wins: seat.wins,
+            losses: seat.losses,
+            ties: seat.ties,
+            pointsFor: seat.pointsFor,
+            record: seat.metadata.record,
+          })),
+          weeks: weeks.map((week) => ({
+            week: week.week,
+            type: week.type,
+            pairings: week.pairings,
+            pointsByRoster: Object.fromEntries(
+              week.entries
+                .filter((entry) => isScoredEntry(entry, week.type))
+                .map((entry) => [entry.rosterId, entry.points]),
+            ),
+          })),
+        })
+      : null;
+
+  if (reconciliation !== null) warnings.push(...reconciliation.warnings);
 
   return {
     year: league.value.season,
@@ -503,12 +731,16 @@ export async function importSeason(
     status: league.value.status,
     isComplete: league.value.status === 'complete',
     playoffWeekStart: league.value.playoffWeekStart,
+    capturedAt: leagueResult.fetchedAt,
+    weekShape,
     users: users.value,
     seats,
     rosterlessUserIds,
     shape,
     placements,
+    fullPlacements,
     weeks,
+    reconciliation,
     warnings,
   };
 }

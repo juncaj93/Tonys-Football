@@ -220,6 +220,55 @@ describe('champions derived from the bracket', () => {
   });
 });
 
+describe('playoff participation', () => {
+  it('names everyone who appeared in a bracket that was actually played', async () => {
+    const chain = await traverseChain(fixtures(), LEAGUE_2026, { includeWeeks: false });
+    const season2025 = seasonFor(chain.seasons, 2025);
+
+    expect(season2025.placements.playoffRosterIds).toEqual([1, 4, 5, 6, 8, 10]);
+  });
+
+  /**
+   * The failure this guards against is specific and was live in the data.
+   *
+   * Sleeper publishes the 2026 winners bracket during the preseason with the
+   * first round already filled in — six rosters named, before a single game
+   * exists. Read naively, that marks six managers as playoff teams for a
+   * season that has not started, and Tony congratulates people on a January
+   * they have not reached. `16 §12`: never fabricate.
+   */
+  it('claims nobody from a bracket that is drawn but undecided', async () => {
+    const chain = await traverseChain(fixtures(), LEAGUE_2026, { includeWeeks: false });
+    const season2026 = seasonFor(chain.seasons, 2026);
+
+    // The bracket really does name rosters...
+    expect(season2026.placements.byPosition).toEqual({});
+    // ...and we still claim nothing.
+    expect(season2026.placements.playoffRosterIds).toEqual([]);
+    expect(
+      season2026.warnings.some((warning) => warning.includes('not derivable yet')),
+    ).toBe(true);
+  });
+
+  it('counts entrants as soon as one game has been decided', () => {
+    // Mid-playoffs: round 1 has a result, later rounds are still placeholders.
+    const placements = derivePlacements([
+      { matchId: 1, round: 1, placement: null, team1RosterId: 5, team2RosterId: 4, winnerRosterId: 5, loserRosterId: 4 },
+      { matchId: 2, round: 1, placement: null, team1RosterId: 10, team2RosterId: 9, winnerRosterId: null, loserRosterId: null },
+      { matchId: 3, round: 2, placement: null, team1RosterId: 8, team2RosterId: null, winnerRosterId: null, loserRosterId: null },
+    ]);
+
+    expect(placements.playoffRosterIds).toEqual([4, 5, 8, 9, 10]);
+  });
+
+  it('stays silent on a season with no bracket at all', () => {
+    const placements = derivePlacements([]);
+
+    expect(placements.playoffRosterIds).toEqual([]);
+    expect(placements.warnings).toEqual([]);
+  });
+});
+
 describe('identity across seasons', () => {
   /**
    * The single most important rule in the data model (`16 §5.1`): a roster
