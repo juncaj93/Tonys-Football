@@ -23,25 +23,27 @@ Milestones after M2, in order and one at a time: **M3** modular character identi
 | Branch | Role |
 |---|---|
 | `main` | production. Merging it deploys — `vercel-build` runs migrate → seed → build. There is no quiet merge to `main`. |
-| `integration/m2-loot-box` | **the active M2 integration branch.** Every M2 slice PRs into this. One PR to `main` when the loop is coherent as a product. |
-| `claude/tonys-pizza-tech-lead-iq2n38` | M2 slice 1. **PR #19 → `integration/m2-loot-box`.** |
+| `integration/m2-loot-box` | the M2 integration branch. Slices 1–3 merged; slice 4 is **PR #22**. Goes to `main` as one PR once slice 4 lands. |
 
-Base slice branches on `integration/m2-loot-box`, never on `main`, for the rest of M2.
+Base a slice branch on the **active integration branch**, never on `main`. Rebase onto it after each slice merges so the next PR shows only its own diff.
 
 ### Slices
 
 | # | Slice | State |
 |---|---|---|
-| 1 | Box on the tray · open in place · reveal · persistence | ✅ **merged** (PR #19) |
-| 2 | Acquisition — ledger, trigger balance, opening grant, purchase | ✅ built, PR pending |
-| 3 | `/counter/collection` — where a pull can be looked at | **next** |
-| 4 | Showcase / equip, and the parlor reflecting the result | not started |
+| 1 | Box on the tray · open in place · reveal · persistence | ✅ merged (PR #19) |
+| 2 | Acquisition — ledger, trigger balance, opening grant, purchase | ✅ merged (PR #20) |
+| 3 | `/counter/collection` — the shelf, set progress, duplicates | ✅ merged (PR #21) |
+| 4 | Showcase, and the parlor reflecting the result | **PR #22 open** |
 
-**Slices 1–2 cover milestone items 1–7 and 11.** Items 8, 9, 10 are slices 3–4.
+All twelve items of the commissioner's M2 definition are covered by slices 1–4. Wearable *equipping* is explicitly **M3's**, not M2's — twelve wearables and five slots need a character to be equipped onto (ruling index, 2026-07-30).
 
 ### Exact next task
 
-Open the slice 2 PR (`claude/m2-slice2-tokens` → `integration/m2-loot-box`), drive it green, merge. Then **slice 3 — `/counter/collection`**: the route where a pulled collectible can actually be looked at. Until it exists the loop has a dead end, which is why nothing merges to `main` yet.
+1. Drive **PR #22** green and merge it into `integration/m2-loot-box`.
+2. Open the **integration PR: `integration/m2-loot-box` → `main`**. Read it as a *product*, not a diff — `AUTONOMY.md §3` calls this `ready-for-production`, and a set of green PRs is not a milestone. Walk the whole loop once at 390/375/360: tab → buy → tray glows → open in place → reveal → shelf → showcase → receipt reflects it.
+3. **Merging that PR deploys production.** `vercel-build` runs migrate → seed → build. Migrations 0004–0006 are all additive.
+4. Then start **M3 — modular character identity**. Read `PROJECT_SPEC/03` slots, `PROJECT_SPEC/11_LEAGUE_MEMBER_CHARACTER_SYSTEM.md`, and `art/ASSET_PIPELINE.md` first. Start constrained and dependable: canonical base bodies, a fixed slot set, saved configuration, reliable layering. **Not** free-form generation.
 
 ---
 
@@ -49,11 +51,10 @@ Open the slice 2 PR (`claude/m2-slice2-tokens` → `integration/m2-loot-box`), d
 
 | Gate | Result | Where |
 |---|---|---|
-| `npm run check` | green — 524 tests, 31 files | local, throwaway Postgres |
-| `npm run visual:qa` | green — 14 states × 3 widths, production build | local |
-| `ci.yml` + `visual-qa.yml` on slice 1 | green on real runners; merged at `bd50a16` | PR #19 |
+| `npm run check` | green — **549 tests, 33 files** | local, throwaway Postgres |
+| `npm run visual:qa` | green — **18 states × 3 widths**, production build | local |
+| `ci.yml` + `visual-qa.yml` | green on real runners for slices 1, 2 and 3 | PRs #19 #20 #21 |
 | Reduced motion | verified in-browser: reveal at 106 ms, `opacity: 1`, `transform: none`, no console errors | local |
-| `ci.yml` / `visual-qa.yml` on GitHub | see PR #19 | — |
 
 **Preview and production URLs cannot be reached from the sandbox** — the proxy denies CONNECT to `*.vercel.app`. Verify GitHub-side and say so explicitly. Never claim a URL was smoke-tested when it was not.
 
@@ -91,6 +92,11 @@ Precedence when they conflict: commissioner ruling → Technical Lead ruling →
 - **Never delete an approved slug, record or asset to satisfy an older count.** Recalculate the count.
 - **Body copy floor is 17px.** Size the container to the type.
 - **`PlaceholderSign` is for surfaces.** Small objects use `AssetView … compact`, or a 44-unit slot becomes a 133px slab.
+- **The Showcase is one column with no score.** `16 §5.3` and `18 §4`: no levels, prestige or clout, ever. Ownership is trigger-enforced — an FK cannot say "*your* collectible".
+- **Duplicates are counted, never converted.** `03 §12` defers salvage until after simulation. A salvage rate is a P3 decision.
+- **`users.showcase_collectible_id`'s FK lives in SQL, not `schema.ts`** — declaring the reverse of `collectibles.user_id` makes both table types mutually recursive and TypeScript gives up (TS7022).
+- **That FK makes `TRUNCATE collectibles CASCADE` reach `users`** and therefore `loot_boxes` and `sessions`. Do not build test state by truncating a middle table; build it directly. For a local reset, truncate and **re-seed**.
+- **A skip list is a place for defects to live.** `colour-fidelity` and `legacy` run on every visual state now. Do not exempt a page from them.
 
 ---
 
@@ -129,7 +135,12 @@ Gotchas that have cost time:
 - Never run `playwright install` here; use the `PLAYWRIGHT_CHROMIUM` path above.
 - `visual-qa-*/` and `visual-qa/` are gitignored. Screenshots belong to a workflow run, not to git history.
 - `capturing tray-reveal consumes the box.` Restore with:
-  `psql "$DATABASE_URL" -c "truncate table collectibles, box_openings, loot_boxes, token_transactions, economy_configs cascade" && npm run db:seed`
+  ```bash
+  psql "$DATABASE_URL" -c "truncate table collectibles, box_openings, loot_boxes, \
+    token_transactions, economy_configs cascade"
+  npm run db:seed          # the cascade also empties users/sessions — re-seeding is required
+  ```
+  Then re-add the three preview seasons for `six-banners` (the SQL block is in `.github/workflows/visual-qa.yml`).
 
 ---
 
@@ -138,4 +149,7 @@ Gotchas that have cost time:
 - **Reward weights provisional** until the P3 simulation. `PROVISIONAL_RARITY_MASS` in `lib/counter/rewards.ts`.
 - **Collectible art is placeholder**, so an unopened box and an unfinished collectible are drawn as the same carton. Specified behaviour; the plate carries identity and every reveal is lifted so the moment reads. Real art is a registry row.
 - **Group B content still needs commissioner approval**; seed Group A only.
+- **No token sink other than boxes, and no weekly income.** Matchup wins and weekly high scores need a played season and the two cron jobs (`16 §4.3`) that would award them. The reason codes exist; nothing is wired to them. Do not invent a reward that fires on nothing.
+- **Salvage for duplicates** is unbuilt and P3-gated.
+- **12 of 24 collectibles get finished art at launch**; the rest stay placeholder. Each is a registry row, never a code change.
 - **One greeting pair still shared** (SuggMyNick / cheeseking). Two lines of markdown, no code. Asserted in `lib/content/greeting.test.ts`.
