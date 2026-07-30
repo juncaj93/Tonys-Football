@@ -25,7 +25,7 @@ So the gates below are written as things a machine can check, and the rest is wr
 
 Captured at every width, every run:
 
-`idle` · `tony-dialogue` · `tonight-board` · `banner-completed` · `banner-current-tbd` · `rack` · `prediction` · `receipt` · `counter` · `back-hall` · `keyboard-focus` · `six-banners` · `tray-owned-box` · `tray-reveal`
+`idle` · `tony-dialogue` · `tonight-board` · `banner-completed` · `banner-current-tbd` · `rack` · `prediction` · `receipt` · `counter` · `back-hall` · `keyboard-focus` · `six-banners` · `tray-owned-box` · `tray-reveal` · `collection` · `collection-filtered` · `showcase` · `showcase-chosen`
 
 Loading, empty and error states are reviewed when the surface that owns them changes.
 
@@ -82,6 +82,7 @@ Reject, with a concrete repair task, for any of:
 - **An object floating with nothing under it.** The room has no floating things, so a floating thing reads as a layout bug rather than as a prize. The revealed collectible rests on the tray; motion may lift it, geometry may not.
 - **Rarity, or any other state, painted as a neon frame.** Rarity is the **word first**, then frame geometry, then colour — and colour is an accent *inside* a house-material surface, never the surface's own border. An epic pull inside a bright magenta double frame is a UI component sitting on a hand-drawn counter.
 - **Text the same colour as the surface under it.** Body copy inside a cream `PixelPanel` is `text-ink-700`; `text-paper-*` is for copy on the dark room. Cream-on-cream shipped on `/counter`, `/back-hall` and `/timeline` — three routes rendering headings above **invisible** paragraphs, all of them green in CI. A related trap: a class naming a `--color-*` token that does not exist generates no rule at all and silently inherits. `lib/design/colour-tokens.test.ts` now fails the build for the second case; the first is still a thing a reviewer has to look for.
+- **The same thing rendered twice in one panel.** The Showcase showed a manager's item as a summary *and* as the only entry in its picker, with nothing to distinguish the two — which reads as a duplicate render, not as a control under a heading. If a surface repeats something on purpose, label why.
 - **Broken spacing, awkward composition**, or anything that technically works and visibly feels unfinished.
 
 ---

@@ -5,6 +5,7 @@ import { type AssetResolution } from '@/lib/assets/types';
 import { requireUser } from '@/lib/auth/current-user';
 import { openBox, purchaseBox } from '@/lib/counter/boxes';
 import { type Rarity } from '@/lib/counter/catalog';
+import { setShowcase } from '@/lib/counter/showcase';
 import { openSeason } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
 
@@ -135,4 +136,27 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
       replayed: reveal.replayed,
     },
   };
+}
+
+/**
+ * Choosing what the league sees.
+ *
+ * `null` clears it. Ownership is verified in the service **and** by a trigger on
+ * `users`, so a request naming somebody else's collectible is refused twice — the
+ * service so it reads as a polite no, the trigger so no future caller can skip it.
+ *
+ * One failure shape, as elsewhere: not-yours and no-such-thing are the same answer,
+ * so probing collectible ids teaches nothing.
+ */
+export async function setShowcaseAction(
+  collectibleId: string | null,
+): Promise<{ readonly ok: boolean }> {
+  const { user } = await requireUser();
+
+  if (collectibleId !== null && !/^[0-9a-f-]{36}$/i.test(collectibleId)) {
+    return { ok: false };
+  }
+
+  const result = await setShowcase(getDb(), { userId: user.id, collectibleId });
+  return { ok: result.status !== 'not_yours' };
 }

@@ -93,7 +93,9 @@ type StateName =
   | 'tray-owned-box'
   | 'tray-reveal'
   | 'collection'
-  | 'collection-filtered';
+  | 'collection-filtered'
+  | 'showcase'
+  | 'showcase-chosen';
 
 async function dismissTony(page: Page): Promise<void> {
   const x = page.getByRole('button', { name: /Dismiss what Tony said/i });
@@ -227,6 +229,35 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForTimeout(1200);
       return;
 
+    /*
+     * The Showcase, before anything is chosen.
+     *
+     * The empty state carries real weight here: it is what nine of ten managers see
+     * on day one, and `18 §4` forbids clout, so having nothing out has to look like
+     * a choice rather than a deficiency.
+     */
+    case 'showcase':
+      await page.goto(`${BASE}/counter/showcase`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    /*
+     * The Showcase, with something in it.
+     *
+     * Runs after `tray-reveal` has put a collectible on the shelf, so the picker has
+     * something to offer. Picking it is the last step of the milestone's loop — the
+     * point at which a pull becomes something the league can see.
+     */
+    case 'showcase-chosen':
+      await page.goto(`${BASE}/counter/showcase`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: /Show this one/i }).first().click();
+      // The pick is confirmed by a server round trip and a refresh, not optimistically.
+      await page.getByRole('button', { name: /take it off the shelf/i }).waitFor({
+        timeout: 15_000,
+      });
+      await page.waitForTimeout(400);
+      return;
+
     case 'back-hall':
       await home(page);
       await dismissTony(page);
@@ -319,6 +350,8 @@ const ALL_STATES: readonly StateName[] = [
   'tray-reveal',
   'collection',
   'collection-filtered',
+  'showcase',
+  'showcase-chosen',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
