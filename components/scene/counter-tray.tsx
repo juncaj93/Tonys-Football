@@ -323,6 +323,17 @@ function Revealed({
 
   return (
     <>
+      {/*
+        * The flash it arrives out of. Behind the item, gone in half a second,
+        * tinted by the tier — so a legendary pull is visibly a bigger event
+        * than a common one without a single per-tier rule.
+        */}
+      <div
+        aria-hidden="true"
+        className={`reveal-burst pointer-events-none absolute z-[22] rarity-${reveal.rarity}`}
+        style={place(TRAY_REVEAL)}
+      />
+
       {/* The collectible, risen out of the box, at the tray. */}
       <div
         aria-hidden="true"
@@ -345,7 +356,7 @@ function Revealed({
         ref={heading}
         role="status"
         tabIndex={-1}
-        className={`panel-rise pixel-edge absolute z-[26] border-2 border-wood-dark bg-paper-mid px-3 pt-2 pb-2.5 text-ink-900 outline-none rarity-frame rarity-${reveal.rarity}`}
+        className={`panel-rise plate-late pixel-edge absolute z-[26] border-2 border-wood-dark bg-paper-mid px-3 pt-2 pb-2.5 text-ink-900 outline-none rarity-frame rarity-${reveal.rarity}`}
         style={placePlate()}
       >
         {/*

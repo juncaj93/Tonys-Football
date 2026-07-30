@@ -821,15 +821,81 @@ body[data-parlor-focus='reveal'] .tony-line {
   animation: reveal-rises 420ms cubic-bezier(0.16, 0.84, 0.3, 1) both;
 }
 
+/*
+ * It arrives, overshoots, and settles.
+ *
+ * The old curve was a clean 420ms ease to rest — correct, and completely
+ * inert. A thing that stops exactly where it is going reads as a state change;
+ * a thing that goes slightly too far and comes back reads as *landing*, and
+ * that is the whole difference between a value updating and a moment.
+ *
+ * The overshoot is 6%, which is small enough that nothing looks rubbery at 46
+ * room units and large enough to register at three device pixels per unit.
+ */
 @keyframes reveal-rises {
   0% {
     opacity: 0;
     transform: translate3d(0, 14px, 0) scale(0.82);
   }
+  62% {
+    opacity: 1;
+    transform: translate3d(0, -2px, 0) scale(1.06);
+  }
   100% {
     opacity: 1;
     transform: translate3d(0, 0, 0) scale(1);
   }
+}
+
+/*
+ * The flash the item arrives out of.
+ *
+ * One expanding ring of the tier's own colour, drawn *behind* the collectible
+ * and gone in half a second. It is the only thing in the reveal that says
+ * "something just happened here" rather than "something is here now".
+ *
+ * Tinted by `--rarity`, so escalation is free: a common pull flashes the same
+ * neutral grey as its lift, a legendary flashes gold. No extra rule per tier.
+ *
+ * `radial-gradient` rather than a bordered circle: a hard ring at 46 units is
+ * two pixels of aliased curve, and the house rule against blur is about *edges
+ * between surfaces*, not about light. Light in this room is already soft — the
+ * pendants, the box's own glow, the board's falloff.
+ */
+.reveal-burst {
+  background: radial-gradient(
+    circle,
+    color-mix(in srgb, var(--rarity) 70%, transparent) 0%,
+    color-mix(in srgb, var(--rarity) 28%, transparent) 42%,
+    transparent 68%
+  );
+  animation: reveal-bursts 520ms cubic-bezier(0.16, 0.84, 0.3, 1) both;
+}
+
+@keyframes reveal-bursts {
+  0% {
+    opacity: 0;
+    transform: scale(0.35);
+  }
+  22% {
+    opacity: 0.9;
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.9);
+  }
+}
+
+/*
+ * The plate is set down *after* the item has landed, not with it.
+ *
+ * Simultaneous arrival makes the eye choose, and it chooses the text, so the
+ * collectible — the thing the whole sequence exists to show — gets read second.
+ * A 300ms stagger puts the item first and the name after it, which is the order
+ * a person hands you something and then tells you what it is.
+ */
+.plate-late {
+  animation-delay: 300ms;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -849,6 +915,17 @@ body[data-parlor-focus='reveal'] .tony-line {
     animation: none;
     opacity: 1;
     transform: none;
+  }
+
+  /* The flash is pure theatre — it carries no information, so it simply does
+   * not happen. The stagger goes too: with nothing animating, a 300ms delay
+   * would be 300ms of the plate not being there for no reason at all. */
+  .reveal-burst {
+    display: none;
+  }
+
+  .plate-late {
+    animation-delay: 0ms;
   }
 }
 
