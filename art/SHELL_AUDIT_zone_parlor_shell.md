@@ -106,7 +106,8 @@ Logical 320 × 569, derived from edge detection on the real file. Source px in b
 | Feature | Logical `x, y, w, h` | Source | Tap target |
 |---|---|---|---|
 | Nook → `/slice` | `6, 180, 45, 112` | 18–151, 529–858 | ✅ |
-| Board → Tonight | `49, 79, 132, 97` | 143–531, 233–518 | ✅ |
+| Board → Tonight, **as painted** | `49, 79, 132, 101` | 143–531, 233–528 | ✅ |
+| Board → Tonight, **as shipped (+5)** | **`54, 79, 132, 101`** | — | ✅ |
 | Rail rod → `/timeline` | `54, 65, 131, 5` | 159–543, 191–206 | ❌ **5 tall** |
 | Rail incl. brackets | `54, 58, 131, 16` | 159–543, 171–218 | ❌ 16 tall |
 | Sign → prediction | `154, 184, 37, 59` | 454–563, 542–714 | pad → `151, 184, 44, 59` |
@@ -206,6 +207,33 @@ The rod is still **5 logical units tall** and still not paddable in place: reach
 growing it 9× and swallowing the board below. That solves itself when the banners exist,
 because banners hang *below* the rod and the hit regions trace the banners rather than the
 rail. **No `/timeline` target on the rod itself.** Not a shell defect.
+
+### The board — re-measured, and moved
+
+The board's outer frame is **`x 49–180`, `y 79–179`** as painted: **132 × 101**, centre
+`114.5`. That is 2 units wider and 4 taller than the figure this document carried before.
+
+The earlier reading stopped at the frame's dark bevel on the right and missed the amber lip
+at `x 179–180` — the same lip it kept correctly at `x 49–50` on the left. The frame's colour
+profile is very nearly a mirror, so the asymmetry was the tell.
+
+The reliable method, and the one now in `scripts/shift-tonight-board.ts`: the board sits between
+**two different materials** — a dark panel (`#4A2E1C`) on the left and lit wall (`#F2A94B`)
+on the right — and the frame's own bevel contains both. So each side is found by asking
+where *its own* wall material stops, not by one brightness threshold across the whole band.
+A single threshold finds the frame's shading and stops early. That is the same mistake that
+produced the three conflicting rail figures above.
+
+**The shipped shell has the board at `x 54–185`**, five units right of where it is painted,
+so the board and the banner row co-centre at `119.5` exactly and the board shares its left
+edge with the rod.
+
+The correction was applied to the **output**, not the source: `art/incoming/` is untouched
+and the approved painting stays approved. `scripts/shift-tonight-board.ts` records what was
+done and can re-apply it, and `ASSET_PIPELINE.md §4a` records why that script is deliberately
+**not** wired into `art:process` — reprocessing the shell reverts the board, and the revert is
+caught by a printed notice and a failing test rather than prevented by making a one-off into
+a pipeline stage.
 
 ---
 
