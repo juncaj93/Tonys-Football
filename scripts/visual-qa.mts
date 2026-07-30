@@ -57,6 +57,9 @@ const WIDTHS = [390, 375, 360] as const;
 /** WCAG 2.5.8 AA. The room's own 44px convention is stricter and not always reachable. */
 const AA_MIN = 24;
 
+/** WCAG 1.4.3 AA for normal text. Rarity words are the primary rarity signal. */
+const AA_CONTRAST = 4.5;
+
 interface Failure {
   readonly gate: string;
   readonly detail: string;
@@ -115,7 +118,11 @@ type StateName =
   | 'demo-tray-empty'
   | 'demo-collection-full'
   | 'demo-counter-broke'
-  | 'demo-showcase-chosen';
+  | 'demo-showcase-chosen'
+  | 'reveal-common'
+  | 'reveal-rare'
+  | 'reveal-epic'
+  | 'reveal-legendary';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -470,6 +477,31 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.goto(`${BASE}/counter/showcase`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1200);
       return;
+
+    /*
+     * The reveal, at each rarity, on purpose.
+     *
+     * These are the four states this driver could never produce. The roll
+     * happens inside `openBox`, so `tray-reveal` photographs whatever the table
+     * gave — which for four runs out of five is a common, and means the epic and
+     * legendary treatments had never once been reviewed at 360.
+     *
+     * `?preview_reveal=` synthesises the payload on the server behind the demo
+     * guards (`lib/demo/preview.ts`). Nothing is rolled, nothing is written, no
+     * box is consumed — so unlike `tray-reveal` these are repeatable, and they
+     * are the same item at every width so the three screenshots compare.
+     */
+    case 'reveal-common':
+    case 'reveal-rare':
+    case 'reveal-epic':
+    case 'reveal-legendary': {
+      const rarity = state.slice('reveal-'.length);
+      await page.goto(`${BASE}/?preview_reveal=${rarity}`, { waitUntil: 'networkidle' });
+      await dismissTony(page);
+      // Past the rise (420ms) and the plate's deliberate late arrival.
+      await page.waitForTimeout(1600);
+      return;
+    }
   }
 }
 
@@ -522,6 +554,13 @@ const ALL_STATES: readonly StateName[] = [
   'demo-collection-full',
   'demo-counter-broke',
   'demo-showcase-chosen',
+  // The four rarity treatments, side by side and repeatable. Signed in as
+  // whoever the previous demo state left us as, which is fine: the payload is
+  // synthesised and does not depend on what that seat owns.
+  'reveal-common',
+  'reveal-rare',
+  'reveal-epic',
+  'reveal-legendary',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
@@ -792,6 +831,114 @@ async function checkOnlyTheTrayGlows(page: Page, width: number): Promise<void> {
   }
 }
 
+
+/**
+ * Rarity words have to be readable on whatever they are sitting on.
+ *
+ * `18` makes rarity **the printed word first**, colour third — so a rarity word
+ * nobody can read is not a styling nit, it is the primary signal missing.
+ *
+ * This has now shipped twice. `LEGENDARY` was invisible on cream once, was
+ * repaired on the surfaces that existed then, and was still invisible on the
+ * **reveal plate** — because the plate is a hand-rolled cream surface that never
+ * got `on-paper`, and because the reveal's rarity treatment could not be
+ * photographed on purpose until `?preview_reveal=` existed. The first legendary
+ * screenshot ever taken showed it.
+ *
+ * So it is arithmetic now. WCAG AA for normal text is 4.5:1; these are small
+ * uppercase display type, where anything less is unreadable at arm's length on a
+ * phone in a lit room.
+ */
+/**
+ * Rarity words have to be readable on whatever they are sitting on.
+ *
+ * `18` makes rarity **the printed word first**, colour third — so a rarity word
+ * nobody can read is not a styling nit, it is the primary signal missing.
+ *
+ * This shipped twice. `LEGENDARY` was invisible on cream once, was repaired on
+ * the surfaces that existed then, and was still invisible on the **reveal
+ * plate** — a hand-rolled cream surface that never got `on-paper`, and one whose
+ * rarity treatment could not be photographed on purpose until
+ * `?preview_reveal=` existed. The first legendary screenshot ever taken showed
+ * it.
+ *
+ * So it is arithmetic now. WCAG AA for normal text is 4.5:1, and these are small
+ * uppercase display type where less than that is unreadable at arm's length.
+ */
+async function checkRarityContrast(page: Page, width: number, state: string): Promise<void> {
+  /*
+   * The page returns **strings**; every calculation happens in Node.
+   *
+   * Not a style preference. `tsx` compiles this file with esbuild's `keepNames`,
+   * which wraps named function expressions in a `__name(...)` helper — and that
+   * helper does not exist inside `page.evaluate`, so any named arrow in here
+   * fails at runtime with `ReferenceError: __name is not defined`. Keeping the
+   * in-page half to one anonymous expression with no local functions sidesteps
+   * it, and the arithmetic is easier to read out here anyway.
+   */
+  const samples = await page.evaluate(() => {
+    const out: { text: string; color: string; ground: string }[] = [];
+    for (const el of document.querySelectorAll('.rarity-word')) {
+      let ground = '';
+      let node: Element | null = el;
+      for (let depth = 0; depth < 12 && node !== null; depth++) {
+        const bg = getComputedStyle(node).backgroundColor;
+        // Anything with real alpha is the ground. `transparent` and near-clear
+        // washes are not, so keep walking.
+        if (bg !== '' && !bg.includes('rgba(0, 0, 0, 0)')) {
+          const alpha = /rgba\([^)]*,\s*([\d.]+)\s*\)/.exec(bg);
+          if (alpha === null || Number(alpha[1]) >= 0.9) {
+            ground = bg;
+            break;
+          }
+        }
+        node = node.parentElement;
+      }
+      out.push({ text: (el.textContent ?? '').trim().slice(0, 24), color: getComputedStyle(el).color, ground });
+    }
+    return out;
+  });
+
+  for (const sample of samples) {
+    const fg = channels(sample.color);
+    const bg = channels(sample.ground);
+    if (fg === null || bg === null) continue;
+
+    const ratio = contrast(fg, bg);
+    if (ratio < AA_CONTRAST) {
+      fail(
+        'rarity-contrast',
+        `@${String(width)} ${state} "${sample.text}" is ${ratio.toFixed(2)}:1 against its own ` +
+          'background, under the 4.5:1 AA floor. A cream surface needs `on-paper`.',
+      );
+    }
+  }
+}
+
+function channels(value: string): [number, number, number] | null {
+  const match = /rgba?\(([^)]+)\)/.exec(value);
+  if (match?.[1] === undefined) return null;
+  const parts = match[1].split(',').map((n) => Number.parseFloat(n.trim()));
+  const [r, g, b] = parts;
+  if (r === undefined || g === undefined || b === undefined) return null;
+  if ([r, g, b].some((n) => Number.isNaN(n))) return null;
+  return [r, g, b];
+}
+
+function contrast(fg: [number, number, number], bg: [number, number, number]): number {
+  const a = luminance(fg);
+  const b = luminance(bg);
+  return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+}
+
+function luminance([r, g, b]: [number, number, number]): number {
+  const linear = [r, g, b].map((channel) => {
+    const c = channel / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  }) as [number, number, number];
+  return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
+}
+
 /* -------------------------------------------------------------------- main -- */
 
 async function run(): Promise<void> {
@@ -859,6 +1006,10 @@ async function run(): Promise<void> {
          */
         await checkColourFidelity(page, width);
         await checkNoLegacy(page, width);
+        // Everywhere, like the two above: a rarity word can appear on any
+        // surface, and the defect this catches was on the one surface nobody
+        // thought to check.
+        await checkRarityContrast(page, width, state);
 
         {
 

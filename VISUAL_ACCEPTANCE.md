@@ -29,6 +29,8 @@ Captured at every width, every run:
 
 Plus four on **demo seats** (`lib/demo/`): `demo-tray-empty` · `demo-collection-full` · `demo-counter-broke` · `demo-showcase-chosen`.
 
+Plus the **four rarity treatments**: `reveal-common` · `reveal-rare` · `reveal-epic` · `reveal-legendary`, via `?preview_reveal=` (`lib/demo/preview.ts`). These are the states this driver could never produce — the roll happens inside `openBox`, so `tray-reveal` photographs whatever the table gave, and the epic and legendary treatments had never once been reviewed. Nothing is rolled or written, so they are repeatable and show the same item at every width.
+
 Loading, empty and error states are reviewed when the surface that owns them changes.
 
 ### The demo-backed states, and what they buy
@@ -64,6 +66,7 @@ Purchase fixed it properly rather than by contrivance. Each width now **buys its
 | `object-map` | The rendered set of `data-room-object` / `data-room-kind` markers **equals `ROOM_OBJECTS` exactly** — same ids, same kinds, no extras, no duplicates. Summarised as **3 Doors · 4 Displays · 1 Toy** | The room's grammar. A ninth object, a Door quietly demoted, a vanished Display, or a renamed id is a product regression no unit test sees. Judged on `idle` and `tray-owned-box`. |
 | `glow` | Nothing in the room carries a `drop-shadow` filter except the tray's own box states and a rarity treatment | `18` allows one persistent affordance — a Door with something to say. A glow arriving on a Display, or a second Door lighting up, teaches the room's grammar wrong. |
 | `overflow` | Zero horizontal document overflow | |
+| `rarity-contrast` | Every `.rarity-word` clears **4.5:1** against its own nearest opaque background | `18` makes rarity *the printed word first*, colour third — a rarity word nobody can read is the primary signal missing. This shipped twice: `LEGENDARY` was invisible on cream, was repaired on the surfaces that existed then, and was still invisible on the **reveal plate**, which no screenshot could reach until `?preview_reveal=` existed. It then found that `on-paper`'s own inks had never cleared AA either — legendary at 2.24:1 and common at 3.42:1. |
 | `console` | No console errors or failed requests | This is the gate that caught the `/underground` 404. |
 
 ### Why `object-map` counts markers and not anchors

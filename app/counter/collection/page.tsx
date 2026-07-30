@@ -115,7 +115,9 @@ export default async function CollectionPage({
                     * `colour-tokens.test.ts` exists for at the Tailwind level.
                     */
                   className={`rarity-${rarity} relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 py-2 active:translate-y-px ${
-                    active ? 'bg-paper-mid' : 'bg-[#241618]'
+                    // The chosen tier sits on cream, so it needs the paper inks;
+                    // the others are on the dark rail and keep the lit ones.
+                    active ? 'on-paper bg-paper-mid' : 'bg-[#241618]'
                   }`}
                 >
                   <span
@@ -319,7 +321,8 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
 
   return (
     <li
-      className={`rarity-frame rarity-${entry.rarity} pixel-edge relative flex h-full flex-col items-center gap-1 border-2 border-wood-dark bg-paper-mid px-1.5 pt-2 pb-1.5`}
+      /* `on-paper`: cream ground, so the tier colours are the dark inks. */
+      className={`rarity-frame rarity-${entry.rarity} pixel-edge on-paper relative flex h-full flex-col items-center gap-1 border-2 border-wood-dark bg-paper-mid px-1.5 pt-2 pb-1.5`}
     >
       {/*
         * 46px, which is the source's own size.
