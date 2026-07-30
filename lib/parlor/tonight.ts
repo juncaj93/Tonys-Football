@@ -27,6 +27,70 @@ import { seasonClock } from './season';
 
 export const MAX_TONIGHT_LINES = 4;
 
+/**
+ * What is printed on the board's own face.
+ *
+ * ## Two elements, and that is the whole design
+ *
+ * Commissioner ruling, 2026-07-30: the board *"isn't clear. Too small font, too
+ * many words (should just be like 'Week 5' along with a matchup of the week or
+ * something) ... Needs to look elegant."*
+ *
+ * The face had been carrying a state line **plus a sentence** — "Week one · 42
+ * days" over "Matty B still has the 2025 ring. Nobody has taken it off him." —
+ * at 8px and 9px, in a 111-unit field. Two sentences at decorative size in the
+ * largest object in an idle room. The panel behind the board already holds all
+ * four lines and always did; the face was duplicating them badly.
+ *
+ * So the face is **a hero and one short fact**, nothing else. A board in a
+ * pizzeria says WEEK 5 and who is playing. It does not narrate.
+ *
+ * ## `detail` is deliberately allowed to be null
+ *
+ * During the season it is the matchup of the week, and that is a **Stats & Data
+ * fact**, not something this function may infer (`PRODUCT_DELIVERY_MANDATE.md
+ * §9`: SW never decides what a result means). Until the matchup fact layer
+ * exists, the offseason detail is the countdown — a verified value from the
+ * clock — and the field simply stays empty rather than being filled with prose.
+ */
+export interface BoardFace {
+  /** The big line. `WEEK ONE`, `WEEK 5`. Short enough to stay one line. */
+  readonly hero: string;
+  /** One short fact under it, or null. Never a sentence. */
+  readonly detail: string | null;
+}
+
+/**
+ * The board's face, from the clock.
+ *
+ * Pure and synchronous: the face is a *view* over state the caller already has,
+ * so it needs no query of its own. When `fantasy_matchups` lands, the matchup of
+ * the week arrives as a typed fact parameter — not as a lookup added in here.
+ */
+export function boardFace(input: {
+  /** Days until week one, or null once the season is under way. */
+  readonly daysUntilKickoff: number | null;
+  /** The current week, once there is one. */
+  readonly week?: number | null;
+  /** A Stats-provided matchup of the week, e.g. `Matty B v Nathan`. */
+  readonly matchup?: string | null;
+}): BoardFace {
+  const week = input.week ?? null;
+
+  if (input.daysUntilKickoff === null) {
+    return {
+      hero: week === null ? 'WEEK ONE' : `WEEK ${String(week)}`,
+      detail: input.matchup ?? null,
+    };
+  }
+
+  return {
+    hero: 'WEEK ONE',
+    detail:
+      input.daysUntilKickoff === 1 ? 'tomorrow' : `${String(input.daysUntilKickoff)} days out`,
+  };
+}
+
 export interface TonightLine {
   readonly key: string;
   readonly text: string;

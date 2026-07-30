@@ -27,7 +27,7 @@ import {
   roomObject,
 } from '@/lib/parlor/objects';
 import { seasonClock } from '@/lib/parlor/season';
-import { tonightBoard } from '@/lib/parlor/tonight';
+import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
 import { loadTags } from '@/lib/tags/repository';
 
 /**
@@ -109,9 +109,14 @@ export default async function ParlorPage() {
   });
 
   const line = greeting?.text ?? `Tony nods at ${user.displayName} and goes back to the oven.`;
-  // The board's face carries the state line plus one headline. The countdown
-  // already has its own row there, so the headliner is the next line down.
-  const headliner = tonight.find((entry) => entry.key !== 'kickoff');
+  /*
+   * The board's face: a hero and at most one short fact.
+   *
+   * The matchup of the week is a Stats & Data fact and is not passed yet, so in
+   * the offseason the detail is the countdown — a verified clock value. The face
+   * shows nothing rather than inventing prose (`PRODUCT_DELIVERY_MANDATE.md §9`).
+   */
+  const face = boardFace({ daysUntilKickoff: clock.daysUntilKickoff });
   const shell = resolveAsset('zone_parlor_shell');
 
   return (
@@ -231,29 +236,30 @@ export default async function ParlorPage() {
             {/*
               * The board's own face.
               *
-              * Ruled **surface-rendered**, and it was rendering nothing: the
-              * text lived only in the panel that opens over it, so the largest
-              * object in an idle room was a blank cream rectangle. An idle room
-              * is what a manager looks at most of the time.
+              * **A hero and one short fact, centred.** Commissioner ruling,
+              * 2026-07-30: the board was not clear — too small, too many words,
+              * and colliding with the painted frame. It had been carrying a state
+              * line *plus a full sentence* at 8px and 9px, duplicating badly what
+              * the panel behind it already says in full.
               *
-              * A state line and one headliner is what the measured field holds
-              * — `TONIGHT_FIELD`, 111 x 74 logical. The panel keeps all four
-              * lines. `aria-hidden` because the button beneath already carries
-              * the label and the panel carries the prose; a screen reader
-              * should not hear the headline twice on the way to the same place.
+              * So: `WEEK ONE` at 20px in the board's own red, one short line under
+              * it, and nothing else. `TONIGHT_FIELD` is now inset six units inside
+              * the cream so neither line touches the frame.
+              *
+              * `aria-hidden` because the button beneath carries the label and the
+              * panel carries the prose; a screen reader should not hear the
+              * headline twice on the way to the same place.
               */}
             <div
               aria-hidden="true"
-              className="pointer-events-none absolute flex flex-col gap-[3%] overflow-hidden"
+              className="pointer-events-none absolute flex flex-col items-center justify-center overflow-hidden text-center"
               style={place(TONIGHT_FIELD)}
             >
-              <p className="font-display text-[8px] leading-none tracking-wide text-red-dark/85 uppercase">
-                {clock.daysUntilKickoff === null
-                  ? 'Week one'
-                  : `Week one · ${String(clock.daysUntilKickoff)} days`}
+              <p className="font-display text-[20px] leading-[1.1] tracking-[0.02em] text-red-dark uppercase">
+                {face.hero}
               </p>
-              {headliner !== undefined && (
-                <p className="text-[9px] leading-[1.45] text-ink-900/80">{headliner.text}</p>
+              {face.detail !== null && (
+                <p className="mt-1.5 text-[16px] leading-[1.25] text-ink-900/80">{face.detail}</p>
               )}
             </div>
 

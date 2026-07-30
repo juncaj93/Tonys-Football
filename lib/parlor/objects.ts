@@ -241,21 +241,35 @@ export function roomObject(id: string): RoomObjectSpec {
 /**
  * The Tonight board's cream field, measured — `SHELL_AUDIT §4`.
  *
- * The board is the only surface in the room ruled **surface-rendered**: its text
- * belongs on the board's face at room scale, not only inside the panel that
- * opens over it. A blank cream rectangle is the largest object in an idle room,
- * and an idle room is what a manager sees most of the time.
- *
- * `111 × 79` logical is **135 × 96 css** at the 390px viewport the room is
- * designed against. That holds a state line and a short headliner — not the
- * four lines `18 §3.2` allows, which is why the panel still exists and still
- * carries all of them. The board answers *"what week is it, and what happened"*
- * at a glance; the panel answers *"tell me the rest."*
- *
- * Coordinates are the board's shipped position, so they move with the +5 shift
- * rather than being written down twice.
+ * `111 × 79` at `(60, 93)`. This is the **art's** extent: where the cream stops
+ * and the painted frame begins. Text does not go here — `TONIGHT_FIELD` is inset
+ * inside it. Recorded separately so the inset is visibly derived from a
+ * measurement rather than guessed.
  */
-export const TONIGHT_FIELD: RoomObjectSpec['rect'] = [60, 93, 111, 74];
+export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [60, 93, 111, 79];
+
+/**
+ * Where the board's words actually go — the cream field **inset by 6 units**.
+ *
+ * The board is the only surface ruled *surface-rendered*: its text belongs on the
+ * board's face at room scale, not only inside the panel that opens over it. A
+ * blank cream rectangle is the largest object in an idle room, and an idle room is
+ * what a manager sees most of the time.
+ *
+ * ## Why it is inset, and why that was a defect
+ *
+ * This used to be `TONIGHT_CREAM` itself — `60, 93, 111, 74` — so the first line's
+ * cap height sat on the cream's top edge and the left of every line touched the
+ * frame. Commissioner ruling, 2026-07-30: the board *"is overlapped with the
+ * border of the frame"*. A sign painter leaves a margin; the frame is part of the
+ * drawing and text must not crowd it.
+ *
+ * Six units on every side, so the text block is `99 × 67` and clears the painted
+ * frame on all four sides at every supported width. What sits inside it is a hero
+ * and at most one short fact (`boardFace`), centred — not the two sentences at 8px
+ * and 9px that were there before.
+ */
+export const TONIGHT_FIELD: RoomObjectSpec['rect'] = [66, 99, 99, 67];
 
 /**
  * The prediction sign's slate — the art's own bounds, `SHELL_AUDIT §4`.

@@ -71,7 +71,9 @@ One object may legitimately be several targets. The banner rail is a single Disp
 Reject, with a concrete repair task, for any of:
 
 - **Tony or clothing clipping**, or wrong rear/foreground layering around him. Compare against the approved B0 composite: he is cut at logical **y 292** and his visible band is **112 units**.
-- **Text uncomfortable to read on an iPhone.** Body copy floor is **17px**. Size the container to the type, never the type to the container — that mistake was made once, at 15px, to shrink a box.
+- **Text uncomfortable to read on an iPhone.** Body and dialogue copy sit at **16–18 CSS px, adjusted upward when the pixel font needs the optical size** (`PRODUCT_DELIVERY_MANDATE.md §6`, which supersedes the earlier bare "17px floor"). Size the container to the type, never the type to the container — that mistake was made once at 15px to shrink a box, and again at 8px and 9px on the Tonight board.
+- **Text crowding a painted frame.** The board's words go in `TONIGHT_FIELD`, inset six units inside the cream. A sign painter leaves a margin; the frame is part of the drawing.
+- **A surface narrating instead of stating.** The board's face is a hero plus at most one short fact — `WEEK 5`, then who is playing. Sentences belong in the panel behind it. Two sentences at decorative size on the largest object in an idle room is the defect this rule exists for.
 - **Contaminated room colour**, blurry pixel art, or a soft edge where the palette has a hard one.
 - **Visible hit regions**, focus boxes larger than the object, or a rectangle drawn around an inert object.
 - **Generic HTML cards or buttons dominating the room.** Transient panels may be rectangular pixel-art surfaces; inert room objects may not be boxed at all.
@@ -95,7 +97,8 @@ Reject, with a concrete repair task, for any of:
 | Board, as shipped | `x 54–185` · 132 × 101 · centre `119.5` |
 | Banner slots | `56 · 78 · 100 · 122 · 144 · 166` · width 18 · gap **4** · pitch 22 |
 | Banner hit row | `y 58–87`, ends extended by `gap / 2` |
-| Tonight text field | `60, 93, 111, 74` |
+| Tonight board cream field, as drawn | `TONIGHT_CREAM` `60, 93, 111, 79` |
+| Tonight **text** field | `TONIGHT_FIELD` `66, 99, 99, 67` — the cream **inset 6 units on every side**, so no line touches the painted frame |
 | Prediction slate | `154, 184, 37, 59` |
 | Newspaper rack | `(10, 224)` at 38 × 38 |
 | Tray surface, as drawn | `156, 284, 94, 25` — hit region is the same tray padded to `156, 275, 94, 44` |

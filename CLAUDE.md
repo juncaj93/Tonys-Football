@@ -4,7 +4,8 @@ This repository contains the complete product specification for **Tony’s Pizza
 
 Before planning or implementing any feature, read:
 
-1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan. Start here.**
+0. `docs/PRODUCT_DELIVERY_MANDATE.md` — **the standing commissioner mandate. Read this first.** It defines what "complete" means, the permanent visual standard, the mandatory screenshot loop, demoability, specialist ownership, and the deterministic stats-fact layer.
+1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan.**
 2. `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` — **the approved implementation ordering**
 3. `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` — **how the room works. Read before touching any parlor object.**
 4. `docs/IMPLEMENTATION_HANDOFF.md` — **the current assignment**
@@ -116,7 +117,9 @@ Work the assignment in `docs/IMPLEMENTATION_HANDOFF.md`. Do not begin a slice th
 
 ## Source of Truth
 
-When requirements conflict, follow the source-of-truth hierarchy in `README.md`.
+`docs/PRODUCT_DELIVERY_MANDATE.md` is the latest commissioner ruling and sits above everything else. Below it, follow the source-of-truth hierarchy in `README.md` and `AUTONOMY.md §1`.
+
+**Do not preserve incorrect behaviour because an old Markdown file still describes it.** Correct the loser, and add a test so the contradiction cannot return.
 
 Prefer the most specialized canonical document for a system after applying that hierarchy.
 
