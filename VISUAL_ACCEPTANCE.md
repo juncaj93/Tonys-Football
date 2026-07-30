@@ -27,7 +27,19 @@ Captured at every width, every run:
 
 `idle` · `tony-dialogue` · `tonight-board` · `banner-completed` · `banner-current-tbd` · `rack` · `prediction` · `receipt` · `counter` · `back-hall` · `keyboard-focus` · `six-banners` · `tray-owned-box` · `tray-reveal` · `collection` · `collection-filtered` · `showcase` · `showcase-chosen`
 
+Plus four on **demo seats** (`lib/demo/`): `demo-tray-empty` · `demo-collection-full` · `demo-counter-broke` · `demo-showcase-chosen`.
+
 Loading, empty and error states are reviewed when the surface that owns them changes.
+
+### The demo-backed states, and what they buy
+
+These four could not be captured at all before the demo appliers existed, because reaching them from a seeded manager meant destroying a state a later capture needed.
+
+**`demo-tray-empty` is the important one.** The seed grants every manager a welcome box, so `idle` has always been the *owned* room wearing the calm room's name — the box-free parlor, which is what most of a season looks like, had never once been photographed, and the `glow` gate had never had to prove a negative. It does now: eight objects, nothing glowing.
+
+They are also the first states in this driver that are **repeatable**. Each is applied by `npm run demo -- apply <state>`, which is idempotent through the product's own unique constraints, so a second run photographs the same database rather than a consumed one. The manager-backed states above still are not — see `tray-reveal`.
+
+`DEMO_FIXTURES=1` is required in the environment that runs the driver. It is the demo system's opt-in and the driver deliberately does **not** set it for you: the whole function of the opt-in is that whoever starts a run has said which database it points at.
 
 **`tray-reveal` became required once boxes were purchasable.** It could not be before: a box opens exactly once by design, so capturing the reveal *consumed* the state — 390 got a screenshot and the two narrower widths photographed an empty tray. A gate that passes on a fresh database and fails on the second run is worse than no gate.
 
