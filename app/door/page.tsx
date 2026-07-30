@@ -29,21 +29,16 @@ export const dynamic = 'force-dynamic';
 export default async function DoorPage() {
   if ((await viewer()) !== null) redirect('/');
 
-  const everyone = await listDoorManagers(getDb());
-  const managers = everyone.filter((manager) => manager.seated);
   /*
-   * Managers with no seat this season — a co-owner, and two people who played
-   * 2024 or 2025 and are not in 2026.
+   * The league, and only the league.
    *
-   * They are on the door because `CLAUDE.md` separates **permanent manager
-   * identity** from seasonal roster identity, and because they own things: a
-   * collectible persists across seasons. A door keyed on this year's roster told
-   * them they are not in this league, which is false.
-   *
-   * Kept in their own group rather than mixed in, so the board still reads as
-   * "ten hooks" at a glance and nobody has to work out why there are thirteen.
+   * `listDoorManagers` is derived from `lib/league/membership.ts` now, so there
+   * is nothing to filter here — and deliberately no second group. A "still on
+   * the wall" section shipped for a few hours this morning and the commissioner
+   * ruled it out absolutely: a retired manager does not appear labelled,
+   * disabled, or explained. There is no alumni page and this is not one.
    */
-  const former = everyone.filter((manager) => !manager.seated);
+  const managers = await listDoorManagers(getDb());
 
   return (
     <>
@@ -101,41 +96,6 @@ export default async function DoorPage() {
                 ))}
               </ul>
             </div>
-          )}
-
-          {former.length > 0 && (
-            <section className="mt-9">
-              <h2 className="font-display text-[12px] tracking-wide text-ink-300 uppercase">
-                Still on the wall
-              </h2>
-              <p className="mt-2 text-[17px] leading-[1.5] text-ink-300">
-                No seat this season. The key still works, and what you collected is still
-                yours.
-              </p>
-              <ul className="mt-4 space-y-2">
-                {former.map((manager) => (
-                  <li key={manager.id}>
-                    <Link
-                      href={`/door/${manager.id}`}
-                      className={`flex ${TAP_TARGET} min-h-[3.5rem] items-center justify-between gap-3 pixel-edge border-2 border-wood-dark bg-paper-dark px-4 text-ink-900 active:translate-y-px`}
-                    >
-                      <span className="flex min-w-0 items-center gap-2.5">
-                        <span
-                          aria-hidden="true"
-                          className="h-2.5 w-2.5 shrink-0 rounded-full border border-ink-500/60 bg-ink-100/25"
-                        />
-                        <span className="truncate text-[21px]">{manager.displayName}</span>
-                      </span>
-                      <span className="shrink-0 font-display text-[11px] text-ink-500 uppercase">
-                        {manager.lastSeatedYear === null
-                          ? 'co-owner'
-                          : `last in ${String(manager.lastSeatedYear)}`}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </section>
           )}
 
           <p className="mt-8 pb-6 text-[17px] leading-[1.5] text-ink-300">

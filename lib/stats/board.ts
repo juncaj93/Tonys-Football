@@ -3,6 +3,8 @@ import { desc, eq } from 'drizzle-orm';
 import { type Queryable } from '@/lib/db';
 import { seasons } from '@/lib/db/schema';
 
+import { activeManagerIds } from '@/lib/league/membership';
+
 import { type MatchupFact, finalizedMarginsCents, seasonFacts } from './facts';
 
 /**
@@ -68,6 +70,27 @@ export async function featuredMatchup(db: Queryable): Promise<MatchupFact | null
     historicalMarginsCents: population,
   });
 
-  // `facts` is sorted strongest story first, deterministically.
-  return derived.facts[0] ?? null;
+  /*
+   * The publication boundary: a fact may name a retired manager, a **published
+   * claim** may not.
+   *
+   * The distinction is the whole point of having a fact layer. Ryan beating
+   * Berardo by 140.72 in week 16 of 2024 is the largest margin this league has
+   * ever recorded and it is *true* — the fact keeps it, the audit trail keeps
+   * it, and `seasonFacts` will hand it over. But the commissioner's ruling is
+   * that a retired manager never enters an official Slice story, standing,
+   * record, receipt or statistical summary, and the Tonight board is exactly
+   * that. So the record survives and the sentence does not get said.
+   *
+   * Filtered here rather than inside `seasonFacts`, deliberately. Suppressing it
+   * at derivation would make the fact layer's answer depend on who happens to be
+   * seated this season, and a fact whose truth changes when somebody leaves the
+   * league is not a fact. Derivation is history; this is editorial.
+   */
+  const active = await activeManagerIds(db);
+  return (
+    derived.facts.find(
+      (fact) => active.has(fact.winnerManagerId) && active.has(fact.loserManagerId),
+    ) ?? null
+  );
 }
