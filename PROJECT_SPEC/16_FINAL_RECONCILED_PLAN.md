@@ -177,7 +177,13 @@ Basements (v1.1) and the casino (Phase 10) attach to system 3. Neither is a sixt
 
 ## 7. The Dynamic Pizza Shop
 
-### 7.1 Six permanent zones
+> ⚠️ **§7.1 is superseded by `18_PARLOR_NAVIGATION_MAP.md` v2.0 (approved 2026-07-29)** for the room's composition, its object list, and its routes. `18` is the specialized canonical document for the parlor, per the source-of-truth hierarchy in `README.md`.
+>
+> Specifically withdrawn from the table and note below: the **six discrete tiles** (now one portrait shell plus transparent overlays) · the **display case** and **`/collection`** (now the countertop tray → **`/counter`**) · the **menu board** (merged into the small sign) · the separate **basement** and **boarded back doors** (now one rear doorway → **`/back-hall`**, with Rooms and Underground inside it) · the **four-item bottom nav**.
+>
+> **What §7 still governs, unchanged:** the dressing resolver (§7.2), the shop's state-driven behaviour, and the principle that the room is flavour layered over deterministic league state.
+
+### 7.1 Six permanent zones — *superseded, retained for provenance*
 
 Authored as **discrete tiles, never one wide background.** Desktop composes a scene; mobile stacks full-width cards. Same components, same assets, no scaling down.
 

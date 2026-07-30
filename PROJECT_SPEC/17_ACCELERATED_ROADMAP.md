@@ -202,7 +202,7 @@ The engineer works serially. Real parallelism is commissioner-and-engineer.
 
 | Track | Owner |
 |---|---|
-| B0 art test set → B1 zone tiles | Commissioner |
+| B0 art test set → B1 parlor shell, room overlays, Back Hall (`18 §11`) | Commissioner |
 | Reviewing and extending the Counter Greeting lines | Commissioner |
 | Remaining Tony and manager dialogue | Commissioner |
 | Implementation slices | Engineer |
