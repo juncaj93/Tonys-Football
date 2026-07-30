@@ -16,7 +16,9 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ## Where the product is — 2026-07-30
 
-**Active milestone: M2 — the complete pizza-box loot loop. Built; shipping.**
+**M2 — the complete pizza-box loot loop. ✅ Shipped to `main` 2026-07-30 (`238dfca`, PR #23). Production deployed.**
+
+**Active milestone: none — pick up the queue below, starting at #26.**
 
 The commissioner's M2 definition is the *whole* dopamine loop, twelve items: acquire → box on the counter → select → anticipation and animation → rarity-legible reveal → transactional idempotent write → server-side persistence → appears in the collection → equip/showcase → the parlor reflects it → duplicate/retry/refresh correct → passes iPhone visual QA. **M2 is not complete after acquisition, storage, a route, or a static reveal.**
 
@@ -28,8 +30,8 @@ Milestones after M2, in order and one at a time: **M3** modular character identi
 
 | Branch | Role |
 |---|---|
-| `main` | production. Merging it deploys — `vercel-build` runs migrate → seed → build. There is no quiet merge to `main`. |
-| `integration/m2-loot-box` | the M2 integration branch. Slices 1–3 merged; slice 4 is **PR #22**. Goes to `main` as one PR once slice 4 lands. |
+| `main` | production. Merging it deploys — `vercel-build` runs migrate → seed → build. There is no quiet merge to `main`. **Carries all of M2 as of `238dfca`.** |
+| `integration/m2-loot-box` | ✅ merged and finished. Do not add to it. The next milestone gets its own integration branch. |
 
 Base a slice branch on the **active integration branch**, never on `main`. Rebase onto it after each slice merges so the next PR shows only its own diff.
 
@@ -41,16 +43,18 @@ Base a slice branch on the **active integration branch**, never on `main`. Rebas
 | 2 | Acquisition — ledger, trigger balance, opening grant, purchase | ✅ merged (PR #20) |
 | 3 | `/counter/collection` — the shelf, set progress, duplicates | ✅ merged (PR #21) |
 | 4 | Showcase, and the parlor reflecting the result | ✅ merged (PR #22) |
-| — | Delivery mandate persisted + the board fix | **PR #25 open** → integration |
+| — | Delivery mandate persisted + the board fix | ✅ merged (PR #25) |
+| — | Countdown de-duplicated; visual-QA database trap documented | ✅ merged (`c91548c`) |
 
 All twelve items of the commissioner's M2 definition are covered by slices 1–4. Wearable *equipping* is explicitly **M3's**, not M2's — twelve wearables and five slots need a character to be equipped onto (ruling index, 2026-07-30).
 
 ### Exact next task
 
-1. Merge **PR #25** (mandate + board fix) into `integration/m2-loot-box` once its gates are green.
-2. **PR #23** is `integration/m2-loot-box` → `main` and was already fully green before #25 was added; it re-runs on the new head. Read it as a *product*, not a diff. Walk the whole loop at 390/375/360: tab → buy → tray glows → open in place → reveal → shelf → showcase → receipt reflects it.
-3. **Merging #23 deploys production.** `vercel-build` runs migrate → seed → build. Migrations 0004–0006 are additive. Then verify the live URL — **which cannot be done from the sandbox** (see below) — and post a `RELEASE REVIEW`.
-4. Then the queue below, in order.
+**Start issue #26 — the Stats Intelligence deterministic fact layer.** It is specified, scoped by a `TECH LEAD RULING` onto `ImportedWeek`, and sequenced first on purpose.
+
+Open a branch off `main` (M2's integration branch is closed; a new milestone gets a new one). The first consumer is already waiting: `boardFace()` takes an optional `matchup` and renders **nothing** when it is absent, because `MANDATE §9` forbids the interface deriving a fantasy fact for itself. Filling that socket is the acceptance test for the layer.
+
+**One outstanding verification, human-only:** the live `*.vercel.app` URL was never loaded — the sandbox proxy denies CONNECT to it. `main` CI and the Vercel deployment both reported success GitHub-side, but *nobody has looked at production in a browser since M2 landed*. See the `RELEASE REVIEW` on PR #23.
 
 ### The queue after M2 ships
 
@@ -73,7 +77,8 @@ Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requi
 | `npm run check` | green — **555 tests, 34 files** | local, throwaway Postgres |
 | `npm run visual:qa` | green — **18 states × 3 widths**, production build | local |
 | `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
-| PR #23 (integration → `main`) | fully green before #25 was added on top | PR #23 |
+| PR #23 (integration → `main`) | green on final head `c91548c`; **merged** as `238dfca` | PR #23 |
+| Live production URL | ❌ **never loaded.** Proxy denies CONNECT to `*.vercel.app` | — |
 | The whole loop, walked on a production build | tab → buy → open in place → reveal → shelf → showcase → receipt. Ledger `SEASON_START 250, BOX_PURCHASE -50` | local |
 | Reduced motion | verified in-browser: reveal at 106 ms, `opacity: 1`, `transform: none`, no console errors | local |
 
@@ -111,7 +116,9 @@ Precedence when they conflict: commissioner ruling → Technical Lead ruling →
 - **Every asset by slug through the registry.** Swapping art is a registry row, never a code change.
 - **The injected clock and the injected RNG.** `new Date()` / `Date.now()` are lint errors outside `lib/clock.ts`; randomness only via `lib/counter/rng.ts`.
 - **Never delete an approved slug, record or asset to satisfy an older count.** Recalculate the count.
-- **Body copy floor is 17px.** Size the container to the type.
+- **Body copy is 16–18px, adjusted upward wherever legibility needs it** (`MANDATE §6`, superseding the bare 17px floor). Size the container to the type, never the type to the container.
+- **`npm run visual:qa` needs a freshly created database and is not re-runnable.** It opens the welcome box, and a box opens once ever; re-seeding does not restore it. A second run against the same database fails *geometrically* — an object reported "outside of the viewport" — which reads like a layout regression and is not one. `dropdb tonys_dev && createdb tonys_dev && npm run db:migrate && npm run db:seed` first. **A green result on a used database means nothing.** CI is immune; it gets a new database every run.
+- **The driver does not start a server.** It expects one already on `:3111`. A *stale* `next-server` left from an earlier session will happily serve old code and hand you a confident, wrong green — check `ps -eo pid,args | grep -F next-server` before trusting a local run. (`ss -ltnp` returns nothing useful in this sandbox; an `EADDRINUSE` is the reliable signal.)
 - **`PlaceholderSign` is for surfaces.** Small objects use `AssetView … compact`, or a 44-unit slot becomes a 133px slab.
 - **The Showcase is one column with no score.** `16 §5.3` and `18 §4`: no levels, prestige or clout, ever. Ownership is trigger-enforced — an FK cannot say "*your* collectible".
 - **Duplicates are counted, never converted.** `03 §12` defers salvage until after simulation. A salvage rate is a P3 decision.
