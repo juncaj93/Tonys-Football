@@ -138,6 +138,7 @@ Chronological. `PR #n · comment` is the authoritative text.
 | 2026-07-29 | Merge order **superseded** by the integration-branch model | PR #14 |
 | 2026-07-29 | Finalized seasons refuse record updates; open seasons still update | `docs/DATA_AUDIT.md` · PR #10 |
 | 2026-07-30 | **Full autonomous delivery mandate** — Technical Lead is also integration owner, visual gate, and delegated commissioner for V1 | this file |
+| 2026-07-30 | **COMMISSIONER: the league does not pay for API use.** The orchestrator is reduced to manual dispatch, `ANTHROPIC_API_KEY` is removed, and no paid dependency may be reintroduced without a new decision. No product scope is affected — `16 §9` already requires the Slice to publish with the key unset | `AUTONOMY.md §4` · issue #18 |
 | 2026-07-30 | Transient panels are **set down in the room**, never bottom sheets. Sized to content, centred, pixel-bevelled, shared material with Tony's box and the champion panel | `components/scene/room-object.tsx` |
 | 2026-07-30 | **Body copy floor is 17px.** Size the container to the type, never the type to the container | `components/scene/tony-toy.tsx` |
 | 2026-07-30 | The Tonight board is **surface-rendered**: state line + one headliner on the board's own face, all four lines in the panel | `TONIGHT_FIELD` |
@@ -171,11 +172,13 @@ Chronological. `PR #n · comment` is the authoritative text.
 
 Next slices, as separate issues: **token acquisition** through `apply_token_delta` (which also makes `tray-reveal` a required visual state), then **`/counter/collection`**, then **showcase and equip**.
 
-### The orchestrator is blocked, and the milestone is not
+### The orchestrator is off, and the milestone is unaffected
 
-The model-driven loop (`.github/workflows/orchestrator.yml`) is armed and cannot run: the account behind `ANTHROPIC_API_KEY` has **no credit**, so every turn exits on `Credit balance is too low` before the role file is read. Both runs on 2026-07-30 failed that way and produced nothing.
+The model-driven loop never ran a single turn: both runs on 2026-07-30 exited on `Credit balance is too low` before the role file was read. Escalated as issue #18 — and the **commissioner answered that the league does not pay for API use.**
 
-That is escalation category 4 (`AUTONOMY.md §6`) and the only thing a human must do here. It does not stop delivery — the Technical Lead holds the same mandate the orchestrator does and worked slice 1 directly. Tracked on issue #18, labelled `blocked-human-only`.
+So the loop is retired rather than repaired: `orchestrator.yml` is manual-dispatch only, `ANTHROPIC_API_KEY` comes out of Actions secrets, and #18 is closed as not-planned. Recorded in `§8` and `AUTONOMY.md §4`.
+
+This costs the project nothing that matters. The labels in `AUTONOMY.md §2` are the state machine and the `agents/*.md` files are the role contracts; the workflow was one possible actor reading them, not the mechanism itself. Turns are taken in a session — which is how slice 1 shipped, under exactly the gates the loop would have applied. The two gates that decide whether work is good, `ci.yml` and `visual-qa.yml`, were built to depend on nothing and are untouched.
 
 ---
 

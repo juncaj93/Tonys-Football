@@ -89,7 +89,7 @@ Shipped: the Next.js foundation, the injected clock, the asset registry, the ide
 
 **Next assignment:** M2 slice 2 — token acquisition through `apply_token_delta`. Boxes are currently a seeded fixture. See `docs/IMPLEMENTATION_HANDOFF.md`.
 
-**Blocked on a human:** the orchestrator workflow is armed but the account behind `ANTHROPIC_API_KEY` has no credit, so every model-driven turn exits immediately. Issue #18, `blocked-human-only`. Delivery continues without it.
+**No paid API use** (commissioner decision, 2026-07-30). The orchestrator workflow is retired to manual dispatch only and `ANTHROPIC_API_KEY` is unset — nothing in this repository spends money. This affects no product scope: generative AI is limited to Tony's Tuesday Slice, and `16 §9` already requires the Slice to publish correctly with the key unset. Delivery runs on the label lifecycle in `AUTONOMY.md §2` plus the two unpaid gates, `npm run check` and `npm run visual:qa`. Do not reintroduce a paid dependency without a new decision.
 
 The engineer runs continuously inside a vertical slice and stops only at the conditions in `17 §8`. PR checkpoints are the six categories in `17 §7` — not every subtask.
 
