@@ -2,6 +2,8 @@ import { and, count, desc, eq, isNotNull } from 'drizzle-orm';
 
 import { type Database } from '@/lib/db';
 import { seasonMemberships, seasons, users } from '@/lib/db/schema';
+import { notADemoSeat } from '@/lib/demo/boundary';
+import { featuredMatchup } from '@/lib/stats/board';
 
 import { seasonClock } from './season';
 
@@ -49,9 +51,11 @@ export const MAX_TONIGHT_LINES = 4;
  *
  * During the season it is the matchup of the week, and that is a **Stats & Data
  * fact**, not something this function may infer (`PRODUCT_DELIVERY_MANDATE.md
- * §9`: SW never decides what a result means). Until the matchup fact layer
- * exists, the offseason detail is the countdown — a verified value from the
- * clock — and the field simply stays empty rather than being filled with prose.
+ * §9`: SW never decides what a result means). That fact layer now exists —
+ * `lib/stats/facts.ts` — and `matchupLine()` turns one into the two names this
+ * field takes. It stays optional and still defaults to null, because a season
+ * with no publishable fact must leave the board empty rather than fill it with
+ * prose. In the offseason the detail is the countdown, a verified clock value.
  */
 export interface BoardFace {
   /** The big line. `WEEK ONE`, `WEEK 5`. Short enough to stay one line. */
@@ -64,8 +68,10 @@ export interface BoardFace {
  * The board's face, from the clock.
  *
  * Pure and synchronous: the face is a *view* over state the caller already has,
- * so it needs no query of its own. When `fantasy_matchups` lands, the matchup of
- * the week arrives as a typed fact parameter — not as a lookup added in here.
+ * so it needs no query of its own. The matchup arrives as a **parameter** —
+ * already reduced from a typed fact by `lib/stats/board.ts` — and is never
+ * looked up in here. Keeping the query out is what stops this function from
+ * growing an opinion about which game matters.
  */
 export function boardFace(input: {
   /** Days until week one, or null once the season is under way. */
@@ -138,19 +144,68 @@ export async function tonightBoard(db: Database): Promise<readonly TonightLine[]
     });
   }
 
+  /*
+   * --- The heaviest night on the books -------------------------------------
+   *
+   * The first thing in the parlor to render a Stats fact, and the reason it is
+   * worth doing in the offseason rather than waiting for week one: the fact
+   * layer is otherwise demonstrable only in a test, and `MANDATE §5` asks for
+   * the loop to work, not for the code to exist.
+   *
+   * Every figure here comes off the fact object. Nothing is recomputed, nothing
+   * is rounded, and the *word* — `obliterated`, `crushed` — is the intensity the
+   * fact was classified with under a stored policy version. `MANDATE §9`: this
+   * surface renders a Stats classification and never chooses one.
+   *
+   * Absent when there is no fact, which is the whole point of the socket. A
+   * league with one unfinalized season gets no line rather than a hedge.
+   *
+   * **Priority 35, below the keys and above the history line.** The board holds
+   * four lines and a fifth is how a board becomes a feed, so adding one has to
+   * displace one. It displaces *"2024 and 2025 are on the books"* — the least
+   * specific of the five, and the one this line partly implies anyway by naming
+   * a week of a season and quoting its score.
+   */
+  const heaviest = await featuredMatchup(db);
+  if (heaviest !== null) {
+    lines.push({
+      key: 'heaviest',
+      text:
+        `${heaviest.winnerDisplayName} ${heaviest.intensity} ${heaviest.loserDisplayName} ` +
+        `by ${heaviest.margin.toFixed(2)} in week ${String(heaviest.week)}, ` +
+        `${String(heaviest.season)}. Still the one people bring up.`,
+      priority: 35,
+    });
+  }
+
   // --- Who has picked up their keys ---------------------------------------
   if (latestSeason !== undefined) {
+    /*
+     * Both counts exclude demo seats.
+     *
+     * This line said **"5 of 14 managers"** on a preview holding four demo
+     * seats, which is a false statement about a ten-person league in the
+     * product's own voice. `MANDATE §8` requires the demo system to stay
+     * distinct at the UI boundary and this is that boundary — see
+     * `lib/demo/boundary.ts`. Both halves join `users` now; the total used not
+     * to, which is how it drifted from the claimed count.
+     */
     const [seats] = await db
       .select({ total: count() })
       .from(seasonMemberships)
-      .where(eq(seasonMemberships.seasonId, latestSeason.id));
+      .innerJoin(users, eq(seasonMemberships.userId, users.id))
+      .where(and(eq(seasonMemberships.seasonId, latestSeason.id), notADemoSeat()));
 
     const [claimed] = await db
       .select({ total: count() })
       .from(seasonMemberships)
       .innerJoin(users, eq(seasonMemberships.userId, users.id))
       .where(
-        and(eq(seasonMemberships.seasonId, latestSeason.id), isNotNull(users.pinUpdatedAt)),
+        and(
+          eq(seasonMemberships.seasonId, latestSeason.id),
+          isNotNull(users.pinUpdatedAt),
+          notADemoSeat(),
+        ),
       );
 
     const total = seats?.total ?? 0;

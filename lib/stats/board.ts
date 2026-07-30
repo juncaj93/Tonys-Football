@@ -1,0 +1,73 @@
+import { desc, eq } from 'drizzle-orm';
+
+import { type Queryable } from '@/lib/db';
+import { seasons } from '@/lib/db/schema';
+
+import { type MatchupFact, finalizedMarginsCents, seasonFacts } from './facts';
+
+/**
+ * The board's matchup of the week — the fact layer's first consumer.
+ *
+ * `boardFace()` takes an optional `matchup` string and renders **nothing** when
+ * it is absent, because `PRODUCT_DELIVERY_MANDATE.md §9` forbids the interface
+ * deciding what a result means. That empty socket is the acceptance test for
+ * this layer, and this function is what fills it — with a *typed fact* and
+ * nothing else.
+ *
+ * ## What it deliberately does not do
+ *
+ * It does not compose a sentence. `boardFace`'s detail is capped at twenty
+ * characters with no full stop (the board's face is a hero plus one short fact),
+ * so what goes there is two names and nothing more: **`Ryan v Berardo`**. The
+ * intensity, the margin and the evidence stay on the fact object for the panel
+ * and the Slice to use, where there is room to state them properly.
+ *
+ * Rendering `obliterated` here would be the interface picking a word out of a
+ * fact object and putting it on the largest surface in the room without the
+ * evidence that earns it. The word travels with its fact or not at all.
+ */
+
+/** Two names, short enough for the board's face. Null when nothing qualifies. */
+export function matchupLine(fact: MatchupFact | null): string | null {
+  if (fact === null) return null;
+
+  const line = `${fact.winnerDisplayName} v ${fact.loserDisplayName}`;
+
+  // The board's own contract, asserted by `board-face.test.ts`: twenty
+  // characters. Two long names are a real possibility, and a truncated name is
+  // worse than an empty board — so the board stays empty and the panel behind it
+  // still carries the whole fact.
+  return line.length <= 20 ? line : null;
+}
+
+/**
+ * The strongest publishable fact from the most recent finalized season.
+ *
+ * Offseason behaviour, and it is the behaviour that matters today: the 2026
+ * season has not been played, so there is no *current* week to feature. Rather
+ * than inventing one, this reaches back to the last season whose books are
+ * closed — which is a true statement about a real game — and returns null when
+ * even that does not exist.
+ *
+ * Returns the fact rather than a string, so the caller decides how much of it to
+ * render and no rendering decision happens here.
+ */
+export async function featuredMatchup(db: Queryable): Promise<MatchupFact | null> {
+  const [latest] = await db
+    .select({ year: seasons.year })
+    .from(seasons)
+    .where(eq(seasons.status, 'ARCHIVED'))
+    .orderBy(desc(seasons.year))
+    .limit(1);
+
+  if (latest === undefined) return null;
+
+  const population = await finalizedMarginsCents(db);
+  const derived = await seasonFacts(db, {
+    year: latest.year,
+    historicalMarginsCents: population,
+  });
+
+  // `facts` is sorted strongest story first, deterministically.
+  return derived.facts[0] ?? null;
+}

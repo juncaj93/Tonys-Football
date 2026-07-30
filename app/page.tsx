@@ -28,6 +28,7 @@ import {
 } from '@/lib/parlor/objects';
 import { seasonClock } from '@/lib/parlor/season';
 import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
+import { featuredMatchup, matchupLine } from '@/lib/stats/board';
 import { loadTags } from '@/lib/tags/repository';
 
 /**
@@ -83,13 +84,16 @@ export default async function ParlorPage() {
   const db = getDb();
   const clock = seasonClock();
 
-  const [tags, managers, tonight, banners, box, season] = await Promise.all([
+  const [tags, managers, tonight, banners, box, season, featured] = await Promise.all([
     loadTags(db),
     listDoorManagers(db),
     tonightBoard(db),
     championBanners(db),
     ownedBox(db, user.id),
     openSeason(db),
+    // A Stats fact, or null. The board renders it or renders nothing — it never
+    // derives one (`PRODUCT_DELIVERY_MANDATE.md §9`).
+    featuredMatchup(db),
   ]);
 
   // Null when this manager holds no seat this season — a co-owner, or somebody not
@@ -112,11 +116,21 @@ export default async function ParlorPage() {
   /*
    * The board's face: a hero and at most one short fact.
    *
-   * The matchup of the week is a Stats & Data fact and is not passed yet, so in
-   * the offseason the detail is the countdown — a verified clock value. The face
-   * shows nothing rather than inventing prose (`PRODUCT_DELIVERY_MANDATE.md §9`).
+   * In the offseason the detail is the countdown — a verified clock value. Once
+   * the season is under way it is the matchup, and that matchup arrives as a
+   * **typed Stats fact** (`lib/stats/facts.ts`) rather than as anything this
+   * component worked out. Two names and nothing else: the intensity and the
+   * margin travel with the fact to surfaces that have room to state them, and a
+   * loaded word on the largest object in the room without its evidence is the
+   * thing `PRODUCT_DELIVERY_MANDATE.md §9` forbids.
+   *
+   * Null stays null. An absent fact leaves the detail empty rather than
+   * inventing prose.
    */
-  const face = boardFace({ daysUntilKickoff: clock.daysUntilKickoff });
+  const face = boardFace({
+    daysUntilKickoff: clock.daysUntilKickoff,
+    matchup: matchupLine(featured),
+  });
   const shell = resolveAsset('zone_parlor_shell');
 
   return (

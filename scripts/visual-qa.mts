@@ -796,15 +796,26 @@ async function run(): Promise<void> {
         hasTouch: true,
       });
       const page = await ctx.newPage();
-      const errors: string[] = [];
+      /*
+       * Console errors, tagged with the state that produced them.
+       *
+       * They used to be collected into one bare list and reported as
+       * `@375 <message>`. That is a true statement and an unusable one: the run
+       * covers twenty-two states, and locating a single hydration warning meant
+       * reproducing the whole sequence by hand. The gate now records where it
+       * was standing when the error arrived.
+       */
+      const errors: { state: string; text: string }[] = [];
+      let capturing = 'sign-in';
       page.on('console', (m) => {
-        if (m.type() === 'error') errors.push(m.text());
+        if (m.type() === 'error') errors.push({ state: capturing, text: m.text() });
       });
-      page.on('pageerror', (e) => errors.push(e.message));
+      page.on('pageerror', (e) => errors.push({ state: capturing, text: e.message }));
 
       await signIn(page);
 
       for (const state of states) {
+        capturing = state;
         const demoKey = DEMO_BACKED[state];
         if (demoKey === undefined) await reach(page, state);
         else await reachDemo(page, state, demoKey);
@@ -883,7 +894,9 @@ async function run(): Promise<void> {
         }
       }
 
-      for (const e of errors.slice(0, 5)) fail('console', `@${String(width)} ${e}`);
+      for (const e of errors.slice(0, 5)) {
+        fail('console', `@${String(width)} during "${e.state}" — ${e.text}`);
+      }
       await ctx.close();
     }
   } finally {

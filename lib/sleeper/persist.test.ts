@@ -298,7 +298,12 @@ describe.skipIf(!hasDatabase)('persistChain', () => {
       expect(run?.status).toBe('SUCCEEDED');
       expect(run?.kind).toBe('HISTORICAL_IMPORT');
       expect(run?.source).toBe('test');
-      expect(run?.recordsChanged).toBe(46); // 13 people + 3 seasons + 30 seats
+      // 13 people + 3 seasons + 30 seats + 162 games.
+      //
+      // The games arrived when `fantasy_matchups` landed: the stats fact layer
+      // derives every publishable claim from a stored row, so the import stopped
+      // skipping weeks. 81 in 2024, 81 in 2025, none in the unplayed 2026.
+      expect(run?.recordsChanged).toBe(208);
       expect(run?.finishedAt).not.toBeNull();
     });
 

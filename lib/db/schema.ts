@@ -1132,6 +1132,121 @@ export const collectibles = pgTable(
   (table) => [index('collectibles_user_idx').on(table.userId, table.acquiredAt)],
 );
 
+// ---------------------------------------------------------------------------
+// Weekly results, and the policy that decides what they mean
+// ---------------------------------------------------------------------------
+
+/**
+ * One game, as the weekly scoring snapshot recorded it.
+ *
+ * `16 §5.2` names this table; `PRODUCT_DELIVERY_MANDATE.md §10` says why it has
+ * to exist before any narrative copy. Every publishable claim about a game is
+ * derived from a row here, so a claim stays recomputable from a stored record
+ * rather than from a query somebody ran once.
+ *
+ * **Points are cents.** A margin of 50.51 has to be exactly 50.51 forever, and
+ * `154.42 - 103.91` in IEEE 754 is `50.510000000000005`. `reconcile.ts` already
+ * works in cents and exports `toCents`/`fromCents`.
+ *
+ * **Only paired rows.** An unpaired roster has points and no game — normal once
+ * the playoffs start, and true of all ten rosters in week 18 — and a table of
+ * games is the wrong place to record a non-game.
+ */
+export const fantasyMatchups = pgTable(
+  'fantasy_matchups',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    week: integer('week').notNull(),
+
+    /**
+     * `regular` · `playoff` · `consolation` · `unscored`.
+     *
+     * From the league's own `playoff_week_start` and `last_scored_leg`, never a
+     * hardcoded week number — `lib/sleeper/weeks.ts` documents why week 18 is
+     * `unscored` despite having points in every row.
+     */
+    weekType: text('week_type').notNull(),
+
+    /** Stable within a week, and what makes a re-import idempotent. */
+    sleeperMatchupId: integer('sleeper_matchup_id').notNull(),
+
+    rosterAId: integer('roster_a_id').notNull(),
+    rosterBId: integer('roster_b_id').notNull(),
+
+    pointsACents: integer('points_a_cents').notNull(),
+    pointsBCents: integer('points_b_cents').notNull(),
+
+    /** Null on a tie. A tie is a result, not a missing value. */
+    winnerRosterId: integer('winner_roster_id'),
+
+    marginCents: integer('margin_cents').notNull(),
+
+    /** When the weekly payload was fetched. Weekly scoring is mutable upstream. */
+    capturedAt: timestamp('captured_at', { withTimezone: true }),
+
+    /**
+     * This game sits inside a finalized-versus-snapshot disagreement.
+     *
+     * `16 §12`: 2024's standings and its weekly points disagree for four
+     * rosters. `reconcile.ts` reports it and never resolves it. Marked at import
+     * so a fact derived months later suppresses rather than publishing a winner
+     * the official record contradicts.
+     */
+    disputed: boolean('disputed').notNull().default(false),
+
+    ...timestamps,
+  },
+  (table) => [
+    unique('fantasy_matchups_season_week_matchup_unique').on(
+      table.seasonId,
+      table.week,
+      table.sleeperMatchupId,
+    ),
+    index('fantasy_matchups_season_week_idx').on(table.seasonId, table.week),
+    // The margin is stored for querying; this makes it unable to disagree with
+    // the points it came from.
+    check(
+      'fantasy_matchups_margin_matches_points',
+      sql`${table.marginCents} = abs(${table.pointsACents} - ${table.pointsBCents})`,
+    ),
+    check(
+      'fantasy_matchups_distinct_rosters',
+      sql`${table.rosterAId} <> ${table.rosterBId}`,
+    ),
+    check(
+      'fantasy_matchups_winner_played',
+      sql`${table.winnerRosterId} is null
+        or ${table.winnerRosterId} = ${table.rosterAId}
+        or ${table.winnerRosterId} = ${table.rosterBId}`,
+    ),
+  ],
+);
+
+/**
+ * The thresholds that decide what a margin *means*.
+ *
+ * Exactly the shape `reward_tables` uses, for exactly the same reason
+ * (`16 §8`): these numbers are **simulation-gated** and provisional until the P3
+ * calibration. A recalibration writes a new version; a fact records the version
+ * it was classified under, so an old fact stays interpretable against the policy
+ * that was live when it was derived rather than silently re-meaning itself.
+ *
+ * Append-only, enforced by a trigger.
+ */
+export const significancePolicies = pgTable('significance_policies', {
+  /** Content hash of `tiers`. Two environments seeding the same numbers agree. */
+  version: text('version').primaryKey(),
+  tiers: jsonb('tiers').notNull(),
+  /** True until the P3 calibration signs these numbers off. */
+  provisional: boolean('provisional').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type Season = typeof seasons.$inferSelect;
@@ -1162,3 +1277,7 @@ export type BoxOpening = typeof boxOpenings.$inferSelect;
 export type NewBoxOpening = typeof boxOpenings.$inferInsert;
 export type Collectible = typeof collectibles.$inferSelect;
 export type NewCollectible = typeof collectibles.$inferInsert;
+export type FantasyMatchup = typeof fantasyMatchups.$inferSelect;
+export type NewFantasyMatchup = typeof fantasyMatchups.$inferInsert;
+export type SignificancePolicy = typeof significancePolicies.$inferSelect;
+export type NewSignificancePolicy = typeof significancePolicies.$inferInsert;

@@ -3,13 +3,14 @@
  *
  *   npm run db:seed
  *
- * Five idempotent steps, safe to run on every deploy and safe to run twice:
+ * Six idempotent steps, safe to run on every deploy and safe to run twice:
  *
  *   1. import the league chain from recorded fixtures
  *   2. apply the names Tony uses, from `content/managers.md`
  *   3. seed the Counter Greetings from `content/counter-greetings.md`
  *   4. open each manager's token tab and put one box on their tray
- *   5. grant admin to the commissioner named in the environment
+ *   5. store the significance policy a fantasy fact is classified under
+ *   6. grant admin to the commissioner named in the environment
  *
  * Fixtures rather than the live API, deliberately (`16 §12`): the import is
  * then offline, repeatable, and identical in every environment, and a Sleeper
@@ -25,6 +26,7 @@ import { ensureRewardTable, grantBox } from '@/lib/counter/boxes';
 import { applyTokenDelta, ensureEconomyConfig, openSeason } from '@/lib/counter/tokens';
 import { CATALOG_SIZE } from '@/lib/counter/catalog';
 import { standardRewardTable } from '@/lib/counter/rewards';
+import { ensureSignificancePolicy, standardPolicy } from '@/lib/stats/significance';
 import {
   assertOnlyApprovedGroups,
   readCounterGreetings,
@@ -71,7 +73,19 @@ async function main(): Promise<void> {
     // --- 1. League history ------------------------------------------------
     const source = createFixtureSource();
     const leagueId = process.env['SLEEPER_LEAGUE_ID'] ?? DEFAULT_LEAGUE_ID;
-    const chain = await traverseChain(source, leagueId, { includeWeeks: false });
+    /*
+     * Weeks are imported now.
+     *
+     * They were skipped while nothing read them, and the seed ran on every
+     * deploy. `fantasy_matchups` changes that: the stats fact layer derives
+     * every publishable claim about a game from a stored row, so the rows have
+     * to exist in every environment the moment the layer does.
+     *
+     * It stays idempotent — a re-import of an unchanged week reports zero
+     * records changed, and a re-import that *disagrees* with a finalized season
+     * writes nothing and records a conflict.
+     */
+    const chain = await traverseChain(source, leagueId, { includeWeeks: true });
 
     if (chain.seasons.length === 0) {
       console.error('The chain produced no seasons; nothing to import.');
@@ -218,7 +232,25 @@ async function main(): Promise<void> {
         `${String(managers.length - granted)} managers already had theirs`,
     );
 
-    // --- 5. The commissioner ----------------------------------------------
+    /*
+     * --- 5. What a margin means ------------------------------------------
+     *
+     * Stored before anything derives a fact, for the same reason the reward
+     * table is stored before a box can be opened: a fact records the policy
+     * version it was classified under, so the version has to be a row somebody
+     * can look up rather than a constant that was live at the time.
+     *
+     * Append-only and provisional until the P3 calibration (`16 §8`).
+     */
+    const significance = await ensureSignificancePolicy(db);
+    const policy = standardPolicy();
+    console.log(
+      `Meaning  significance ${significance.version} · ` +
+        `${String(policy.tiers.length)} tiers · edged <= ${String(policy.edgedMaxMargin)} · ` +
+        `percentile needs ${String(policy.minPopulation)} games · PROVISIONAL until the P3 calibration`,
+    );
+
+    // --- 6. The commissioner ----------------------------------------------
     const commissioner = process.env['COMMISSIONER_SLEEPER_USER_ID'] ?? '';
 
     if (commissioner === '') {

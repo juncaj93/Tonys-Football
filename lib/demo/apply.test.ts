@@ -9,8 +9,9 @@ import { catalogItem } from '@/lib/counter/catalog';
 import { collectionFor } from '@/lib/counter/collection';
 import { standardRewardTable } from '@/lib/counter/rewards';
 import { clearRandomSource } from '@/lib/counter/rng';
-import { showcaseFor } from '@/lib/counter/showcase';
+import { leagueShowcase, showcaseFor } from '@/lib/counter/showcase';
 import { applyTokenDelta, ensureEconomyConfig, wallet } from '@/lib/counter/tokens';
+import { tonightBoard } from '@/lib/parlor/tonight';
 
 import { APPLIED_STATES, DemoBlocked, applyDemoState, rollForSlug } from './apply';
 import { DemoRefused, isDemoSeat } from './guard';
@@ -330,6 +331,29 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
       const outcome = await applyDemoState(db!, state.key, ALLOWED);
       expect(outcome.browserSteps.length).toBeGreaterThan(0);
     }
+  });
+
+  it('never counts a demo seat as a manager of the league', async () => {
+    // This is a regression test with a screenshot behind it. After the appliers
+    // landed, the Tonight board read **"5 of 14 managers have picked up their
+    // keys"** on a preview holding four demo seats — a false statement about a
+    // ten-person league, in the product's own voice. `MANDATE §8` requires the
+    // demo system to stay distinct at the UI boundary too.
+    const before = await tonightBoard(db!);
+    const keysBefore = before.find((line) => line.key === 'keys')?.text;
+    const wallBefore = await leagueShowcase(db!);
+
+    for (const key of ['one-box', 'broke', 'showcased', 'collection-full']) {
+      await applyDemoState(db!, key, ALLOWED);
+    }
+
+    const after = await tonightBoard(db!);
+    expect(after.find((line) => line.key === 'keys')?.text).toBe(keysBefore);
+
+    const wallAfter = await leagueShowcase(db!);
+    expect(wallAfter.map((entry) => entry.userId)).toEqual(
+      wallBefore.map((entry) => entry.userId),
+    );
   });
 
   it('hands back a door to sign in at, because a state nobody can reach is not a demo', async () => {
