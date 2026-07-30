@@ -2,6 +2,8 @@
 
 **Status:** active. This file is the operational contract; `docs/TECH_LEAD_OPERATING_MODEL.md` is the role and ruling record.
 
+> **Read `docs/PRODUCT_DELIVERY_MANDATE.md` first.** It is a standing **commissioner** ruling (2026-07-30) and therefore level 1 in `§1` below. It governs how this file is applied: what "complete" means (`§5`), the permanent visual-quality standard (`§6`), the mandatory screenshot loop (`§7`), demoability as a product requirement (`§8`), specialist ownership (`§9`), and the deterministic stats-fact layer that must precede any narrative copy (`§10`).
+
 ---
 
 ## 0. The problem this solves
@@ -16,7 +18,7 @@ Tony's was being advanced by a human copying reports between chat sessions. That
 
 When materials disagree, resolve in this order and **correct the loser** rather than re-litigating:
 
-1. Latest explicit commissioner ruling
+1. Latest explicit commissioner ruling — currently `docs/PRODUCT_DELIVERY_MANDATE.md`
 2. Latest recorded Technical Lead ruling (`docs/TECH_LEAD_OPERATING_MODEL.md §8`)
 3. Approved visual references and canonical production assets
 4. `PROJECT_SPEC/` and product Markdown
@@ -78,6 +80,8 @@ One label per issue, and exactly one. The label **is** the state.
       │        production-verification → smoke → done, or roll back
       └──► back to implementation-active
 ```
+
+**Green CI is necessary and never sufficient.** The full bar is `PRODUCT_DELIVERY_MANDATE.md §5`, and the screenshot loop in its `§7` is **mandatory** for every user-facing slice.
 
 **Green CI is necessary and never sufficient.** Every visual defect this project shipped passed CI: the legacy homepage, the violet floor, the full-width bottom sheet, and a `<Link>` to a route that does not exist. `VISUAL_ACCEPTANCE.md` is the second gate and `npm run visual:qa` enforces the machine-checkable part of it.
 

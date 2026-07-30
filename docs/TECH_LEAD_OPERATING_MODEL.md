@@ -138,6 +138,9 @@ Chronological. `PR #n · comment` is the authoritative text.
 | 2026-07-29 | Merge order **superseded** by the integration-branch model | PR #14 |
 | 2026-07-29 | Finalized seasons refuse record updates; open seasons still update | `docs/DATA_AUDIT.md` · PR #10 |
 | 2026-07-30 | **Full autonomous delivery mandate** — Technical Lead is also integration owner, visual gate, and delegated commissioner for V1 | this file |
+| 2026-07-30 | **COMMISSIONER: standing Product Delivery Mandate.** The objective is a demonstrable, polished, statistically trustworthy product — not the existence of routes, schemas or PRs. Completion bar, permanent visual standard, mandatory screenshot loop, demoability, specialist ownership, deterministic stats-fact layer | `docs/PRODUCT_DELIVERY_MANDATE.md` |
+| 2026-07-30 | **COMMISSIONER: the Tonight board is not clear.** Too small, too many words, colliding with the frame. It should read like `WEEK 5` plus one short fact, elegantly, inside the cream field | `TONIGHT_FIELD` · `lib/parlor/tonight.ts` |
+| 2026-07-30 | Typography floor is **16–18 CSS px, adjusted upward when the pixel font needs optical size** — supersedes the bare "17px floor". Panels adapt around readable text; text is never shrunk to fit a panel | `PRODUCT_DELIVERY_MANDATE.md §6` |
 | 2026-07-30 | **COMMISSIONER: the league does not pay for API use.** The orchestrator is reduced to manual dispatch, `ANTHROPIC_API_KEY` is removed, and no paid dependency may be reintroduced without a new decision. No product scope is affected — `16 §9` already requires the Slice to publish with the key unset | `AUTONOMY.md §4` · issue #18 |
 | 2026-07-30 | Transient panels are **set down in the room**, never bottom sheets. Sized to content, centred, pixel-bevelled, shared material with Tony's box and the champion panel | `components/scene/room-object.tsx` |
 | 2026-07-30 | **Body copy floor is 17px.** Size the container to the type, never the type to the container | `components/scene/tony-toy.tsx` |
@@ -227,7 +230,7 @@ Integration branch **`integration/v1-parlor-milestone`**, tracked by **PR #14**,
 | Newspaper rack | `(10, 224)` at 38 × 38 |
 | Layer cut | logical **y 292** |
 | Tony | `(64, 180)` at 72 × 197, visible band 112 units |
-| Tonight board text field | `TONIGHT_FIELD` `60, 93, 111, 74` — state line + one headliner |
+| Tonight board text field | `TONIGHT_FIELD` `66, 99, 99, 67` — inset 6 units in the cream; hero + one short fact, centred |
 | Prediction slate | `PREDICTION_SLATE` `154, 184, 37, 59` — chalk residue only |
 
 Board and banner row co-centre at `119.5`, delta `0.0`. Partitions clear WCAG 2.5.8 AA at 24.75 CSS px on a 360 px viewport.
