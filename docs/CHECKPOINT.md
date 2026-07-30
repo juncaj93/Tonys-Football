@@ -83,7 +83,7 @@ Item 3 is done. What the demo fixtures immediately exposed, and what is next:
 
 | | Work |
 |---|---|
-| **D** | **Collection, Counter and Showcase density and rhythm.** `demo-collection-full` is the evidence: unowned spots are near-black cards with a grey dash and read as *failed to load* rather than deliberately empty; set progress is a cream slab eating a third of the screen above the shelf; the filters are generic dark rectangles. This is the commissioner's "generic dashboard cards" defect, now photographed. |
+| **D** | ✅ **Collection and Showcase — done** (#35). The shelf is boards with objects standing on them and gaps where nothing is; set progress *is* the filter; the league wall is a ledger on paper rather than ten black cards. The Counter needed only its back-link corrected. |
 | **C** | **Art slots.** Every owned collectible draws the same beige carton, because the collectible art is placeholder. Each is a registry row, never a code change — but the placeholder must stop being a box-shaped stand-in for twenty-four different objects. |
 | **B** | **The reveal.** Anticipation, rarity treatment and the continuation action. See the note below about photographing a *specific* rarity. |
 | **E** | ✅ **Seatless managers — done** (#34). The door opens for the whole permanent record; the receipt and the counter say the true thing; the full M2 loop walked end to end as Berardo. |

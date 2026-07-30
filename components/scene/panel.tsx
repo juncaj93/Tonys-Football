@@ -171,14 +171,21 @@ export function ClosedRoom({
   );
 }
 
-/** The way back, at the bottom where a thumb is. */
+/**
+ * The way back, at the bottom where a thumb is.
+ *
+ * **"Out front", not "the counter".** It goes to `/`, and on `/counter` — a real
+ * route, titled *Tony's counter* — a plate reading "back to the counter" is a
+ * link to the page you are standing on. The room's own copy already calls the
+ * parlor out front: *"It opens out at the tray, not in here."*
+ */
 export function ReturnPlate() {
   return (
     <Link
       href="/"
       className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-[#1c1113] font-display text-[12px] leading-[1.5] text-paper-mid uppercase active:translate-y-px"
     >
-      &larr;&nbsp;&nbsp;Back to the counter
+      &larr;&nbsp;&nbsp;Back out front
     </Link>
   );
 }
