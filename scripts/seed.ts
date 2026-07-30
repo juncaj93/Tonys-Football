@@ -189,18 +189,19 @@ async function main(): Promise<void> {
     }
 
     /*
-     * One unopened box per manager, granted once, ever.
+     * The house's welcome box — one per manager, granted once, ever.
      *
-     * This is a **fixture, not an economy.** Boxes are bought with tokens
-     * through `apply_token_delta`, and that is the next slice; until it exists
-     * the box has to come from somewhere, and a seeded grant is the honest
-     * placeholder — it puts the real loop in front of real managers without
-     * inventing a price the P3 simulation has not produced yet (`16 §8`).
+     * This began as a fixture, because slice 1 had no way to acquire a box and one
+     * had to come from somewhere. Purchase exists now, so that justification is
+     * gone and the grant is kept for a different and better reason: **the first
+     * box should not cost anything.** A manager's first visit ends with them
+     * opening something rather than doing arithmetic about whether to, and it costs
+     * the economy nothing that P3 has to model — it is one box, once, forever.
      *
-     * `grantKey` is what keeps it a fixture rather than a faucet: the key is
-     * stable per manager, so every subsequent deploy grants nothing — including
-     * after the box has been opened, which is the case that matters. A re-grant
-     * of an opened box would be a reroll dressed up as a deployment.
+     * `grantKey` is what keeps it a gift rather than a faucet: the key is stable
+     * per manager, so every subsequent deploy grants nothing — **including after
+     * the box has been opened**, which is the case that matters. A re-grant of an
+     * opened box would be a reroll dressed up as a deployment.
      */
     const managers = await db.select({ id: users.id }).from(users);
     let granted = 0;
@@ -213,7 +214,7 @@ async function main(): Promise<void> {
       if (result.granted) granted += 1;
     }
     console.log(
-      `Tray     ${String(granted)} boxes granted · ` +
+      `Tray     ${String(granted)} welcome boxes granted · ` +
         `${String(managers.length - granted)} managers already had theirs`,
     );
 

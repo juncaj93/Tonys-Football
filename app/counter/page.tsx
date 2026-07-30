@@ -52,16 +52,23 @@ export default async function CounterPage() {
   // A manager with no seat this season has no wallet, which is a real state —
   // a co-owner, or somebody who has not been seated yet. They can still open a
   // box they own; they simply cannot buy one.
-  const purse =
-    season === null
-      ? null
-      : await (async () => {
-          const [held, economy] = await Promise.all([
-            wallet(db, { userId: user.id, seasonId: season.id }),
-            economyFor(db, season.id),
-          ]);
-          return held === null ? null : { balance: held.balance, economy };
-        })();
+  /*
+   * The wallet, and the prices in force.
+   *
+   * `economyFor` throws when a season has no stored config, and that strictness is
+   * right for a *service*: `18 §4.3` will not have the first purchase of a deploy
+   * silently invent an economy. But a throw here reached the manager as
+   * **"Application error: a server-side exception has occurred"** — a white screen
+   * on the shop's own page, which is a far worse failure than the one it was
+   * guarding against.
+   *
+   * So the page absorbs it and answers in-world (`05 §8.5`), while the underlying
+   * error still goes to the server log for whoever broke the seed. Production runs
+   * `migrate → seed → build`, so this is the partial-seed case rather than the
+   * normal one — but "rare" is not "impossible", and the shop should never show a
+   * stack-trace page to ten friends.
+   */
+  const purse = season === null ? null : await purseFor(db, user.id, season.id);
 
   return (
     <>
@@ -102,7 +109,7 @@ export default async function CounterPage() {
 
               {purse === null ? (
                 <p className="mt-3 text-[17px] leading-[1.5] text-ink-700">
-                  You have no tab open this season, so there is nothing to buy with.
+                  Tony hasn&rsquo;t put a price on it yet. Nothing to buy with today.
                 </p>
               ) : (
                 <BuyBox
@@ -152,6 +159,31 @@ export default async function CounterPage() {
       </Page>
     </>
   );
+}
+
+/**
+ * The manager's balance and the prices, or null if either is unavailable.
+ *
+ * Null covers two genuinely different situations that the page answers the same
+ * way — no seat this season, and no stored prices — because in both cases the
+ * honest thing to say is "there is nothing to buy with right now". The log tells
+ * the difference apart; the manager does not need to.
+ */
+async function purseFor(
+  db: ReturnType<typeof getDb>,
+  userId: string,
+  seasonId: string,
+): Promise<{ balance: number; economy: Awaited<ReturnType<typeof economyFor>> } | null> {
+  const held = await wallet(db, { userId, seasonId });
+  if (held === null) return null;
+
+  try {
+    return { balance: held.balance, economy: await economyFor(db, seasonId) };
+  } catch (error: unknown) {
+    // Loud in the log, quiet in the shop.
+    console.error('[counter] no economy config for the open season', error);
+    return null;
+  }
 }
 
 /** "1 collectible" / "3 collectibles". Counting is a fact, so it is stated exactly. */

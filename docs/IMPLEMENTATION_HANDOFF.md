@@ -288,6 +288,7 @@ Room interaction (`18 §10`):
 - **Purchase debits first.** If the money fails the box is never created, so nobody holds an unpaid box. The box's `grant_key` is derived from the ledger key, so a retry cannot mint a second box.
 - **The purchase key is namespaced server-side** under the session's user id. A client cannot craft a key that reaches another ledger row.
 - **`apply_token_delta` refuses a finalized season.** `03 §6` closes the books; 2024/2025 are finalized in every environment, so it is reachable rather than theoretical.
+- **The seeded box is now a deliberate welcome gift, not a fixture.** Purchase exists, so the old justification is gone; it is kept because a manager's first visit should end in opening something rather than in arithmetic. Still one per manager, forever, via a stable `grantKey`.
 - **The opening balance is the only honest token source today.** Matchup wins and weekly high scores need a played season and the two cron jobs that would award them (`16 §4.3`) do not exist. The enum declares them; nothing is wired to them. **Do not invent a weekly reward that fires on nothing.**
 - **The balance is on the receipt, not in the utility bar.** The homepage is exactly eight interactive objects, and a balance readout bolted to the chrome is the first step toward the dashboard `16 §1` names as the failure mode.
 - **`tray-reveal` is now a required visual state** because each width can buy its own box. That capture exercises the ledger, the balance check and the tray transition as well as the reveal.
