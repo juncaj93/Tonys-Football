@@ -71,11 +71,14 @@ import {
  * held an unopened box, and an unreachable route is the same class of defect as
  * the `<Link href="/underground">` the gates were built to catch.
  *
- * So the reveal plate carries the onward step. `/counter` is reachable in every
- * state: with an empty tray by tapping it, and with a box on it by opening the
- * box — one tap, and the thing the manager came to do anyway — and then from the
- * plate. When purchase lands, managers arrive at `/counter` to buy in the first
- * place and this stops being the only entrance.
+ * So the reveal plate carries the onward step — to **`/counter/collection`**, the
+ * shelf, which is where the thing you just pulled now lives. That is the honest
+ * next thought after a pull, and it is one tap from the counter itself.
+ *
+ * `/counter` is reachable in every state: with an empty tray by tapping it, and
+ * with a box on it by opening the box — one tap, and the thing the manager came to
+ * do anyway. Since purchase landed, managers also arrive there to buy, so the tray
+ * is no longer its only entrance.
  *
  * ## No scrim
  *
@@ -353,10 +356,10 @@ function Revealed({
           * destination rather than a mood.
           */}
         <Link
-          href="/counter"
+          href="/counter/collection"
           className="mt-1 flex min-h-[26px] items-center font-display text-[10px] tracking-wide text-ink-700/80 uppercase underline decoration-ink-700/30 underline-offset-2 active:translate-y-px"
         >
-          See the counter
+          Put it on the shelf
         </Link>
       </div>
 
