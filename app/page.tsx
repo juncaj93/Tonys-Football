@@ -16,6 +16,7 @@ import { championBanners } from '@/lib/parlor/champions';
 import {
   COUNTER_EDGE,
   ROOM,
+  PREDICTION_SLATE,
   TONIGHT_FIELD,
   TONY,
   place,
@@ -216,14 +217,35 @@ export default async function ParlorPage() {
               )}
             </div>
 
+            {/*
+              * The prediction sign's slate, wiped.
+              *
+              * Trigger-only, so there is no prediction printed here — but baked
+              * dark and rendering nothing it was the only object in the room
+              * that read as *unloaded* rather than as quiet. Everything else
+              * that is empty here is visibly empty on purpose.
+              *
+              * Two faint chalk strokes: the residue of something erased. No
+              * invented prediction, no fake data, no label — just a board that
+              * has been used and is currently clean.
+              */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute flex flex-col justify-center gap-[8%] overflow-hidden px-[14%]"
+              style={place(PREDICTION_SLATE)}
+            >
+              <span className="h-[2px] w-full bg-paper-white/12" />
+              <span className="h-[2px] w-[62%] bg-paper-white/10" />
+            </div>
+
             {/* Displays. */}
             <RoomDisplay spec={roomObject('tonight')} title="Tonight at Tony's">
               {tonight.length === 0 ? (
-                <p className="pb-3 text-[19px] text-ink-500">Nothing on the board.</p>
+                <p className="pb-1 text-[17px] leading-[1.5] text-ink-700">Nothing on the board.</p>
               ) : (
-                <ul className="space-y-3.5 pb-3">
+                <ul className="space-y-3 pb-1">
                   {tonight.map((entry) => (
-                    <li key={entry.key} className="flex gap-3 text-[19px] leading-[1.45]">
+                    <li key={entry.key} className="flex gap-2.5 text-[17px] leading-[1.5]">
                       <span aria-hidden="true" className="pt-0.5 text-red-dark">
                         —
                       </span>
@@ -237,8 +259,9 @@ export default async function ParlorPage() {
             <BannerRail banners={banners} />
 
             <RoomDisplay spec={roomObject('prediction')} title="Tony's prediction">
-              <p className="pb-3 text-[19px] leading-[1.45] text-ink-700">
-                Tony hasn&rsquo;t called this one yet. Check back Tuesday.
+              <p className="pb-1 text-[17px] leading-[1.5] text-ink-700">
+                Tony hasn&rsquo;t called this one yet. He writes it up on Tuesday, with the
+                paper.
               </p>
             </RoomDisplay>
 

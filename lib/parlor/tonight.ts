@@ -122,12 +122,29 @@ export async function tonightBoard(db: Database): Promise<readonly TonightLine[]
 
   if (archived.length > 0) {
     const years = archived.map((season) => String(season.year));
+    /**
+     * Two years read as a sentence; five read as a list a machine wrote.
+     *
+     * `years.join(' and ')` was fine for 2024 and 2025 and became
+     * *"2021 and 2022 and 2023 and 2024 and 2025 are on the books"* the moment a
+     * third season existed — which it will in January 2027, on its own, with
+     * nobody looking. Contiguous history collapses to a range; a gap keeps the
+     * years so the sentence never claims a season the league did not play.
+     */
+    const first = years[0]!;
+    const last = years[years.length - 1]!;
+    const contiguous = Number(last) - Number(first) + 1 === years.length;
+
     lines.push({
       key: 'history',
       text:
         years.length === 1
-          ? `${years[0]!} is on the books, every game of it.`
-          : `${years.join(' and ')} are on the books, every game of them.`,
+          ? `${first} is on the books, every game of it.`
+          : years.length === 2
+            ? `${first} and ${last} are on the books, every game of them.`
+            : contiguous
+              ? `${first} through ${last} are on the books, every game of them.`
+              : `${years.join(', ')} are on the books, every game of them.`,
       priority: 40,
     });
   }

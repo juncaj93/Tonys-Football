@@ -113,8 +113,26 @@ export function RoomToy({ spec, onTap }: { spec: RoomObjectSpec; onTap: () => vo
 /**
  * What a Display opens into.
  *
- * The room does not go away; it sits behind the thing you picked up, and the
- * contents scroll on their own.
+ * ## It was a bottom sheet, and that was the wrong idiom
+ *
+ * This used to be a full-width cream slab pinned to the bottom edge at
+ * `max-h-[76dvh]`, sliding up over the room. Everything about it was competent
+ * and none of it belonged: a sheet that spans the viewport and covers
+ * three-quarters of the screen is the gesture language of a phone app with a
+ * themed background, and it made the parlor into that background. Tapping the
+ * receipt should feel like picking a piece of paper off a counter, not like
+ * summoning an action sheet.
+ *
+ * So it is now **a thing lying on the counter, in front of the room**: sized to
+ * its contents, centred in the room's own column rather than the viewport's,
+ * pixel-bevelled like every other surface in the shop, and never taller than it
+ * needs to be. It shares its material with Tony's speech box and the champion
+ * panel, so all three transient surfaces read as one shop rather than three
+ * component libraries.
+ *
+ * The room stays visible behind it, dimmed. That is deliberate — a panel you
+ * opened is allowed to sit over the art (`18 §7.2.4`); a panel that *replaces*
+ * the art has taken the room away.
  */
 function Sheet({
   title,
@@ -141,12 +159,12 @@ function Sheet({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col justify-end">
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
       {/*
         * Putting the thing down again. Deliberately not a button and not in the
-        * tab order: the sheet already has a real Close control and Escape.
+        * tab order: the panel already has a real Close control and Escape.
         */}
-      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink-900/55" />
+      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink-900/60" />
 
       <div
         ref={panel}
@@ -154,25 +172,42 @@ function Sheet({
         aria-modal="true"
         aria-labelledby={headingId}
         tabIndex={-1}
-        className="sheet-rise relative max-h-[76dvh] overflow-y-auto border-t-2 border-wood-dark bg-paper-mid text-ink-900 shadow-[0_-4px_0_rgba(0,0,0,0.45)] outline-none"
-        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.25rem)' }}
+        className="panel-rise pixel-edge relative w-full max-w-[19.5rem] border-2 border-wood-dark bg-paper-mid text-ink-900 outline-none"
       >
-        <div aria-hidden="true" className="sticky top-0 z-20 h-[2px] bg-amber-mid/45" />
+        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-amber-mid/45" />
 
-        <div className="sticky top-[2px] z-10 flex items-center justify-between gap-3 border-b-2 border-wood-dark/30 bg-paper-mid px-4 pt-4 pb-3.5">
-          <h2 id={headingId} className="font-display text-[15px] leading-[1.4] text-ink-900 uppercase">
+        <div className="flex items-start justify-between gap-3 px-3.5 pt-3.5 pb-2.5">
+          <h2
+            id={headingId}
+            className="font-display text-[13px] leading-[1.4] tracking-wide text-ink-700 uppercase"
+          >
             {title}
           </h2>
+          {/*
+            * A pixel cross, not a labelled button. The panel is small enough
+            * that a word-sized `CLOSE` control was the second-loudest thing in
+            * it; Escape and the scrim do the same job without the furniture.
+            * 44px of hit area around a 12px mark.
+            */}
           <button
             type="button"
             onClick={onClose}
-            className="pixel-edge flex min-h-[44px] shrink-0 items-center justify-center border-2 border-wood-dark/50 bg-paper-dark/50 px-3.5 font-display text-[11px] leading-[1.5] text-ink-700 uppercase active:translate-y-px"
+            aria-label="Close"
+            className="-mt-2.5 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center active:translate-y-px"
           >
-            Close
+            <span aria-hidden="true" className="relative block h-3 w-3 opacity-70">
+              <span className="absolute top-1/2 left-0 h-[2px] w-full rotate-45 bg-ink-700" />
+              <span className="absolute top-1/2 left-0 h-[2px] w-full -rotate-45 bg-ink-700" />
+            </span>
           </button>
         </div>
 
-        <div className="px-4 pt-5">{children}</div>
+        <div
+          className="max-h-[52dvh] overflow-y-auto px-3.5 pb-4"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) * 0.5 + 1rem)' }}
+        >
+          {children}
+        </div>
       </div>
     </div>
   );

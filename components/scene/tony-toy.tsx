@@ -84,10 +84,13 @@ export function TonyToy({
         *     talking speed — `spoken-line.tsx` makes exactly that argument for
         *     why there is "no ambiguity about who is speaking." A label on top
         *     of that is belt, braces, and a nameplate.
-        *   - **20px at 1.35** wrapped a one-sentence greeting onto three lines.
+        *   - The first fix overcorrected to 15px, which is below the readable
+        *     floor for body copy on a phone. It is 17px now, and the box is
+        *     sized to hold that comfortably rather than the type being shrunk to
+        *     fit a box.
         *
         * So: sized to the words, anchored under him rather than centred on the
-        * screen, and the tail lands on his side of the counter. `max-w-[17rem]`
+        * screen, and the tail lands on his side of the counter. `max-w-[19rem]`
         * keeps it clear of the tray and the doorway on the right; it is a
         * measurement against the room, not a round number.
         *
@@ -111,7 +114,7 @@ export function TonyToy({
           className="tony-line pointer-events-none fixed inset-x-3 z-40 flex justify-start"
           style={{ bottom: 'calc(env(safe-area-inset-bottom) + 0.75rem)' }}
         >
-          <div className="pointer-events-auto relative max-w-[17rem]">
+          <div className="pointer-events-auto relative max-w-[19rem]">
             {/* A stepped tail, drawn in pixels rather than rotated. */}
             {/*
               * At 38% the tail lands under Tony's own lane rather than under
@@ -152,7 +155,7 @@ export function TonyToy({
                 */}
               <span
                 aria-live="polite"
-                className="block text-[15px] leading-[1.45] text-paper-white"
+                className="block text-[17px] leading-[1.5] text-paper-white"
               >
                 <SpokenLine key={line} retypeOnChange>
                   {line}

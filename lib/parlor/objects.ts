@@ -257,6 +257,22 @@ export function roomObject(id: string): RoomObjectSpec {
  */
 export const TONIGHT_FIELD: RoomObjectSpec['rect'] = [60, 93, 111, 74];
 
+/**
+ * The prediction sign's slate — the art's own bounds, `SHELL_AUDIT §4`.
+ *
+ * The sign is **trigger-only**: its slate is 24 units wide and cannot carry a
+ * sentence, so the prediction lives in the panel. But baked dark and rendering
+ * nothing, it was the one object in the room that looked *unloaded* rather than
+ * quiet — every other empty thing here is visibly empty on purpose. The board
+ * has two lines on it, the banners have years, the receipt has a name.
+ *
+ * So it gets a **wiped-board** treatment: two faint chalk strokes, the residue
+ * of something erased. It invents no prediction — there is nothing to say until
+ * Tuesday, and saying nothing is the correct content. It just says it the way a
+ * chalkboard in a pizza shop would, instead of the way a failed fetch would.
+ */
+export const PREDICTION_SLATE: RoomObjectSpec['rect'] = [154, 184, 37, 59];
+
 /** A room rectangle as the percentages the browser wants. */
 export function place(rect: RoomObjectSpec['rect']): {
   left: string;
