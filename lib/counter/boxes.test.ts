@@ -1,4 +1,4 @@
-import { eq, sql } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
@@ -159,14 +159,19 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       // `18 §4.3` says the reward is resolved from a *stored* table. Writing one
       // on first use would let the first opening of a deploy silently define the
       // economy.
+      /*
+       * Start from a database with **no** stored reward table, rather than emptying
+       * one afterwards.
+       *
+       * The earlier version truncated `reward_tables CASCADE`. That stopped working
+       * the moment `users.showcase_collectible_id` was added, because the cascade
+       * then follows reward_tables → box_openings → collectibles → users → loot_boxes
+       * and takes the test's own box with it. Building the state directly is both
+       * clearer and immune to the next FK somebody adds.
+       */
+      await resetDatabase(db!);
       const alex = await makeManager();
       const box = await grantOne(alex.id);
-
-      // TRUNCATE rather than DELETE: the append-only trigger refuses a DELETE,
-      // which is the point of the trigger and is asserted separately below.
-      // TRUNCATE does not fire row-level triggers, which is the same door the
-      // test harness uses to reset between files.
-      await db!.execute(sql`truncate table reward_tables cascade`);
 
       await expect(openBox(db!, { userId: alex.id, boxId: box.id })).rejects.toThrow(
         /not stored/,

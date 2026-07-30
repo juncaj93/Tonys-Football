@@ -13,6 +13,7 @@ import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
 import { ownedBox } from '@/lib/counter/boxes';
+import { showcaseFor } from '@/lib/counter/showcase';
 import { openSeason, wallet } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
 import { championBanners } from '@/lib/parlor/champions';
@@ -95,6 +96,9 @@ export default async function ParlorPage() {
   // seated yet. A zero would make "no tab" and "spent everything" look the same.
   const purse =
     season === null ? null : await wallet(db, { userId: user.id, seasonId: season.id });
+
+  // What the league can see of them, so the room reflects the Showcase choice.
+  const shown = await showcaseFor(db, user.id);
 
   const greeting = await greetingFor(db, {
     userId: user.id,
@@ -313,11 +317,29 @@ export default async function ParlorPage() {
             <RoomDisplay spec={roomObject('receipt')} title="Your record">
               <p className="text-[19px] leading-[1.45] text-ink-700">{user.displayName}</p>
               {purse !== null && (
-                <p className="mt-2 pb-3 text-[17px] leading-[1.45] text-ink-700">
+                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
                   {String(purse.balance)} Tony Tokens on your tab this season.
                 </p>
               )}
-              {purse === null && <p className="pb-3" />}
+              {/*
+                * What the league can see of you.
+                *
+                * Milestone item 10 — returning to the parlor reflects the result.
+                * The tray already does that for a box; this does it for the choice
+                * made at the Showcase, and it belongs on the receipt because the
+                * receipt is the manager's own record of themselves.
+                */}
+              {shown !== null && (
+                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
+                  {shown.name} is out in the showcase.
+                </p>
+              )}
+              {shown === null && (
+                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700/85">
+                  Nothing of yours is out in the showcase.
+                </p>
+              )}
+              <p className="pb-3" />
             </RoomDisplay>
 
             {/* The Toy. */}

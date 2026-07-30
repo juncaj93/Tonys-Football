@@ -111,6 +111,35 @@ export const users = pgTable('users', {
   /** Retired, not deleted. History is preserved permanently. */
   isRetired: boolean('is_retired').notNull().default(false),
 
+  /**
+   * The one collectible this manager shows the league.
+   *
+   * `16 §5.3` is explicit that the Showcase is **a column, not a feature** — one
+   * item, surfaced where the league can see it, with no levels, prestige or clout
+   * attached (`18 §4`). Keeping it a column is what stops it growing a table and
+   * then a ranking.
+   *
+   * It hangs off `users` rather than off a membership because a Showcase is part
+   * of who somebody is, not of a season they played — the same reason the
+   * collectible it points at is permanent while the tokens that bought it reset.
+   *
+   * **A manager may only show what they own**, and that is enforced by a trigger
+   * rather than by the service that sets it: an FK can say "this is a
+   * collectible" but not "this is *your* collectible".
+   *
+   * Nullable, and null is an ordinary state — a manager who has not chosen yet,
+   * or who has taken their item back off the shelf.
+   *
+   * **The foreign key is declared in SQL, not here**, and deliberately so:
+   * `collectibles.user_id` references `users`, so declaring the reverse in the
+   * schema makes the two table types mutually recursive and TypeScript gives up on
+   * inferring either (`TS7022`). Postgres has no such trouble with a cycle. The
+   * constraint lives in `drizzle/0006_showcase.sql` alongside the ownership trigger
+   * it belongs with, and drizzle leaves undeclared constraints alone rather than
+   * dropping them.
+   */
+  showcaseCollectibleId: uuid('showcase_collectible_id'),
+
   ...timestamps,
 });
 

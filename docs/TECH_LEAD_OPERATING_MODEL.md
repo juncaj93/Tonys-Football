@@ -165,6 +165,15 @@ Chronological. `PR #n · comment` is the authoritative text.
 | 2026-07-30 | **New gate:** no Tailwind class may reference an undefined `--color-*` token. Four sites shipped invisible or accidentally-inherited text | `lib/design/colour-tokens.test.ts` |
 | 2026-07-30 | Body copy inside a cream `PixelPanel` is **`text-ink-700`**, never `text-paper-*`. Cream on cream shipped on three routes | `VISUAL_ACCEPTANCE.md §4` |
 | 2026-07-30 | `tray-reveal` is a **required** visual state now that a box can be bought per width | `VISUAL_ACCEPTANCE.md §1` |
+| 2026-07-30 | **`RoomBehind` was drawing the withdrawn two-tile room** behind every interior route since V1. Now the one approved shell. The `legacy` and `colour-fidelity` checks run on **every** state — a skip list is a place for defects to live | `components/scene/room-behind.tsx` |
+| 2026-07-30 | The `legacy` gate matches the withdrawn **root** `/collection`, anchored to a path boundary. `/counter/collection` is canonical and must not trip it | `scripts/visual-qa.mts` |
+| 2026-07-30 | The collection shows the **whole 24-item catalog**, unowned entries named and deliberately empty. Set progress is a statement about the gap | `app/counter/collection/page.tsx` |
+| 2026-07-30 | **Duplicates are counted, never converted.** `03 §12` defers salvage until after simulation; a salvage rate here would be a P3 decision taken early | `lib/counter/collection.ts` |
+| 2026-07-30 | Collection filters are **URLs, not client state**, and an unrecognised value means "everything" rather than an error | `parseFilter` |
+| 2026-07-30 | The Showcase is **one column on `users`**, no levels or clout (`16 §5.3`, `18 §4`). Ownership is enforced by a trigger — an FK can say "a collectible", not "*your* collectible" | `drizzle/0006_showcase.sql` |
+| 2026-07-30 | The Showcase wall lists **every manager including retired ones and those showing nothing** — omitting them makes "has not picked" look like "is not in this league" | `lib/counter/showcase.ts` |
+| 2026-07-30 | **Wearable equipping belongs to M3**, not M2. `03`'s 12 wearables / 5 slots need the character system to be equipped onto; the allowed M2 action is the Showcase | this file |
+| 2026-07-30 | The `users → collectibles` FK is declared in **SQL, not `schema.ts`** — the reverse reference makes the table types mutually recursive and TypeScript stops inferring both (TS7022). It also extends `TRUNCATE ... CASCADE` to reach `users` | `drizzle/0006_showcase.sql` |
 
 ---
 

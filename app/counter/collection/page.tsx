@@ -154,6 +154,16 @@ export default async function CollectionPage({
           )}
 
           <div className="mt-8 space-y-3">
+            {/*
+              * Through to the Showcase. It is the natural next thought once you can
+              * see what you have: which one do the others get to look at.
+              */}
+            <Link
+              href="/counter/showcase"
+              className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-red-dark font-display text-[12px] text-paper-white uppercase active:translate-y-px"
+            >
+              Put one in the showcase
+            </Link>
             <Link
               href="/counter"
               className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-[#1c1113] font-display text-[12px] text-paper-mid uppercase active:translate-y-px"

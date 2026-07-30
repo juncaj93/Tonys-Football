@@ -43,6 +43,13 @@
       "when": 1785410037759,
       "tag": "0005_token_ledger",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785412897657,
+      "tag": "0006_showcase",
+      "breakpoints": true
     }
   ]
 }
