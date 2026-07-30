@@ -226,7 +226,7 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
       <span aria-hidden="true" className="flex h-12 w-full items-center justify-center">
         <span className="block h-12 w-12">
           {/* `compact`: object scale, so the wall-sized placeholder is wrong here. */}
-          <AssetView resolution={resolveAsset(entry.slug)} compact />
+          <AssetView resolution={resolveAsset(entry.slug)} compact placeholder="collectible" />
         </span>
       </span>
 

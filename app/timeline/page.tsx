@@ -46,10 +46,22 @@ export default async function TimelinePage() {
                   <div id={String(banner.year)} className="scroll-mt-4">
                     <PanelHeading>{String(banner.year)}</PanelHeading>
 
+                    {/*
+                      * The champion's name was `text-paper-mid` on a cream
+                      * `PixelPanel` — cream on cream, contrast 1.1:1, so every
+                      * finalized season rendered the word CHAMPION above an
+                      * empty line. It has been that way in production since V1
+                      * and it is the fourth route to ship this exact mistake.
+                      *
+                      * The name is the single most important word on this page,
+                      * so it is now the largest and darkest thing in the panel,
+                      * and the label under it is a caption rather than a
+                      * decoration at 9px in 70% amber.
+                      */}
                     {banner.champion === null ? (
                       <>
-                        <p className="mt-1.5 font-display text-[15px] text-paper-mid">TBD</p>
-                        <p className="mt-1.5 text-[15px] leading-[1.45] text-ink-700">
+                        <p className="mt-1.5 font-display text-[17px] text-ink-500">TBD</p>
+                        <p className="mt-1.5 text-[16px] leading-[1.45] text-ink-700">
                           {banner.current
                             ? 'Still being played. Nobody has won it yet.'
                             : 'Not finalized, so there is no champion on record.'}
@@ -57,10 +69,10 @@ export default async function TimelinePage() {
                       </>
                     ) : (
                       <>
-                        <p className="mt-1.5 font-display text-[15px] text-paper-mid">
+                        <p className="mt-1.5 font-display text-[22px] leading-[1.2] text-ink-900">
                           {banner.champion}
                         </p>
-                        <p className="mt-1.5 font-display text-[9px] text-amber-mid/70 uppercase">
+                        <p className="mt-1 font-display text-[11px] tracking-[0.08em] text-wood-mid uppercase">
                           Champion
                         </p>
                       </>

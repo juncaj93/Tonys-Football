@@ -82,7 +82,18 @@ export function PlaceholderSign({
  * real box art lands with real transparency, the same CSS follows the real
  * outline with no change here. That is the property the mechanism was chosen for.
  */
-export function PlaceholderObject({ className = '' }: { className?: string }) {
+/** What a compact placeholder is standing in for. */
+export type ObjectPlaceholder = 'box' | 'collectible';
+
+export function PlaceholderObject({
+  kind = 'box',
+  className = '',
+}: {
+  kind?: ObjectPlaceholder;
+  className?: string;
+}) {
+  if (kind === 'collectible') return <PlaceholderCollectible className={className} />;
+
   return (
     <span aria-hidden="true" className={`relative block h-full w-full ${className}`}>
       {/* The base of the carton. */}
@@ -94,6 +105,49 @@ export function PlaceholderObject({ className = '' }: { className?: string }) {
       {/* The handwritten label. A mark, not a word — there is no room for a word. */}
       <span className="absolute top-[12%] left-[16%] h-[3px] w-[44%] bg-red-dark/80" />
       <span className="absolute top-[24%] left-[16%] h-[2px] w-[28%] bg-red-dark/55" />
+    </span>
+  );
+}
+
+/**
+ * The stand-in for **a collectible**, which is not the stand-in for the box.
+ *
+ * It was, and that was the defect. `PlaceholderObject` drew one carton and both
+ * the unopened box and the thing that came out of it used it, so the whole
+ * reveal — the moment the entire milestone is built around — showed a box
+ * turning into the same box, and every item in the Collection and the Showcase
+ * was that box again. A rare `Can of whipped cream` and a common `Receipt spike`
+ * were pixel-identical. The commissioner: *"the collectible is represented
+ * primarily by text."* It was, because the picture said nothing.
+ *
+ * So: a **tagged parcel on the shelf** — a different silhouette from a flat
+ * carton at a glance, taller than it is wide, with a tied string and a hanging
+ * tag. It says *an object somebody kept*, which is the one thing true of all
+ * twenty-four items, and it says nothing about which one.
+ *
+ * ## It is meant to look temporary
+ *
+ * `MANDATE`'s art-slot rules forbid *"polished-looking temporary art that may
+ * accidentally become canonical"* as firmly as they forbid a broken-image icon.
+ * So this is five flat rectangles and a blank tag: no rendering, no gradient, no
+ * detail that could be mistaken for a decision about what a whipped-cream can
+ * looks like. The **blank tag is the tell** — a thing with a label that has not
+ * been written on yet.
+ *
+ * Every item resolves through the registry, so replacing this is
+ * `collectible_can_whipped_cream` landing as a row — never a change here.
+ */
+function PlaceholderCollectible({ className }: { className: string }) {
+  return (
+    <span aria-hidden="true" className={`relative block h-full w-full ${className}`}>
+      {/* The parcel. Inset on both sides so it is upright, not a box. */}
+      <span className="absolute inset-x-[18%] top-[14%] bottom-0 border-2 border-wood-dark bg-paper-dark" />
+      {/* Wrapped: one band across, one down. Hard lines, no shadow. */}
+      <span className="absolute inset-x-[18%] top-[46%] h-[2px] bg-wood-mid" />
+      <span className="absolute top-[14%] bottom-0 left-1/2 w-[2px] -translate-x-1/2 bg-wood-mid" />
+      {/* The tag, hanging off the string, deliberately blank. */}
+      <span className="absolute top-0 left-[52%] h-[16%] w-[2px] bg-wood-mid" />
+      <span className="absolute top-0 left-[56%] h-[13%] w-[26%] border-2 border-wood-dark bg-paper-mid" />
     </span>
   );
 }
@@ -113,11 +167,20 @@ export function AssetView({
   resolution,
   className = '',
   compact = false,
+  placeholder = 'box',
 }: {
   resolution: AssetResolution;
   className?: string;
   /** Drawn at object scale — a few dozen units — rather than as a surface. */
   compact?: boolean;
+  /**
+   * Which compact stand-in to draw while the slug has no art.
+   *
+   * A property of the *slot*, not of the asset — the same registry row is a
+   * sealed box on the counter and a kept object on a shelf, and those are not
+   * the same picture. Ignored once real art exists.
+   */
+  placeholder?: ObjectPlaceholder;
 }) {
   if (resolution.kind === 'missing') {
     return (
@@ -133,7 +196,7 @@ export function AssetView({
 
   if (resolution.kind === 'placeholder') {
     return compact ? (
-      <PlaceholderObject className={className} />
+      <PlaceholderObject kind={placeholder} className={className} />
     ) : (
       <PlaceholderSign label={resolution.label} slug={resolution.slug} className={className} />
     );

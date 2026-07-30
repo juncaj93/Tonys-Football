@@ -119,9 +119,35 @@ export function CounterTray({
     if (phase === 'anticipation' && beatOver && reveal !== null) setPhase('reveal');
   }, [phase, beatOver, reveal]);
 
+  /*
+   * The room can only be doing one thing at a time.
+   *
+   * Tony's line and the reveal are siblings that know nothing about each other,
+   * so both rendered and the parlor ended up with two panels stacked over the
+   * lower third — *"overlapping web cards rather than a composed game scene."*
+   * Independent components will always do this; the fix is not to teach each one
+   * about the others but to give the room a single **focus** they defer to.
+   *
+   * Opening a box claims it. `globals.css` decides what yielding looks like —
+   * here it is only declared, so a future transient (a purchase, a bounty) can
+   * claim the same focus without this file learning about it.
+   *
+   * On `body` rather than in React state because the two components have no
+   * common client ancestor: the room is a server component, and adding a
+   * provider around it to carry one boolean would be a larger change than the
+   * defect. Cleared on unmount, so a navigation mid-reveal cannot leave Tony
+   * permanently mute.
+   */
+  useEffect(() => {
+    const claimed = phase === 'anticipation' || phase === 'reveal';
+    if (claimed) document.body.dataset['parlorFocus'] = 'reveal';
+    else delete document.body.dataset['parlorFocus'];
+  }, [phase]);
+
   useEffect(
     () => () => {
       if (timer.current !== null) clearTimeout(timer.current);
+      delete document.body.dataset['parlorFocus'];
     },
     [],
   );
@@ -304,7 +330,7 @@ function Revealed({
         style={place(TRAY_REVEAL)}
       >
         {/* 42 x 42 in room units — object scale, so the same rule applies. */}
-        <AssetView resolution={reveal.asset} compact />
+        <AssetView resolution={reveal.asset} compact placeholder="collectible" />
       </div>
 
       {/*

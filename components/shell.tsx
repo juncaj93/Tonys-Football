@@ -49,11 +49,26 @@ export function Page({
   oneScreen?: boolean;
 }) {
   if (oneScreen) {
+    /*
+     * **No top inset here, deliberately.** Every other page pads itself clear of
+     * the notch, because a sheet of paper should not slide under the clock. The
+     * parlor is not a sheet of paper — it is a room, and a room should reach the
+     * top of the window.
+     *
+     * Padding it cost roughly 103 px on the phone: about 59 of safe area plus a
+     * 44 px bar, all of it `ink-900`. On a 664 px screen that is **one sixth of
+     * the display painted black above the shop**, and the commissioner read it
+     * exactly as it looks — *"the large black region above the room makes the
+     * experience feel letterboxed and disconnected."*
+     *
+     * So the room starts at row zero and the safe area is handled by the things
+     * that sit *over* it: the utility bar carries the inset as its own padding,
+     * and a short scrim keeps the status bar legible against the ceiling. Same
+     * clearance, none of the void, and the reclaimed height goes to the room —
+     * which is the one thing on this screen worth looking at.
+     */
     return (
-      <div
-        className="relative mx-auto flex h-dvh w-full max-w-3xl flex-col overflow-hidden"
-        style={{ paddingTop: 'env(safe-area-inset-top)' }}
-      >
+      <div className="relative mx-auto flex h-dvh w-full max-w-3xl flex-col overflow-hidden">
         {children}
       </div>
     );
