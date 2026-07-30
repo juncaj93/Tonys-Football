@@ -554,6 +554,33 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
     return { evidence: { balance, price: values.standardBoxPriceTokens } };
   },
 
+  /**
+   * A pull, with an empty tab underneath it.
+   *
+   * The state that proves the reveal plate makes **no offer** when the offer
+   * could not be taken. `MANDATE §8` lists "zero tokens" among the scenarios,
+   * and until this existed the absent case could only be reasoned about — every
+   * reveal screenshot ever taken was of somebody who could afford another box.
+   *
+   * Spent down *before* the pull so the plate reads the empty tab, not a
+   * balance that was true a moment earlier.
+   */
+  'pull-while-broke': async (db, seat) => {
+    await openTab(db, seat);
+    const { values } = await economyFor(db, seat.seasonId);
+    const balance = await spendDownTo(db, seat, values.standardBoxPriceTokens - 1);
+    const reveal = await pull(db, seat, 0, firstOfRarity('common'));
+
+    return {
+      evidence: {
+        slug: reveal.slug,
+        balance,
+        price: values.standardBoxPriceTokens,
+        canAffordAnother: balance >= values.standardBoxPriceTokens,
+      },
+    };
+  },
+
   'purchase-ok': async (db, seat) => {
     await openTab(db, seat);
     const result = await purchaseBox(db, {

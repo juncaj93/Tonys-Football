@@ -119,6 +119,7 @@ type StateName =
   | 'demo-collection-full'
   | 'demo-counter-broke'
   | 'demo-showcase-chosen'
+  | 'demo-pull-while-broke'
   | 'reveal-common'
   | 'reveal-rare'
   | 'reveal-epic'
@@ -146,6 +147,9 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'demo-collection-full': 'collection-full',
   'demo-counter-broke': 'broke',
   'demo-showcase-chosen': 'showcased',
+  // The reveal plate with **no** onward offer, because the tab cannot take it.
+  // Every reveal screenshot before this was of somebody who could afford another.
+  'demo-pull-while-broke': 'pull-while-broke',
 };
 
 interface DemoApplied {
@@ -479,6 +483,16 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
 
     /*
+     * The pull is already done by the applier, so this is the room *after* it —
+     * the tray empty and the tab short. What it proves is a negative: the plate
+     * makes no offer it could not honour, and the counter says the true reason.
+     */
+    case 'demo-pull-while-broke':
+      await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    /*
      * The reveal, at each rarity, on purpose.
      *
      * These are the four states this driver could never produce. The roll
@@ -554,6 +568,7 @@ const ALL_STATES: readonly StateName[] = [
   'demo-collection-full',
   'demo-counter-broke',
   'demo-showcase-chosen',
+  'demo-pull-while-broke',
   // The four rarity treatments, side by side and repeatable. Signed in as
   // whoever the previous demo state left us as, which is fine: the payload is
   // synthesised and does not depend on what that seat owns.

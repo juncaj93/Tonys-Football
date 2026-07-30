@@ -401,6 +401,26 @@ function Revealed({
         <p className="mt-1.5 text-[17px] leading-[1.3] text-ink-900">{reveal.name}</p>
 
         {/*
+          * What it *means*, which the plate did not say.
+          *
+          * It ended at `COMMON / Squeeze bottle` — a label. A new player closed
+          * the loop knowing the name of an object and nothing about whether it
+          * mattered, how far along they were, or that it was theirs to keep. The
+          * commissioner's M2 bar has "understand what they earned" as its own
+          * beat, and a name is not that.
+          *
+          * Three cases, and the first one is the one that matters most: the very
+          * first collectible anybody ever owns should be told it is the first.
+          */}
+        <p className="mt-1 text-[15px] leading-[1.3] text-ink-700">
+          {reveal.distinct === 1
+            ? 'The first thing on your shelf. It stays there.'
+            : reveal.distinct === reveal.total
+              ? `That is all ${String(reveal.total)}. The whole shelf.`
+              : `${String(reveal.distinct)} of ${String(reveal.total)} on your shelf.`}
+        </p>
+
+        {/*
           * The way on to the counter.
           *
           * It is here because the tray's destination is conditional: while a box
@@ -414,12 +434,37 @@ function Revealed({
           * room. It names its destination, so its accessible name is a
           * destination rather than a mood.
           */}
-        <Link
-          href="/counter/collection"
-          className="mt-1 flex min-h-[26px] items-center font-display text-[10px] tracking-wide text-ink-700/80 uppercase underline decoration-ink-700/30 underline-offset-2 active:translate-y-px"
-        >
-          Put it on the shelf
-        </Link>
+        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-0.5">
+          <Link
+            href="/counter/collection"
+            className="flex min-h-[26px] items-center font-display text-[10px] tracking-wide text-ink-700/80 uppercase underline decoration-ink-700/30 underline-offset-2 active:translate-y-px"
+          >
+            Put it on the shelf
+          </Link>
+
+          {/*
+            * *"Want to open another"* is one of the nine beats, and until now
+            * nothing anywhere said another box existed. The loop simply ended:
+            * bare tray, Tony silent, no price on anything.
+            *
+            * So the offer is made at the one moment the player is certainly
+            * looking, and it carries the **price** — an offer without one is an
+            * invitation to go and find out, which is a different and worse
+            * feeling.
+            *
+            * Absent when they cannot afford it (`nextBoxPrice` is null). An
+            * offer you cannot take is worse than no offer, and it is also how a
+            * shop starts feeling like a store.
+            */}
+          {reveal.nextBoxPrice !== null && (
+            <Link
+              href="/counter"
+              className="flex min-h-[26px] items-center font-display text-[10px] tracking-wide text-red-dark uppercase underline decoration-red-dark/40 underline-offset-2 active:translate-y-px"
+            >
+              Another&nbsp;&mdash;&nbsp;{String(reveal.nextBoxPrice)}
+            </Link>
+          )}
+        </div>
       </div>
 
       {/*
