@@ -14,7 +14,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 | Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
 |---|---|---|---|---|
-| **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #36 | The remaining reveal beats (visual debt 2 and 5) |
+| **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #38 | Tony guiding beats 2 and 8 — see below |
 | **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36 | `/counter` furniture (visual debt 3) |
 | **Stats & Data** | `TECH_LEAD_IMPLEMENTING`, independently verified | `main` | #33 | The deterministic Slice, consuming typed facts only |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **blocked on the commissioner** | — | — | Supply the files; the slot is enforced |
@@ -34,7 +34,25 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ## Where the product is — 2026-07-30 (second session)
 
-**Five pull requests landed this session.** In order: **#31** the demo-state catalog and its two isolation guards · **#32** the appliers, the CLI, the one-command database and four demo-backed visual states · **#33** Stats Intelligence — persisted weekly matchups, typed facts, the calibrated significance policy, the board socket · **#34** seatless managers through their own door · **#35** the Collection and Showcase shelf. **#36** carries the art-slot contract and this checkpoint.
+**Eight pull requests landed this session.** In order: **#31** the demo-state catalog and its two isolation guards · **#32** the appliers, the CLI, the one-command database and four demo-backed visual states · **#33** Stats Intelligence — persisted weekly matchups, typed facts, the calibrated significance policy, the board socket · **#34** seatless managers through their own door · **#35** the Collection and Showcase shelf. **#36** the art-slot contract and the photographable reveal · **#37** the retired-manager boundary and the independent Stats verification · **#38** the reveal plate saying what was earned and offering another.
+
+### The M2 loop, walked and scored
+
+The bar is the commissioner's emotional sequence, not the subsystem list. Walked on a production build in #38; screenshots of every beat are in `visual-qa/loop/`.
+
+| Beat | State |
+|---|---|
+| enter Tony's Pizza | ✅ warm, in-world, legible immediately |
+| immediately understand | ✅ Tony opens with a line built from your real record |
+| receive a welcome box | ⚠️ it is *there* and lit; nobody hands it over. **Tony should.** |
+| become excited to open it | ⚠️ the glow is the only signal |
+| enjoy opening it | ✅ anticipation, rise, rarity flash, plate |
+| receive a collectible | ✅ |
+| understand what they earned | ✅ #38 — first / *n* of 24 / the whole shelf |
+| want to open another | ✅ #38 — the offer, with its price, absent when unaffordable |
+| continue into Collection or Showcase | ✅ |
+
+**The one open beat is Tony's.** He is the natural voice for "here, first one's on the house" and for "want another?", and both are *curated content* — a new greeting group governed by `assertOnlyApprovedGroups`, which is a content decision rather than an implementation one. Two derived tags would carry it: an unopened welcome box, and an empty tray with enough on the tab. Not added silently.
 
 ### Corrections applied after the first report
 
@@ -153,8 +171,8 @@ Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requi
 
 | Gate | Result | Where |
 |---|---|---|
-| `npm run check` | green — **667 tests, 41 files** | local, throwaway Postgres |
-| `npm run visual:qa` | green — **22 states × 3 widths**, production build | local |
+| `npm run check` | green — **691 tests, 44 files** | local, throwaway Postgres |
+| `npm run visual:qa` | green — **27 states × 3 widths**, production build | local |
 | `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
 | PR #23 (integration → `main`) | green on final head `c91548c`; **merged** as `238dfca` | PR #23 |
 | Live production URL | ❌ **never loaded.** Proxy denies CONNECT to `*.vercel.app` | — |
