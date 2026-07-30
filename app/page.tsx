@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
-import { Arriving, ShowInteractables } from '@/components/scene/arrival';
+import { Arriving } from '@/components/scene/arrival';
+import { BannerRail } from '@/components/scene/banner-rail';
 import { RoomDisplay, RoomDoor } from '@/components/scene/room-object';
 import { TonyToy } from '@/components/scene/tony-toy';
 import { Page } from '@/components/shell';
@@ -11,7 +12,15 @@ import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
 import { getDb } from '@/lib/db';
-import { COUNTER_EDGE, ROOM, TONY, roomObject } from '@/lib/parlor/objects';
+import { championBanners } from '@/lib/parlor/champions';
+import {
+  COUNTER_EDGE,
+  ROOM,
+  TONIGHT_FIELD,
+  TONY,
+  place,
+  roomObject,
+} from '@/lib/parlor/objects';
 import { seasonClock } from '@/lib/parlor/season';
 import { tonightBoard } from '@/lib/parlor/tonight';
 import { loadTags } from '@/lib/tags/repository';
@@ -20,48 +29,53 @@ import { loadTags } from '@/lib/tags/repository';
  * Tony's Pizza Parlor.
  *
  * You are standing at the counter, and that is the whole page. The room fills
- * the viewport, Tony is behind it, and **the shop is the navigation** — there is
- * no tab bar, because a restaurant with a tab bar screwed along the bottom of it
- * is an app with a themed background. You get to your collection by looking in
- * the case on the counter. Nothing here scrolls; what you pick up opens over the
- * room and scrolls on its own.
+ * the viewport, Tony is in it, and **the shop is the navigation** — there is no
+ * tab bar, because a restaurant with a tab bar screwed along the bottom is an
+ * app with a themed background. Nothing here scrolls; what you pick up opens
+ * over the room and scrolls on its own.
  *
- * ## The room is three layers
+ * ## The room is one image, cut once
  *
- *   1. `zone_front_counter` — the ceiling, the wall, the back bar, the counter
- *   2. Tony
- *   3. `zone_counter_front` — the front of the counter and the floor
+ * `zone_parlor_shell` is a single 320 × 569 drawing. Rows **0–291** are drawn
+ * behind Tony and rows **292–568** over him, which is what puts him *in* the
+ * shop rather than on a picture of one — and what lets the counter, the tray
+ * and the receipt sit in front of his waist.
  *
- * The two tiles are one drawing cut at the counter's near edge, so they
- * reassemble it with no seam. Tony is drawn *between* them, which is what puts
- * him in the shop rather than on top of a picture of one — and what lets him
- * step up from behind the counter when you arrive.
- *
- * ## The measurements
+ * It used to be two assets. That was withdrawn: two independently generated
+ * images that must stay pixel-aligned across every regeneration is a defect
+ * class, and one drawing cut at a measured line has no seam to drift.
  *
  * ## What is interactive, and why
  *
- * `lib/parlor/objects.ts` is the map, and the rule is the ruling's: an object
- * is interactive because it has an understandable purpose, not because it is
- * painted well. Doors go somewhere and are the only kind that advertise;
- * Displays are read in place; Toys answer; scenery is scenery and is not in the
- * markup at all. Every shape is a polygon traced on the art, which is both the
- * outline that glows and the region that takes the tap.
+ * `lib/parlor/objects.ts` is the map: **3 Doors, 4 Displays, 1 Toy.** An object
+ * is interactive because a manager can guess where it goes before tapping it,
+ * not because it is painted well. Booths, posters and the oven are scenery and
+ * are not in the markup at all.
+ *
+ * **Only Doors glow, and only when they have something to say.** The board, the
+ * sign, the receipt, the tray and the doorway are baked into the shell, so they
+ * have no alpha to derive a glow from — which is correct rather than a
+ * limitation: Displays never glow by rule, and in V1 the two baked Doors have
+ * nothing to announce.
  */
 
 // The greeting is chosen per manager and logged on the first visit of each day,
 // so this page is never static and never cached.
 export const dynamic = 'force-dynamic';
 
+/** The fraction of the room that sits behind Tony. */
+const CUT = COUNTER_EDGE / ROOM.height;
+
 export default async function ParlorPage() {
   const { user } = await requireUser();
   const db = getDb();
   const clock = seasonClock();
 
-  const [tags, managers, tonight] = await Promise.all([
+  const [tags, managers, tonight, banners] = await Promise.all([
     loadTags(db),
     listDoorManagers(db),
     tonightBoard(db),
+    championBanners(db),
   ]);
 
   const greeting = await greetingFor(db, {
@@ -73,15 +87,20 @@ export default async function ParlorPage() {
   });
 
   const line = greeting?.text ?? `Tony nods at ${user.displayName} and goes back to the oven.`;
+  // The board's face carries the state line plus one headline. The countdown
+  // already has its own row there, so the headliner is the next line down.
+  const headliner = tonight.find((entry) => entry.key !== 'kickoff');
+  const shell = resolveAsset('zone_parlor_shell');
 
   return (
     <Page oneScreen>
       <Arriving>
         {/*
           * The utility bar. Deliberately the smallest thing on the screen: the
-          * day, the way to ask what is interactive, and who you are. Every part
-          * of it is `nowrap` — a bar that reflows to two lines is a bar that has
-          * stolen a slice of the room, and the room is the point.
+          * day and who you are, and nothing else. The "what's open?" control
+          * that used to live here is gone — `18 §7` makes that assist optional
+          * and off by default rather than persistent chrome, and it was also
+          * where the visible rectangles around room objects came from.
           */}
         <header className="flex h-11 shrink-0 items-center justify-between gap-1 overflow-hidden bg-ink-900 pr-1 pl-3">
           <span className="shrink-0 font-display text-[9px] whitespace-nowrap text-ink-100/55 uppercase">
@@ -89,32 +108,41 @@ export default async function ParlorPage() {
               ? 'Week one'
               : `${String(clock.daysUntilKickoff)} days out`}
           </span>
-          <div className="flex min-w-0 items-center">
-            <ShowInteractables />
-            <Link
-              href="/profile"
-              className="flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-display text-[9px] whitespace-nowrap text-paper-mid/75"
-            >
-              {user.displayName}
-            </Link>
-          </div>
+          <Link
+            href="/profile"
+            className="flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-display text-[9px] whitespace-nowrap text-paper-mid/75"
+          >
+            {user.displayName}
+          </Link>
         </header>
 
         {/* ---- The parlor ------------------------------------------------- */}
         <main
           className="relative flex min-h-0 flex-1 justify-center overflow-hidden"
-          // The floor's own colour, so a viewport taller than the room reads as
-          // more floor rather than as a letterbox.
-          style={{ backgroundColor: '#3b2050' }}
+          // The carpet's own colour, measured off the bottom of the shell, so a
+          // viewport taller than the room reads as more floor rather than as a
+          // letterbox. This was `#3b2050` — `violet-deep`, the exact colour the
+          // Euclidean quantizer fix drove to 0% in the art. The page had been
+          // hardcoding the old bug's output.
+          style={{ backgroundColor: '#4A2E1C' }}
         >
           <div
             className="relative w-full max-w-[430px] self-start"
             style={{ aspectRatio: `${String(ROOM.width)} / ${String(ROOM.height)}` }}
           >
-            {/* 1. Everything behind the counter. */}
-            <AssetView resolution={resolveAsset('zone_front_counter')} />
+            {/* 1. The room behind Tony — the shell's rows 0-291. */}
+            <div
+              className="absolute inset-x-0 top-0 overflow-hidden"
+              style={{ height: `${(CUT * 100).toFixed(3)}%` }}
+            >
+              <AssetView resolution={shell} />
+            </div>
 
-            {/* The shop's small signs of life, over the rear layer only. */}
+            {/* The newspaper rack, standing in the left alcove. */}
+            <div className="absolute z-[6]" style={place([10, 224, 38, 38])}>
+              <AssetView resolution={resolveAsset('object_newspaper_rack')} />
+            </div>
+
             <AmbientLife />
 
             {/* 2. Tony, standing in the room. */}
@@ -133,27 +161,62 @@ export default async function ParlorPage() {
               />
             </div>
 
-            {/* 3. The counter front and the floor, drawn over him. */}
+            {/*
+              * 3. The counter and the floor, drawn over him.
+              *
+              * The same image, pulled up by the cut so its lower half lands
+              * exactly where it was painted. One drawing, so there is no seam
+              * to misalign.
+              */}
             <div
-              className="absolute inset-x-0 z-20"
-              style={{ top: `${((COUNTER_EDGE / ROOM.height) * 100).toFixed(3)}%` }}
+              className="absolute inset-x-0 bottom-0 z-20 overflow-hidden"
+              style={{ height: `${((1 - CUT) * 100).toFixed(3)}%` }}
             >
-              <AssetView resolution={resolveAsset('zone_counter_front')} />
+              <div
+                className="absolute inset-x-0 top-0"
+                style={{ transform: `translateY(-${(CUT * 100).toFixed(3)}%)` }}
+              >
+                <AssetView resolution={shell} />
+              </div>
             </div>
 
-            {/* ---- What is interactive, and why ------------------------- */}
+            {/* ---- The eight -------------------------------------------- */}
+
+            {/* Doors. */}
+            <RoomDoor spec={roomObject('slice')} />
+            <RoomDoor spec={roomObject('counter')} />
+            <RoomDoor spec={roomObject('back-hall')} />
 
             {/*
-              * The display case: the one available Door the artwork contains.
-              * Doors are the only kind that advertise, so this is the only
-              * thing in the room carrying a persistent outline.
+              * The board's own face.
+              *
+              * Ruled **surface-rendered**, and it was rendering nothing: the
+              * text lived only in the panel that opens over it, so the largest
+              * object in an idle room was a blank cream rectangle. An idle room
+              * is what a manager looks at most of the time.
+              *
+              * A state line and one headliner is what the measured field holds
+              * — `TONIGHT_FIELD`, 111 x 74 logical. The panel keeps all four
+              * lines. `aria-hidden` because the button beneath already carries
+              * the label and the panel carries the prose; a screen reader
+              * should not hear the headline twice on the way to the same place.
               */}
-            <RoomDoor spec={roomObject('collection')} />
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute flex flex-col gap-[3%] overflow-hidden"
+              style={place(TONIGHT_FIELD)}
+            >
+              <p className="font-display text-[8px] leading-none tracking-wide text-red-dark/85 uppercase">
+                {clock.daysUntilKickoff === null
+                  ? 'Week one'
+                  : `Week one · ${String(clock.daysUntilKickoff)} days`}
+              </p>
+              {headliner !== undefined && (
+                <p className="text-[9px] leading-[1.45] text-ink-900/80">{headliner.text}</p>
+              )}
+            </div>
 
-            {/*
-              * The blank board on the wall. A Display: read in place, no route,
-              * no highlight.
-              */}
+            {/* Displays. */}
             <RoomDisplay spec={roomObject('tonight')} title="Tonight at Tony's">
               {tonight.length === 0 ? (
                 <p className="pb-3 text-[19px] text-ink-500">Nothing on the board.</p>
@@ -171,70 +234,72 @@ export default async function ParlorPage() {
               )}
             </RoomDisplay>
 
-            {/*
-              * Tony. A Toy: he answers and leads nowhere, so no outline. His
-              * line and its box live in the component with him.
-              */}
+            <BannerRail banners={banners} />
+
+            <RoomDisplay spec={roomObject('prediction')} title="Tony's prediction">
+              <p className="pb-3 text-[19px] leading-[1.45] text-ink-700">
+                Tony hasn&rsquo;t called this one yet. Check back Tuesday.
+              </p>
+            </RoomDisplay>
+
+            <RoomDisplay spec={roomObject('receipt')} title="Your record">
+              <p className="pb-3 text-[19px] leading-[1.45] text-ink-700">{user.displayName}</p>
+            </RoomDisplay>
+
+            {/* The Toy. */}
             <TonyToy spec={roomObject('tony')} greeting={line} />
-
           </div>
-
         </main>
       </Arriving>
     </Page>
   );
 }
 
-/** A rectangle on the drawing, as the percentages the browser wants. */
-function at(x: number, y: number, width: number, height: number) {
-  return {
-    left: `${((x / ROOM.width) * 100).toFixed(3)}%`,
-    top: `${((y / ROOM.height) * 100).toFixed(3)}%`,
-    width: `${((width / ROOM.width) * 100).toFixed(3)}%`,
-    height: `${((height / ROOM.height) * 100).toFixed(3)}%`,
-  };
-}
-
 /**
  * Three small signs that the shop is running.
  *
- * Not decoration for its own sake and not new objects — each one is a light
- * that already exists in the drawing, given something to do. They are placed
- * over the rear layer so the counter front still occludes anything that reaches
- * below it, and they are opacity only, so they cost a composite and nothing
- * else. `prefers-reduced-motion` removes all three.
+ * Each one is **a light that already exists in the drawing**, given something
+ * to do — not decoration invented on top of the art.
+ *
+ * These were **re-measured against `zone_parlor_shell`**, not carried over. The
+ * previous coordinates were read off the old two-tile room, and on this shell
+ * they landed on a wooden pillar, a patch of shadow, and bare ceiling between
+ * fixtures. Nothing would have errored and no test would have failed — a
+ * cyan-white gradient bar would simply have glowed on a pillar until somebody
+ * noticed. The positions below are the measured extents of the brightest pixels
+ * in the image: the ceiling fixtures at `y 16`, and the pendant lamp over the
+ * booths at `(278, 155)`.
+ *
+ * Opacity only, so they cost a composite and nothing else, and
+ * `prefers-reduced-motion` removes all three.
  */
 function AmbientLife() {
   return (
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]">
-      {/* The soda fountain's four lit buttons. */}
-      <span
-        className="anim-fountain absolute rounded-[1px]"
-        style={{
-          ...at(36, 231, 30, 9),
-          background:
-            'linear-gradient(90deg, rgba(216,244,255,0.5), rgba(255,217,138,0.45), rgba(255,138,120,0.45))',
-          mixBlendMode: 'screen',
-        }}
-      />
-
-      {/* A highlight travelling across the warmer's glass. */}
-      <span className="absolute overflow-hidden" style={at(186, 241, 68, 24)}>
-        <span
-          className="anim-sheen absolute inset-y-0 w-1/3 -skew-x-12"
-          style={{
-            background:
-              'linear-gradient(90deg, transparent, rgba(255,255,255,0.35), transparent)',
-          }}
-        />
-      </span>
-
-      {/* One ceiling light that has never warmed up properly. */}
+      {/* The ceiling fixture on the left, which has never warmed up properly. */}
       <span
         className="anim-flicker absolute rounded-full"
         style={{
-          ...at(196, 20, 26, 12),
-          background: 'radial-gradient(closest-side, rgba(255,217,138,0.75), transparent)',
+          ...place([53, 12, 19, 11]),
+          background: 'radial-gradient(closest-side, rgba(255,217,138,0.55), transparent)',
+        }}
+      />
+
+      {/* Its twin on the right, steady. */}
+      <span
+        className="anim-fountain absolute rounded-full"
+        style={{
+          ...place([178, 12, 17, 11]),
+          background: 'radial-gradient(closest-side, rgba(255,217,138,0.4), transparent)',
+        }}
+      />
+
+      {/* The pendant lamp hanging over the booths. */}
+      <span
+        className="anim-sheen absolute rounded-full"
+        style={{
+          ...place([270, 147, 18, 18]),
+          background: 'radial-gradient(closest-side, rgba(255,217,138,0.42), transparent)',
         }}
       />
     </div>
