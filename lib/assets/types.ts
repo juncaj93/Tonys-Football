@@ -49,6 +49,15 @@ export interface AssetRecord {
   readonly path: string | null;
 
   readonly rarity?: string;
+  /**
+   * Where the art sits in its slot.
+   *
+   * `bottom-center` for anything standing on a surface, which is every
+   * collectible: a taller replacement then grows *upward* rather than sinking
+   * through the tray. Part of the art-slot contract in
+   * `docs/art/ART_PRODUCTION_BACKLOG.md`, asserted by `art-slots.test.ts`.
+   */
+  readonly anchor?: string;
   readonly slot?: string;
   readonly safeArea?: SafeArea;
   readonly suppresses?: readonly string[];

@@ -14,6 +14,18 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Where the product is — 2026-07-30 (second session)
+
+**Five pull requests landed this session.** In order: **#31** the demo-state catalog and its two isolation guards · **#32** the appliers, the CLI, the one-command database and four demo-backed visual states · **#33** Stats Intelligence — persisted weekly matchups, typed facts, the calibrated significance policy, the board socket · **#34** seatless managers through their own door · **#35** the Collection and Showcase shelf. **#36** carries the art-slot contract and this checkpoint.
+
+### The one thing that needs the commissioner
+
+**Collectible art.** Every one of the twenty-four items draws the same stand-in, and generating sprites needs an image generator the league does not pay for. `docs/art/ART_PRODUCTION_BACKLOG.md` batch B is the brief — eight items, `46 × 46`, transparent, bottom-centre anchor, parlor palette, no baked text or frame. Dropping the files under `public/assets/collectible/` and adding a row each to `art/assets.inventory.json` is the whole swap; no feature code changes. Until then the stand-in is deliberate, not broken.
+
+Everything else below is engineering and does not wait on anybody.
+
+---
+
 ## Where the product is — 2026-07-30
 
 **M2 — the complete pizza-box loot loop. ✅ Shipped to `main` 2026-07-30 (`238dfca`, PR #23). Production deployed.**
@@ -36,10 +48,10 @@ Milestones after M2, in order and one at a time: **M3** modular character identi
 
 | Branch | Role |
 |---|---|
-| `main` | production. Merging it deploys — `vercel-build` runs migrate → seed → build. There is no quiet merge to `main`. **Carries all of M2 as of `238dfca`.** |
-| `integration/m2-loot-box` | ✅ merged and finished. Do not add to it. The next milestone gets its own integration branch. |
+| `main` | production. Merging it deploys — `vercel-build` runs migrate → seed → build. There is no quiet merge to `main`. |
+| `integration/m2-loot-box` | ✅ merged and finished. Do not add to it. |
 
-Base a slice branch on the **active integration branch**, never on `main`. Rebase onto it after each slice merges so the next PR shows only its own diff.
+**Slices are branching straight off `main` again**, one PR each, merged as soon as both gates are green. That is deliberate and it worked: five PRs landed in one session without a three-way merge. The integration-branch model in `TECH_LEAD_OPERATING_MODEL.md §3` exists to stop an *incomplete visual milestone* reaching production — each of these was individually coherent, so it did not apply. Group onto an integration branch again the moment a slice is only meaningful alongside its siblings.
 
 ### Slices
 
@@ -84,8 +96,8 @@ Item 3 is done. What the demo fixtures immediately exposed, and what is next:
 | | Work |
 |---|---|
 | **D** | ✅ **Collection and Showcase — done** (#35). The shelf is boards with objects standing on them and gaps where nothing is; set progress *is* the filter; the league wall is a ledger on paper rather than ten black cards. The Counter needed only its back-link corrected. |
-| **C** | **Art slots.** Every owned collectible draws the same beige carton, because the collectible art is placeholder. Each is a registry row, never a code change — but the placeholder must stop being a box-shaped stand-in for twenty-four different objects. |
-| **B** | **The reveal.** Anticipation, rarity treatment and the continuation action. See the note below about photographing a *specific* rarity. |
+| **C** | ⚠️ **Art slots — the contract is done, the art is a commissioner input** (#36). `lib/assets/art-slots.test.ts` now asserts canvas, anchor, rarity and name for all 24, and it caught a real defect on its first run: every collectible was registered at `32x32` while the slot it draws into is **46**, a 1.4375× resample that would have blurred every sprite — discoverable only *after* they were drawn. Corrected to `46x46`. **Generating the sprites needs an image generator, and the league does not pay for API use, so batches A–C are blocked on the commissioner supplying files.** |
+| **B** | **The reveal.** Anticipation, rarity treatment and the continuation action. Partly delivered in #30 (order pad, overshoot-and-settle, rarity flash, plate delay). What remains is closed-box appearance, shudder timing, lid behaviour, duplicate messaging and the transition out. See the note below about photographing a *specific* rarity — that is the blocker on reviewing it properly. |
 | **E** | ✅ **Seatless managers — done** (#34). The door opens for the whole permanent record; the receipt and the counter say the true thing; the full M2 loop walked end to end as Berardo. |
 
 **A known gap in the demo system, recorded rather than papered over:** the *reveal* cannot yet be demoed at a chosen rarity. The roll is injected through `lib/counter/rng.ts`, which is process-global, and the CLI runs in a different process from the server — so a pre-applied `pull-legendary` leaves the box already opened and the tray empty. Photographing a rarity-specific reveal needs an isolated component state, which `MANDATE §8` explicitly permits, and belongs with **B**.
@@ -114,7 +126,7 @@ Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requi
 
 | Gate | Result | Where |
 |---|---|---|
-| `npm run check` | green — **656 tests, 40 files** | local, throwaway Postgres |
+| `npm run check` | green — **667 tests, 41 files** | local, throwaway Postgres |
 | `npm run visual:qa` | green — **22 states × 3 widths**, production build | local |
 | `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
 | PR #23 (integration → `main`) | green on final head `c91548c`; **merged** as `238dfca` | PR #23 |

@@ -67,7 +67,16 @@
   --color-magenta-deep: #8f1f6b;
 
   /* Rarity reinforces frame geometry and a text label — never color alone. */
-  --color-rarity-common: var(--color-ink-300);
+  /*
+   * `ink-100`, not `ink-300`.
+   *
+   * Common's dark-ground colour was 3.42:1 against the panels it actually sits
+   * on — under the 4.5:1 AA floor, and by coincidence exactly the same failing
+   * ratio the old paper ink had, which is why one fix looked like it covered
+   * both. `ink-100` is 7.6:1 on the same ground. Common is still the quietest
+   * tier; it is now a quiet tier you can read.
+   */
+  --color-rarity-common: var(--color-ink-100);
   --color-rarity-rare: var(--color-blue-light);
   --color-rarity-epic: var(--color-magenta-neon);
   --color-rarity-legendary: var(--color-amber-glow);
@@ -972,11 +981,35 @@ body[data-parlor-focus='reveal'] .tony-line {
   --rarity-legendary: var(--color-rarity-legendary);
 }
 
+/*
+ * The tier inks for a light ground, **measured against `paper-mid`** rather than
+ * eyeballed.
+ *
+ * These existed and were still not readable. `amber-deep` on cream is 2.24:1 and
+ * `ink-300` is 3.42:1 — both under the 4.5:1 AA floor for normal text, and
+ * `LEGENDARY` on the reveal plate was the worst case in the product. `18` makes
+ * rarity **the printed word first** and colour third, so a rarity word nobody
+ * can read is the primary signal missing, not a styling nit.
+ *
+ * `scripts/visual-qa.mts` fails the build below 4.5:1 now, on every surface, so
+ * these numbers cannot drift back:
+ *
+ *   common      ink-500     7.08:1
+ *   rare        blue-mid    4.78:1
+ *   epic        magenta-deep 5.47:1
+ *   legendary   wood-mid    4.96:1
+ *
+ * Legendary is the interesting one. There is no darker gold in the palette —
+ * `amber-deep` is the bottom of that ramp — so it takes the warmest ink that
+ * passes, which is the wood. Gold burnt into paper rather than gold glowing in a
+ * dark room, and the *frame* still carries the tier at full colour. That is
+ * exactly the ordering `18` specifies: word, then frame, then colour.
+ */
 .on-paper {
   --rarity-common: var(--color-ink-500);
   --rarity-rare: var(--color-blue-mid);
   --rarity-epic: var(--color-magenta-deep);
-  --rarity-legendary: var(--color-amber-deep);
+  --rarity-legendary: var(--color-wood-mid);
 }
 
 .rarity-common {

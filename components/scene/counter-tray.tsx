@@ -97,16 +97,29 @@ export function CounterTray({
   spec,
   ownedBoxId,
   boxAsset,
+  previewReveal = null,
 }: {
   spec: RoomObjectSpec;
   /** The oldest unopened box, or null. Resolved on the server every render. */
   ownedBoxId: string | null;
   /** `object_box_owned`, resolved through the registry on the server. */
   boxAsset: AssetResolution;
+  /**
+   * A synthesised reveal to show instead of the tray, for review only.
+   *
+   * Always null in production — the server refuses to build one there
+   * (`lib/demo/preview.ts`). It exists because the reveal's *rarity treatment*
+   * could not otherwise be photographed on purpose: the roll happens inside
+   * `openBox`, and no screenshot harness can choose it.
+   *
+   * A prop rather than a second code path: the component below is the one a
+   * manager sees, or the screenshot is not worth taking.
+   */
+  previewReveal?: RevealPayload | null;
 }) {
   const router = useRouter();
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [reveal, setReveal] = useState<RevealPayload | null>(null);
+  const [phase, setPhase] = useState<Phase>(previewReveal === null ? 'idle' : 'reveal');
+  const [reveal, setReveal] = useState<RevealPayload | null>(previewReveal);
   /** The anticipation beat is over — elapsed, skipped, or never ran. */
   const [beatOver, setBeatOver] = useState(false);
   const [, startTransition] = useTransition();
@@ -356,7 +369,16 @@ function Revealed({
         ref={heading}
         role="status"
         tabIndex={-1}
-        className={`panel-rise plate-late pixel-edge absolute z-[26] border-2 border-wood-dark bg-paper-mid px-3 pt-2 pb-2.5 text-ink-900 outline-none rarity-frame rarity-${reveal.rarity}`}
+        /*
+          * `on-paper` re-points the tier colours at inks mixed for a light
+          * ground. Without it the plate rendered `LEGENDARY` in `amber-glow` —
+          * a colour chosen to read on the *dark room* — on cream, where it is
+          * very nearly invisible. It shipped that way because the reveal's
+          * rarity treatment could not be photographed on purpose until
+          * `?preview_reveal=` existed; the very first legendary screenshot
+          * showed it.
+          */
+        className={`panel-rise plate-late pixel-edge on-paper absolute z-[26] border-2 border-wood-dark bg-paper-mid px-3 pt-2 pb-2.5 text-ink-900 outline-none rarity-frame rarity-${reveal.rarity}`}
         style={placePlate()}
       >
         {/*

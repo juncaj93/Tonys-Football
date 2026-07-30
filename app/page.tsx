@@ -28,6 +28,7 @@ import {
 } from '@/lib/parlor/objects';
 import { seasonClock } from '@/lib/parlor/season';
 import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
+import { previewReveal } from '@/lib/demo/preview';
 import { featuredMatchup, matchupLine } from '@/lib/stats/board';
 import { loadTags } from '@/lib/tags/repository';
 
@@ -79,7 +80,11 @@ export const dynamic = 'force-dynamic';
 /** The fraction of the room that sits behind Tony. */
 const CUT = COUNTER_EDGE / ROOM.height;
 
-export default async function ParlorPage() {
+export default async function ParlorPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { user } = await requireUser();
   const db = getDb();
   const clock = seasonClock();
@@ -103,6 +108,17 @@ export default async function ParlorPage() {
 
   // What the league can see of them, so the room reflects the Showcase choice.
   const shown = await showcaseFor(db, user.id);
+
+  /*
+   * `?preview_reveal=legendary` — review only, and null everywhere it matters.
+   *
+   * The reveal's rarity treatment is otherwise unphotographable on purpose: the
+   * roll happens inside `openBox` and no harness can choose it. `MANDATE §8`
+   * names preview-only query parameters as a sanctioned demo mechanism; the two
+   * guards in `lib/demo/guard.ts` are evaluated here, on the server, so this
+   * cannot be turned on from a URL bar in production.
+   */
+  const preview = previewReveal((await searchParams)['preview_reveal'], process.env);
 
   const greeting = await greetingFor(db, {
     userId: user.id,
@@ -261,6 +277,7 @@ export default async function ParlorPage() {
             <CounterTray
               spec={roomObject('counter')}
               ownedBoxId={box?.id ?? null}
+              previewReveal={preview}
               boxAsset={resolveAsset('object_box_owned')}
             />
 

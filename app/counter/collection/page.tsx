@@ -115,7 +115,9 @@ export default async function CollectionPage({
                     * `colour-tokens.test.ts` exists for at the Tailwind level.
                     */
                   className={`rarity-${rarity} relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 py-2 active:translate-y-px ${
-                    active ? 'bg-paper-mid' : 'bg-[#241618]'
+                    // The chosen tier sits on cream, so it needs the paper inks;
+                    // the others are on the dark rail and keep the lit ones.
+                    active ? 'on-paper bg-paper-mid' : 'bg-[#241618]'
                   }`}
                 >
                   <span
@@ -319,10 +321,19 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
 
   return (
     <li
-      className={`rarity-frame rarity-${entry.rarity} pixel-edge relative flex h-full flex-col items-center gap-1 border-2 border-wood-dark bg-paper-mid px-1.5 pt-2 pb-1.5`}
+      /* `on-paper`: cream ground, so the tier colours are the dark inks. */
+      className={`rarity-frame rarity-${entry.rarity} pixel-edge on-paper relative flex h-full flex-col items-center gap-1 border-2 border-wood-dark bg-paper-mid px-1.5 pt-2 pb-1.5`}
     >
-      <span aria-hidden="true" className="flex h-12 w-full items-center justify-center">
-        <span className="block h-12 w-12">
+      {/*
+        * 46px, which is the source's own size.
+        *
+        * It was 48. The registry now authors every collectible at 46 x 46 — the
+        * reveal slot's exact dimensions — and 48 into 46 is a 1.043x resample
+        * that blurs the hard edges the quantizer exists to guarantee. Native
+        * size, or a whole multiple of it, and nothing in between.
+        */}
+      <span aria-hidden="true" className="flex h-[46px] w-full items-center justify-center">
+        <span className="block h-[46px] w-[46px]">
           {/* `compact`: object scale, so the wall-sized placeholder is wrong here. */}
           <AssetView resolution={resolveAsset(entry.slug)} compact placeholder="collectible" />
         </span>

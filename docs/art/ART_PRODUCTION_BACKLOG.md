@@ -22,6 +22,12 @@ Read with `art/ASSET_PIPELINE.md` (how art enters the repo) and `VISUAL_ACCEPTAN
 
 ## Status of the current stand-ins
 
+### The contract is a test now
+
+`lib/assets/art-slots.test.ts` asserts what this file used to only describe: every catalog collectible carries the slot's exact canvas, a `bottom-center` anchor, a valid rarity, and a name. Prose is what a batch of twenty-four sprites gets generated against, so the parts that can be checked are checked.
+
+**What is still a commissioner input.** The art itself. Generating it needs an image generator, and the league does not pay for API use (2026-07-30) — so batches A–C are blocked on the commissioner supplying files, not on engineering. Every slot renders a stand-in until then and every swap stays a registry row.
+
 | Slot | Stand-in today | Safe to test with? |
 |---|---|---|
 | Unopened box on the tray | `PlaceholderObject kind="box"` — a flat carton, five rectangles | **Yes.** Reads as a sealed box at 44 × 30. |
@@ -66,7 +72,7 @@ The catalog is 24 items and the set list is already fixed in the registry. Batch
 | wearable | one hat or apron | M3 needs a wearable that is also a collectible. |
 | junk | one deliberately worthless item | The set's humour depends on it. |
 
-**Size: 46 × 46**, the reveal slot, bottom-centre anchor. The same file serves the Collection grid and the Showcase — both scale it by a whole number, so one source is enough. An item that does not fill 46 × 46 should be **short, not floating**: bottom-aligned with empty space above.
+**Size: 46 × 46**, the reveal slot, bottom-centre anchor. **Corrected 2026-07-30:** every collectible was registered at `32x32` while the slot it draws into is 46 — a 1.4375× resample, fractional, and a breach of rule 4 above. Nothing looked wrong because the stand-in is CSS and CSS does not care; it would have become visible only after twenty-four sprites were drawn at the wrong size. The registry now says `46x46` and `lib/assets/art-slots.test.ts` fails the build if it drifts. The Collection and Showcase draw at 46 and 23 — native and a whole division — for the same reason. The same file serves the Collection grid and the Showcase — both scale it by a whole number, so one source is enough. An item that does not fill 46 × 46 should be **short, not floating**: bottom-aligned with empty space above.
 
 `collectible_can_whipped_cream` is the reference piece. Exact perspective, crop and anchor are recorded here once the first one is measured against the real reveal slot rather than described in advance — the Technical Lead owes that measurement before Batch B is generated, not after.
 

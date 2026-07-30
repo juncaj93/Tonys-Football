@@ -122,11 +122,12 @@
       },
       "collectible_bapple_tree": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B0",
         "art_status": "placeholder",
         "rarity": "legendary",
-        "alt": "The Bapple Tree"
+        "alt": "The Bapple Tree",
+        "anchor": "bottom-center"
       },
       "surface_poster_blank": {
         "family": "surface",
@@ -548,210 +549,234 @@
       "$comment": "One ring asset. The season year is rendered as text at runtime, so one asset serves every championship forever.",
       "item_championship_ring": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B2",
         "art_status": "placeholder",
         "rarity": "legendary",
         "systemLayer": true,
-        "alt": "Championship ring"
+        "alt": "Championship ring",
+        "anchor": "bottom-center"
       }
     },
     "_collectibles_B3": {
       "$comment": "24-item launch catalog. 12 receive finished art at launch (the 2 legendary, 4 epic, and 6 marked priority); the rest ship as placeholder_pizza_box and upgrade on any Tuesday.",
       "collectible_signed_jersey_legend": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "legendary",
         "priority": true,
-        "alt": "Framed signed jersey"
+        "alt": "Framed signed jersey",
+        "anchor": "bottom-center"
       },
       "collectible_portable_sauna": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "epic",
         "priority": true,
-        "alt": "Portable sauna"
+        "alt": "Portable sauna",
+        "anchor": "bottom-center"
       },
       "collectible_burn_barrel": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "epic",
         "priority": true,
-        "alt": "Burn barrel"
+        "alt": "Burn barrel",
+        "anchor": "bottom-center"
       },
       "collectible_neon_tony_sign": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "epic",
         "priority": true,
-        "alt": "Neon Tony's Pizza sign"
+        "alt": "Neon Tony's Pizza sign",
+        "anchor": "bottom-center"
       },
       "collectible_arcade_cabinet": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "epic",
         "priority": true,
-        "alt": "Arcade cabinet"
+        "alt": "Arcade cabinet",
+        "anchor": "bottom-center"
       },
       "collectible_cookie_tote": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "rare",
         "priority": true,
-        "alt": "Cookie tote"
+        "alt": "Cookie tote",
+        "anchor": "bottom-center"
       },
       "collectible_reddiwip": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "rare",
-        "alt": "Can of whipped cream"
+        "alt": "Can of whipped cream",
+        "anchor": "bottom-center"
       },
       "collectible_lava_lamp": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "rare",
         "interactive": true,
-        "alt": "Lava lamp"
+        "alt": "Lava lamp",
+        "anchor": "bottom-center"
       },
       "collectible_singing_fish": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "rare",
         "interactive": true,
-        "alt": "Novelty singing fish"
+        "alt": "Novelty singing fish",
+        "anchor": "bottom-center"
       },
       "collectible_crt_tv": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "rare",
         "interactive": true,
         "priority": true,
-        "alt": "CRT television"
+        "alt": "CRT television",
+        "anchor": "bottom-center"
       },
       "collectible_pinball_machine": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "rare",
-        "alt": "Pinball machine"
+        "alt": "Pinball machine",
+        "anchor": "bottom-center"
       },
       "collectible_revolution_poster": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "rare",
         "priority": true,
-        "alt": "Join the revolution poster"
+        "alt": "Join the revolution poster",
+        "anchor": "bottom-center"
       },
       "collectible_freddy_bowl": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "rare",
-        "alt": "Dog bowl"
+        "alt": "Dog bowl",
+        "anchor": "bottom-center"
       },
       "collectible_pizza_cutter": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Pizza cutter"
+        "alt": "Pizza cutter",
+        "anchor": "bottom-center"
       },
       "collectible_parmesan_shaker": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Parmesan shaker"
+        "alt": "Parmesan shaker",
+        "anchor": "bottom-center"
       },
       "collectible_napkin_dispenser": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Napkin dispenser"
+        "alt": "Napkin dispenser",
+        "anchor": "bottom-center"
       },
       "collectible_ketchup_bottle": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Squeeze bottle"
+        "alt": "Squeeze bottle",
+        "anchor": "bottom-center"
       },
       "collectible_paper_menu": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Paper menu"
+        "alt": "Paper menu",
+        "anchor": "bottom-center"
       },
       "collectible_booth_cushion": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Red vinyl booth cushion"
+        "alt": "Red vinyl booth cushion",
+        "anchor": "bottom-center"
       },
       "collectible_arcade_token": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Arcade token"
+        "alt": "Arcade token",
+        "anchor": "bottom-center"
       },
       "collectible_receipt_spike": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Receipt spike"
+        "alt": "Receipt spike",
+        "anchor": "bottom-center"
       },
       "collectible_coffee_mug": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Diner coffee mug"
+        "alt": "Diner coffee mug",
+        "anchor": "bottom-center"
       },
       "collectible_checkered_cloth": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B3",
         "art_status": "placeholder",
         "rarity": "common",
-        "alt": "Checkered tablecloth"
+        "alt": "Checkered tablecloth",
+        "anchor": "bottom-center"
       }
     },
     "_surfaces_B4": {
@@ -898,10 +923,11 @@
       },
       "placeholder_pizza_box": {
         "family": "collectible",
-        "canvas": "32x32",
+        "canvas": "46x46",
         "batch": "B4",
         "art_status": "placeholder",
-        "alt": "Closed pizza box with a handwritten label"
+        "alt": "Closed pizza box with a handwritten label",
+        "anchor": "bottom-center"
       }
     },
     "_dressings_B5": {

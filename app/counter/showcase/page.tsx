@@ -153,7 +153,8 @@ export default async function ShowcasePage() {
                        */
                       <span className="h-[3px] w-6 bg-ink-700/30" />
                     ) : (
-                      <span className="block h-10 w-10">
+                      <span className="block h-[23px] w-[23px]">
+                        {/* Half the 46 source — a whole division, so still crisp. */}
                         <AssetView resolution={resolveAsset(entry.item.slug)} compact placeholder="collectible" />
                       </span>
                     )}
