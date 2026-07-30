@@ -154,6 +154,17 @@ Chronological. `PR #n · comment` is the authoritative text.
 | 2026-07-30 | **Rarity is the word first**, then frame geometry, then colour. Colour is an accent *inside* a house-material surface, never the surface's own border | `app/globals.css` |
 | 2026-07-30 | `PlaceholderSign` is for **surfaces**; small objects use `PlaceholderObject` via `AssetView … compact`. The wall sign does not shrink | `lib/assets/placeholder.tsx` |
 | 2026-07-30 | The revealed collectible **rests on the tray**, where the box was. Motion may lift it; geometry may not float it | `TRAY_REVEAL` |
+| 2026-07-30 | `apply_token_delta` is a **Postgres function**, not a service. The balance column has one write path, enforced by a trigger pair — a direct `UPDATE` of `token_balance` raises | `drizzle/0005_token_ledger.sql` |
+| 2026-07-30 | **A token delta needs a client-supplied idempotency key; opening a box does not.** A delta is an event with no natural key; a box opens once and has one. The two slices differ on purpose | `lib/counter/tokens.ts` |
+| 2026-07-30 | Reusing an idempotency key for a **different** delta raises rather than silently no-opping — a silent no-op would tell a caller it moved tokens that never moved | `apply_token_delta` |
+| 2026-07-30 | Overdraft is refused by `CHECK (token_balance >= 0)`, never by a read-then-check in a service. The Buy button is **never disabled on a client-read balance** | `lib/counter/boxes.ts` |
+| 2026-07-30 | Purchase debits **before** creating the box, so an unaffordable purchase creates nothing. One transaction; the box's `grant_key` is derived from the ledger key | `purchaseBox` |
+| 2026-07-30 | `apply_token_delta` refuses a **finalized season** (`03 §6` closes the books). 2024/2025 are finalized in every environment, so this is reachable | `drizzle/0005_token_ledger.sql` |
+| 2026-07-30 | The purchase idempotency key is **namespaced server-side** under the session's user id, so a client cannot craft a key that reaches another ledger row | `app/actions/counter.ts` |
+| 2026-07-30 | The token balance lives on the **receipt**, not in the utility bar — a balance bolted to the chrome is the first step toward the dashboard `16 §1` names as the failure mode | `app/page.tsx` |
+| 2026-07-30 | **New gate:** no Tailwind class may reference an undefined `--color-*` token. Four sites shipped invisible or accidentally-inherited text | `lib/design/colour-tokens.test.ts` |
+| 2026-07-30 | Body copy inside a cream `PixelPanel` is **`text-ink-700`**, never `text-paper-*`. Cream on cream shipped on three routes | `VISUAL_ACCEPTANCE.md §4` |
+| 2026-07-30 | `tray-reveal` is a **required** visual state now that a box can be bought per width | `VISUAL_ACCEPTANCE.md §1` |
 
 ---
 
@@ -163,7 +174,7 @@ Chronological. `PR #n · comment` is the authoritative text.
 
 | | Work | State |
 |---|---|---|
-| 1 | Ownership, openings and inventory schema — append-only, trigger-enforced | ✅ |
+| 1 | Ownership, openings and inventory schema — append-only, trigger-enforced | ✅ merged |
 | 2 | Stored versioned reward table, provisional until P3 | ✅ |
 | 3 | Server-authoritative, transactional, idempotent opening | ✅ |
 | 4 | The box on the tray; open-in-place; the reveal | ✅ |

@@ -259,3 +259,45 @@ Room interaction (`18 §10`):
 
 - **Reward weights are provisional.** `PROVISIONAL_RARITY_MASS` in `lib/counter/rewards.ts` exists so the loop can be played, not because it is right. Tuning it is P3's job; doing it earlier locks the values the gate exists to keep open.
 - **Collectible art is placeholder**, so an unfinished item and the box it came out of are drawn as the same carton. The plate carries the identity, and every reveal is lifted so the moment still reads. Twelve items get finished art at launch, and each one is a registry row.
+
+
+---
+
+# Where M2 slice 2 landed
+
+**Token acquisition.** The economy's spine, and the thing every later slice spends.
+
+## The map
+
+| | Where |
+|---|---|
+| `apply_token_delta`, the balance triggers, the append-only guards | `drizzle/0005_token_ledger.sql` |
+| Typed wrapper, wallet reads, versioned config | `lib/counter/tokens.ts` |
+| Buying a box — one transaction, debit first | `lib/counter/boxes.ts` (`purchaseBox`) |
+| The Buy control and its per-attempt idempotency token | `components/counter/buy-box.tsx` |
+| Season opening balance, idempotent per seat | `scripts/seed.ts` |
+| The dead-colour-token gate | `lib/design/colour-tokens.test.ts` |
+
+## Decisions a later slice should know about
+
+- **`apply_token_delta` is a Postgres function, not a service.** `16 §5.4` says no feature gets its own balance-writing path, and that is only true if the path is in the database. A cron job, a psql session and a server action all reach the same code.
+- **The balance column has a guard trigger, not just a CHECK.** A direct `UPDATE season_memberships SET token_balance = …` raises. The ledger trigger raises a transaction-local flag for exactly the duration of its own UPDATE; nothing else may change the column.
+- **A token delta needs a caller-supplied idempotency key; opening a box does not.** A delta is an *event* with no natural key — "add 150 tokens" may legitimately happen twice. A box opens once and has one. The two slices differ deliberately, and the difference is worth preserving.
+- **Reusing a key for a different delta raises.** Silently returning the old row would tell a caller it moved tokens that never moved.
+- **Overdraft is refused by the database, never by a service.** A read-then-check is a race: ten parallel purchases against an eight-box balance yield exactly eight, asserted.
+- **Purchase debits first.** If the money fails the box is never created, so nobody holds an unpaid box. The box's `grant_key` is derived from the ledger key, so a retry cannot mint a second box.
+- **The purchase key is namespaced server-side** under the session's user id. A client cannot craft a key that reaches another ledger row.
+- **`apply_token_delta` refuses a finalized season.** `03 §6` closes the books; 2024/2025 are finalized in every environment, so it is reachable rather than theoretical.
+- **The opening balance is the only honest token source today.** Matchup wins and weekly high scores need a played season and the two cron jobs that would award them (`16 §4.3`) do not exist. The enum declares them; nothing is wired to them. **Do not invent a weekly reward that fires on nothing.**
+- **The balance is on the receipt, not in the utility bar.** The homepage is exactly eight interactive objects, and a balance readout bolted to the chrome is the first step toward the dashboard `16 §1` names as the failure mode.
+- **`tray-reveal` is now a required visual state** because each width can buy its own box. That capture exercises the ledger, the balance check and the tray transition as well as the reveal.
+
+## What slice 3 owns
+
+1. **`/counter/collection`** — where a pulled collectible can actually be looked at. Rarity, filters, set progress, duplicate counts. Until it exists the loop dead-ends and nothing may merge to `main`.
+2. **Do not** absorb showcase or equip. That is slice 4.
+
+## Still open
+
+- **Every economy number is provisional.** `PROVISIONAL_ECONOMY` in `lib/counter/tokens.ts` (250 opening, 50 per box) comes from `03 §4` / `03 §11` baselines, not from simulation. P3 owns them; a rebalance writes a **new** `economy_configs` version rather than editing one.
+- **No token sinks other than boxes**, and no weekly income. Both wait on systems that do not exist yet.

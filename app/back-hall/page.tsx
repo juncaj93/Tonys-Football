@@ -53,7 +53,7 @@ export default async function BackHallPage() {
             <Link href="/rooms" className="block outline-none">
               <PixelPanel className="px-4 py-4 active:translate-y-px">
                 <PanelHeading>Down the stairs</PanelHeading>
-                <p className="mt-1.5 text-[15px] leading-[1.45] text-paper-mid/75">
+                <p className="mt-1.5 text-[15px] leading-[1.45] text-ink-700">
                   A light is on at the bottom and somebody has been moving boxes.
                 </p>
                 <p className="mt-2 font-display text-[9px] text-amber-mid/70 uppercase">
@@ -82,7 +82,7 @@ export default async function BackHallPage() {
               */}
             <PixelPanel className="px-4 py-4">
               <PanelHeading>The curtained door</PanelHeading>
-              <p className="mt-1.5 text-[15px] leading-[1.45] text-paper-mid/75">
+              <p className="mt-1.5 text-[15px] leading-[1.45] text-ink-700">
                 Heavy curtain, no handle you can see, no sign on it.
               </p>
               <p className="mt-2 font-display text-[9px] text-amber-mid/70 uppercase">

@@ -242,22 +242,24 @@ async function reach(page: Page, state: StateName): Promise<void> {
     /*
      * The reveal.
      *
-     * **Opt-in, via `--state=tray-reveal`, and deliberately not in `ALL_STATES`.**
+     * **Required at every width, now that boxes are bought rather than seeded.**
      *
-     * A box opens exactly once, by design — that is the slice's central
-     * guarantee, enforced by a unique constraint. So capturing the reveal
-     * *consumes* the state, which means it cannot be part of a gate that has to
-     * be idempotent and has to produce the same artifact set at three widths from
-     * one seeded database. Including it would make `npm run visual:qa` pass on a
-     * fresh database and fail on the second run, and a gate that cries wolf gets
-     * switched off.
+     * It could not be before. A box opens exactly once by design, so the seeded
+     * fixture box meant capturing the reveal at 390 consumed it and the two
+     * narrower widths photographed an empty tray — a gate that passes on a fresh
+     * database and fails on the second run, which is worse than no gate.
      *
-     * This is a real gap and it is stated rather than hidden: the reveal is
-     * reviewed from an on-demand capture until boxes are *acquirable*, at which
-     * point the driver can mint one per width and this becomes a required state.
-     * That is the next slice (token purchase through `apply_token_delta`).
+     * Purchase fixes it properly rather than by contrivance: each width buys its
+     * own box out of the season's opening balance, which covers several at the
+     * provisional price. So this state now also exercises the ledger, the balance
+     * check and the tray transition in one pass.
      */
     case 'tray-reveal':
+      await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: /Buy a standard pizza box/i }).click();
+      // The purchase refreshes the page; wait for the tray panel to appear rather
+      // than for a fixed delay, so a slow runner does not photograph a stale page.
+      await page.getByText(/unopened box/i).first().waitFor({ timeout: 15_000 });
       await home(page);
       await dismissTony(page);
       await page.getByRole('button', { name: /Open your pizza box/i }).click({ force: true });
@@ -281,10 +283,8 @@ const ALL_STATES: readonly StateName[] = [
   'keyboard-focus',
   'six-banners',
   'tray-owned-box',
+  'tray-reveal',
 ];
-
-/** Reachable by name, but not part of the required set. See `tray-reveal` above. */
-const OPT_IN_STATES: readonly StateName[] = ['tray-reveal'];
 
 /* ------------------------------------------------------------------- gates -- */
 
@@ -548,10 +548,7 @@ async function checkOnlyTheTrayGlows(page: Page, width: number): Promise<void> {
 
 async function run(): Promise<void> {
   const only = process.argv.find((a) => a.startsWith('--state='))?.split('=')[1];
-  const states =
-    only === undefined
-      ? ALL_STATES
-      : [...ALL_STATES, ...OPT_IN_STATES].filter((s) => s === only);
+  const states = only === undefined ? ALL_STATES : ALL_STATES.filter((s) => s === only);
   if (states.length === 0) throw new Error(`unknown --state=${String(only)}`);
 
   mkdirSync(OUT, { recursive: true });

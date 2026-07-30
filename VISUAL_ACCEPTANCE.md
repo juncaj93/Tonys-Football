@@ -25,11 +25,13 @@ So the gates below are written as things a machine can check, and the rest is wr
 
 Captured at every width, every run:
 
-`idle` · `tony-dialogue` · `tonight-board` · `banner-completed` · `banner-current-tbd` · `rack` · `prediction` · `receipt` · `counter` · `back-hall` · `keyboard-focus` · `six-banners` · `tray-owned-box`
+`idle` · `tony-dialogue` · `tonight-board` · `banner-completed` · `banner-current-tbd` · `rack` · `prediction` · `receipt` · `counter` · `back-hall` · `keyboard-focus` · `six-banners` · `tray-owned-box` · `tray-reveal`
 
 Loading, empty and error states are reviewed when the surface that owns them changes.
 
-**`tray-reveal` is reachable but not required**, via `npm run visual:qa -- --state=tray-reveal`. A box opens exactly once by design, so capturing the reveal *consumes* the state: it cannot be part of a gate that must be idempotent and must produce the same artifact set at three widths from one seeded database. It becomes a required state in the slice that makes boxes acquirable, when the driver can mint one per width. Until then the reveal is reviewed from an on-demand capture, and this paragraph is here so the gap is stated rather than discovered.
+**`tray-reveal` became required once boxes were purchasable.** It could not be before: a box opens exactly once by design, so capturing the reveal *consumed* the state — 390 got a screenshot and the two narrower widths photographed an empty tray. A gate that passes on a fresh database and fails on the second run is worse than no gate.
+
+Purchase fixed it properly rather than by contrivance. Each width now **buys its own box** out of the season's opening balance before opening it, so the state is repeatable *and* the capture exercises the ledger, the balance check and the tray transition in one pass.
 
 ## 2. Required widths
 
@@ -79,6 +81,7 @@ Reject, with a concrete repair task, for any of:
 - **A placeholder drawn at the wrong scale.** `PlaceholderSign` is the taped-up wall sign and does not shrink — its `min-h-24` wins, its label wraps, and a 44 × 30 slot becomes a 54 × 133 white slab with a developer's slug printed down it. Small objects use `PlaceholderObject` (`AssetView … compact`). This shipped once, on the first placeholder ever drawn at object scale.
 - **An object floating with nothing under it.** The room has no floating things, so a floating thing reads as a layout bug rather than as a prize. The revealed collectible rests on the tray; motion may lift it, geometry may not.
 - **Rarity, or any other state, painted as a neon frame.** Rarity is the **word first**, then frame geometry, then colour — and colour is an accent *inside* a house-material surface, never the surface's own border. An epic pull inside a bright magenta double frame is a UI component sitting on a hand-drawn counter.
+- **Text the same colour as the surface under it.** Body copy inside a cream `PixelPanel` is `text-ink-700`; `text-paper-*` is for copy on the dark room. Cream-on-cream shipped on `/counter`, `/back-hall` and `/timeline` — three routes rendering headings above **invisible** paragraphs, all of them green in CI. A related trap: a class naming a `--color-*` token that does not exist generates no rule at all and silently inherits. `lib/design/colour-tokens.test.ts` now fails the build for the second case; the first is still a thing a reviewer has to look for.
 - **Broken spacing, awkward composition**, or anything that technically works and visibly feels unfinished.
 
 ---

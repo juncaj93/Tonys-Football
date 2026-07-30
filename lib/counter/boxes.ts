@@ -5,9 +5,9 @@ import { type Database } from '@/lib/db';
 import { boxOpenings, collectibles, lootBoxes, rewardTables } from '@/lib/db/schema';
 
 import { catalogItem, type Rarity } from './catalog';
-import { standardRewardTable } from './rewards';
-import { resolveRoll } from './rewards';
+import { resolveRoll, standardRewardTable } from './rewards';
 import { rollBelow } from './rng';
+import { applyTokenDelta, economyFor, wallet } from './tokens';
 
 /**
  * Owning a box, and opening it.
@@ -17,9 +17,9 @@ import { rollBelow } from './rng';
  * never decides a reward.** Nothing in `components/` or `app/` may resolve an
  * item; they call in here and render what comes back.
  *
- * Purchase is deliberately absent. Boxes arrive from the seed in this slice; the
- * token path goes through `apply_token_delta` and is the next slice's work
- * (`16 §5.4`). No function here writes a balance.
+ * Purchase spends tokens, and every token movement goes through
+ * `apply_token_delta` (`16 §5.4`). **No function here writes a balance** — the
+ * database refuses it, so this file could not do so even by mistake.
  */
 
 /** What the tray needs to know. */
@@ -75,6 +75,125 @@ export async function grantBox(
     .returning({ id: lootBoxes.id });
 
   return { granted: written.length > 0 };
+}
+
+/**
+ * Buy a box with tokens.
+ *
+ * ## One transaction, and the money moves first
+ *
+ * The debit and the box are written together, so there is no state where a
+ * manager has paid and has nothing, or has a box and has paid nothing. The debit
+ * goes first on purpose: `apply_token_delta` is what enforces the balance, so if
+ * they cannot afford it the `CHECK (token_balance >= 0)` fails and the box is
+ * never created. **Nothing here reads a balance and decides** — a read-then-check
+ * is a race, and two purchases arriving together would both pass it.
+ *
+ * ## Idempotent through the ledger's key
+ *
+ * The purchase's identity *is* the ledger key. A retry replays the delta (a
+ * no-op) and then finds the box already granted under the derived `grant_key`, so
+ * a double-tapped Buy button spends once and yields one box. Both halves are
+ * unique constraints rather than checks, so a race loses at the database.
+ *
+ * The caller supplies the key. `18 §4` puts purchase on `/counter`; the action
+ * there derives a key from the manager, the season and the request, so a retried
+ * form submission is the same purchase and a *deliberate* second purchase is a
+ * different one.
+ */
+export async function purchaseBox(
+  db: Database,
+  input: {
+    userId: string;
+    seasonId: string;
+    /** Names this purchase. A replay is a no-op; see the note above. */
+    idempotencyKey: string;
+  },
+): Promise<
+  | { readonly status: 'bought'; readonly boxId: string; readonly spent: number }
+  /** The balance would have gone negative. The database refused it. */
+  | { readonly status: 'insufficient_tokens'; readonly price: number; readonly balance: number }
+> {
+  const { values } = await economyFor(db, input.seasonId);
+  const price = values.standardBoxPriceTokens;
+
+  try {
+    return await db.transaction(async (tx) => {
+      await applyTokenDelta(tx, {
+        userId: input.userId,
+        seasonId: input.seasonId,
+        amount: -price,
+        reason: 'BOX_PURCHASE',
+        // `03 §5` requires human-readable text. Curated, not generated.
+        description: 'One standard pizza box, off the counter.',
+        idempotencyKey: input.idempotencyKey,
+      });
+
+      const granted = await tx
+        .insert(lootBoxes)
+        .values({
+          userId: input.userId,
+          kind: 'standard',
+          state: 'UNOPENED',
+          source: 'purchase',
+          // Derived from the ledger key, so the box and the debit share one
+          // identity and a retry cannot produce a second box.
+          grantKey: `purchase:${input.idempotencyKey}`,
+          grantedAt: now(),
+        })
+        .onConflictDoNothing({ target: lootBoxes.grantKey })
+        .returning({ id: lootBoxes.id });
+
+      const boxId =
+        granted[0]?.id ??
+        (
+          await tx
+            .select({ id: lootBoxes.id })
+            .from(lootBoxes)
+            .where(eq(lootBoxes.grantKey, `purchase:${input.idempotencyKey}`))
+            .limit(1)
+        )[0]?.id;
+
+      if (boxId === undefined) throw new Error('the purchased box was not recorded');
+
+      return { status: 'bought' as const, boxId, spent: price };
+    });
+  } catch (error: unknown) {
+    // The one expected failure: the balance check refused the debit. Every other
+    // error is a real fault and must keep propagating.
+    if (isBalanceViolation(error)) {
+      const current = await wallet(db, { userId: input.userId, seasonId: input.seasonId });
+      return {
+        status: 'insufficient_tokens',
+        price,
+        balance: current?.balance ?? 0,
+      };
+    }
+    throw error;
+  }
+}
+
+/**
+ * Was this the balance constraint refusing an overdraft?
+ *
+ * Matched on the **constraint name**, not the message. A message match would also
+ * swallow an unrelated check violation and report it to a manager as "you cannot
+ * afford this", which is a lie that looks like a feature.
+ */
+function isBalanceViolation(error: unknown): boolean {
+  let current: unknown = error;
+  for (let depth = 0; depth < 5; depth++) {
+    if (typeof current !== 'object' || current === null) return false;
+    const candidate = current as { code?: string; constraint?: string; cause?: unknown };
+    if (
+      candidate.code === '23514' &&
+      candidate.constraint === 'season_memberships_token_balance_non_negative'
+    ) {
+      return true;
+    }
+    current = candidate.cause;
+  }
+  return false;
 }
 
 /**

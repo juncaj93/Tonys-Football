@@ -3,8 +3,9 @@
 import { resolveAsset } from '@/lib/assets/registry';
 import { type AssetResolution } from '@/lib/assets/types';
 import { requireUser } from '@/lib/auth/current-user';
-import { openBox } from '@/lib/counter/boxes';
+import { openBox, purchaseBox } from '@/lib/counter/boxes';
 import { type Rarity } from '@/lib/counter/catalog';
+import { openSeason } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
 
 /**
@@ -54,6 +55,63 @@ export type OpenBoxResponse =
    * and the room answers in-world rather than surfacing an error taxonomy.
    */
   | { readonly ok: false };
+
+export type BuyBoxResponse =
+  | { readonly ok: true; readonly spent: number }
+  /** Not enough tokens. The only failure worth explaining, because it is actionable. */
+  | { readonly ok: false; readonly reason: 'insufficient'; readonly price: number; readonly balance: number }
+  /** No open season, no seat, or a malformed request. Nothing was charged. */
+  | { readonly ok: false; readonly reason: 'unavailable' };
+
+/**
+ * Buying a box at the counter.
+ *
+ * ## The idempotency key is namespaced server-side, and that is a security property
+ *
+ * The client supplies a random token per attempt, so a double-tapped Buy button
+ * sends the same one and spends once, while a deliberate second purchase sends a
+ * new one. But the key that reaches the ledger is
+ * `purchase:<userId>:<clientToken>` — built **here**, from the session's own user
+ * id.
+ *
+ * If the client's token were used raw, a manager could send
+ * `season-start:<season>:<someone>` and collide with a real ledger key. The
+ * replay guard inside `apply_token_delta` would raise rather than silently no-op,
+ * so nothing could actually be stolen — but the request would fail confusingly
+ * instead of being impossible. Namespacing makes the whole class unreachable.
+ *
+ * The token is also format-checked, so it cannot be used to smuggle structure
+ * into the key.
+ */
+export async function buyBoxAction(clientToken: string): Promise<BuyBoxResponse> {
+  const { user } = await requireUser();
+
+  if (!/^[0-9a-f-]{36}$/i.test(clientToken)) return { ok: false, reason: 'unavailable' };
+
+  const db = getDb();
+  const season = await openSeason(db);
+  // No open season means the books are closed everywhere — `apply_token_delta`
+  // refuses a finalized season outright, so this is the honest answer rather than
+  // letting the database raise.
+  if (season === null) return { ok: false, reason: 'unavailable' };
+
+  const result = await purchaseBox(db, {
+    userId: user.id,
+    seasonId: season.id,
+    idempotencyKey: `purchase:${user.id}:${clientToken}`,
+  });
+
+  if (result.status === 'insufficient_tokens') {
+    return {
+      ok: false,
+      reason: 'insufficient',
+      price: result.price,
+      balance: result.balance,
+    };
+  }
+
+  return { ok: true, spent: result.spent };
+}
 
 export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
   const { user } = await requireUser();
