@@ -167,9 +167,11 @@ function ChampionPanel({ banner, onClose }: { banner: Banner; onClose: () => voi
           {banner.champion ?? 'TBD'}
         </p>
 
-        {banner.current && (
+        {banner.champion === null && (
           <p className="mt-1.5 text-[13px] leading-[1.45] text-paper-mid/70">
-            Still being played. Nobody has won it yet.
+            {banner.current
+              ? 'Still being played. Nobody has won it yet.'
+              : 'Not finalized, so there is no champion on record.'}
           </p>
         )}
 

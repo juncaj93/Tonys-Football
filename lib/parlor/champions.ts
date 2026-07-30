@@ -67,13 +67,20 @@ export async function championBanners(db: Database): Promise<readonly Banner[]> 
     byYear.set(row.year, entry);
   }
 
+  const latest = Math.max(...byYear.keys());
+
   const banners = [...byYear.entries()]
     .sort(([a], [b]) => a - b)
     .map(([year, entry]) => ({
       year,
       label: String(year).slice(-2),
       champion: entry.champion,
-      current: !entry.finalized,
+      // **Not simply `!finalized`.** A 2024 season that is archived but has not
+      // been through `--finalize` has no champion on record, and saying "still
+      // being played" about it would be plainly false. Only the newest season
+      // can be the one in progress; anything older without a champion is a gap
+      // in the record, and the panel says so instead.
+      current: year === latest && !entry.finalized,
     }));
 
   // At season seven the six-season window shifts left once and shows the six
