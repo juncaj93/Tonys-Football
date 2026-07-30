@@ -273,6 +273,91 @@ export const TONIGHT_FIELD: RoomObjectSpec['rect'] = [60, 93, 111, 74];
  */
 export const PREDICTION_SLATE: RoomObjectSpec['rect'] = [154, 184, 37, 59];
 
+/* -------------------------------------------------------------------------
+ * The tray
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The tray's drawn surface — `SHELL_AUDIT §4`: `156, 284, 94, 25`.
+ *
+ * Recorded separately from the tray Door's hit region, which is the same tray
+ * padded up to a 44-unit target (`156, 275, 94, 44`). Two different questions:
+ * where the tray *is* drawn, and where a thumb may land to reach it.
+ */
+export const TRAY_SURFACE: RoomObjectSpec['rect'] = [156, 284, 94, 25];
+
+/**
+ * Where an owned box sits on the tray.
+ *
+ * Derived from the tray rather than chosen: the tray runs `x 156–250`, so its
+ * centre is `203`; a 44-unit box centred there spans `181–225`, comfortably
+ * inside the tray's own footprint rather than overhanging it. Its base rests at
+ * `y 306`, one unit above the tray's lowest drawn row (`308`, the lowest feature
+ * in the whole shell), so the box sits *on* the tray instead of floating over it
+ * or sinking through it. 30 units tall puts its lid at `y 276`, above the tray's
+ * back edge — which is what a box on a tray looks like from this angle.
+ *
+ * This is the one place in the room where an overlay appears and disappears with
+ * state, and it is deliberately **not** a ninth object: the box is a state of the
+ * tray Door, and the Door is what takes the tap (`18 §4.1`).
+ */
+export const TRAY_BOX: RoomObjectSpec['rect'] = [181, 276, 44, 30];
+
+/**
+ * Where the collectible ends up when the box opens.
+ *
+ * **On the tray, where the box was.** An earlier version put it at `y 224`, a
+ * clear 18 units above the tray's back edge, on the reasoning that the reveal
+ * should rise clear of the box. On screen it read as an object hovering in front
+ * of Tony's chest with nothing under it — the room has no floating things in it,
+ * so a floating thing reads as a layout bug rather than as a prize.
+ *
+ * So it rests where the box rested: base at `y 308`, the tray's lowest drawn row,
+ * centred on the tray's `x 203`. Slightly larger than the box was (46 against 44)
+ * because the box is gone and this is the thing you are meant to be looking at.
+ * The *rise* is the animation's job — it travels up into this position — not the
+ * resting geometry's.
+ */
+export const TRAY_REVEAL: RoomObjectSpec['rect'] = [180, 262, 46, 46];
+
+/**
+ * The plate that names what came out, set down on the counter front.
+ *
+ * ## Why it is below the tray and not above it
+ *
+ * Above the tray is the prediction sign, the board and Tony. A plate there
+ * covers the three things the room spent the most effort drawing, and a panel
+ * that *replaces* the art has taken the room away (`18 §7.2.4`). Below the tray
+ * is counter front — drawn, but claiming nothing and carrying no interactive
+ * object.
+ *
+ * It is also the honest gesture: the box opens on the tray and what was inside is
+ * set down on the counter in front of you. `y 316` is just past the counter's
+ * front edge at logical `313`, so the plate lies on the counter rather than
+ * floating over the join.
+ *
+ * ## No height, on purpose
+ *
+ * The rule is *sized to its contents* (`18 §7.2.4`), so the height is the text's
+ * to decide and this anchor deliberately does not carry one. A fixed height is
+ * how a panel ends up with the type shrunk to fit it, which is the mistake that
+ * was made once at 15px.
+ *
+ * 168 of 320 units wide — a little over half the room, nowhere near the viewport
+ * edges, and nowhere near the bottom of the screen. A plate on a counter, **not
+ * a bottom sheet.**
+ */
+export const TRAY_PLATE_ANCHOR = { x: 126, y: 316, width: 168 } as const;
+
+/** The plate's anchor as the percentages the browser wants. No height — see above. */
+export function placePlate(): { left: string; top: string; width: string } {
+  return {
+    left: `${((TRAY_PLATE_ANCHOR.x / ROOM.width) * 100).toFixed(3)}%`,
+    top: `${((TRAY_PLATE_ANCHOR.y / ROOM.height) * 100).toFixed(3)}%`,
+    width: `${((TRAY_PLATE_ANCHOR.width / ROOM.width) * 100).toFixed(3)}%`,
+  };
+}
+
 /** A room rectangle as the percentages the browser wants. */
 export function place(rect: RoomObjectSpec['rect']): {
   left: string;

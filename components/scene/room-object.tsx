@@ -36,13 +36,59 @@ import { place, type RoomObjectSpec } from '@/lib/parlor/objects';
  */
 
 /**
+ * How the object map is counted at runtime.
+ *
+ * Every interactive object in the room carries `data-room-object` (its id) and
+ * `data-room-kind`. `npm run visual:qa`'s `object-map` gate reads these and
+ * asserts the rendered set against `ROOM_OBJECTS` — the whole map, not a count
+ * of anchors.
+ *
+ * ## Why not just count `<a href>` like the gate used to
+ *
+ * Because one Door legitimately stops being an anchor. The tray is a Door, and
+ * when a box is owned it **opens at the tray, in place** (`18 §4.1`) rather than
+ * navigating — so it renders as a button. Counting anchors would have read that
+ * as "a Door went missing", and the obvious way to make the gate pass again
+ * would have been to route to `/counter` first, which is the exact defect the
+ * ruling names.
+ *
+ * So the marker is the object's identity rather than its HTML tag. That is also
+ * a stronger gate: it catches a Door quietly becoming a Display, an object
+ * disappearing, and a ninth object appearing — none of which an anchor count
+ * sees.
+ *
+ * ## Partitioned objects
+ *
+ * One object may be several targets. The banner rail is a single Display whose
+ * row is divided into six real DOM buttons, because "which season is that one?"
+ * is a question about a specific banner. Those buttons additionally carry
+ * `data-room-partition`, which is how the gate knows six elements sharing one id
+ * are one object rather than five duplicates.
+ *
+ * The distinction is the point: without it, the gate would either reject the rail
+ * or have to stop checking for duplicates — and a genuinely duplicated object
+ * doubles a tap target invisibly.
+ */
+export function roomObjectAttributes(
+  spec: RoomObjectSpec,
+  /** Index within a partitioned object, e.g. a banner slot. */
+  partition?: number,
+): Record<string, string> {
+  return {
+    'data-room-object': spec.id,
+    'data-room-kind': spec.kind,
+    ...(partition === undefined ? {} : { 'data-room-partition': String(partition) }),
+  };
+}
+
+/**
  * A Door: it goes somewhere.
  *
  * The anchor *is* the hit region — positioned and sized in room units — rather
  * than a full-bleed element with a shape inside it. Keyboard focus lands on it
  * naturally and the focus ring follows the same rectangle.
  */
-export function RoomDoor({ spec }: { spec: RoomObjectSpec }) {
+export function RoomDoor({ spec, children }: { spec: RoomObjectSpec; children?: React.ReactNode }) {
   if (spec.href === undefined) throw new Error(`${spec.id} is a Door with nowhere to go`);
 
   return (
@@ -51,7 +97,10 @@ export function RoomDoor({ spec }: { spec: RoomObjectSpec }) {
       aria-label={`${spec.label} — ${spec.destination ?? ''}`.trim()}
       style={place(spec.rect)}
       className="room-shape absolute z-30 outline-none"
-    />
+      {...roomObjectAttributes(spec)}
+    >
+      {children}
+    </Link>
   );
 }
 
@@ -80,6 +129,7 @@ export function RoomDisplay({
         }}
         style={place(spec.rect)}
         className="room-shape absolute z-30 outline-none"
+        {...roomObjectAttributes(spec)}
       />
 
       {open && (
@@ -106,6 +156,7 @@ export function RoomToy({ spec, onTap }: { spec: RoomObjectSpec; onTap: () => vo
       onClick={onTap}
       style={place(spec.rect)}
       className="room-shape absolute z-30 outline-none"
+      {...roomObjectAttributes(spec)}
     />
   );
 }

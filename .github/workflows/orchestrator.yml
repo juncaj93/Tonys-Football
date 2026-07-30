@@ -152,8 +152,8 @@ jobs:
           ISSUE: ${{ steps.actor.outputs.issue }}
           LABEL: ${{ steps.actor.outputs.label }}
         run: |
-          set -euo pipefail
-          claude -p "$(cat <<PROMPT
+          set -uo pipefail
+          PROMPT=$(cat <<PROMPT
           You are taking one turn in Tony's autonomous delivery system.
 
           Read, in this order, and treat them as binding:
@@ -174,6 +174,41 @@ jobs:
 
           Never print a secret. Green CI is necessary and never sufficient.
           PROMPT
-          )" --permission-mode acceptEdits --allowedTools \
+          )
+
+          # The turn is allowed to fail; how it failed decides what that means.
+          set +e
+          claude -p "$PROMPT" --permission-mode acceptEdits --allowedTools \
               "Bash,Read,Write,Edit,Glob,Grep" \
-            2>&1 | tail -200
+            > turn.log 2>&1
+          STATUS=$?
+          set -e
+
+          tail -200 turn.log
+
+          #
+          # An unfunded key is not a broken build.
+          #
+          # The header of this file argues that a workflow which fails loudly every
+          # hour because of a missing secret gets switched off, and then nobody
+          # notices when the secret arrives. An account with no credit is exactly
+          # that failure with a different message: the hourly cron would paint the
+          # Actions tab red forever, for a reason no machine in this repository can
+          # fix.
+          #
+          # This happened. Both runs on 2026-07-30 exited on "Credit balance is too
+          # low" before the role file was even read, so the first model-driven turn
+          # produced nothing at all.
+          #
+          # So it is reported as a warning and the job passes. The durable record is
+          # the blocked-human-only issue, which is where `AUTONOMY.md §6` says a
+          # payment blocker lives — not in a red X that stops meaning anything by
+          # the fiftieth time you see it.
+          #
+          if [ "$STATUS" -ne 0 ] && \
+             grep -qiE 'credit balance is too low|insufficient (credit|quota|funds)' turn.log; then
+            echo "::warning title=Orchestrator is unfunded::The ANTHROPIC_API_KEY account has no credit, so no turn can run. This is AUTONOMY.md section 6 item 4 — authorize payment. Tracked on the blocked-human-only issue; delivery continues by hand until it is resolved."
+            exit 0
+          fi
+
+          exit "$STATUS"

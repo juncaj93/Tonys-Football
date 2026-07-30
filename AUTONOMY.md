@@ -88,9 +88,18 @@ One label per issue, and exactly one. The label **is** the state.
 | `npm run visual:qa` — 12 states × 3 widths, deterministic gates, artifacts | **live**, no credentials |
 | `.github/workflows/visual-qa.yml` — runs the above on every PR, uploads screenshots | **live**, no credentials |
 | `.github/workflows/ci.yml` — typecheck · lint · test · build | **live** |
-| `.github/workflows/orchestrator.yml` — the model-driven loop | **inert until `ANTHROPIC_API_KEY` exists**; guarded so it skips rather than fails |
+| `.github/workflows/orchestrator.yml` — the model-driven loop | **armed, and blocked on payment.** See below |
 
 This split is deliberate. The arithmetic gates are the ones that never sleep, so they were built first and depend on nothing. The judgement gates need a model, and a model needs a key.
+
+### The orchestrator is armed and unfunded
+
+`ANTHROPIC_API_KEY` exists and is valid. The account behind it has **no credit**, so every turn exits on `Credit balance is too low` before the role file is read. Both runs on 2026-07-30 failed that way and produced nothing — the first model-driven turn never happened.
+
+That is `§6` item 4, authorize payment, and it is the only thing a human must do. Two consequences worth stating:
+
+- **It does not stop delivery.** The Technical Lead holds the same mandate the orchestrator does, so slices are worked directly until the loop can run. M2 slice 1 shipped this way.
+- **A credit failure is reported as a warning, not a red build.** The hourly cron would otherwise paint the Actions tab red forever for a reason no machine here can fix, and this file's own argument is that such a workflow gets switched off — after which nobody notices when it *is* funded. The durable record is the `blocked-human-only` issue.
 
 ---
 

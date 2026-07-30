@@ -1,12 +1,16 @@
 # Implementation Handoff
 
 **For:** the engineer picking up the next assignment
-**Last completed:** V0 Pipeline + V1 Doors Open
+**Last completed:** V0 Pipeline · V1 Doors Open · **M2 slice 1 — the loot box on the tray**
 **Authority:** `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` for ordering · `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` for the room · `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` for everything else
 
-> **V0 and V1 are shipped.** What follows is kept as the record of that
-> assignment; §"Where V1 landed" at the bottom is what a reader needs now.
-> The next slice is **V2 Memory** (`17 §4`) and has not been assigned.
+> **V0, V1 and M2 slice 1 are shipped.** What follows is kept as the record of
+> the V1 assignment; §"Where V1 landed" and §"Where M2 slice 1 landed" at the
+> bottom are what a reader needs now.
+>
+> **The next assignment is M2 slice 2 — token acquisition.** Boxes are currently
+> granted by the seed as a fixture; slice 2 makes them purchasable through
+> `apply_token_delta`. See §"What slice 2 owns".
 
 ---
 
@@ -67,16 +71,23 @@ M1 ships on the `*.vercel.app` URL. Do not block on DNS. Keep the origin out of 
 
 Every object is exactly one role, and **a Door glows only when it has something to say**. That is what makes a glow mean *something changed here*, rather than becoming wallpaper.
 
-**Exactly eight interactive objects — 4 Doors, 3 Displays, 1 Toy:**
+**Exactly eight interactive objects — 3 Doors, 4 Displays, 1 Toy:**
+
+> Corrected 2026-07-30. This table read *4 Doors, 3 Displays* and had gone stale:
+> the banner rail was reclassified **Door → Display** on PR #9, which is what made
+> "every Door glows conditionally and nothing else ever glows" a rule with no
+> exceptions. `CLAUDE.md` and `VISUAL_ACCEPTANCE.md` already said 3 · 4 · 1, so
+> this was the loser of a three-way contradiction and is fixed rather than
+> re-litigated (`AUTONOMY.md §1`).
 
 | # | Object | Role | Route / behaviour | Glows when |
 |---|---|---|---|---|
 | ① | Left arched nook — newspaper rack | Door | `/slice` | a Slice is unread |
 | ② | Large wall board | Display | Tonight at Tony's, expands in place | never |
-| ③ | Banner rail | Door | `/timeline` | **never persistently** |
+| ③ | Banner rail | Display | one button per banner, panel in place | never |
 | ④ | Small sign right of Tony | Display | prediction (V1), expands in place | never |
 | ⑤ | Receipt in front of Tony | Display | manager record, expands in place | never |
-| ⑥ | Countertop tray | Door | `/counter` | a box is owned or available |
+| ⑥ | Countertop tray | Door | empty → `/counter`; **box on it → opens in place** | a box is owned |
 | ⑦ | Right-rear doorway | Door | `/back-hall` | something beyond it is open |
 | ⑧ | Tony | Toy | a line on tap, cooldown-limited, **no navigation** | never |
 
@@ -151,7 +162,7 @@ On a real iPhone:
 
 Room interaction (`18 §10`):
 
-- [ ] Exactly **eight** interactive objects: **4 Doors, 3 Displays, 1 Toy**
+- [ ] Exactly **eight** interactive objects: **3 Doors, 4 Displays, 1 Toy**
 - [ ] **No** basement door, Underground door, display case, second doorway, or floor hatch
 - [ ] Typically **one or two** objects glow; the banner rail never glows persistently
 - [ ] Every glowing object can be correctly guessed **before** tapping
@@ -204,3 +215,47 @@ Room interaction (`18 §10`):
 2. **Group A's figures are pinned to 2025, and say so.** Every record, points total and placement names its season, and no line uses a relative time phrase — both enforced by `lib/content/parse.test.ts`. That keeps a claim about 2025 a claim about 2025 once 2026 finishes. It does not make a line immortal: "one ring" stops being true if that manager wins another, so the set still wants a read-through when a season completes.
 3. **Kickoff is a constant.** `KICKOFF_2026` in `lib/parlor/season.ts`. Sleeper exposes no reliable preseason start date, so it is configuration rather than a derived fact.
 4. **No PIN-change flow.** A manager can sign out everywhere; changing a PIN needs the commissioner to clear it first. It belongs with the auth work it would extend rather than bolted onto the profile page.
+
+---
+
+# Where M2 slice 1 landed
+
+**Issue #17 — the tray holds a real box, and opening it is the moment.**
+
+## The map
+
+| | Where |
+|---|---|
+| Catalog, derived from the asset registry | `lib/counter/catalog.ts` |
+| Reward table — build, version, resolve a roll | `lib/counter/rewards.ts` |
+| Injected randomness, the clock's sibling | `lib/counter/rng.ts` |
+| Grant · own · open · count | `lib/counter/boxes.ts` |
+| The server action the client is allowed to call | `app/actions/counter.ts` |
+| The tray, the anticipation beat, the reveal | `components/scene/counter-tray.tsx` |
+| Ownership, openings, inventory, append-only triggers | `drizzle/0004_loot_box_openings.sql` |
+| Object-scale placeholder | `lib/assets/placeholder.tsx` |
+
+## Decisions a later slice should know about
+
+- **`box_openings.box_id` is UNIQUE, and that single constraint is the idempotency mechanism.** A box opens once, ever, so the operation has a natural key and needs no client-supplied idempotency key. `SELECT … FOR UPDATE` makes the common concurrent case *wait and read back the existing opening* rather than error, and the constraint is the backstop under it. Ten parallel opens produce one collectible; asserted.
+- **The idempotency-key invariant is about `apply_token_delta`, not about everything.** A token delta is an event with no natural key, which is why it needs one. Do not copy the pattern where a natural key already exists.
+- **The catalog is derived from the asset registry.** Rarity and the display name (the record's `alt`) have exactly one home. `CATALOG_SIZE` is asserted in the seed and in tests, so a registry edit cannot silently change the economy — and the fix for a failing count is never to delete an approved slug.
+- **The reward table is stored, content-hash-versioned and append-only.** A rebalance writes a *new* version; every historical opening keeps pointing at the version it rolled against, and the recorded `roll` plus that version recompute the outcome exactly. That is what "auditable" means here. Weights are `provisional = true` until the **P3 simulation**; clearing that flag is the one legitimate update to an existing table row.
+- **Opening refuses to roll against a table this database has never stored.** Writing one on first use would let the first opening of a deploy silently define the economy.
+- **Randomness is injected exactly like the clock.** One override point in `lib/counter/rng.ts`, `crypto.randomInt` in production. The synthetic-season replay (`16 §14`) needs this as much as it needs the clock.
+- **Boxes come from the seed, keyed so it is a fixture and not a faucet.** `grant_key` is unique, so every later deploy grants nothing — including after the box has been opened, which is the case that matters. A re-grant of an opened box would be a reroll dressed up as a deployment. Slice 2 replaces this with purchase and should use a **new** key prefix if it ever grants again.
+- **Collectibles allow duplicates.** No unique on `(user_id, slug)`. A weighted table produces duplicates, and forbidding them would silently turn every duplicate roll into a reroll — a reward-pacing change hidden in a constraint.
+- **The audit trail is trigger-enforced, not convention.** Openings cannot be updated or deleted; a collectible's owner, item, rarity and origin cannot change; a stored reward table cannot be edited or deleted. Same reasoning as the finalized-season guards in `0003`. `TRUNCATE` still bypasses them, which is how the test harness resets.
+- **The tray's destination is conditional, so `/counter` needed a second entrance.** With a box on the tray there is no anchor to tap, and a route reachable only sometimes is the same defect class as a link to a route that does not exist. The reveal plate carries the onward step. When purchase lands, managers arrive at `/counter` to buy and this stops being the only entrance — revisit the plate's link then.
+- **`/counter` now reports what is actually owned.** It used to say "Nothing collected yet" unconditionally, which became a false statement about a manager's own property the moment a box could be opened.
+
+## What slice 2 owns
+
+1. **Token acquisition** — `apply_token_delta` with an idempotency key, trigger-maintained balance, `CHECK (balance >= 0)`, weekly rewards. Purchase replaces the seeded fixture grant.
+2. Once boxes are acquirable, **`tray-reveal` becomes a required visual state** at all three widths — the driver can mint a box per width, and the gate stops being single-use. Remove it from `OPT_IN_STATES`.
+3. **Do not** absorb `/counter/collection`, showcase, equip or rotation. Separate issues.
+
+## Still open
+
+- **Reward weights are provisional.** `PROVISIONAL_RARITY_MASS` in `lib/counter/rewards.ts` exists so the loop can be played, not because it is right. Tuning it is P3's job; doing it earlier locks the values the gate exists to keep open.
+- **Collectible art is placeholder**, so an unfinished item and the box it came out of are drawn as the same carton. The plate carries the identity, and every reveal is lifted so the moment still reads. Twelve items get finished art at launch, and each one is a registry row.

@@ -3,12 +3,13 @@
  *
  *   npm run db:seed
  *
- * Four idempotent steps, safe to run on every deploy and safe to run twice:
+ * Five idempotent steps, safe to run on every deploy and safe to run twice:
  *
  *   1. import the league chain from recorded fixtures
  *   2. apply the names Tony uses, from `content/managers.md`
  *   3. seed the Counter Greetings from `content/counter-greetings.md`
- *   4. grant admin to the commissioner named in the environment
+ *   4. store the reward table and put one box on each manager's tray
+ *   5. grant admin to the commissioner named in the environment
  *
  * Fixtures rather than the live API, deliberately (`16 §12`): the import is
  * then offline, repeatable, and identical in every environment, and a Sleeper
@@ -20,6 +21,9 @@ import { eq } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
+import { ensureRewardTable, grantBox } from '@/lib/counter/boxes';
+import { CATALOG_SIZE } from '@/lib/counter/catalog';
+import { standardRewardTable } from '@/lib/counter/rewards';
 import {
   assertOnlyApprovedGroups,
   readCounterGreetings,
@@ -43,6 +47,16 @@ const DEFAULT_LEAGUE_ID = '1385016656425668608';
  * still moving, so a human names the years instead.
  */
 const FINALIZED_SEASONS = [2024, 2025] as const;
+
+/**
+ * The grant-key prefix for the seeded fixture box.
+ *
+ * Versioned in the string. If a later slice ever needs to grant a *second*
+ * fixture box deliberately, it uses a new prefix — which is a visible, reviewable
+ * change, rather than the invisible one where a key is reused and every manager
+ * silently gets another box on the next deploy.
+ */
+const FIXTURE_BOX_GRANT = 'seed:m2s1:standard';
 
 async function main(): Promise<void> {
   if ((process.env['DATABASE_URL'] ?? '') === '') {
@@ -108,7 +122,60 @@ async function main(): Promise<void> {
 
     await assertOnlyApprovedGroups(db);
 
-    // --- 4. The commissioner ----------------------------------------------
+    // --- 4. The tray ------------------------------------------------------
+    //
+    // The reward table is stored before any box exists to open, because
+    // `18 §4.3` requires openings to resolve against a *stored* table — the
+    // service refuses to roll against a version this database has never
+    // recorded rather than writing one on first use.
+    const { version } = await ensureRewardTable(db);
+    const table = standardRewardTable();
+    console.log(
+      `Rewards  table ${version} · ${String(table.entries.length)} items · ` +
+        `total weight ${String(table.totalWeight)} · PROVISIONAL until the P3 simulation`,
+    );
+
+    if (table.entries.length !== CATALOG_SIZE) {
+      // Loud and fatal. `16` approves a 24-item catalog; a registry edit that
+      // changes the count changes the economy, and it should not be possible to
+      // discover that from a screenshot weeks later.
+      throw new Error(
+        `the catalog holds ${String(table.entries.length)} items, not ${String(CATALOG_SIZE)}. ` +
+          'If the change is intended, update CATALOG_SIZE and say so in the pull request. ' +
+          'Never delete an approved slug to satisfy an older count.',
+      );
+    }
+
+    /*
+     * One unopened box per manager, granted once, ever.
+     *
+     * This is a **fixture, not an economy.** Boxes are bought with tokens
+     * through `apply_token_delta`, and that is the next slice; until it exists
+     * the box has to come from somewhere, and a seeded grant is the honest
+     * placeholder — it puts the real loop in front of real managers without
+     * inventing a price the P3 simulation has not produced yet (`16 §8`).
+     *
+     * `grantKey` is what keeps it a fixture rather than a faucet: the key is
+     * stable per manager, so every subsequent deploy grants nothing — including
+     * after the box has been opened, which is the case that matters. A re-grant
+     * of an opened box would be a reroll dressed up as a deployment.
+     */
+    const managers = await db.select({ id: users.id }).from(users);
+    let granted = 0;
+    for (const manager of managers) {
+      const result = await grantBox(db, {
+        userId: manager.id,
+        grantKey: `${FIXTURE_BOX_GRANT}:${manager.id}`,
+        source: 'seed',
+      });
+      if (result.granted) granted += 1;
+    }
+    console.log(
+      `Tray     ${String(granted)} boxes granted · ` +
+        `${String(managers.length - granted)} managers already had theirs`,
+    );
+
+    // --- 5. The commissioner ----------------------------------------------
     const commissioner = process.env['COMMISSIONER_SLEEPER_USER_ID'] ?? '';
 
     if (commissioner === '') {
