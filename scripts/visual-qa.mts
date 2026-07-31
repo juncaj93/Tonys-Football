@@ -453,12 +453,30 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * provisional price. So this state now also exercises the ledger, the balance
      * check and the tray transition in one pass.
      */
-    case 'tray-reveal':
+    case 'tray-reveal': {
       await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
+
+      /*
+       * Wait on the **count**, not on the copy.
+       *
+       * This used to wait for the words "unopened box" to appear, which broke
+       * the day the counter stopped saying them — a driver coupled to prose
+       * fails as a fifteen-second timeout in an unrelated-looking place. The
+       * page publishes `data-unopened-boxes`, so the wait is now "the number
+       * went up", which is what a purchase actually means.
+       */
+      const before = await page
+        .locator('[data-unopened-boxes]')
+        .first()
+        .getAttribute('data-unopened-boxes');
+
       await page.getByRole('button', { name: /Buy a standard pizza box/i }).click();
-      // The purchase refreshes the page; wait for the tray panel to appear rather
-      // than for a fixed delay, so a slow runner does not photograph a stale page.
-      await page.getByText(/unopened box/i).first().waitFor({ timeout: 15_000 });
+      await page.waitForFunction(
+        `document.querySelector("[data-unopened-boxes]")?.getAttribute("data-unopened-boxes") !== ${JSON.stringify(before)}`,
+        undefined,
+        { timeout: 15_000 },
+      );
+
       await home(page);
       // The pad stays up here too: this is the *real* path, so it is the
       // strongest place to prove the room yields when the box opens.
@@ -489,6 +507,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       // The anticipation beat is 1100ms and the rise is 420ms.
       await page.waitForTimeout(1800);
       return;
+    }
 
     /*
      * The demo-backed states.

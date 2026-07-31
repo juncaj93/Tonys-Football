@@ -94,7 +94,20 @@ export default async function CounterPage() {
             * tells you there is one waiting, he does not also hand you a card
             * about it.
             */}
-          <p className="mt-4 text-[17px] leading-[1.5] text-paper-mid/85">
+          <p
+            /*
+             * The count, as a marker as well as a sentence.
+             *
+             * The visual driver has to know when a purchase has landed, and it
+             * used to know by waiting for the words *"unopened box"* — which is
+             * a test coupled to prose, and it broke the moment the prose
+             * improved. A number in an attribute is a contract the copy can be
+             * rewritten around, the same way `data-room-object` lets the room's
+             * labels change without moving the object map.
+             */
+            data-unopened-boxes={String(unopenedBoxes)}
+            className="mt-4 text-[17px] leading-[1.5] text-paper-mid/85"
+          >
             {unopenedBoxes === 0
               ? 'Tony wipes the counter and waits. The tray is empty.'
               : unopenedBoxes === 1
