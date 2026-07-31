@@ -82,6 +82,22 @@ export const BOX_OFFERS: LineSyntax = {
   variables: ['price'],
 };
 
+/**
+ * What Tony says at the counter about a result the fact layer verified.
+ *
+ * Approved by the commissioner on 2026-07-31: *"Allow Tony to use verified Stats
+ * facts for occasional contextual dialogue."* The whole file is readable — there
+ * is no held-back second half — and every variable below is substituted from a
+ * `MatchupFact`-derived value and then checked by the Slice's own validator
+ * (`lib/parlor/aside.ts`).
+ */
+export const STATS_ASIDES: LineSyntax = {
+  file: 'content/counter-stats.md',
+  startsAt: '# Approved',
+  endsAt: null,
+  variables: ['winner', 'loser', 'margin', 'points', 'champion', 'season'],
+};
+
 export interface ParsedLine {
   /** The authoring key, e.g. `A1`. Unique across every surface. */
   readonly key: string;
@@ -162,6 +178,10 @@ export function parseLines(markdown: string, syntax: LineSyntax): readonly Parse
 
 export function parseCounterGreetings(markdown: string): readonly ParsedLine[] {
   return parseLines(markdown, COUNTER_GREETINGS);
+}
+
+export function parseStatsAsides(markdown: string): readonly ParsedLine[] {
+  return parseLines(markdown, STATS_ASIDES);
 }
 
 export function parseBoxOffers(markdown: string): readonly ParsedLine[] {

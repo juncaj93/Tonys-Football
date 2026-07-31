@@ -94,7 +94,12 @@ const NOT_A_MANAGER: ReadonlySet<string> = new Set([...houseWords(), 'Tony', 'To
 
 const CAPITALISED = /\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?\b/g;
 
-function scan(text: string, packet: FactPacket, into: Violation[]): void {
+function scan(
+  text: string,
+  packet: FactPacket,
+  into: Violation[],
+  ordinary: ReadonlySet<string> = NOT_A_MANAGER,
+): void {
   if (text === '') return;
 
   for (const match of text.matchAll(NUMBER)) {
@@ -115,7 +120,7 @@ function scan(text: string, packet: FactPacket, into: Violation[]): void {
   for (const match of text.matchAll(CAPITALISED)) {
     const value = match[0];
     if (packet.allowedNames.includes(value)) continue;
-    if (NOT_A_MANAGER.has(value)) continue;
+    if (ordinary.has(value)) continue;
     if (nameParts.has(value)) continue;
     into.push({ kind: 'unknown-name', value });
   }
@@ -175,6 +180,49 @@ function prose(edition: Edition): readonly string[] {
       row.rightPoints,
     ]),
   ];
+}
+
+/**
+ * Check any prose against a packet — not only a newspaper.
+ *
+ * `MANDATE §9` applies to every surface, not to the one that happens to look
+ * like journalism. When Tony mentions a result at the counter he is making the
+ * same class of claim the Slice makes, so he goes through the same gate: a line
+ * that changed a name, a score, a margin or a tier is refused and he says
+ * nothing about football instead.
+ *
+ * Sharing the validator rather than writing a second one is the point. A second
+ * one would drift, and it would drift on the quieter surface — the one nobody
+ * re-reads — which is where an unchecked claim does its damage.
+ */
+export function validateProse(
+  texts: readonly string[],
+  packet: FactPacket,
+  /**
+   * The curated source the prose was rendered from, when there is one.
+   *
+   * A template contains `{winner}`, not `Brandon` — a proper noun can only enter
+   * a rendered line through **substitution**, so every capitalised word already
+   * present in the template is curated prose by construction. Deriving the
+   * ordinary-word set from it is the same rule `houseWords()` applies to the
+   * Slice's own tables (*if the renderer can print it, the checker has to be able
+   * to see it*), extended to a surface whose curated strings live in a Markdown
+   * file rather than in a TypeScript constant.
+   *
+   * Without this, `He is not going to pretend that was a game` is refused because
+   * `He` is a capitalised word the Slice's headlines never use — which is the
+   * validator being right about its own vocabulary and wrong about this one.
+   */
+  templates: readonly string[] = [],
+): Verdict {
+  const ordinary = new Set(NOT_A_MANAGER);
+  for (const template of templates) {
+    for (const match of template.matchAll(/\b[A-Z][a-z]+\b/g)) ordinary.add(match[0]);
+  }
+
+  const violations: Violation[] = [];
+  for (const text of texts) scan(text, packet, violations, ordinary);
+  return { publishable: violations.length === 0, violations };
 }
 
 export function validateEdition(edition: Edition, packet: FactPacket): Verdict {

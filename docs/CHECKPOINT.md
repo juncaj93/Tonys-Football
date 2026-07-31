@@ -108,8 +108,38 @@ retired managers absent from every published surface **and still present in the 
 |---|---|
 | `main` | `6740408` — PR #43 merged |
 | Branch | `claude/tonys-pizza-autonomous-jizv8b` |
-| `npm run check` | green — **811 tests across 50 files** |
+| `npm run check` | green — **827 tests across 51 files** |
 | `npm run visual:qa` | green — **49 states × 3 widths**, production build, `DEMO_FIXTURES=1` on server *and* driver |
+
+### Tony may mention a result, and may not change one
+
+`lib/parlor/aside.ts` + `content/counter-stats.md` (approved 2026-07-31, eight lines, surface
+`parlor_stats_aside`). The greeting stays the default — `17 §3`'s criterion is *one verified thing
+about you* — and this is the exception, with a **fortnight** cooldown against the greeting's three
+days.
+
+Four rules, each enforced rather than intended:
+
+1. **Only finalized facts.** The input is a `FactPacket`, which refuses an open season outright and
+   has already applied the publication boundary. There is no path from an unfinalized week here.
+2. **No calculation in dialogue code.** Every number is read off a published fact and written with
+   the packet's *own* formatters.
+3. **Nothing may change.** The rendered sentence goes through **the Slice's validator**, against the
+   fact's own declared allowed sets. A name or number the fact did not supply is refused and Tony
+   says nothing about football. One validator, not two — a second would drift, and it would drift on
+   the quieter surface.
+4. **Never during a moment.** Skipped whenever a moment tag is held, so it cannot collide with the
+   welcome box, the waiting box or a reveal.
+
+**One extension the validator needed.** `validateProse` now takes the *templates* a line was rendered
+from and treats their capitalised words as house copy. A template contains `{winner}`, never
+`Brandon` — a proper noun can only enter through substitution — so this is the same rule
+`houseWords()` applies to the Slice's own tables, extended to a surface whose curated strings live in
+Markdown. Without it, *"He is not going to pretend that was a game"* was refused because `He` is a
+word the Slice's headlines never use.
+
+The champion is a **fallback, not a competitor**: a banner is always true and never news, so it only
+speaks when the week itself had nothing loud in it.
 
 ### Batch B is one command away
 

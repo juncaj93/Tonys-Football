@@ -12,6 +12,8 @@ import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
+import { statsAsideFor } from '@/lib/parlor/aside';
+import { latestPacket, mostRecentChampion } from '@/lib/slice/edition';
 import { ownedBox } from '@/lib/counter/boxes';
 import { showcaseFor } from '@/lib/counter/showcase';
 import { openSeason, wallet } from '@/lib/counter/tokens';
@@ -150,7 +152,25 @@ export default async function ParlorPage({
     daysUntilKickoff: clock.daysUntilKickoff,
   });
 
-  const line = greeting?.text ?? `Tony nods at ${user.displayName} and goes back to the oven.`;
+  /*
+   * Occasionally, Tony mentions a result instead.
+   *
+   * The greeting is the default and stays the default — `17 §3`'s acceptance
+   * criterion is *one verified thing about you*, and a counter that opened with
+   * league trivia every day would have quietly stopped meeting it. The aside has
+   * a fortnight-long cooldown, refuses outright while a moment is in play, and
+   * refuses again if the Slice's validator will not pass the sentence
+   * (`lib/parlor/aside.ts`). Null is the usual answer.
+   */
+  const aside = await statsAsideFor(db, {
+    userId: user.id,
+    packet: await latestPacket(db),
+    momentTags: moment,
+    champion: await mostRecentChampion(db),
+  });
+
+  const spoken = aside ?? greeting;
+  const line = spoken?.text ?? `Tony nods at ${user.displayName} and goes back to the oven.`;
   /*
    * The board's face: a hero and at most one short fact.
    *
@@ -255,7 +275,7 @@ export default async function ParlorPage({
             >
               <TonyAtTheCounter
                 slug={greeting?.tonySlug ?? 'character_tony_neutral'}
-                mood={greeting?.expression ?? 'neutral'}
+                mood={spoken?.expression ?? 'neutral'}
               />
             </div>
 
