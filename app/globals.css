@@ -544,6 +544,21 @@ button {
 }
 
 /*
+ * The caret when he is not typing.
+ *
+ * It is `display: none` rather than absent from the markup, and that is the
+ * whole point: `SpokenLine` renders the **same elements** whether it is typing
+ * or at rest, so no state update can ever change the shape of the tree. A
+ * client component that adds or removes an element while React is still
+ * reconciling the server's HTML is what React reports as a hydration mismatch
+ * of kind "HTML", and this room has been failing that gate intermittently.
+ * Hiding is free; restructuring is not.
+ */
+.caret-idle {
+  display: none;
+}
+
+/*
  * Tony's own cue while the room is showing what can be touched: he lifts two
  * pixels, as though shifting his weight because somebody is looking at him.
  *

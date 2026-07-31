@@ -29,6 +29,25 @@ import { useArrival } from '@/components/scene/arrival';
  *
  * The pace is bounded rather than fixed: long lines type faster so that nobody
  * waits four seconds for a joke.
+ *
+ * ## One shape, always
+ *
+ * The two states render **the same elements**. They did not: resting was a
+ * single `<span>` and typing was two siblings with a caret inside the second,
+ * so the moment the ticker started, the element tree changed shape underneath
+ * whatever React was doing.
+ *
+ * That is the defect behind visual debt 6. React reports a mismatch between the
+ * server's HTML and the client's tree as error #418, and its first argument
+ * says which kind: `"text"` when a sentence differs, `"HTML"` when the
+ * *structure* does. The failing run said **`HTML`** — so a changed sentence was
+ * never the explanation, and a component that adds two elements and removes one
+ * on a timer is the only thing in this room that changes structure at all.
+ *
+ * So the caret is always present and hidden with a class, the screen-reader copy
+ * is always present, and `typed` now only ever changes the *characters* in a
+ * span that already exists. There is no arrangement of timing that can make this
+ * component restructure anything.
  */
 
 /** When he starts, relative to the room appearing. Just after he settles. */
@@ -91,14 +110,28 @@ export function SpokenLine({
 
   // `typed === null` is the resting state: the finished line, exactly as the
   // server rendered it. Every path that is not actively typing lands here.
-  if (typed === null) return <span>{children}</span>;
+  return <SpokenText line={children} typed={typed} />;
+}
 
+/**
+ * The markup — both states, one shape.
+ *
+ * Split out and exported so the shape can be **asserted** rather than intended.
+ * `spoken-line.test.tsx` renders it resting and mid-word and compares the
+ * element skeletons; they have to be identical, because that identity is the
+ * only thing standing between a timer and a hydration mismatch.
+ *
+ * The screen reader reads the `sr-only` copy in both states, which is what it
+ * did while typing already, and what it should do: a finished sentence rather
+ * than a stuttering one.
+ */
+export function SpokenText({ line, typed }: { line: string; typed: string | null }) {
   return (
     <>
-      <span className="sr-only">{children}</span>
+      <span className="sr-only">{line}</span>
       <span aria-hidden="true">
-        {typed}
-        <span className="caret" />
+        {typed ?? line}
+        <span className={typed === null ? 'caret-idle' : 'caret'} />
       </span>
     </>
   );

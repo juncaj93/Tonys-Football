@@ -1,9 +1,11 @@
 import { and, eq, gte } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
+import { seededDraw } from '@/lib/content/draw';
 import { selectContent, type SelectableEntry } from '@/lib/content/select';
 import { type Database } from '@/lib/db';
 import { contentEntries, contentUsageLog } from '@/lib/db/schema';
+import { easternDayKey } from '@/lib/parlor/season';
 
 import { economyFor, openSeason, wallet } from './tokens';
 
@@ -165,6 +167,22 @@ export async function offerAnotherBox(
 
   const variables = { price: String(price) };
 
+  /*
+   * Seeded, like every other content surface, rather than `Math.random`.
+   *
+   * The offer is chosen on the server and travels back inside the reveal
+   * payload, so it was never the hydration hazard the greeting was. It is
+   * seeded anyway: one unrecorded source of randomness in the codebase is a
+   * place for the next one to hide, and the shelf count is in the seed so two
+   * different pulls on the same evening are two different draws.
+   *
+   * Variety across a run of boxes comes from the one-day cooldown, which is
+   * what `BOX_OFFER_COOLDOWN_DAYS` is for, and is unaffected by this.
+   */
+  const random =
+    request.random ??
+    seededDraw(request.userId, BOX_OFFER_SURFACE, easternDayKey(at), String(request.distinct));
+
   const draw = (records: readonly { entryId: string; usedAt: Date }[]) =>
     selectContent<SelectableEntry>({
       candidates,
@@ -186,7 +204,7 @@ export async function offerAnotherBox(
        * first pull is answered with "first one was free" rather than with the
        * line everybody gets.
        */
-      ...(request.random !== undefined ? { random: request.random } : {}),
+      random,
     });
 
   // Second pass with no history. Every line requires `can_afford_another`, so an

@@ -31,6 +31,29 @@ const clockEnforcement = {
       message:
         'Use now().getTime() from @/lib/clock instead of Date.now(). The time machine and season replay depend on a single injected clock.',
     },
+    /*
+     * The same rule, for the same reason, applied to the other half of it.
+     *
+     * "Randomness only via `lib/counter/rng.ts`" has been a standing constraint
+     * since M2 and was written down in the checkpoint beside the clock — but
+     * only the clock half was ever enforced, and `lib/content/select.ts`
+     * defaulted its draw to `Math.random` for four milestones without anything
+     * noticing.
+     *
+     * That is not a style point. Content selection runs **inside a server
+     * render**, so an unseeded draw is a sentence that can differ between the
+     * HTML the server sent and the tree the browser builds from it — which
+     * React reports as a hydration mismatch on the product's first screen.
+     *
+     * Two sanctioned sources, both injectable and both replayable: `rollBelow`
+     * for an event with an outcome worth recording, `seededDraw` for anything
+     * chosen during a render.
+     */
+    {
+      selector: "CallExpression[callee.object.name='Math'][callee.property.name='random']",
+      message:
+        'Use rollBelow() from @/lib/counter/rng for an event, or seededDraw() from @/lib/content/draw for anything chosen during a render. Math.random inside a render is a hydration mismatch waiting to happen.',
+    },
   ],
 };
 

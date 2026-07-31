@@ -15,7 +15,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
 |---|---|---|---|---|
 | **M3 — character identity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #48 | Nothing. The vertical slice is complete: data, compositor, service, surface, previews, demo states, gates. Wearable *sources* are a later milestone and none is approved |
-| **Back Hall as a room** | `QUEUED_NOT_ACTIVE` | — | — | **The next executable slice.** Unblocked by the 2026-07-31 ruling; see below |
+| **Back Hall as a room** | `QUEUED_NOT_ACTIVE` | — | — | **The next executable slice.** Unblocked by the 2026-07-31 ruling; see below. Blocked on nothing but the Actions freeze, which does not stop local work |
 | **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Tony's Line, bounties, the chalkboard prediction, and the commissioner review queue |
@@ -24,6 +24,123 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-07-31 (fifth session)
+
+**Nothing has been pushed to GitHub as a pull request, and that is deliberate.**
+
+### The standing constraint this session ran under
+
+**COMMISSIONER, 2026-07-31: the account is near its monthly GitHub Actions allowance.**
+`visual-qa.yml` runs on `pull_request`; `ci.yml` runs on pull requests and pushes to `main`;
+pushing to a branch with **no open PR triggers neither**. That is the whole shape of the
+conservation: work goes to a durable non-PR branch and the gates run **locally**.
+
+Prohibited until the reset is confirmed: opening or reopening a PR · pushing to a branch that
+has one · pushing to `main` · merging · manual dispatch · re-running a failed or cancelled run
+· using CI as a debugging loop · several small PRs · deploying to verify routine work.
+
+**The reset is not inferred from the calendar.** It takes an explicit commissioner statement,
+or billing/usage evidence this session can actually read. Neither exists, so the work stays on
+the branch. **No gate was weakened** — `npm run check` and `npm run visual:qa` both ran, in
+full, locally, on a production build and a fresh database. Only their GitHub execution is
+deferred.
+
+At the time of writing there are **no open pull requests** on the repository, `main` is
+`2073c7d`, and the working branch `claude/resume-product-direction-5d76fh` has no PR attached.
+
+### Visual debt 6 is closed, and the recorded diagnosis was wrong
+
+The parlor's intermittent React #418. Two theories were on the table and **neither survived
+reading the error's own arguments**, which is the part worth carrying forward.
+
+`#418` is emitted with the mismatch's *kind* as its first argument, and React writes exactly
+one of two words there — `"text"` when a sentence differed between the server's HTML and the
+client's tree, `"HTML"` when the **structure** did:
+
+```js
+// react-dom-client.production.js
+Error(formatProdErrorMessage(418, isText ? "text" : "HTML", ""));
+```
+
+The failing run reported **`args[]=HTML`**. So a content line that changed between two renders
+— the diagnosis this session was handed — could not have produced it. That is not a small
+correction: it turns an unbounded search into one question, *what changes the shape of this
+tree*, and the room had exactly one answer.
+
+**`SpokenLine`.** It rendered a single `<span>` at rest and **two siblings with a nested
+caret** while typing. And `TonyToy` passed `retypeOnChange` unconditionally, so on every parlor
+load after the first, `arrived` was false, the typing delay was `startsAt = 0`, and the swap
+fired as close to hydration as a timer can get. `receipt` runs eighth — seven parlor loads had
+already primed exactly that state before the driver got there.
+
+Three repairs, and only the first is the defect:
+
+| | Repair |
+|---|---|
+| 1 | **The structure is invariant.** Both states render the same elements; the caret is hidden by a class rather than removed, and `typed` now only changes characters in a span that already exists. `spoken-line.test.tsx` compares element skeletons, so tidying the resting branch back into one span fails the build |
+| 2 | **The greeting no longer retypes on a return visit** — which is what `spoken-line.tsx` said it did all along: *"coming back from the display case to watch a sentence reassemble itself would be an animation between you and information you have already read."* The greeting is not new; a poked line is, and `asked` is now the thing that says so |
+| 3 | **`Math.random` is a lint error.** Never the cause here, and still a real breach: *"randomness only via `lib/counter/rng.ts`"* has been standing since M2 with only the clock half enforced, and `selectContent` defaulted its draw to `Math.random` **inside a server render** for four milestones |
+
+### The content draw is seeded, and that is a product rule rather than a fix
+
+`lib/content/draw.ts`. A content draw is a **property of a request** — this manager, this
+surface, this Eastern day — not an event. Seeding it there means two renders of one request
+choose the same sentence *before* anything is written to `content_usage_log`, which puts that
+table back to being cooldowns and history rather than the only thing keeping Tony from changing
+his mind mid-page.
+
+`selectContent`'s `random` is **required** now. A new surface has to say what its draw is
+derived from; it cannot inherit the hazard by leaving the field out. Three callers were wired:
+the greeting and the stats aside seed on manager · surface · day, and the box offer adds the
+shelf count. **One deliberately does not**: `anotherLineFor` is a poke, it must differ from
+the last one, and it runs in a server action rather than a render — so it uses `rollBelow`,
+the project's one injected RNG, which keeps it replayable and keeps the rule true everywhere.
+
+The generator is pinned to specific values, not merely to self-consistency: a test that only
+checks a seeded draw agrees with itself keeps passing through a change of hash, and every
+manager's greeting would move silently on the day it shipped.
+
+### What was measured, and what was not
+
+**Not reproduced locally, and the attempts are worth recording so nobody repeats them:** a full
+58-state sweep, ten timed reloads with a byte-for-byte diff of two server renders, fifteen
+reloads at **10x CPU throttling**, and eight against a development build. Zero console errors,
+**zero divergence between two server renders of the same request**, and one confirmation worth
+keeping — a single request to `/` executes the page **once**, so the flight payload and the
+HTML have never come from different renders.
+
+The fix is therefore justified by the error's own argument and by the code, not by a
+reproduction. Said plainly rather than implied.
+
+**Walked in a real browser**, on the production build: first arrival types · return visit does
+**not** · poking Tony does · zero console errors.
+
+### Exact repository state
+
+| | |
+|---|---|
+| `main` | **`2073c7d`** — unchanged; nothing was merged or pushed to it |
+| Branch | `claude/resume-product-direction-5d76fh` — **no open PR**, and none to be opened until the allowance reset is confirmed |
+| Open PRs | **none** |
+| `npm run check` | green — **919 tests across 58 files** (was 907 / 56) |
+| `npm run visual:qa` | green — **58 states × 3 widths**, production build, fresh database |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`, and it denies the Actions artifact host too — the failing run's screenshots could not be downloaded |
+
+### The next executable task, in order
+
+1. **The Back Hall as a room** — visual debt 5, unblocked, and now the top of the list. Local
+   work the whole way: scene architecture, the flag boundary, five demo states, driver states,
+   two walk-and-fix rounds.
+2. **The casino foundation** — one game, server-authoritative, after the Back Hall.
+3. **Tony's Line, bounties, the chalkboard prediction** — all read the fact packet that exists.
+4. **The commissioner review queue** for live Slice publication.
+5. **Batch B**, whenever the PNGs arrive. One command.
+
+**When the allowance reset is confirmed**, the branch becomes **one** coherent PR — not several
+narrow ones — carrying everything accumulated under the freeze.
 
 ---
 
@@ -740,7 +857,7 @@ Precedence when they conflict: commissioner ruling → Technical Lead ruling →
 - **A Tailwind class naming an undefined `--color-*` token silently inherits.** `lib/design/colour-tokens.test.ts` fails the build for it now.
 - **Reward weights and prices are simulation-gated to P3.** Nothing locks before the multi-season simulation. Do not tune to taste.
 - **Every asset by slug through the registry.** Swapping art is a registry row, never a code change.
-- **The injected clock and the injected RNG.** `new Date()` / `Date.now()` are lint errors outside `lib/clock.ts`; randomness only via `lib/counter/rng.ts`.
+- **The injected clock and the injected RNG.** `new Date()` / `Date.now()` **and `Math.random()`** are lint errors — the randomness half went unenforced for four milestones and `selectContent` defaulted to `Math.random` inside a server render the whole time. Two sanctioned sources: `rollBelow` (`lib/counter/rng.ts`) for an event worth recording, `seededDraw` (`lib/content/draw.ts`) for anything chosen during a render.
 - **Never delete an approved slug, record or asset to satisfy an older count.** Recalculate the count.
 - **Body copy is 16–18px, adjusted upward wherever legibility needs it** (`MANDATE §6`, superseding the bare 17px floor). Size the container to the type, never the type to the container.
 - **`npm run visual:qa` needs a freshly created database and is not re-runnable** — for the *manager-backed* states. The four demo-backed states are repeatable; the rest are not, because `tray-reveal` consumes a box. It opens the welcome box, and a box opens once ever; re-seeding does not restore it. A second run against the same database fails *geometrically* — an object reported "outside of the viewport" — which reads like a layout regression and is not one. Run `npm run db:reset` first. **A green result on a used database means nothing.** CI is immune; it gets a new database every run.

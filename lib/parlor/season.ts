@@ -39,17 +39,28 @@ export interface SeasonClock {
  * Michigan, so it is counted on that calendar.
  */
 export function easternDaysBetween(from: Date, to: Date): number {
-  const day = (instant: Date): number => {
-    const parts = new Intl.DateTimeFormat('en-CA', {
-      timeZone: 'America/New_York',
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(instant);
-    return Date.parse(`${parts}T00:00:00Z`);
-  };
+  return Math.round(
+    (Date.parse(`${easternDayKey(to)}T00:00:00Z`) -
+      Date.parse(`${easternDayKey(from)}T00:00:00Z`)) /
+      86_400_000,
+  );
+}
 
-  return Math.round((day(to) - day(from)) / 86_400_000);
+/**
+ * The calendar day in Michigan, as `YYYY-MM-DD`.
+ *
+ * The parlor already counts days on this calendar — a greeting turns over at
+ * midnight Eastern rather than at whatever hour the server thinks it is — and
+ * the seeded content draw needs the same day for the same reason: "one line per
+ * manager per day" has to mean the day the manager is having.
+ */
+export function easternDayKey(instant: Date): string {
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'America/New_York',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(instant);
 }
 
 export function seasonClock(kickoff: Date = KICKOFF_2026): SeasonClock {

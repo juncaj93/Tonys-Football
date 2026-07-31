@@ -1,10 +1,12 @@
 import { and, eq, gte } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
+import { rollBelow } from '@/lib/counter/rng';
 import { type Database } from '@/lib/db';
 import { contentEntries, contentUsageLog } from '@/lib/db/schema';
-import { easternDaysBetween } from '@/lib/parlor/season';
+import { easternDayKey, easternDaysBetween } from '@/lib/parlor/season';
 
+import { seededDraw } from './draw';
 import { renderTemplate, selectContent, type SelectableEntry } from './select';
 import type { Expression } from './parse';
 
@@ -176,6 +178,20 @@ export async function greetingFor(
     if (text !== null) return asGreeting(today, text);
   }
 
+  /*
+   * Seeded on the manager and the day, not on `Math.random`.
+   *
+   * The day-cache above already means "one line per manager per day" once a
+   * showing has been written down. This makes it true *before* the write, which
+   * is what a render needs: the same request rendered twice — the server's HTML
+   * and whatever the browser builds from it — has to produce the same sentence,
+   * or React reports a hydration mismatch on the first screen of the product.
+   *
+   * The second pass below shares the seed deliberately. It is the same draw with
+   * the history discarded, not a second attempt at a different answer.
+   */
+  const random = request.random ?? seededDraw(request.userId, GREETING_SURFACE, easternDayKey(at));
+
   const draw = (records: readonly { entryId: string; usedAt: Date }[]) =>
     selectContent<GreetingEntry>({
       candidates,
@@ -186,7 +202,7 @@ export async function greetingFor(
       audienceSize: (entry) =>
         request.leagueTags.filter((held) => entry.requiredTags.every((tag) => held.has(tag)))
           .length,
-      ...(request.random !== undefined ? { random: request.random } : {}),
+      random,
     });
 
   // Second pass with no history: the only thing an empty first pass can mean is
@@ -310,7 +326,20 @@ export async function anotherLineFor(
     now: now(),
     audienceSize: (entry) =>
       request.leagueTags.filter((held) => entry.requiredTags.every((tag) => held.has(tag))).length,
-    ...(request.random !== undefined ? { random: request.random } : {}),
+    /*
+     * The one content draw that must **not** be seeded on the day.
+     *
+     * Poking Tony is a request for something else, so two pokes a minute apart
+     * have to differ — a per-day seed would make him repeat himself forever.
+     * This is also the one draw that is safe to vary: it runs in a server action
+     * the manager triggered, never in the render of a page, so there is no
+     * server HTML for it to disagree with.
+     *
+     * `rollBelow` rather than `Math.random` because it is the project's one
+     * injected source of randomness, which keeps this replayable and keeps the
+     * rule "randomness only via `lib/counter/rng.ts`" true of the whole codebase.
+     */
+    random: request.random ?? (() => rollBelow(1_000_000) / 1_000_000),
   });
 
   return selection?.text ?? null;

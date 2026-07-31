@@ -116,6 +116,39 @@ What changed:
 
 ---
 
+### The Actions allowance is a standing constraint too
+
+**Commissioner, 2026-07-31: the account is near its monthly included GitHub Actions minutes.**
+This is a *conservation* instruction, not a suspension of the gates.
+
+What the triggers actually are, verified rather than assumed:
+
+| Workflow | Fires on |
+|---|---|
+| `visual-qa.yml` | `pull_request` · `workflow_dispatch` |
+| `ci.yml` | `pull_request` (any base) · pushes to `main` |
+
+So **pushing commits to a branch with no open pull request costs nothing**, and that is where
+work goes. Allowed: working locally, running the gates locally, committing, pushing to a
+non-PR branch, updating the checkpoint and the ruling index, reading existing GitHub results,
+and preparing **one** coherent future PR branch.
+
+Prohibited until the reset is confirmed: opening or reopening a pull request · pushing to a
+branch that already has one · pushing to `main` · merging · manual dispatch · re-running a
+failed or cancelled run · using CI as an exploratory debugging loop · a series of small PRs ·
+deploying to verify routine work.
+
+**The reset is not inferred from the calendar.** It takes an explicit commissioner statement,
+or billing/usage evidence the session can read directly. "It is probably a new month" is not
+authorization.
+
+**No release gate is weakened by any of this.** `npm run check` and `npm run visual:qa` still
+run in full, on a production build against a fresh database, every time — only their *GitHub
+execution* is deferred. When the allowance returns, the branch becomes one meaningful CI and
+visual-QA run rather than a dozen cheap ones.
+
+---
+
 ## 5. Rules that bind every actor
 
 - **Never expose a secret** in code, logs, issue text, PR comments or screenshots. Secrets live in GitHub Actions secrets and are read only by workflows.
