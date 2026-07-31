@@ -99,22 +99,19 @@ export default async function SlicePage({
               daysUntilKickoff={clock.daysUntilKickoff}
             />
           ) : (
-            <>
-              {/*
-                * The paper that is on the rack today is last season's.
-                *
-                * Said once, above the masthead, in the rack's voice rather than
-                * the paper's — the issue itself is dated and does not need to
-                * apologise for being old. Only in the offseason: a live issue is
-                * the current one and labelling it would be wrong.
-                */}
-              {state.mode === 'rack' && (
-                <p className="mb-2 text-center font-display text-[13px] leading-[1.5] tracking-[0.08em] text-paper-mid/70 uppercase">
-                  Last one Tony printed
-                </p>
-              )}
-              <Newspaper issue={issue} />
-            </>
+            /*
+              * The paper on the rack today is last season's, and the sheet says
+              * so **on itself**.
+              *
+              * The note used to sit above the masthead, on the room — a caveat in
+              * front of the nameplate. Passed in as a stamp it prints inside the
+              * paper, under the rules, where a stamp goes. Only in the offseason:
+              * a live issue is the current one and labelling it would be wrong.
+              */
+            <Newspaper
+              issue={issue}
+              stamp={state.mode === 'rack' ? 'Last one Tony printed' : null}
+            />
           )}
 
           <div className="mt-7">

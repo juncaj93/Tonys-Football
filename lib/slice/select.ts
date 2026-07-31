@@ -58,6 +58,11 @@ import {
  * significance, so a real blowout always runs — it just runs second when the
  * paper ran one last week.
  *
+ * ## And above `MATERIAL`, variety has no vote at all
+ *
+ * A record, a title, or an `obliterated` margin is not a matter of tone. It leads
+ * whatever ran last week and whoever else is in the issue. See `MATERIAL`.
+ *
  * ## Greedy over a fixed order, deliberately
  *
  * Candidates arrive sorted by significance. The walk is single-pass and the
@@ -118,6 +123,30 @@ export const MAX_STORIES = 3;
 export const REPEAT_PENALTY = 120;
 
 /**
+ * Above this, variety stops having a vote.
+ *
+ * **Commissioner ruling, 2026-07-31:** *"Do not allow novelty, variety, or
+ * manager balancing to suppress a materially significant verified event."*
+ *
+ * Every rule in this module exists to stop the paper repeating itself, and every
+ * one of them is a heuristic about *tone*. A record, a title, or a margin the
+ * classifier called `obliterated` is not a matter of tone — it is the news, and a
+ * paper that dropped it because the same manager already appeared, or because a
+ * blowout led last week, would be wrong in the way that loses a reader's trust
+ * rather than merely boring them.
+ *
+ * So above this line: no repeat penalty, no novelty discount, no `same-kind`
+ * drop. `same-game` still applies, because two stories about one game is one
+ * story told twice and that is not a variety rule — it is arithmetic.
+ *
+ * The value sits below `championship` (900), both records (940 / 950) and an
+ * `obliterated` blowout (780+), and above everything a heuristic should be
+ * allowed to move: a `crushed` blowout (600+), a nail-biter (600–700), a high
+ * score (480–580), a streak, a table move.
+ */
+export const MATERIAL = 750;
+
+/**
  * What leading a recent issue costs, most recent first.
  *
  * Last week is discounted hardest. Two weeks back is a reminder rather than a
@@ -152,15 +181,19 @@ export function selectStories(
    * The discount lives here and only here; every floor below reads the raw
    * significance.
    */
+  const rank = (candidate: StoryCandidate): number =>
+    candidate.significance -
+    (candidate.significance >= MATERIAL ? 0 : stalePenalty(candidate.kind));
+
   const ordered = [...candidates].sort(
-    (x, y) =>
-      y.significance -
-        stalePenalty(y.kind) -
-        (x.significance - stalePenalty(x.kind)) || x.id.localeCompare(y.id),
+    (x, y) => rank(y) - rank(x) || x.id.localeCompare(y.id),
   );
 
   const demoted: Demoted[] = candidates
-    .filter((candidate) => stalePenalty(candidate.kind) > 0)
+    .filter(
+      (candidate) =>
+        stalePenalty(candidate.kind) > 0 && candidate.significance < MATERIAL,
+    )
     .map((candidate) => ({
       id: candidate.id,
       kind: candidate.kind,
@@ -208,7 +241,15 @@ export function selectStories(
       continue;
     }
 
-    if (usedKinds.has(candidate.kind)) {
+    /*
+     * The materiality escape hatch, checked once and used three times below.
+     *
+     * `same-game` is deliberately *not* gated on it: that rule is above this
+     * line, because one result is one story whatever it was worth.
+     */
+    const material = candidate.significance >= MATERIAL;
+
+    if (!material && usedKinds.has(candidate.kind)) {
       drop(candidate, 'same-kind', `the issue already carries a ${candidate.kind} story`);
       continue;
     }
@@ -225,7 +266,7 @@ export function selectStories(
     const already = subject === undefined ? 0 : (subjectCount.get(subject) ?? 0);
     const adjusted = candidate.significance - already * REPEAT_PENALTY;
 
-    if (already > 0 && adjusted < STORY_FLOOR) {
+    if (!material && already > 0 && adjusted < STORY_FLOOR) {
       drop(
         candidate,
         'manager-repeat',

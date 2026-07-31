@@ -12,7 +12,7 @@ import { LEAD_FLOOR, STORY_FLOOR, type StoryCandidate } from '@/lib/stats/storie
 import { latestEdition } from './edition';
 import { SLICE_EDITIONS, allEditions, resolveEdition } from './editions';
 import { factPacket, margin, points, type FactPacket } from './packet';
-import { MAX_STORIES, selectStories } from './select';
+import { MATERIAL, MAX_STORIES, selectStories } from './select';
 import {
   COLOUR,
   COLUMN,
@@ -87,7 +87,7 @@ const HAND: FactPacket = {
 const blank: Edition = {
   season: 2025,
   week: 3,
-  dateline: 'Tuesday edition · Season 2025 · Week 3',
+  dateline: 'Season 2025 · Week 3',
   character: 'ordinary',
   headline: '',
   deck: null,
@@ -343,6 +343,56 @@ describe('the desk', () => {
     expect(stale.quiet).toBe(false);
     expect(stale.lead?.id).toBe('blow');
     expect(stale.demoted).toContainEqual(expect.objectContaining({ id: 'blow', penalty: 150 }));
+  });
+
+  it('never lets variety suppress a materially significant event', () => {
+    /*
+     * Commissioner ruling, 2026-07-31, and the three rules it overrides, driven
+     * one at a time. A record is the news; a paper that dropped it because the
+     * same manager already appeared, or because a blowout led last week, would be
+     * wrong in the way that loses a reader rather than merely bores them.
+     */
+    const record = candidate({
+      id: 'record',
+      kind: 'record-margin',
+      significance: MATERIAL + 10,
+      subjects: ['same'],
+    });
+
+    // 1. Novelty cannot demote it below a weaker story.
+    const stale = selectStories(
+      [record, candidate({ id: 'fresh', kind: 'streak', significance: 500, subjects: ['other'] })],
+      { recentLeadKinds: ['record-margin'] },
+    );
+    expect(stale.lead?.id).toBe('record');
+    expect(stale.demoted).toEqual([]);
+
+    // 2. Nor can a manager already carrying the issue.
+    const repeat = selectStories([
+      candidate({ id: 'first', kind: 'blowout', significance: 800, subjects: ['same'] }),
+      record,
+    ]);
+    expect(repeat.rest.map((story) => story.id)).toContain('record');
+
+    // 3. Nor can another story of the same kind.
+    const sameKind = selectStories([
+      candidate({ id: 'other-record', kind: 'record-margin', significance: 900, subjects: ['a'] }),
+      { ...record, gameKey: 'different' },
+    ]);
+    expect([sameKind.lead, ...sameKind.rest].map((story) => story?.id)).toContain('record');
+  });
+
+  it('still tells one result as one story, however material', () => {
+    // `same-game` is above the materiality line, because it is arithmetic rather
+    // than a variety heuristic.
+    const selection = selectStories([
+      candidate({ id: 'title', kind: 'championship', significance: 900, gameKey: 'g1' }),
+      candidate({ id: 'record', kind: 'record-margin', significance: 950, gameKey: 'g1' }),
+    ]);
+    expect(selection.rest).toHaveLength(0);
+    expect(selection.suppressed).toContainEqual(
+      expect.objectContaining({ reason: 'same-game' }),
+    );
   });
 
   it('lets a fresh story of equal weight overtake a repeated one', () => {

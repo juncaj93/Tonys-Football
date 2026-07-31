@@ -16,6 +16,8 @@ import { factPacket } from '@/lib/slice/packet';
 import { renderEdition } from '@/lib/slice/render';
 
 import { finalizedMarginsCents, seasonFacts } from './facts';
+import { standingsThrough, winStreak } from './standings';
+import { seasonWeeks } from './week';
 
 /**
  * An independent check on the fact layer, from the raw files.
@@ -611,5 +613,183 @@ describe.skipIf(!hasDatabase)('the fact layer, checked against the raw files', (
       }
     }
     expect(namesSomebodyRetired).toBe(true);
+  });
+
+  /* ---- the table, and the streaks, recomputed from the files ----------- */
+
+  it('recomputes the regular season and finds exactly the disagreement `16 §12` documents', async () => {
+    /*
+     * The strongest independent check available, because it compares two things
+     * Sleeper published *separately*: the weekly points files, and the finalized
+     * `wins`/`losses` on each roster.
+     *
+     * Adding up fourteen weeks of raw points gives a record. `season_memberships`
+     * holds the record Sleeper's own standings reported. They should be the same
+     * number, and where they are not, nothing in this product may pick a winner
+     * (`16 §12`: the disagreement is reported and never resolved).
+     *
+     * **2025 agrees perfectly. 2024 disagrees for exactly four rosters — 5, 6, 9
+     * and 10.** That is pinned rather than tolerated: a fifth disagreement means
+     * either the import changed or the fixtures did, and both are worth a build
+     * failure. `disputed` on `fantasy_matchups` is what stops any of it being
+     * published.
+     */
+    const expected: Record<number, readonly number[]> = { 2024: [5, 6, 9, 10], 2025: [] };
+
+    for (const [leagueId, year] of [
+      [LEAGUE_2024, 2024],
+      [LEAGUE_2025, 2025],
+    ] as const) {
+      const record = new Map<number, { wins: number; losses: number; ties: number }>();
+      const bump = (rosterId: number) => {
+        const existing = record.get(rosterId);
+        if (existing !== undefined) return existing;
+        const fresh = { wins: 0, losses: 0, ties: 0 };
+        record.set(rosterId, fresh);
+        return fresh;
+      };
+
+      // Regular season only. A bracket result does not move the table — the
+      // table is what produced the bracket.
+      for (let week = 1; week <= 14; week++) {
+        for (const game of rawGames(leagueId, week)) {
+          const [a, b] = game.rosters;
+          const [ca, cb] = game.cents;
+          const left = bump(a);
+          const right = bump(b);
+          if (ca === cb) {
+            left.ties++;
+            right.ties++;
+          } else if (ca > cb) {
+            left.wins++;
+            right.losses++;
+          } else {
+            right.wins++;
+            left.losses++;
+          }
+        }
+      }
+
+      const [season] = await db!.select().from(seasons).where(eq(seasons.year, year));
+      const stored = await db!
+        .select()
+        .from(seasonMemberships)
+        .where(eq(seasonMemberships.seasonId, season!.id));
+
+      const disagreeing = stored
+        .filter((row) => {
+          const mine = record.get(row.rosterId);
+          return mine !== undefined && (mine.wins !== row.wins || mine.losses !== row.losses);
+        })
+        .map((row) => row.rosterId)
+        .sort((x, y) => x - y);
+
+      expect(disagreeing, `${String(year)} standings disagreement`).toEqual(expected[year]);
+    }
+  });
+
+  it('agrees with the table the story layer builds, week by week', async () => {
+    /*
+     * `standingsThrough` is the thing under test; the expectation below is built
+     * here from the raw files with no call into `lib/stats`. Checked at **every**
+     * regular week rather than at the end, because a standings *move* is a claim
+     * about two adjacent weeks and an off-by-one in the cutoff would be invisible
+     * in a final table.
+     */
+    for (const [leagueId, year] of [
+      [LEAGUE_2024, 2024],
+      [LEAGUE_2025, 2025],
+    ] as const) {
+      const season = await seasonWeeks(db!, year);
+
+      for (let through = 1; through <= 14; through++) {
+        const mine = new Map<number, { wins: number; pf: number }>();
+        const bump = (rosterId: number) => {
+          const existing = mine.get(rosterId);
+          if (existing !== undefined) return existing;
+          const fresh = { wins: 0, pf: 0 };
+          mine.set(rosterId, fresh);
+          return fresh;
+        };
+
+        for (let week = 1; week <= through; week++) {
+          for (const game of rawGames(leagueId, week)) {
+            const [a, b] = game.rosters;
+            const [ca, cb] = game.cents;
+            bump(a).pf += ca;
+            bump(b).pf += cb;
+            if (ca > cb) bump(a).wins++;
+            else if (cb > ca) bump(b).wins++;
+          }
+        }
+
+        const table = standingsThrough({
+          rows: season.rows,
+          throughWeek: through,
+          roster: season.roster,
+        });
+
+        for (const row of table) {
+          const expected = mine.get(row.rosterId);
+          if (expected === undefined) continue;
+          const where = `${String(year)} through w${String(through)} roster ${String(row.rosterId)}`;
+          expect(row.wins, `${where} wins`).toBe(expected.wins);
+          expect(row.pointsForCents, `${where} points for`).toBe(expected.pf);
+        }
+
+        // The order is a claim too: wins, then points for. Checked as a property
+        // of the returned sequence rather than by rebuilding the sort here.
+        for (let i = 1; i < table.length; i++) {
+          const above = table[i - 1]!;
+          const below = table[i]!;
+          const ordered =
+            above.wins > below.wins ||
+            (above.wins === below.wins && above.pointsForCents >= below.pointsForCents);
+          expect(ordered, `${String(year)} w${String(through)} order at ${String(i)}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('counts a winning run the same way the raw weeks do', async () => {
+    /*
+     * A streak is the one derived value with a *direction* — counted backwards
+     * from a week — so an off-by-one reads as a plausible number rather than as a
+     * wrong one. Recomputed here by walking the raw weeks forward and keeping a
+     * running count, which is deliberately the opposite direction from
+     * `winStreak`'s.
+     */
+    for (const [leagueId, year] of [
+      [LEAGUE_2024, 2024],
+      [LEAGUE_2025, 2025],
+    ] as const) {
+      const season = await seasonWeeks(db!, year);
+
+      const running = new Map<number, number>();
+      for (let week = 1; week <= 14; week++) {
+        for (const game of rawGames(leagueId, week)) {
+          const [a, b] = game.rosters;
+          const [ca, cb] = game.cents;
+          if (ca === cb) {
+            // A tie ends a run rather than extending it — an unbeaten run and a
+            // winning run are different claims.
+            running.set(a, 0);
+            running.set(b, 0);
+          } else {
+            const winner = ca > cb ? a : b;
+            const loser = ca > cb ? b : a;
+            running.set(winner, (running.get(winner) ?? 0) + 1);
+            running.set(loser, 0);
+          }
+        }
+
+        for (const [rosterId, expected] of running) {
+          expect(
+            winStreak({ rows: season.rows, rosterId, throughWeek: week }),
+            `${String(year)} w${String(week)} roster ${String(rosterId)}`,
+          ).toBe(expected);
+        }
+      }
+    }
   });
 });

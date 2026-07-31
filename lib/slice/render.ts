@@ -179,6 +179,18 @@ export const RESULT = {
  * belong in the fact layer instead.
  */
 export const FRAME = {
+  /*
+   * The championship's middle sentence.
+   *
+   * It was removed when `FRAME` and `KIND_COLOUR` both said *banner* — two
+   * sentences making one point. The fix is a different point rather than no
+   * point: the paper's biggest story should not be two lines long, and the title
+   * game is the one story where the *season* is the context.
+   */
+  championship: [
+    'A whole year of Sundays, settled in an afternoon.',
+    'Everything since September was on the way to that game.',
+  ],
   'record-margin': ['The widest anybody has been beaten by, in either season on file.'],
   'record-score': ['The biggest single afternoon anybody has had, in either season on file.'],
   'high-score': ['The best anybody managed that week.'],
@@ -322,7 +334,6 @@ export const COLUMN: Record<EditionCharacter, readonly string[]> = {
  * able to see it.**
  */
 export const PHRASES = {
-  dateline: 'Tuesday edition',
   datelineSeason: 'Season',
   datelineWeek: 'Week',
   datelinePlayoffs: 'Playoffs',
@@ -505,6 +516,9 @@ function bodyOf(story: StoryCandidate, namedInHeadline: boolean): string {
    */
   switch (detail.kind) {
     case 'championship':
+      sentences.push(fill(pick(GAP, seedFor(story, 'gap')), tokens));
+      sentences.push(pick(FRAME.championship, seedFor(story, 'frame')));
+      break;
     case 'blowout':
     case 'nail-biter':
     case 'elimination':
@@ -597,12 +611,18 @@ function characterOf(packet: FactPacket): EditionCharacter {
   return packet.lead.significance >= 700 ? 'loud' : 'ordinary';
 }
 
+/**
+ * The dateline: season, week, and whether it is a bracket week.
+ *
+ * It used to open with *"Tuesday edition"*, which put four words in front of the
+ * only two facts on the line and wrapped it across two rows at 360 — *"SEASON
+ * 2025 ·"* then *"PLAYOFFS, WEEK 17"*, broken mid-phrase. The masthead directly
+ * above already says Tuesday, so the words were paying rent twice and buying a
+ * wrap.
+ */
 function datelineOf(packet: FactPacket): string {
-  const tail =
-    packet.weekType === 'playoff'
-      ? `${PHRASES.datelinePlayoffs}, ${PHRASES.datelineWeek.toLowerCase()} ${String(packet.week)}`
-      : `${PHRASES.datelineWeek} ${String(packet.week)}`;
-  return `${PHRASES.dateline} · ${PHRASES.datelineSeason} ${String(packet.season)} · ${tail}`;
+  const head = `${PHRASES.datelineSeason} ${String(packet.season)} · ${PHRASES.datelineWeek} ${String(packet.week)}`;
+  return packet.weekType === 'playoff' ? `${head} · ${PHRASES.datelinePlayoffs}` : head;
 }
 
 function scoreboardOf(lines: readonly ScoreLine[]): readonly RenderedScore[] {
