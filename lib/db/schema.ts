@@ -1281,3 +1281,76 @@ export type FantasyMatchup = typeof fantasyMatchups.$inferSelect;
 export type NewFantasyMatchup = typeof fantasyMatchups.$inferInsert;
 export type SignificancePolicy = typeof significancePolicies.$inferSelect;
 export type NewSignificancePolicy = typeof significancePolicies.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// M3 — modular character identity
+// ---------------------------------------------------------------------------
+
+/**
+ * A manager's base appearance.
+ *
+ * Four small integers, indices into `lib/character/catalog.ts`. `04 §10` permits
+ * a validated JSON configuration and this is columns instead, for one reason
+ * that matters: a column can carry a CHECK, and a legal-combination rule living
+ * only in application code holds until somebody writes a second caller.
+ *
+ * **Order in that catalog is the meaning of the stored number.** Never reorder
+ * it; only append. A stored value pointing at a moved row is unrecoverable and
+ * nobody notices for a week.
+ */
+export const characterConfigurations = pgTable('character_configurations', {
+  userId: uuid('user_id')
+    .primaryKey()
+    .references(() => users.id, { onDelete: 'cascade' }),
+
+  body: integer('body').notNull(),
+  face: integer('face').notNull(),
+  hair: integer('hair').notNull(),
+  /** Recolours the base layers only. A wearable keeps its authored colours. */
+  palette: integer('palette').notNull(),
+
+  ...timestamps,
+});
+
+/**
+ * What a manager is wearing.
+ *
+ * A row per equipped item; unequipping deletes it. *"Not wearing a hat"* is the
+ * absence of a hat, and a soft-deleted equip would need every reader to remember
+ * the filter.
+ *
+ * Three guarantees are in the database rather than in a service, and each one
+ * fails a race the service could not see:
+ *
+ * - **one item per slot** — two taps arriving together both read an empty head
+ *   slot and both insert; the second fails here instead of leaving somebody
+ *   wearing two hats with no way to remove either
+ * - **one place for each item** — the same collectible cannot occupy two slots
+ * - **only what you own** — a trigger, because a foreign key can say *"this is a
+ *   collectible"* and cannot say *"this is **your** collectible"*. The Showcase
+ *   needed exactly this and for exactly this reason.
+ */
+export const wearableEquips = pgTable(
+  'wearable_equips',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+
+    /** RESTRICT, like every reference to a collectible. They are never deleted. */
+    collectibleId: uuid('collectible_id')
+      .notNull()
+      .references(() => collectibles.id, { onDelete: 'restrict' }),
+
+    /** `back` · `bottoms` · `top` · `hand` · `head` (`lib/character/layers.ts`). */
+    slot: text('slot').notNull(),
+
+    equippedAt: timestamp('equipped_at', { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique('wearable_equips_one_per_slot').on(table.userId, table.slot),
+    unique('wearable_equips_one_place_each').on(table.collectibleId),
+  ],
+);

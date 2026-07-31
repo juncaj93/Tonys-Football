@@ -27,6 +27,121 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Where the product is — 2026-07-31 (third session)
+
+**PR #44 and #45 merged.** `main` is `6dd5b64`. Work below is on
+`claude/tonys-pizza-autonomous-jizv8b`, open as **PR #46**.
+
+**Batch B PNGs are deferred commissioner content** (ruling, 2026-07-31). They are not a blocker, not
+to be requested again, and the repository does not idle waiting for them. The ingestion path stays
+ready: `art/incoming/<slug>_01.png` → `npm run art:batch` → `--register`.
+
+### ⚠️ One contradiction the commissioner has to settle
+
+`art/assets.inventory.json`, group `_wearables_B2`, carries the comment:
+
+> *"12 earned wearables. **These ARE part of the 24-item catalog**, not additional to it."*
+
+**The implemented product disagrees.** `lib/counter/catalog.ts` holds 24 `collectible_*` slugs and no
+`wear_*` ones; those 24 are what `reward_tables` is seeded with; `CATALOG_SIZE` asserts the count.
+
+They cannot both be true and the difference is not cosmetic — **if the comment is right, the pizza
+box should be dropping wearables and M2's shipped economy is wrong.**
+
+The code follows the implemented catalog, because `16` and a seeded reward table outrank a comment in
+an art file (`AUTONOMY.md §1`) and because changing it would silently alter a live economy.
+`lib/character/character.test.ts` pins the implemented behaviour so a change is deliberate.
+**Reported rather than resolved** (`CLAUDE.md`).
+
+### The Slice, walked at real size
+
+Five things, all found by looking rather than by testing:
+
+- **A quiet week looked like a championship** — *"Not a lot to report"* at the same 26px a title
+  gets. `EditionCharacter` already knows which is which, so headline size now comes from it:
+  **26 / 22 / 19**. Strong news versus weak news as *type* rather than as intention.
+- The dateline opened with *"Tuesday edition"* and wrapped mid-phrase at 360. The masthead above
+  already says Tuesday.
+- *"Last one Tony printed"* sat above the masthead, on the room — a caveat in front of the nameplate.
+  It is a stamp on the sheet now.
+- The colophon was four lines under a two-sentence lead. One.
+- The championship — the biggest story the paper can print — was two sentences. Three now.
+
+**Commissioner ruling applied:** above **`MATERIAL` (750)** the repeat penalty, the novelty discount
+and the `same-kind` rule all stop applying. A record, a title or an `obliterated` margin is the news.
+`same-game` stays above that line — one result is one story whatever it was worth, which is arithmetic
+rather than a variety heuristic.
+
+### Stats verification — three more, and one is the strongest yet
+
+- **The regular season recomputed from fourteen weeks of raw points**, compared against the
+  `wins`/`losses` Sleeper published **separately**. 2025 agrees exactly; **2024 disagrees for exactly
+  four rosters — 5, 6, 9 and 10.** That is `16 §12` *measured* rather than quoted, and pinned so a
+  fifth is a build failure.
+- The table at **every** regular week, because a standings move is a claim about two adjacent weeks.
+- Every winning run, counted **forward** from week one against a helper that counts **backward**.
+
+### A hydration defect the harness found, and the product rule behind it
+
+The visual sweep reported a React hydration error against `demo-collection-empty` — a page with
+nothing to do with the counter. Signing in redirects through the parlor; the stats aside drew a fresh
+line on **every render**, the server rendered one and something rendered again.
+
+The aside now has the greeting's per-day cache. *"Stable dialogue during a page lifecycle"* is a
+product requirement, not a rendering detail. **It reproduced only in a full sweep and passed in
+isolation** — exactly the shape a per-state re-run dismisses as flaky.
+
+### M3 — the character foundation, built
+
+`drizzle/0008_character_identity.sql` plus `lib/character/`. Nothing touches `users`, `collectibles`,
+`loot_boxes`, `season_memberships` or the ledger; Tony's homepage rendering is untouched.
+
+| | |
+|---|---|
+| `layers.ts` | Two base layers (`body`, `hair`), four worn slots (`body`, `face`, `head`, `hand`) — **five slots** with hair, as the ruling index says. Six draw positions, fixed order, `32 × 48` |
+| `catalog.ts` | The **canonical slugs**, `avatar_*` and `wear_*`. Order is the meaning of the stored integer: never reorder, only append |
+| `composite.ts` | Pure. Configuration + equipment → ordered layers. Invalid composites to the default rather than throwing, and never persists the fallback |
+| `service.ts` | Server-authoritative save / equip / unequip. Slot is **derived from the item**, never passed in |
+
+Three guarantees are in the database, not in the service: **one item per slot** · **one place per
+item** · **only what you own** (a trigger — an FK can say *"this is a collectible"* and cannot say
+*"this is **your** collectible"*, exactly as the Showcase found).
+
+**The first draft of this was wrong and a test caught it.** It invented `character_hair_short` at
+`64 × 64` with `back` and `bottoms` slots — none of which exist. All twenty slugs, their slots and
+their canvas were already canon in the registry. `character.test.ts` now fails the build in both
+directions, and `docs/M3_CHARACTER_BOUNDARY.md` is corrected: it proposed the invented layer set, and
+the registry's is authoritative.
+
+**Still M3's, not started:** the manager-facing customiser flow, the `CharacterView` component, and
+`?character=` preview fixtures. The data and the logic are done and tested; the surface is the next
+slice.
+
+### Exact repository state
+
+| | |
+|---|---|
+| `main` | `6dd5b64` |
+| Branch / PR | `claude/tonys-pizza-autonomous-jizv8b` · **PR #46** |
+| `npm run check` | green — **867 tests across 53 files** |
+| `npm run visual:qa` | green — **49 states × 3 widths**, production build, fresh database |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
+
+### The next executable task, in order
+
+1. **M3's surface** — the customiser flow, a `CharacterView`, and `?character=` preview fixtures with
+   the same three guards the Slice editions have (throw on a declared-and-unimplemented state, a
+   marker the driver checks, a driver-coverage test).
+2. **Back Hall environmental implementation.** The stacked-card treatment is **not** final and the
+   9px amber-on-cream Underground line is a defect (`docs/VISUAL_DEBT.md` 4 and 5). Placeholders are
+   fine; the structure has to be a room.
+3. **Tony's Line, bounties, the chalkboard prediction** — all read the fact packet that exists.
+4. **The commissioner review queue** for live Slice publication.
+5. **The first casino foundation** — one game, server-authoritative, after M3 and the Back Hall.
+6. **Batch B**, whenever the PNGs arrive. One command.
+
+---
+
 ## Where the product is — 2026-07-31 (second session)
 
 **PR #43 and #44 are merged.** `main` is **`cc9ac2f`** — CI green on a real runner, and the merge
