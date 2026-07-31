@@ -29,8 +29,13 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ## Where the product is — 2026-07-31 (second session)
 
-**PR #43 merged.** `main` was `6740408` at the start of this session. The work below is on
-`claude/tonys-pizza-autonomous-jizv8b`.
+**PR #43 and #44 are merged.** `main` is **`cc9ac2f`** — CI green on a real runner, and the merge
+deployed. `main` was `6740408` at the start of this session.
+
+**Not verified in a browser.** The sandbox proxy denies CONNECT to `*.vercel.app`, so the hosted
+result of this deploy has not been loaded by anybody. The local evidence is a full production build,
+a fresh database and 49 visual states × 3 widths; the hosted evidence is a green GitHub-side deploy
+and nothing more. Say that plainly rather than implying a smoke test happened.
 
 ### The Slice is a newspaper
 
@@ -106,8 +111,8 @@ retired managers absent from every published surface **and still present in the 
 
 | | |
 |---|---|
-| `main` | `6740408` — PR #43 merged |
-| Branch | `claude/tonys-pizza-autonomous-jizv8b` |
+| `main` | **`cc9ac2f`** — PR #44 merged, CI green on a real runner |
+| Branch | `claude/tonys-pizza-autonomous-jizv8b`, restarted from `main` after the merge |
 | `npm run check` | green — **831 tests across 52 files** |
 | `npm run visual:qa` | green — **49 states × 3 widths**, production build, `DEMO_FIXTURES=1` on server *and* driver |
 
