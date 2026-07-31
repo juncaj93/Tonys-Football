@@ -1,5 +1,8 @@
 import { and, asc, eq } from 'drizzle-orm';
 
+import { DEFAULT_CONFIGURATION } from '@/lib/character/composite';
+import { characterFor, grantWearable, ownedWearables, saveCharacter } from '@/lib/character/service';
+import { now } from '@/lib/clock';
 import { type Database } from '@/lib/db';
 import { lootBoxes } from '@/lib/db/schema';
 import { RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
@@ -87,11 +90,18 @@ export async function applyDemoState(
   db: Database,
   key: string,
   env: Record<string, string | undefined>,
+  /**
+   * Which states are blocked. Defaults to the real list and is a parameter only
+   * so the refusal itself stays testable now that the list is empty — a
+   * mechanism exercised solely through whichever state happens to be blocked
+   * today stops being exercised at all the moment the last one ships.
+   */
+  blocked: readonly string[] = BLOCKED_ON_M3,
 ): Promise<DemoOutcome> {
   assertDemoAllowed(env);
 
   const state = demoState(key);
-  if (BLOCKED_ON_M3.includes(state.key)) {
+  if (blocked.includes(state.key)) {
     throw new DemoBlocked(
       state.key,
       `"${state.key}" needs a character for a wearable to be equipped onto, which is M3. ` +
@@ -535,6 +545,105 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
         total: collection.total,
         copies: collection.copies,
         tiers: RARITY_SPREAD.length,
+      },
+    };
+  },
+
+  /* --- who you are ---------------------------------------------------- */
+
+  /**
+   * The customiser with an empty wardrobe.
+   *
+   * The state **every real manager is in today**, which is why it is the one
+   * worth photographing most: nothing awards a wearable yet, so what a manager
+   * actually meets is four slots that say "nothing for this yet" above a build,
+   * a hairstyle and a colouring they can change. If that screen does not stand up
+   * on its own, the feature does not ship well no matter how good the full
+   * wardrobe looks.
+   */
+  'character-empty': async (db, seat) => {
+    const state = await characterFor(db, seat.userId);
+    return {
+      evidence: {
+        owned: (await ownedWearables(db, seat.userId)).length,
+        layers: state.composite.layers.length,
+      },
+    };
+  },
+
+  /**
+   * A wearable owned and equipped — the state that has been in this catalog,
+   * declared and refused, since M2.
+   *
+   * One item, in one slot, deliberately: it is the *equipping* that was blocked,
+   * and a screenshot of a manager wearing everything proves that no better than
+   * a screenshot of a manager wearing a hat.
+   */
+  'equipped-wearable': async (db, seat) => {
+    await grantWearable(db, seat.userId, 'wear_head_pizza_visor', now());
+    const owned = await ownedWearables(db, seat.userId);
+    const visor = owned.find((item) => item.slug === 'wear_head_pizza_visor');
+    if (visor === undefined) throw new DemoRefused('the visor was granted and is not owned');
+
+    const result = await saveCharacter(db, seat.userId, DEFAULT_CONFIGURATION, {
+      head: visor.collectibleId,
+    });
+    if (!result.ok) throw new DemoRefused(`equipping refused: ${result.detail}`);
+
+    return {
+      evidence: {
+        wearing: Object.values(result.state.equipment).join(', '),
+        layers: result.state.composite.layers.length,
+      },
+    };
+  },
+
+  /**
+   * Every slot filled, with something else in each slot to change to.
+   *
+   * Two items per slot rather than one, because the interesting question a
+   * screenshot of this answers is not *"can a slot be filled"* — the state above
+   * covers that — but whether a row of choices with one of them selected reads
+   * correctly at 360px. One item per slot could not show that.
+   */
+  'character-dressed': async (db, seat) => {
+    const wanted = [
+      'wear_head_beanie_winter',
+      'wear_head_paper_hat',
+      'wear_face_shades',
+      'wear_face_mustache_fake',
+      'wear_body_apron_tony',
+      'wear_body_jersey_blank',
+      'wear_hand_pizza_peel',
+      'wear_hand_slice',
+    ];
+    for (const slug of wanted) await grantWearable(db, seat.userId, slug, now());
+
+    const owned = await ownedWearables(db, seat.userId);
+    const pick = (slug: string): string => {
+      const found = owned.find((item) => item.slug === slug);
+      if (found === undefined) throw new DemoRefused(`${slug} was granted and is not owned`);
+      return found.collectibleId;
+    };
+
+    const result = await saveCharacter(
+      db,
+      seat.userId,
+      { body: 1, hair: 5, palette: 2 },
+      {
+        head: pick('wear_head_beanie_winter'),
+        face: pick('wear_face_shades'),
+        body: pick('wear_body_apron_tony'),
+        hand: pick('wear_hand_pizza_peel'),
+      },
+    );
+    if (!result.ok) throw new DemoRefused(`dressing refused: ${result.detail}`);
+
+    return {
+      evidence: {
+        owned: owned.length,
+        wearing: Object.keys(result.state.equipment).length,
+        layers: result.state.composite.layers.length,
       },
     };
   },

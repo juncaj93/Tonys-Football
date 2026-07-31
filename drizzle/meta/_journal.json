@@ -64,6 +64,13 @@
       "when": 1785500000000,
       "tag": "0008_character_identity",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1785600000000,
+      "tag": "0009_wearable_ownership",
+      "breakpoints": true
     }
   ]
 }

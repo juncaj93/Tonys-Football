@@ -34,7 +34,12 @@ export interface DemoState {
   readonly shows: string;
   readonly reach: Reach;
   /** Where a demo of this lands. */
-  readonly route: '/' | '/counter' | '/counter/collection' | '/counter/showcase';
+  readonly route:
+    | '/'
+    | '/counter'
+    | '/counter/collection'
+    | '/counter/showcase'
+    | '/profile/character';
 }
 
 /**
@@ -97,7 +102,19 @@ export const DEMO_STATES: readonly DemoState[] = [
     key: 'equipped-wearable',
     shows: 'a wearable owned and equipped',
     reach: 'arranged',
-    route: '/counter/collection',
+    route: '/profile/character',
+  },
+  {
+    key: 'character-empty',
+    shows: 'the customiser for a manager who owns nothing to wear',
+    reach: 'arranged',
+    route: '/profile/character',
+  },
+  {
+    key: 'character-dressed',
+    shows: 'every slot filled, and options in each one to change to',
+    reach: 'arranged',
+    route: '/profile/character',
   },
   {
     key: 'showcased',
@@ -131,8 +148,15 @@ export function demoState(key: string): DemoState {
 /**
  * The states that need a wearable or a character to exist.
  *
- * `equipped-wearable` is listed above because the commissioner listed it, and it
- * cannot be produced until M3 gives wearables something to attach to. Naming it
- * here keeps it in the catalog — and honest — instead of quietly absent.
+ * **Empty since M3's surface landed.** `equipped-wearable` was the single entry:
+ * the commissioner listed it, and it could not be produced until a character
+ * existed for a wearable to attach to. Naming it kept it in the catalog — and
+ * honest — instead of quietly absent, and it now applies like any other state.
+ *
+ * The list stays rather than being deleted. It is the mechanism for *"a state
+ * that cannot be produced yet is honest; a state quietly absent is not"*, and
+ * the next milestone that declares a state ahead of its feature needs it.
+ * `apply.test.ts` asserts it is empty, so a state parked here is a deliberate
+ * edit rather than a leftover.
  */
-export const BLOCKED_ON_M3: readonly string[] = ['equipped-wearable'];
+export const BLOCKED_ON_M3: readonly string[] = [];
