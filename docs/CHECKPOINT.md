@@ -14,7 +14,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 | Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
 |---|---|---|---|---|
-| **M3 — character identity** | `TECH_LEAD_IMPLEMENTING` | `claude/tonys-pizza-tech-lead-s11qsw` · **PR #48** | `5093f91` | Nothing. The vertical slice is complete: data, compositor, service, surface, previews, demo states, gates |
+| **M3 — character identity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #48 | Nothing. The vertical slice is complete: data, compositor, service, surface, previews, demo states, gates. Wearable *sources* are a later milestone and none is approved |
 | **Back Hall as a room** | `QUEUED_NOT_ACTIVE` | — | — | **The next executable slice.** Unblocked by the 2026-07-31 ruling; see below |
 | **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
@@ -29,8 +29,12 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ## Where the product is — 2026-07-31 (fourth session)
 
-**PR #47 merged** (`30da0bc`, checkpoint correction). Work below is on
-`claude/tonys-pizza-tech-lead-s11qsw`, open as **PR #48**.
+**PR #47 and #48 are merged.** `main` is **`b0ce940`** — both gates green on real runners, and the
+merge deployed. The integrated head was re-verified locally after the merge: 907 tests, 56 files.
+
+**Not verified in a browser.** The sandbox proxy denies CONNECT to `*.vercel.app`. Local evidence is
+a production build on a fresh database and 58 visual states × 3 widths; hosted evidence is a green
+GitHub-side deploy and nothing more.
 
 ### The wearables contradiction is settled
 
@@ -99,8 +103,8 @@ something about to be discarded.
 
 | | |
 |---|---|
-| `main` | `30da0bc` — PR #47 merged |
-| Branch / PR | `claude/tonys-pizza-tech-lead-s11qsw` · **PR #48** |
+| `main` | **`b0ce940`** — PR #48 merged |
+| Branch | `claude/tonys-pizza-tech-lead-s11qsw`, restarted from `main` after the merge |
 | `npm run check` | green — **907 tests across 56 files** (was 867 / 53) |
 | `npm run visual:qa` | green — **58 states × 3 widths**, production build, fresh database (was 49) |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
