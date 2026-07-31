@@ -26,12 +26,12 @@ Visual QA finds something that is genuinely worth improving and genuinely not wo
 | 1 | `/counter/collection`, empty state | Roughly two screens of scroll for a manager who owns nothing. Now photographed (`demo-collection-empty`) and the pacing is defensible — the earlier note's "eight screens" was an estimate, not a measurement. Left open only as a question of *rhythm*, not of legibility. | The information is right and now readable; changing the length touches `18 §4`'s ruling that the whole catalog is shown. |
 | 2 | Reveal plate, all widths | The collectible is 46 units against a plate that is now six or seven rows tall. It is on the plate's axis and standing on it, so it no longer reads as accidental — but the *caption still outweighs the thing it captions*. | Waiting on real collectible art. All 24 items are `art_status: placeholder`, so tuning focal weight now means tuning to a tagged parcel that is about to be replaced by 24 different silhouettes. |
 | 3 | Tony's dialogue | The order pad landed in #30 and reads as Tony's. The *timing* of its arrival and dismissal has never been reviewed against the reveal's timing — two transient things that must never compete (`MANDATE §6`). | Needs the reveal states, which only became photographable in #36. Now unblocked. |
-| 5 | `/back-hall`, all widths | The Back Hall is three stacked `PixelPanel`s with headings — *"a menu card"* almost exactly as `18 §5` forbids. The spec's shape is one compact pixel-art scene with two environmental choices. | ~~Blocked on art.~~ **Unblocked by commissioner ruling, 2026-07-31**: *"Do not block all Back Hall development on final art… use deliberate in-world placeholder architecture."* The character system has since shown what that looks like — a drawn stand-in at the right size rather than a sign — so the "it would be built twice" reasoning no longer holds. **This is the next executable slice**, and the typography fix below deliberately did not touch the structure. `docs/BACK_HALL_BOUNDARY.md §7.1`. |
 
 ## Closed
 
 | | What | Closed by |
 |---|---|---|
+| 5 | **The Back Hall was a menu card** — three stacked `PixelPanel`s with headings, which `18 §5` forbids almost verbatim | this session. It is a room now: one portrait scene, three hit regions in room units, no scroll. `docs/BACK_HALL_BOUNDARY.md §8` |
 | 6 | **The parlor's intermittent React #418 hydration mismatch** — `SpokenLine` changed its element structure on a timer, and `TonyToy` set that timer to zero on every load after the first | this session. See below |
 | — | `LEGENDARY` unreadable on cream — 2.24:1, on the plate at the centre of the milestone's biggest moment | #36, and now a build-failing gate |
 | — | Common's rarity word at 3.42:1 on both grounds | #36 |

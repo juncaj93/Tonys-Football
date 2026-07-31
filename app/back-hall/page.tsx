@@ -1,122 +1,133 @@
-import Link from 'next/link';
-
-import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
-import { RoomBehind } from '@/components/scene/room-behind';
+import { BackHallScene } from '@/components/scene/back-hall';
+import { RoomDoor } from '@/components/scene/room-object';
+import { ShutDoor } from '@/components/scene/shut-door';
 import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
+import { BACK_HALL, LOCKED_LINES, backHallObject, openTo } from '@/lib/backhall/objects';
+import { featureFlags } from '@/lib/flags';
 
 /**
  * The staff hallway behind the dining room.
  *
- * **One compact screen, two environmental choices, and a door back.** Not a
- * menu card and not a grid — `18 §5` is explicit that this is a place you walk
- * into, and a card grid would make it a submenu with wallpaper.
+ * **One compact screen, two environmental choices, and a door back** — `18 §5`,
+ * and it is a place you walk into rather than a page you read.
+ *
+ * ## What this replaces, and why the replacement is not a restyle
+ *
+ * It was three stacked `PixelPanel`s with headings: *"Down the stairs"*, *"The
+ * curtained door"*, and a return plate underneath. Every one of those is a
+ * control with a label, which is *"a menu card"* almost verbatim as `18 §5`
+ * describes it when forbidding one, and *"generic web boxes"* as the preserved
+ * M1 baseline forbids reintroducing.
+ *
+ * The distinction that matters is not how it looked. The room's whole grammar is
+ * **objects you can guess the destination of before tapping** — that is the test
+ * `18` sets for anything earning a route — and a panel titled with its own
+ * destination has already given up on it. Stairs going down do not need a
+ * heading saying they are stairs.
+ *
+ * So the hall is now built the way the parlor is: one portrait scene filling the
+ * viewport, transparent hit regions over it in room units, nothing scrolling,
+ * and the way out is a door in the wall.
  *
  * ## Why this room exists at all
  *
- * Rooms and Underground are **two taps** from the parlor, which is the one
- * approved exception to one-tap depth, and it is worth being clear about what
- * buys the exception. Two things do. The artwork has exactly **one** real rear
- * doorway, so a second homepage door would have to be invented. And a curtained,
- * unmarked door is *odd* in a public dining room and exactly right in a staff
- * hallway — the Back Hall makes the Underground's reveal better rather than
- * merely making it fit.
+ * Rooms and the Underground are **two taps** from the parlor, the one approved
+ * exception to one-tap depth, and it is worth being clear what buys it. The
+ * artwork has exactly **one** real rear doorway, so a second homepage door would
+ * have to be invented — and a curtained, unmarked door is *odd* in a public
+ * dining room and exactly right in a staff hallway. The Back Hall makes the
+ * Underground's reveal better rather than merely making it fit.
  *
- * In V1 both destinations are locked. They are **visible and tappable anyway**,
- * because a manager should know the downstairs exists before it opens, and
- * because a locked door that answers in-world is a world, while a hidden one is
- * just an absent feature.
+ * ## Both destinations are shut, and that is the state that got the attention
+ *
+ * They are **visible and tappable anyway** (`18 §6`): a manager should know the
+ * downstairs exists before it opens, and a shut door that answers in-world is a
+ * world, while a hidden one is an absent feature. Whether a door is open is a
+ * **deploy-time flag** — nobody earns a hallway, and a per-manager unlock would
+ * be the progression `16` removes from this product.
+ *
+ * ## Nothing glows
+ *
+ * `18 §3`: a Door glows only when it has something to say, and only Doors ever
+ * glow. Nothing beyond this hall is open, so nothing here announces itself — and
+ * the `glow` gate in `npm run visual:qa` fails a room where anything does.
  */
 
 export const dynamic = 'force-dynamic';
 
-export default async function BackHallPage() {
+export default async function BackHallPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireUser();
 
+  /*
+   * `?open=rooms,underground` — review only, resolved here on the server behind
+   * the demo system's own two guards (`lib/flags.ts`). Both destinations are
+   * shut for every real manager, and the state nobody will see for a year is the
+   * one that has to look right when they do.
+   */
+  const query = await searchParams;
+  const flags = featureFlags(process.env, query['open']);
+  const stairs = backHallObject('stairs');
+  const curtain = backHallObject('curtain');
+
   return (
-    <>
-      <RoomBehind />
+    <Page oneScreen>
+      <main
+        className="relative flex min-h-0 flex-1 justify-center overflow-hidden"
+        // The floor's own colour, so a viewport taller than the hall reads as
+        // more corridor rather than as a letterbox. Same treatment as the parlor.
+        style={{ backgroundColor: '#1a1214' }}
+      >
+        <div
+          className="relative w-full max-w-[430px] self-start"
+          style={{ aspectRatio: `${String(BACK_HALL.width)} / ${String(BACK_HALL.height)}` }}
+        >
+          <BackHallScene chained={!flags.rooms} />
 
-      <Page>
-        <div className="mx-auto w-full max-w-[420px] px-4 pt-6 pb-10">
-          <SignPlate>Back hall</SignPlate>
+          {/*
+            * The stairs down to the rooms.
+            *
+            * Open, it is an ordinary Door. Shut, it is the same object with the
+            * same markers and a line instead of a destination — so the object
+            * map is identical in both states, and shipping the basement changes
+            * one element rather than the room.
+            */}
+          {flags.rooms ? (
+            <RoomDoor spec={openTo('stairs')} />
+          ) : (
+            <ShutDoor spec={stairs} line={LOCKED_LINES.stairs} />
+          )}
 
-          <p className="mt-4 text-[17px] leading-[1.5] text-paper-mid/80">
-            Crates against one wall, a mop bucket, and the hum of the walk-in. Two doors.
-          </p>
-
-          <div className="mt-6 space-y-4">
-            {/*
-              * The cellar stairs. Named for what is down there rather than for
-              * the furniture — "Rooms" is where managers keep their things.
-              */}
-            <Link href="/rooms" className="block outline-none">
-              <PixelPanel className="px-4 py-4 active:translate-y-px">
-                <PanelHeading>Down the stairs</PanelHeading>
-                <p className="mt-1.5 text-[17px] leading-[1.45] text-ink-700">
-                  A light is on at the bottom and somebody has been moving boxes.
-                </p>
-                {/*
-                  * A **closed door with a line**, never a disabled control
-                  * (`BACK_HALL_BOUNDARY §2`). It was set at 9px in `amber-mid/70`
-                  * on cream — under the 16–18px floor (`MANDATE §6`) and around
-                  * 1.6:1 against the surface it sits on. A line nobody can read
-                  * is not atmospheric; it is absent, and this one is the entire
-                  * statement that the downstairs exists.
-                  */}
-                <p className="mt-2.5 font-display text-[12px] text-ink-500 uppercase">
-                  Chained — later
-                </p>
-              </PixelPanel>
-            </Link>
-
-            {/*
-              * The Underground. **Never labelled `CASINO` on first discovery**
-              * (`18 §5`) — the whole point is that you find out what it is by
-              * being let in, not by reading a sign on the way past.
-              */}
-            {/*
-              * **Not a `Link`.** It was one, to `/underground`, which does not
-              * exist — so Next prefetched it on hover and every visit to this
-              * page logged a 404. Nothing rendered wrong, nothing failed a test,
-              * and the console error was the only evidence.
-              *
-              * A locked destination is *supposed* to be a dead end that answers
-              * in-world (`18 §6`): "Tappable, but answers in-world — not a
-              * route, not a modal, not a coming-soon badge." A link to a route
-              * that has not been built is none of those things; it is a broken
-              * link wearing the costume of a locked door. The plate is inert
-              * until the Underground opens, and the line on it is the answer.
-              */}
-            <PixelPanel className="px-4 py-4">
-              <PanelHeading>The curtained door</PanelHeading>
-              <p className="mt-1.5 text-[17px] leading-[1.45] text-ink-700">
-                Heavy curtain, no handle you can see, no sign on it.
-              </p>
-              {/*
-                * **The whole reveal of the Underground**, and it shipped at 9px
-                * in `amber-mid/70` on cream — the single least readable thing in
-                * the product, carrying the one line `18 §5` fixes verbatim.
-                *
-                * It is somebody answering a question, so it is set like speech
-                * rather than like a status label: full body size, `ink-900`, and
-                * the quotation marks kept because the joke is that a person said
-                * it. (The Slice's ban on quotation marks is about *fabricated
-                * testimony* in generated prose — this is fixed curated copy from
-                * the navigation map, on a surface with no renderer.)
-                */}
-              <p className="mt-2.5 text-[17px] leading-[1.45] text-ink-900">
-                &ldquo;Don&rsquo;t worry about it.&rdquo;
-              </p>
-            </PixelPanel>
-          </div>
+          {/*
+            * The curtained doorway.
+            *
+            * **`/underground` is not a route in v1, and this must not become a
+            * `<Link>` to one.** It was one once: Next prefetched it on hover,
+            * every visit to this page logged a 404, nothing rendered wrong, no
+            * test failed, and the console gate was the only evidence.
+            *
+            * So `openTo` **throws** if the flag is turned on before the route
+            * exists, rather than rendering a door onto nothing. That is the
+            * repository's standing answer to a declared-and-unimplemented state.
+            * It also means the *both open* state cannot be photographed yet —
+            * recorded in `docs/BACK_HALL_BOUNDARY.md` as a demo the boundary
+            * document asked for and the product cannot honestly produce, rather
+            * than quietly dropped.
+            */}
+          {flags.underground ? (
+            <RoomDoor spec={openTo('curtain')} />
+          ) : (
+            <ShutDoor spec={curtain} line={LOCKED_LINES.curtain} />
+          )}
 
           {/* The way back is a door in the world, not the browser's back button. */}
-          <div className="mt-8">
-            <ReturnPlate />
-          </div>
+          <RoomDoor spec={backHallObject('return')} />
         </div>
-      </Page>
-    </>
+      </main>
+    </Page>
   );
 }

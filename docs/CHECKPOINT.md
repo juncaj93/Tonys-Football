@@ -15,7 +15,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
 |---|---|---|---|---|
 | **M3 — character identity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #48 | Nothing. The vertical slice is complete: data, compositor, service, surface, previews, demo states, gates. Wearable *sources* are a later milestone and none is approved |
-| **Back Hall as a room** | `QUEUED_NOT_ACTIVE` | — | — | **The next executable slice.** Unblocked by the 2026-07-31 ruling; see below. Blocked on nothing but the Actions freeze, which does not stop local work |
+| **Back Hall as a room** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. It is a room: three objects, flag-gated doors, two demo states, its own gates. Real art is a registry row |
 | **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Tony's Line, bounties, the chalkboard prediction, and the commissioner review queue |
@@ -125,19 +125,73 @@ reproduction. Said plainly rather than implied.
 | `main` | **`2073c7d`** — unchanged; nothing was merged or pushed to it |
 | Branch | `claude/resume-product-direction-5d76fh` — **no open PR**, and none to be opened until the allowance reset is confirmed |
 | Open PRs | **none** |
-| `npm run check` | green — **919 tests across 58 files** (was 907 / 56) |
-| `npm run visual:qa` | green — **58 states × 3 widths**, production build, fresh database |
+| `npm run check` | green — **947 tests across 60 files** (was 907 / 56) |
+| `npm run visual:qa` | green — **59 states × 3 widths**, production build, fresh database |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`, and it denies the Actions artifact host too — the failing run's screenshots could not be downloaded |
+
+### The Back Hall is a room
+
+Visual debt 5, closed. It was three stacked `PixelPanel`s with headings — *"a menu card"* almost
+verbatim as `18 §5` forbids one — and the reason that mattered is not how it looked: the room's
+grammar is **objects you can guess the destination of before tapping**, and a panel titled with its
+own destination has already given up on it. Stairs going down do not need a heading saying they are
+stairs.
+
+It is built the way the parlor is. One portrait scene filling the viewport, three transparent hit
+regions in room units, `Page oneScreen`, nothing scrolling, and the way out is a door in the wall.
+`zone_back_hall_shell` is registered at `960x1707` — `320 × 569` at the pipeline's 3× scale, the same
+as the parlor's — so the two rooms share one coordinate system and walking through the rear doorway
+does not change the size of the world.
+
+**The scene is drawn rather than signed.** The old reasoning — *"building against placeholders means
+building it twice"* — is what kept this route a card grid for a milestone, and the commissioner's
+ruling ended it. M3 had already shown the replacement: flat rectangles in palette colours at the
+right size. `components/scene/back-hall.tsx` draws **from the same rectangles the hit regions use**,
+so what a manager sees and what a tap lands on cannot drift. When the art lands, that file is deleted
+and the overlays become `AssetView`s; nothing else moves.
+
+**Nobody earns a hallway.** Open or shut is a **deploy-time flag** (`lib/flags.ts`) — a per-manager
+unlock is progression, which `16` removes from this product, and `18 §6` says a door opens *"for
+everyone at once, as an announced event"*. `roulette` is a reserved key that no path can turn on,
+including the preview override, because it is a decision with a key attached rather than a feature
+waiting for a switch.
+
+#### Two findings, both from looking
+
+1. **`back-hall-both-open` is a demo the boundary document asked for and the product cannot honestly
+   produce.** `/underground` is *deliberately* not a route — the reveal is that you find out what is
+   behind the curtain by being let in — so "the Underground is open" is not a state this product can
+   be in. Rendering it means a `<Link>` to a page that does not exist, which is the defect the console
+   gate caught here once before. The driver hung on `networkidle` against the 404, which is the most
+   useful possible outcome. `openTo()` now **throws** rather than rendering a door onto nothing, and
+   the state becomes photographable in the same change that gives the casino its route.
+2. **The chain was part of the room instead of part of the door**, so the open stairwell was
+   photographed chained. Nothing failed; the picture contradicted the page. Found on the state nobody
+   will see for a year, which is exactly why that state is photographed — and now gated, so the two
+   cannot disagree again.
+
+#### What the gates check
+
+`backhall.test.ts` (21) — three objects, all Doors · none overlapping · 44 CSS px on the narrowest
+phone · the Underground's line verbatim from `18 §5` · **no digit and no "soon" on a shut door**
+(`18 §6` bans countdowns) · nothing naming the casino · `roulette` unopenable by any route.
+`driver-coverage.test.ts` (7) — every declared state has a case, an expectation and a gate.
+`checkBackHall` in the driver — the hall's own object map, **which doors are open read from the DOM
+rather than assumed from the URL**, the chain agreeing with the door, and the word for what is behind
+the curtain never reaching the page.
+
+That last one exists for the reason the nine `reveal-*` states did: `?open=` is resolved by the
+**server**, so a server without `DEMO_FIXTURES=1` answers every state with the ordinary shut hall,
+and a driver that only navigated would file it under a name claiming otherwise and pass.
 
 ### The next executable task, in order
 
-1. **The Back Hall as a room** — visual debt 5, unblocked, and now the top of the list. Local
-   work the whole way: scene architecture, the flag boundary, five demo states, driver states,
-   two walk-and-fix rounds.
-2. **The casino foundation** — one game, server-authoritative, after the Back Hall.
-3. **Tony's Line, bounties, the chalkboard prediction** — all read the fact packet that exists.
-4. **The commissioner review queue** for live Slice publication.
-5. **Batch B**, whenever the PNGs arrive. One command.
+1. **The casino foundation** — one game, server-authoritative. It brings `/underground` with it,
+   which is what makes `back-hall-both-open` photographable and turns `openTo('curtain')` from a
+   throw into one line.
+2. **Tony's Line, bounties, the chalkboard prediction** — all read the fact packet that exists.
+3. **The commissioner review queue** for live Slice publication.
+4. **Batch B**, whenever the PNGs arrive. One command.
 
 **When the allowance reset is confirmed**, the branch becomes **one** coherent PR — not several
 narrow ones — carrying everything accumulated under the freeze.

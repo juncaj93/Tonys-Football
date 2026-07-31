@@ -1,0 +1,214 @@
+import { describe, expect, it } from 'vitest';
+
+import { BACK_HALL, BACK_HALL_OBJECTS, LOCKABLE, LOCKED_LINES, backHallObject } from './objects';
+import { FEATURE_KEYS, featureFlags } from '@/lib/flags';
+import { overlaps } from '@/lib/parlor/objects';
+
+/**
+ * The back hall's map, and the rules `18 §5`–`§6` fix about it.
+ *
+ * Every assertion here corresponds to a sentence in the navigation map rather
+ * than to a preference. Where one does not, it says which defect it is written
+ * against.
+ */
+
+/** The narrowest supported viewport. Room units are scaled to it. */
+const NARROWEST = 360;
+const toCss = (units: number): number => (units / BACK_HALL.width) * NARROWEST;
+
+describe('the back hall map', () => {
+  it('has exactly three objects, all of them doors', () => {
+    // `18 §5`: two environmental choices plus an in-world return. Not four, and
+    // not a fourth thing added later without a ruling.
+    expect(BACK_HALL_OBJECTS).toHaveLength(3);
+    expect(BACK_HALL_OBJECTS.map((o) => o.id).sort()).toEqual(['curtain', 'return', 'stairs']);
+    expect(BACK_HALL_OBJECTS.every((o) => o.kind === 'door')).toBe(true);
+  });
+
+  it('shares the parlor’s coordinate system', () => {
+    // `zone_back_hall_shell` is registered at 960x1707 — 320 x 569 at the
+    // pipeline's 3x authoring scale, identical to the parlor's shell. Walking
+    // through the rear doorway must not change the size of the world.
+    expect(BACK_HALL).toEqual({ width: 320, height: 569 });
+  });
+
+  it('keeps every hit region inside the room', () => {
+    for (const object of BACK_HALL_OBJECTS) {
+      const [x, y, width, height] = object.rect;
+      expect(x, object.id).toBeGreaterThanOrEqual(0);
+      expect(y, object.id).toBeGreaterThanOrEqual(0);
+      expect(x + width, object.id).toBeLessThanOrEqual(BACK_HALL.width);
+      expect(y + height, object.id).toBeLessThanOrEqual(BACK_HALL.height);
+    }
+  });
+
+  it('never lets two objects share a tap', () => {
+    // The gate the parlor's map has had since V1. Neighbours that overlap steal
+    // each other's taps, and the symptom is a door that "sometimes" works.
+    for (const a of BACK_HALL_OBJECTS) {
+      for (const b of BACK_HALL_OBJECTS) {
+        if (a.id === b.id) continue;
+        expect(overlaps(a, b), `${a.id} overlaps ${b.id}`).toBe(false);
+      }
+    }
+  });
+
+  it('gives every object a 44 CSS px target on the narrowest supported phone', () => {
+    for (const object of BACK_HALL_OBJECTS) {
+      const [, , width, height] = object.rect;
+      expect(toCss(width), object.id).toBeGreaterThanOrEqual(44);
+      // Height scales on the same factor: the container is aspect-locked.
+      expect(toCss(height), object.id).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it('spells every label as something spoken, never as a route', () => {
+    for (const object of BACK_HALL_OBJECTS) {
+      expect(object.label, object.id).not.toMatch(/^\//);
+      expect(object.label.length, object.id).toBeGreaterThan(3);
+    }
+  });
+
+  it('throws for an object that is not in the hall', () => {
+    expect(() => backHallObject('basement')).toThrow(/no back-hall object/);
+  });
+});
+
+describe('the two shut doors', () => {
+  it('names exactly the two destinations that can be shut', () => {
+    // The return door is deliberately absent. It is not a feature and it never
+    // closes; a list that included it would invite somebody to flag it.
+    expect([...LOCKABLE]).toEqual(['stairs', 'curtain']);
+    expect(LOCKABLE).not.toContain('return');
+  });
+
+  it('keeps the Underground’s line verbatim from `18 §5`', () => {
+    // Fixed copy. It is the joke and it is the reveal, and rewording it costs
+    // both, so it is pinned rather than described.
+    expect(LOCKED_LINES.curtain).toBe('Don’t worry about it.');
+  });
+
+  it('never says what is behind the curtain', () => {
+    // `18 §5`: never labelled CASINO on first discovery. Checked across every
+    // string this route can render for that door, not just the obvious one.
+    const spoken = [LOCKED_LINES.curtain, backHallObject('curtain').label, backHallObject('curtain').destination ?? ''];
+
+    for (const text of spoken) {
+      expect(text).not.toMatch(/casino|blackjack|slots?|roulette|gambl/i);
+    }
+  });
+
+  it('promises no date on a shut door', () => {
+    // `18 §6`: no countdown timers on locked doors. The single honest countdown
+    // in this product is the end-of-season spend-down; a door that opens "in
+    // three days" manufactures urgency and a door that is simply shut does not.
+    for (const line of Object.values(LOCKED_LINES)) {
+      expect(line).not.toMatch(/\d/);
+      expect(line).not.toMatch(/soon|coming|weeks?|days?|month|later this|shortly/i);
+    }
+  });
+
+  it('says something rather than apologising', () => {
+    for (const line of Object.values(LOCKED_LINES)) {
+      expect(line).not.toMatch(/sorry|unavailable|not available|error|locked|disabled/i);
+      expect(line.length).toBeGreaterThan(10);
+    }
+  });
+});
+
+describe('feature flags', () => {
+  it('ships v1 with both destinations shut', () => {
+    const flags = featureFlags({});
+
+    expect(flags.rooms).toBe(false);
+    expect(flags.underground).toBe(false);
+  });
+
+  it('declares exactly the keys this product has', () => {
+    expect([...FEATURE_KEYS].sort()).toEqual(['rooms', 'roulette', 'underground']);
+  });
+
+  it('never opens roulette, by any route', () => {
+    /*
+     * `16`: "Roulette is never built. A reserved feature-flag key is the entire
+     * required scaffolding." The key exists so the decision has somewhere to
+     * live where somebody adding a game will read it — not so it can be turned
+     * on. Not even the preview override reaches it.
+     */
+    const everything = featureFlags({
+      DEMO_FIXTURES: '1',
+      OPEN_FEATURES: 'rooms,underground,roulette',
+    });
+
+    expect(everything.rooms).toBe(true);
+    expect(everything.underground).toBe(true);
+    expect(everything.roulette).toBe(false);
+  });
+
+  it('refuses the override in production', () => {
+    const flags = featureFlags({
+      NODE_ENV: 'production',
+      VERCEL_ENV: 'production',
+      DEMO_FIXTURES: '1',
+      OPEN_FEATURES: 'rooms,underground',
+    });
+
+    expect(flags.rooms).toBe(false);
+    expect(flags.underground).toBe(false);
+  });
+
+  it('refuses the override without the demo opt-in', () => {
+    const flags = featureFlags({ OPEN_FEATURES: 'rooms,underground' });
+
+    expect(flags.rooms).toBe(false);
+    expect(flags.underground).toBe(false);
+  });
+
+  it('opens one destination without opening the other', () => {
+    const flags = featureFlags({
+      DEMO_FIXTURES: '1',
+      OPEN_FEATURES: 'rooms',
+    });
+
+    expect(flags.rooms).toBe(true);
+    expect(flags.underground).toBe(false);
+  });
+
+  it('opens from a preview query parameter, so both states can be photographed', () => {
+    const demo = { DEMO_FIXTURES: '1' };
+
+    expect(featureFlags(demo, 'rooms')).toEqual({
+      rooms: true,
+      underground: false,
+      roulette: false,
+    });
+    expect(featureFlags(demo, 'rooms,underground')).toEqual({
+      rooms: true,
+      underground: true,
+      roulette: false,
+    });
+    // Repeated parameters arrive as an array, and a stale one must not throw.
+    expect(featureFlags(demo, ['rooms', 'basement'])).toEqual({
+      rooms: true,
+      underground: false,
+      roulette: false,
+    });
+  });
+
+  it('refuses the query parameter in production', () => {
+    const flags = featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'rooms,underground');
+
+    expect(flags.rooms).toBe(false);
+    expect(flags.underground).toBe(false);
+  });
+
+  it('ignores a key it does not recognise rather than throwing', () => {
+    // A stale value in an environment variable should not take a preview down.
+    const flags = featureFlags({
+      DEMO_FIXTURES: '1',
+      OPEN_FEATURES: 'basement, ,vending',
+    });
+
+    expect(flags).toEqual({ rooms: false, underground: false, roulette: false });
+  });
+});
