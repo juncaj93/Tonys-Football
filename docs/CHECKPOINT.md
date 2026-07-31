@@ -16,13 +16,62 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 |---|---|---|---|---|
 | **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #40 | Real collectible art is the only thing left; see "the one thing that needs the commissioner" |
 | **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36, #40 | Collection empty-state pacing (visual debt 1) |
-| **Stats & Data** | `TECH_LEAD_IMPLEMENTING`, independently verified | `main` | #33 | The deterministic Slice, consuming typed facts only |
+| **Stats & Data** | `TECH_LEAD_IMPLEMENTING`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
+| **Tuesday Slice** | `TECH_LEAD_IMPLEMENTING`, independently verified | `claude/resume-tonys-delivery-tech-lead-evndmy` | this branch | Tony's Line, bounties, the chalkboard prediction, and the commissioner review queue |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **blocked on the commissioner** | — | — | Supply the files; the slot is enforced |
 | **M3 character identity** | `QUEUED_NOT_ACTIVE` | — | — | Issue #24 |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-07-31
+
+**PR #40 and #41 are merged.** `main` is `1bdc1f3`. Two milestones landed and a third is on the branch.
+
+### The Slice publishes, deterministically, with no API key
+
+`16 §9`'s pipeline exists end to end and is visible at `/slice`:
+
+```
+lib/stats → lib/slice/packet.ts → lib/slice/render.ts → lib/slice/validate.ts → the rack
+```
+
+- **`packet.ts`** is the boundary. Everything upstream is Stats; everything downstream reads only the packet, which **declares its allowed numbers and names as data**. That is what makes *"every number and proper noun must match an allowed value"* a set-membership test rather than an aspiration. The publication boundary (`activeManagerIds`) is applied here, once.
+- **`render.ts`** assembles from curated templates keyed on the classifier's `intensity`. It cannot reach for a louder word than the policy earned, and `houseWords()` exports the curated vocabulary so the validator can tell house copy from a name.
+- **`validate.ts`** checks the *output* and knows nothing about which renderer made it — so the LLM renderer, when it arrives, is checked by the same rules without a rewrite. Refuses unknown numbers, unknown names, kicker references, win-probability language, unreleased features, and **quotation marks of any kind**.
+- **`edition.ts`** puts the last real issue on the rack. An issue the validator refuses is not published.
+
+Verified over **all 36 weeks of both finalized seasons** with zero violations, and independently against raw fixture JSON: `Matty B 184.12, Ryan 109.98, margin 74.14` recomputed by hand with no call into `lib/stats`, `lib/sleeper` or the packet's own helpers.
+
+### Exact repository state — 2026-07-31
+
+| | |
+|---|---|
+| `main` | `1bdc1f3` — PR #40 and #41 merged |
+| Branch | `claude/resume-tonys-delivery-tech-lead-evndmy` at `17cda08` |
+| Open PR | **#42** — the deterministic Slice, the tier rail, the checkpoint |
+| `npm run check` | green, **755 tests across 48 files** |
+| `npm run visual:qa` | green, **34 states × 3 widths**, fresh database, `DEMO_FIXTURES=1` on **both** the server and the driver |
+
+### The next executable task, in order
+
+1. **Merge #42** once CI and Visual QA are green on `17cda08`. Both passed locally on this exact tree.
+2. **Integrate the Batch B collectible art** the moment the eight PNGs arrive. The package is `docs/art/BATCH_B_COLLECTIBLES_HANDOFF.md`; the loop is `art/incoming/<slug>_NN.png` → `npm run art:process` → `npm run art:validate` → a registry row → `npm run visual:qa`. **No feature code changes.** This is the only thing standing between M2 and closure.
+3. **Tony's Line, bounties and the chalkboard prediction** (`16 §9`). All three read from the fact packet that now exists; all three need a live season to settle against, so they are authored now and settle in September. One table with a type discriminator.
+4. **The commissioner review queue** for the Slice. `16 §9` makes approval mandatory in season one and the manual hold switch permanent. Not built — the historical issue on the rack does not need it, a live one does.
+5. **Visual debt 3** — the order pad's arrival and dismissal timing against the reveal's. Now unblocked, and the last item on the open list that is not waiting on art.
+
+### What is deliberately not started
+
+**M3 character identity (#24).** The commissioner's instruction is not to destabilise M2 before the representative art batch has proven the asset system, and M3 is where wearable equipping lands — the one part of `03`'s twelve wearables and five slots that M2 explicitly does not own.
+
+### Two defects this slice caught, both by looking rather than by testing
+
+1. **A units bug the tests could not see.** `points()` divided by 100 a second time — `MatchupFact` is already in points — and the page printed a real matchup as *"1.84 to 1.10"*. Every structural test passed, because the allowed-number list and the prose came from the same broken helper and the validator confirmed the symmetry. **Symmetry is not verification.** Pinned now by a range assertion and by recomputation from source.
+2. **A visual state with no `case` photographed the parlor and passed.** `slice` was in `StateName` and `ALL_STATES`; its arm never landed. Same false-green shape as the nine reveal states in #40. `reach()` now throws on an unhandled state.
 
 ---
 
@@ -206,8 +255,8 @@ Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requi
 
 | Gate | Result | Where |
 |---|---|---|
-| `npm run check` | green — **726 tests, 46 files** | local, throwaway Postgres |
-| `npm run visual:qa` | green — **33 states × 3 widths**, production build, on a freshly reset database **and a server carrying `DEMO_FIXTURES=1`** — without which the nine reveal states photograph nothing and pass | local |
+| `npm run check` | green — **755 tests, 48 files** | local, throwaway Postgres |
+| `npm run visual:qa` | green — **34 states × 3 widths**, production build, on a freshly reset database **and a server carrying `DEMO_FIXTURES=1`** — without which the nine reveal states photograph nothing and pass | local |
 | `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
 | PR #23 (integration → `main`) | green on final head `c91548c`; **merged** as `238dfca` | PR #23 |
 | Live production URL | ❌ **never loaded.** Proxy denies CONNECT to `*.vercel.app` | — |

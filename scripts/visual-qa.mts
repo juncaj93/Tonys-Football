@@ -123,6 +123,7 @@ type StateName =
   | 'demo-box-waiting'
   | 'demo-welcome-box'
   | 'demo-collection-empty'
+  | 'slice'
   | 'reveal-common'
   | 'reveal-rare'
   | 'reveal-epic'
@@ -570,6 +571,20 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
 
     /*
+     * The rack, with the last issue Tony actually printed on it.
+     *
+     * A real week of a real season, rendered by the deterministic renderer and
+     * checked by the deterministic validator (`16 §9`). Required because a
+     * renderer nobody can look at is a renderer nobody has reviewed — and
+     * because "does this read like a paper" is exactly the judgement no test
+     * makes.
+     */
+    case 'slice':
+      await page.goto(`${BASE}/slice`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    /*
      * The reveal, at each rarity, on purpose.
      *
      * These are the four states this driver could never produce. The roll
@@ -630,6 +645,28 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForTimeout(1600);
       return;
     }
+
+    /*
+     * A state with no case is a state that photographs whatever was already on
+     * screen — and passes.
+     *
+     * That happened. `slice` was added to `StateName` and to `ALL_STATES`, its
+     * case never landed, and the driver dutifully captured the parlor three
+     * times under the name `375-slice.png` and reported success. It is the same
+     * shape as the nine reveal states that photographed a calm room: a green
+     * tick on evidence of the wrong thing, which is worse than a missing state
+     * because nobody re-examines a pass.
+     *
+     * TypeScript cannot catch it — every arm returns, so the switch is
+     * exhaustive as far as the compiler is concerned only if every member has an
+     * arm, and a `default` is what makes the omission loud at runtime for the
+     * case where someone adds a member and a list entry but not an arm.
+     */
+    default:
+      throw new Error(
+        `visual-qa has no case for state "${String(state)}" — it would photograph ` +
+          `whatever page was already open and report success. Add an arm to reach().`,
+      );
   }
 }
 
@@ -686,6 +723,7 @@ const ALL_STATES: readonly StateName[] = [
   'demo-box-waiting',
   'demo-welcome-box',
   'demo-collection-empty',
+  'slice',
   // The four rarity treatments, side by side and repeatable. Signed in as
   // whoever the previous demo state left us as, which is fine: the payload is
   // synthesised and does not depend on what that seat owns.
