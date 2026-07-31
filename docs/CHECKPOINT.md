@@ -46,6 +46,28 @@ lib/stats → lib/slice/packet.ts → lib/slice/render.ts → lib/slice/validate
 
 Verified over **all 36 weeks of both finalized seasons** with zero violations, and independently against raw fixture JSON: `Matty B 184.12, Ryan 109.98, margin 74.14` recomputed by hand with no call into `lib/stats`, `lib/sleeper` or the packet's own helpers.
 
+### Exact repository state — 2026-07-31
+
+| | |
+|---|---|
+| `main` | `1bdc1f3` — PR #40 and #41 merged |
+| Branch | `claude/resume-tonys-delivery-tech-lead-evndmy` at `17cda08` |
+| Open PR | **#42** — the deterministic Slice, the tier rail, the checkpoint |
+| `npm run check` | green, **755 tests across 48 files** |
+| `npm run visual:qa` | green, **34 states × 3 widths**, fresh database, `DEMO_FIXTURES=1` on **both** the server and the driver |
+
+### The next executable task, in order
+
+1. **Merge #42** once CI and Visual QA are green on `17cda08`. Both passed locally on this exact tree.
+2. **Integrate the Batch B collectible art** the moment the eight PNGs arrive. The package is `docs/art/BATCH_B_COLLECTIBLES_HANDOFF.md`; the loop is `art/incoming/<slug>_NN.png` → `npm run art:process` → `npm run art:validate` → a registry row → `npm run visual:qa`. **No feature code changes.** This is the only thing standing between M2 and closure.
+3. **Tony's Line, bounties and the chalkboard prediction** (`16 §9`). All three read from the fact packet that now exists; all three need a live season to settle against, so they are authored now and settle in September. One table with a type discriminator.
+4. **The commissioner review queue** for the Slice. `16 §9` makes approval mandatory in season one and the manual hold switch permanent. Not built — the historical issue on the rack does not need it, a live one does.
+5. **Visual debt 3** — the order pad's arrival and dismissal timing against the reveal's. Now unblocked, and the last item on the open list that is not waiting on art.
+
+### What is deliberately not started
+
+**M3 character identity (#24).** The commissioner's instruction is not to destabilise M2 before the representative art batch has proven the asset system, and M3 is where wearable equipping lands — the one part of `03`'s twelve wearables and five slots that M2 explicitly does not own.
+
 ### Two defects this slice caught, both by looking rather than by testing
 
 1. **A units bug the tests could not see.** `points()` divided by 100 a second time — `MatchupFact` is already in points — and the page printed a real matchup as *"1.84 to 1.10"*. Every structural test passed, because the allowed-number list and the prose came from the same broken helper and the validator confirmed the symmetry. **Symmetry is not verification.** Pinned now by a range assertion and by recomputation from source.
