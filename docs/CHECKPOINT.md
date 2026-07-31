@@ -70,9 +70,37 @@ Four commissioner rulings arrived after the six PRs merged, and one **reverses a
 - **A workstream is only running if an actor is implementing it** — see the table at the top of this file.
 - **Readability wins over styling, always** — `VISUAL_ACCEPTANCE.md §7`–`§8`, with `docs/VISUAL_DEBT.md` for what is not worth stopping for.
 
+### M2 closure — the determination, made from the specification
+
+**Question the commissioner posed:** can M2 be accepted as a production-ready vertical slice with the rest of the catalog tracked as content completion, or does the canonical specification require all 24 finished sprites before the milestone closes?
+
+**Determination: eight is enough to close M2. Twenty-four was never the gate.**
+
+The specification does not merely tolerate partial collectible art — it **plans for it**, in three independent places written before this question came up:
+
+| Where | What it says |
+|---|---|
+| `art/ASSET_PIPELINE.md §5` | Batch B3 is *"Collectibles (**12 priority of 24**)"* |
+| `art/assets.inventory.json`, `_collectibles_B3` | *"12 receive finished art at launch … the rest ship as `placeholder_pizza_box` and **upgrade on any Tuesday**"* |
+| `art/prompts/collectible.md` | The same 12-of-24 split, with the placeholder named as thematically correct rather than unfinished |
+
+Three things follow, and none of them is convenience:
+
+1. **An unfilled slot is not a broken slot.** The fallback is `placeholder_pizza_box` — *an item still in its box* — which is in-world by design (`ASSET_PIPELINE §2`). A manager who pulls one sees something Tony would plausibly hand over, not a missing-image box.
+2. **The remaining sixteen carry no engineering risk.** A swap is a registry row and a PNG; `lib/assets/art-slots.test.ts` fails the build if a slot ever drifts from `TRAY_REVEAL`, and `npm run art:validate` measures each delivered sprite against it. There is no code change waiting on art.
+3. **What M2 has to prove is the *system*.** Eight items covering every rarity, both silhouette extremes, the detail-budget ceiling, an emissive material, a frame that must not read as a UI plate, and the tiny-object anchor case is a proof of the system. Sixteen more of the same is content.
+
+**What this does not license.** The 12-of-24 figure is a **launch** commitment, not an M2 one — the season starts around 10 September. Four more finished sprites beyond this batch are owed before then. That is tracked here as content completion against a date, not as milestone debt.
+
+**M2 therefore closes when the eight-item batch is integrated, validated and polished** — not when the catalog is full.
+
 ### The one thing that needs the commissioner
 
-**Collectible art.** Every one of the twenty-four items draws the same stand-in, and generating sprites needs an image generator the league does not pay for. `docs/art/ART_PRODUCTION_BACKLOG.md` batch B is the brief — eight items, `46 × 46`, transparent, bottom-centre anchor, parlor palette, no baked text or frame. Dropping the files under `public/assets/collectible/` and adding a row each to `art/assets.inventory.json` is the whole swap; no feature code changes. Until then the stand-in is deliberate, not broken.
+**Collectible art — the eight-item batch.** Every one of the twenty-four items draws the same stand-in, and generating sprites needs an image generator the league does not pay for.
+
+**[`docs/art/BATCH_B_COLLECTIBLES_HANDOFF.md`](art/BATCH_B_COLLECTIBLES_HANDOFF.md) is the package**, written to be pasted into an image-generation session without reinterpretation: the shared style preamble, the shared production constraints, a measured per-item brief for all eight, the output naming, and the validation procedure. Every dimension in it was measured off the running product.
+
+Delivering is `art/incoming/<slug>_NN.png` → `npm run art:process` → `npm run art:validate` → a registry row. No feature code changes. Until then the stand-in is deliberate, not broken.
 
 Everything else below is engineering and does not wait on anybody.
 

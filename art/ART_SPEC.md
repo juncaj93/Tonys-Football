@@ -49,7 +49,7 @@ If that screen reads as a single coherent place, the whole library is unblocked 
 | Character (Tony) | 88 × 240 | Feet on the bottom edge. Renders 1:1 in CSS pixels at phone width. |
 | Avatar layers | ⚠️ **REOPENED** — see §2.2 | Must be identical to each other and fixed before B2. |
 | Zone tile | 320 wide, height by content | The parlor is 320 × 569, cut at the counter into 320 × 291 and 320 × 278. See §2.1. |
-| Collectible | 32 × 32 | One source asset serves thumbnail (16px), case (32px), and reveal (96px) |
+| Collectible | **46 × 46** | One source serves all three surfaces. Bottom-centre anchor. Measured, not chosen — see below. |
 | Surface (text-driven) | 96 × 64 | Blank; text is rendered at runtime into the safe area (§7) |
 | Rarity frame | 40 × 40 | One geometry, four palette states |
 | Placeholder | 32 × 32 and 96 × 64 | Two assets covering every unfilled slot |
@@ -60,6 +60,23 @@ If that screen reads as a single coherent place, the whole library is unblocked 
 The one place this bends is width: the room is sized to the viewport, so a 430px-wide phone renders it about 1.1× rather than exactly 1×. That is the price of the room filling the screen, it is bounded and near unity, and it is a very different thing from the 4–5× blow-ups this rule exists to forbid.
 
 **No mixed pixel density within a single scene.** The parlor's room and Tony are drawn at the same effective pixel size; an asset authored at a different one never shares that frame.
+
+### 2.3 The collectible canvas is 46 × 46, and this row used to be wrong
+
+It said **32 × 32**, and it said the one source serves "thumbnail (16px), case (32px), and reveal (96px)" — three sizes, none of which any surface actually uses.
+
+The measured truth, from `lib/parlor/objects.ts` and the three pages that draw a collectible:
+
+| Where | Size drawn | Ratio to a 46 × 46 source |
+|---|---|---|
+| **Reveal** — `TRAY_REVEAL [180, 262, 46, 46]` | 46 **room units** | 1 art pixel = 1 room unit |
+| **Collection** — the shelf cell | 46 **CSS px** | exactly 1 : 1 |
+| **Showcase**, the manager's own | 56 CSS px | 1.217× |
+| **Showcase**, a league row | 23 CSS px | exactly 0.5× |
+
+A source authored at 32 would be resampled into the reveal slot at **1.4375×** — fractional, and the thing this whole section exists to forbid. Nothing looked wrong, because the stand-in is drawn in CSS and CSS does not care about the number in a registry; it would have become visible only after twenty-four sprites had been drawn at the wrong size, which is the expensive moment to find out.
+
+`lib/assets/art-slots.test.ts` now fails the build if any collectible's `canvas` or `anchor` drifts from `TRAY_REVEAL`, so the number in this table and the number the renderer uses cannot disagree again. **The registry and that test are the authority; this row is a description of them.**
 
 ### 2.1 Zone tile dimensions — **settled**
 
