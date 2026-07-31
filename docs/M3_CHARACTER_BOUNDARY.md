@@ -1,6 +1,8 @@
 # M3 — the character boundary, prepared
 
-**Status:** preparation only, 2026-07-31. **Nothing here is implemented and nothing here changes the accepted homepage character rendering.**
+**Status:** partly implemented, 2026-07-31. The data layer, the compositor and the service exist (`drizzle/0008_character_identity.sql`, `lib/character/`); the manager-facing surface does not. Tony's homepage rendering is untouched.
+
+> **Correction, 2026-07-31.** `§2` below proposed a seven-layer set with `back` and `bottoms` slots at a `64 × 64` canvas. **That was invented, and it was wrong.** The slots, the canvas and all twenty slugs were already canon in `art/assets.inventory.json` — `avatar_hair_01`, `wear_head_pizza_visor`, `32 × 48`, slots `hair` · `body` · `face` · `head` · `hand`. `lib/character/layers.ts` implements the canonical set and `lib/character/character.test.ts` fails the build if the two ever disagree. The reasoning in `§2`–`§7` about *ordering*, *ownership*, *clipping* and *registry conventions* all survives; only the specific layer names and the canvas were wrong. Read the code, not `§2`'s table.
 
 The commissioner's instruction is explicit: *"Do not begin full final character implementation yet. You may safely prepare the schema, the contracts, the layer ordering, the compositing rules, the clipping tests, the registry conventions, the preview fixture design, the migration strategy, and the specification for manager avatars versus Tony."*
 

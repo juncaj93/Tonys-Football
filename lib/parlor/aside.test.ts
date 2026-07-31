@@ -1,4 +1,8 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
+
+import { clearClock, now, setFixedClock } from '@/lib/clock';
+import { contentUsageLog } from '@/lib/db/schema';
 
 import { readStatsAsides, seedStatsAsides } from '@/lib/content/seed';
 import { closePool, getDb } from '@/lib/db';
@@ -210,15 +214,45 @@ describe.skipIf(!hasDatabase)('what Tony actually says', () => {
     expect(aside).toBeNull();
   });
 
-  it('does not repeat itself inside the cooldown', async () => {
+  it('says the same thing all day, and writes nothing the second time', async () => {
+    /*
+     * The defect this pins was found by the **visual harness**, not by a test,
+     * and it surfaced on a page that has nothing to do with the counter: signing
+     * in redirects through the parlor, the server rendered one line, something
+     * rendered again, the two disagreed, and React reported a hydration error
+     * against `demo-collection-empty`.
+     *
+     * *"Stable dialogue during a page lifecycle"* is a product requirement. Tony
+     * does not start a new sentence every time you look up.
+     */
     const first = await statsAsideFor(db!, request({}));
     expect(first).not.toBeNull();
 
-    // Only three lines carry `stats_blowout`, and a fixed draw takes the same one
-    // each time — so a second call must either pick a different key or fall
-    // silent, never hand back the line just used.
-    const second = await statsAsideFor(db!, request({}));
-    expect(second?.entryKey).not.toBe(first!.entryKey);
+    const again = await statsAsideFor(db!, request({}));
+    expect(again?.entryKey).toBe(first!.entryKey);
+    expect(again?.text).toBe(first!.text);
+
+    // And the repeat is not a second use: one row, not two.
+    const rows = await db!
+      .select()
+      .from(contentUsageLog)
+      .where(eq(contentUsageLog.userId, seat));
+    expect(rows).toHaveLength(1);
+  });
+
+  it('moves on once the day has', async () => {
+    // The cooldown is what stops a repeat *tomorrow*; the day-cache is what stops
+    // one on the same afternoon. Different rules, and both have to hold.
+    const first = await statsAsideFor(db!, request({}));
+    expect(first).not.toBeNull();
+
+    setFixedClock(new Date(now().getTime() + 2 * 24 * 60 * 60 * 1000));
+    try {
+      const later = await statsAsideFor(db!, request({}));
+      expect(later?.entryKey).not.toBe(first!.entryKey);
+    } finally {
+      clearClock();
+    }
   });
 
   it('refuses a line whose numbers the fact did not supply', async () => {

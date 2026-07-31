@@ -33,15 +33,38 @@ import { type Edition } from '@/lib/slice/render';
  * deriving one. That is why `RenderedScore` carries `leftPoints: string`.
  */
 
-export function Newspaper({ issue }: { issue: Edition }) {
+/**
+ * How loud the front page is allowed to be.
+ *
+ * **Strong news versus weak news, as type rather than as intention.** A quiet
+ * edition used to set *"Not a lot to report"* at the same 26px a championship
+ * gets, so the two most different issues the paper can print looked identical
+ * from across the room — and the whole point of `EditionCharacter` is that the
+ * *data* decides, not somebody's judgement on the week.
+ *
+ * Three steps, not six. A separate size per character would be a decision to make
+ * every week and the paper would drift.
+ */
+const HEADLINE_SIZE: Record<Edition['character'], string> = {
+  title: 'text-[26px] leading-[1.12]',
+  record: 'text-[26px] leading-[1.12]',
+  loud: 'text-[26px] leading-[1.12]',
+  ordinary: 'text-[22px] leading-[1.18]',
+  quiet: 'text-[19px] leading-[1.25]',
+  empty: 'text-[19px] leading-[1.25]',
+};
+
+export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: string | null }) {
   return (
     <PixelPanel tone="paper" className="px-4 pt-3.5 pb-4">
-      <Masthead dateline={issue.dateline} />
+      <Masthead dateline={issue.dateline} stamp={stamp} />
 
       {issue.nothingToPrint === null ? (
         <>
           <article className="mt-4">
-            <h1 className="font-display text-[26px] leading-[1.12] text-ink-900 uppercase">
+            <h1
+              className={`font-display ${HEADLINE_SIZE[issue.character]} text-ink-900 uppercase`}
+            >
               {issue.headline}
             </h1>
 
@@ -133,23 +156,22 @@ export function Newspaper({ issue }: { issue: Edition }) {
         * line in the smallest type the page has, at the bottom where a colophon
         * goes, because it is a fact about the paper and not an apology for it.
         */}
-      <div className="mt-4 border-t-2 border-ink-900/20 pt-2">
-        {/*
-          * The provenance line belongs to an issue that has numbers in it.
-          *
-          * On an empty rack it read *"every number checked before it printed"*
-          * under a page with no numbers on it — true and incoherent. The price is
-          * a property of the paper and stays either way.
-          */}
-        {issue.nothingToPrint === null && (
-          <p className="font-display text-[13px] leading-[1.45] text-ink-500 uppercase">
-            Set from the league&rsquo;s own records. Every number checked before it printed.
-          </p>
-        )}
-        <p className="mt-1 font-display text-[13px] leading-[1.45] text-ink-500 uppercase">
-          Free with any slice.
-        </p>
-      </div>
+      {/*
+        * The colophon: one line.
+        *
+        * It was three lines of small caps plus a fourth for the price — four rows
+        * of furniture under a paper whose lead story is two sentences long. The
+        * provenance still has to be printed (`MANDATE §9`–`§10`), and it does not
+        * have to be a paragraph.
+        *
+        * The provenance clause drops on an empty rack, where *"every number
+        * checked"* sits under a page with no numbers on it — true and incoherent.
+        */}
+      <p className="mt-4 border-t-2 border-ink-900/20 pt-2 font-display text-[13px] leading-[1.45] text-ink-500 uppercase">
+        {issue.nothingToPrint === null
+          ? 'Set from the league\u2019s own records · free with any slice'
+          : 'Free with any slice'}
+      </p>
     </PixelPanel>
   );
 }
@@ -161,7 +183,7 @@ export function Newspaper({ issue }: { issue: Edition }) {
  * hairline below give the name somewhere to sit; without them a display-face
  * string at the top of a panel is a page title.
  */
-function Masthead({ dateline }: { dateline: string }) {
+function Masthead({ dateline, stamp }: { dateline: string; stamp: string | null }) {
   return (
     <header>
       <div aria-hidden="true" className="h-[3px] bg-red-dark" />
@@ -178,10 +200,24 @@ function Masthead({ dateline }: { dateline: string }) {
         * one job — which paper, which week — so the price moved to the colophon,
         * which is where a newspaper's imprint goes anyway.
         */}
-      <p className="mt-1.5 text-center font-display text-[13px] leading-[1.5] tracking-[0.04em] text-ink-500 uppercase">
+      <p className="mt-1.5 text-center font-display text-[14px] leading-[1.5] tracking-[0.04em] text-ink-500 uppercase">
         {dateline}
       </p>
       <div aria-hidden="true" className="mt-1.5 h-[3px] bg-red-dark" />
+
+      {/*
+        * The rack's stamp, printed **on** the paper.
+        *
+        * It used to sit above the masthead, on the room, in dim grey — a caveat
+        * in front of the nameplate, which is a newspaper apologising for itself
+        * before you have read a word. Inside the sheet it reads as what it is: a
+        * stamp somebody put on an old copy.
+        */}
+      {stamp !== null && (
+        <p className="mt-2 text-center font-display text-[13px] leading-[1.5] tracking-[0.12em] text-wood-mid uppercase">
+          {stamp}
+        </p>
+      )}
     </header>
   );
 }

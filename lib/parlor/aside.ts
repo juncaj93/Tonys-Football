@@ -1,6 +1,7 @@
 import { and, eq, gte } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
+import { easternDaysBetween } from '@/lib/parlor/season';
 import { type Database } from '@/lib/db';
 import { contentEntries, contentUsageLog } from '@/lib/db/schema';
 import { renderTemplate, selectContent, type SelectableEntry } from '@/lib/content/select';
@@ -34,6 +35,24 @@ import { validateProse } from '@/lib/slice/validate';
  *    in the middle of something. The aside is skipped whenever a moment tag is
  *    held (`lib/parlor/moment.ts`), so it can never collide with the welcome box,
  *    the waiting box, or a reveal.
+ *
+ * ## Once a day, not once a render
+ *
+ * The first version drew a fresh line every time the room was rendered, and the
+ * visual harness caught it as a **React hydration error** on a page that had
+ * nothing to do with the counter: signing in redirects through the parlor, the
+ * server rendered one line, something rendered again, and the two disagreed.
+ *
+ * That is the same failure the greeting solved with a per-day cache
+ * (`lib/content/greeting.ts`), and it is a product requirement rather than a
+ * rendering detail — *"stable dialogue during a page lifecycle"*. Tony does not
+ * start a new sentence every time you look up.
+ *
+ * So: the first visit of the day draws and logs; every visit after it is handed
+ * back the same line, and **nothing is written**. Unlike the greeting there is no
+ * staleness re-check, because an aside's premise is a finalized week — it cannot
+ * stop being true between two page loads the way *"there is a box on the
+ * counter"* can.
  *
  * ## Occasional means occasional
  *
@@ -194,6 +213,23 @@ interface AsideEntry extends SelectableEntry {
   readonly expression: Expression | null;
 }
 
+/** The aside this manager was last shown today, if there was one. */
+function shownToday(
+  candidates: readonly AsideEntry[],
+  usage: readonly { entryId: string; usedAt: Date }[],
+  at: Date,
+): AsideEntry | null {
+  let latest: { entryId: string; usedAt: Date } | null = null;
+  for (const use of usage) {
+    if (easternDaysBetween(use.usedAt, at) !== 0) continue;
+    if (latest === null || use.usedAt > latest.usedAt) latest = use;
+  }
+  if (latest === null) return null;
+
+  const entryId = latest.entryId;
+  return candidates.find((entry) => entry.id === entryId) ?? null;
+}
+
 /**
  * Choose, check and log one aside — or nothing, which is the usual answer.
  *
@@ -249,6 +285,29 @@ export async function statsAsideFor(
         ),
       ),
     );
+
+  /*
+   * Said something already today? Say the same thing, and write nothing.
+   *
+   * Counted on the same Eastern calendar the rest of the parlor counts on. A line
+   * that no longer renders falls through to a fresh draw rather than showing a
+   * half-substituted sentence.
+   */
+  const today = shownToday(candidates, usage, at);
+  if (today !== null) {
+    const repeated = renderTemplate(today.templateText, fact.variables);
+    if (
+      repeated !== null &&
+      validateProse([repeated], allowedFor(fact, request.packet), [today.templateText])
+        .publishable
+    ) {
+      return {
+        entryKey: today.key,
+        text: repeated,
+        expression: today.expression ?? 'neutral',
+      };
+    }
+  }
 
   const chosen = selectContent<AsideEntry>({
     candidates,
