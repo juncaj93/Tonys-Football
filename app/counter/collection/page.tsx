@@ -114,19 +114,29 @@ export default async function CollectionPage({
                     * missing custom property, which is exactly the failure mode
                     * `colour-tokens.test.ts` exists for at the Tailwind level.
                     */
-                  className={`rarity-${rarity} relative flex min-h-[52px] flex-col items-center justify-center gap-0.5 px-1 py-2 active:translate-y-px ${
+                  /*
+                   * `min-h-[56px]` and `gap-1`, up from 52 and 0.5.
+                   *
+                   * Visual debt 3: the tier word at 10px and the count at 13px
+                   * were stacked with two pixels between them in a 52px cell, so
+                   * the rail read as one dense block rather than four readable
+                   * controls. Four extra pixels of height and two of gap is the
+                   * whole change — the type did not shrink and nothing moved,
+                   * which is the rule: size the container to the type.
+                   */
+                  className={`rarity-${rarity} relative flex min-h-[56px] flex-col items-center justify-center gap-1 px-1 pt-2 pb-2.5 active:translate-y-px ${
                     // The chosen tier sits on cream, so it needs the paper inks;
                     // the others are on the dark rail and keep the lit ones.
                     active ? 'on-paper bg-paper-mid' : 'bg-[#241618]'
                   }`}
                 >
                   <span
-                    className={`rarity-word rarity-${rarity} font-display text-[10px] tracking-[0.08em] uppercase`}
+                    className={`rarity-word rarity-${rarity} font-display text-[10px] leading-none tracking-[0.1em] uppercase`}
                   >
                     {rarity}
                   </span>
                   <span
-                    className={`font-display text-[13px] ${
+                    className={`font-display text-[14px] leading-none ${
                       active
                         ? 'text-ink-900'
                         : complete
