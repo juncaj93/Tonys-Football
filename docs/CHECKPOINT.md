@@ -15,7 +15,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
 |---|---|---|---|---|
 | **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #40 | Real collectible art is the only thing left; see "the one thing that needs the commissioner" |
-| **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36, #40 | `/counter` furniture (visual debt 3) |
+| **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36, #40 | Collection empty-state pacing (visual debt 1) |
 | **Stats & Data** | `TECH_LEAD_IMPLEMENTING`, independently verified | `main` | #33 | The deterministic Slice, consuming typed facts only |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **blocked on the commissioner** | — | — | Supply the files; the slot is enforced |
 | **M3 character identity** | `QUEUED_NOT_ACTIVE` | — | — | Issue #24 |
