@@ -29,8 +29,12 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ## Where the product is — 2026-07-31 (third session)
 
-**PR #44 and #45 merged.** `main` is `6dd5b64`. Work below is on
-`claude/tonys-pizza-autonomous-jizv8b`, open as **PR #46**.
+**PR #44, #45 and #46 are merged.** `main` is **`4ec55d8`** — both gates green on real runners, and
+the merge deployed.
+
+**Not verified in a browser.** The sandbox proxy denies CONNECT to `*.vercel.app`. Local evidence is
+a production build on a fresh database and 49 visual states × 3 widths; hosted evidence is a green
+GitHub-side deploy and nothing more.
 
 **Batch B PNGs are deferred commissioner content** (ruling, 2026-07-31). They are not a blocker, not
 to be requested again, and the repository does not idle waiting for them. The ingestion path stays
@@ -121,8 +125,8 @@ slice.
 
 | | |
 |---|---|
-| `main` | `6dd5b64` |
-| Branch / PR | `claude/tonys-pizza-autonomous-jizv8b` · **PR #46** |
+| `main` | **`4ec55d8`** — PR #46 merged |
+| Branch | `claude/tonys-pizza-autonomous-jizv8b`, restarted from `main` after the merge |
 | `npm run check` | green — **867 tests across 53 files** |
 | `npm run visual:qa` | green — **49 states × 3 widths**, production build, fresh database |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
