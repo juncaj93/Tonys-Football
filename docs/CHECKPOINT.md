@@ -29,7 +29,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ## Where the product is — 2026-07-31
 
-**PR #40 and #41 are merged.** `main` is `1bdc1f3`. Two milestones landed and a third is on the branch.
+**PR #40, #41 and #42 are merged.** `main` is `ebc0a64`. Three milestones landed this session.
 
 ### The Slice publishes, deterministically, with no API key
 
@@ -50,19 +50,18 @@ Verified over **all 36 weeks of both finalized seasons** with zero violations, a
 
 | | |
 |---|---|
-| `main` | `1bdc1f3` — PR #40 and #41 merged |
-| Branch | `claude/resume-tonys-delivery-tech-lead-evndmy` at `17cda08` |
-| Open PR | **#42** — the deterministic Slice, the tier rail, the checkpoint |
+| `main` | **`ebc0a64`** — PR #40, #41 and #42 all merged, all green on real runners |
+| Branch | `claude/resume-tonys-delivery-tech-lead-evndmy`, rebuilt on `main`. Nothing outstanding. |
+| Open PRs | **none** |
 | `npm run check` | green, **755 tests across 48 files** |
 | `npm run visual:qa` | green, **34 states × 3 widths**, fresh database, `DEMO_FIXTURES=1` on **both** the server and the driver |
 
 ### The next executable task, in order
 
-1. **Merge #42** once CI and Visual QA are green on `17cda08`. Both passed locally on this exact tree.
-2. **Integrate the Batch B collectible art** the moment the eight PNGs arrive. The package is `docs/art/BATCH_B_COLLECTIBLES_HANDOFF.md`; the loop is `art/incoming/<slug>_NN.png` → `npm run art:process` → `npm run art:validate` → a registry row → `npm run visual:qa`. **No feature code changes.** This is the only thing standing between M2 and closure.
-3. **Tony's Line, bounties and the chalkboard prediction** (`16 §9`). All three read from the fact packet that now exists; all three need a live season to settle against, so they are authored now and settle in September. One table with a type discriminator.
-4. **The commissioner review queue** for the Slice. `16 §9` makes approval mandatory in season one and the manual hold switch permanent. Not built — the historical issue on the rack does not need it, a live one does.
-5. **Visual debt 3** — the order pad's arrival and dismissal timing against the reveal's. Now unblocked, and the last item on the open list that is not waiting on art.
+1. **Integrate the Batch B collectible art** the moment the eight PNGs arrive. The package is `docs/art/BATCH_B_COLLECTIBLES_HANDOFF.md`; the loop is `art/incoming/<slug>_NN.png` → `npm run art:process` → `npm run art:validate` → a registry row → `npm run visual:qa`. **No feature code changes.** This is the only thing standing between M2 and closure.
+2. **Tony's Line, bounties and the chalkboard prediction** (`16 §9`). All three read from the fact packet that now exists; all three need a live season to settle against, so they are authored now and settle in September. One table with a type discriminator.
+3. **The commissioner review queue** for the Slice. `16 §9` makes approval mandatory in season one and the manual hold switch permanent. Not built — the historical issue on the rack does not need it, a live one does.
+4. **Visual debt 3** — the order pad's arrival and dismissal timing against the reveal's. Now unblocked, and the last item on the open list that is not waiting on art.
 
 ### What is deliberately not started
 
