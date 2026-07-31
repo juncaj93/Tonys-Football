@@ -108,7 +108,7 @@ retired managers absent from every published surface **and still present in the 
 |---|---|
 | `main` | `6740408` — PR #43 merged |
 | Branch | `claude/tonys-pizza-autonomous-jizv8b` |
-| `npm run check` | green — **827 tests across 51 files** |
+| `npm run check` | green — **831 tests across 52 files** |
 | `npm run visual:qa` | green — **49 states × 3 widths**, production build, `DEMO_FIXTURES=1` on server *and* driver |
 
 ### Tony may mention a result, and may not change one
@@ -140,6 +140,17 @@ word the Slice's headlines never use.
 
 The champion is a **fallback, not a competitor**: a banner is always true and never news, so it only
 speaks when the week itself had nothing loud in it.
+
+### The deploy's seed is idempotent, and now provably so
+
+`scripts/seed-idempotency.test.ts` runs the **real** `scripts/seed.ts` twice in a subprocess and
+asserts the second run changes nothing: identical counts across every seeded table, an identical
+content fingerprint, and no manager holding two welcome boxes.
+
+`vercel-build` is `migrate → seed → build`, so this runs against a live database on every merge to
+`main`. A non-idempotent seed would not error and would not fail a gate — it would show up weeks
+later as Tony repeating himself twice as often as his cooldown allows, or as free loot proportional
+to how often anybody merged.
 
 ### Batch B is one command away
 
