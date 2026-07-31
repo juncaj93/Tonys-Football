@@ -432,19 +432,45 @@ export const TRAY_BOX: RoomObjectSpec['rect'] = [181, 276, 44, 30];
 /**
  * Where the collectible ends up when the box opens.
  *
- * **On the tray, where the box was.** An earlier version put it at `y 224`, a
- * clear 18 units above the tray's back edge, on the reasoning that the reveal
- * should rise clear of the box. On screen it read as an object hovering in front
- * of Tony's chest with nothing under it — the room has no floating things in it,
- * so a floating thing reads as a layout bug rather than as a prize.
+ * **Standing on the plate**, base at `y 308` — which is `TRAY_PLATE_ANCHOR.y`,
+ * the plate's top edge — and centred on the room, which is where the plate is
+ * centred. The item and the words that name it share one vertical axis, because
+ * that is what a thing and its label are.
  *
- * So it rests where the box rested: base at `y 308`, the tray's lowest drawn row,
- * centred on the tray's `x 203`. Slightly larger than the box was (46 against 44)
- * because the box is gone and this is the thing you are meant to be looking at.
- * The *rise* is the animation's job — it travels up into this position — not the
- * resting geometry's.
+ * ## Two earlier positions, and what each got right
+ *
+ * `y 224` came first: a clear 18 units above the tray's back edge, so the reveal
+ * would rise clear of the box. On screen it read as an object hovering in front
+ * of Tony's chest with nothing under it. **The room has no floating things in
+ * it**, so a floating thing reads as a layout bug rather than as a prize. That
+ * lesson still holds and is why the base is on a surface.
+ *
+ * `x 180` came second, resting the item where the box had rested — centred on
+ * the tray's own `x 203`. Physically honest, and wrong on screen for a reason
+ * that is only visible in a screenshot: **the tray is not where the room's
+ * centre is.** The tray runs `156–250`, so its centre is 43 units right of the
+ * room's 160, while the plate is centred on the room. The item therefore stood
+ * on the right-hand quarter of its own nameplate — near enough to look
+ * deliberate at a glance and wrong enough to look accidental once seen. The
+ * plate's own note records the same trap from the other side: an off-centre
+ * plate read as *"a card dropped on top of a screenshot"*.
+ *
+ * ## What the small horizontal move costs, and why it is worth it
+ *
+ * The box shudders on the tray and the item appears a little to its left. That
+ * is a real discontinuity and it is the price. It is worth paying because the
+ * burst plays at the new position and the box overlay is gone in the same frame,
+ * so the eye is led rather than left behind — and because the alternative is a
+ * composition where the two most important objects in the moment do not line up.
+ * *"The item, the plate and the tray share one vertical axis"* had been written
+ * in the plate's note as though it were true. It was not. Now two of the three
+ * do, on purpose, and the third is the drawn furniture they came from.
+ *
+ * 46 rather than the box's 44, because the box is gone and this is the thing you
+ * are meant to be looking at. The *rise* is the animation's job — it travels up
+ * into this position — not the resting geometry's.
  */
-export const TRAY_REVEAL: RoomObjectSpec['rect'] = [180, 262, 46, 46];
+export const TRAY_REVEAL: RoomObjectSpec['rect'] = [(ROOM.width - 46) / 2, 262, 46, 46];
 
 /**
  * The plate that names what came out, set down on the counter front.
@@ -482,8 +508,13 @@ export const TRAY_REVEAL: RoomObjectSpec['rect'] = [180, 262, 46, 46];
  * rather than a composed game scene."*
  *
  * Centred on the room's midline and lifted onto the counter's front face, so the
- * item, the plate and the tray share one vertical axis and the plate rests on
- * something solid instead of floating over the checkerboard.
+ * plate rests on something solid instead of floating over the checkerboard.
+ *
+ * This note used to claim the item, the plate and the tray shared one vertical
+ * axis. They did not — the tray's centre is 43 units right of the room's, so the
+ * item stood on the plate's right-hand quarter. `TRAY_REVEAL` moved to the
+ * room's centre rather than the plate moving to the tray's; the reasoning, and
+ * what the small horizontal jump costs, is recorded there.
  */
 export const TRAY_PLATE_ANCHOR = {
   x: (ROOM.width - 168) / 2,

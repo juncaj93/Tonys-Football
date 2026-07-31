@@ -27,6 +27,7 @@ import {
   roomObject,
 } from '@/lib/parlor/objects';
 import { seasonClock } from '@/lib/parlor/season';
+import { momentTags } from '@/lib/parlor/moment';
 import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
 import { previewReveal } from '@/lib/demo/preview';
 import { featuredMatchup, matchupLine } from '@/lib/stats/board';
@@ -110,20 +111,41 @@ export default async function ParlorPage({
   const shown = await showcaseFor(db, user.id);
 
   /*
-   * `?preview_reveal=legendary` — review only, and null everywhere it matters.
+   * `?preview_reveal=legendary&preview_stage=first` — review only, and null
+   * everywhere it matters.
    *
    * The reveal's rarity treatment is otherwise unphotographable on purpose: the
-   * roll happens inside `openBox` and no harness can choose it. `MANDATE §8`
-   * names preview-only query parameters as a sanctioned demo mechanism; the two
-   * guards in `lib/demo/guard.ts` are evaluated here, on the server, so this
-   * cannot be turned on from a URL bar in production.
+   * roll happens inside `openBox` and no harness can choose it. The same is true
+   * of *where in the loop* the pull happened, which is what decides the plate's
+   * last two lines. `MANDATE §8` names preview-only query parameters as a
+   * sanctioned demo mechanism; the two guards in `lib/demo/guard.ts` are
+   * evaluated here, on the server, so this cannot be turned on from a URL bar in
+   * production.
    */
-  const preview = previewReveal((await searchParams)['preview_reveal'], process.env);
+  const query = await searchParams;
+  const preview = previewReveal(query['preview_reveal'], process.env, query['preview_stage']);
+
+  /*
+   * Standing tags plus what is true right now.
+   *
+   * `loadTags` answers "what is true of this person across seasons". A box
+   * sitting shut on the counter is a different kind of fact — it is true this
+   * second and false the moment they tap it — so it is derived per request from
+   * server state (`lib/parlor/moment.ts`), never from anything the client said.
+   *
+   * They are merged into the *viewer's* set only. `leagueTags` below stays
+   * history, which is what makes a moment line the most pointed thing Tony can
+   * say: nobody else in the room is being handed their first box at this
+   * instant, so its audience is zero and the existing smallest-audience rule
+   * picks it over every standing line.
+   */
+  const moment = await momentTags(db, user.id);
+  const standing = tags.get(user.id) ?? new Set<string>();
 
   const greeting = await greetingFor(db, {
     userId: user.id,
     displayName: user.displayName,
-    tags: tags.get(user.id) ?? new Set<string>(),
+    tags: new Set([...standing, ...moment]),
     leagueTags: managers.map((manager) => tags.get(manager.id) ?? new Set<string>()),
     daysUntilKickoff: clock.daysUntilKickoff,
   });

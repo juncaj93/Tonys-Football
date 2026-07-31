@@ -14,8 +14,8 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 | Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
 |---|---|---|---|---|
-| **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #38 | Tony guiding beats 2 and 8 — see below |
-| **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36 | `/counter` furniture (visual debt 3) |
+| **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #40 | Real collectible art is the only thing left; see "the one thing that needs the commissioner" |
+| **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36, #40 | Collection empty-state pacing (visual debt 1) |
 | **Stats & Data** | `TECH_LEAD_IMPLEMENTING`, independently verified | `main` | #33 | The deterministic Slice, consuming typed facts only |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **blocked on the commissioner** | — | — | Supply the files; the slot is enforced |
 | **M3 character identity** | `QUEUED_NOT_ACTIVE` | — | — | Issue #24 |
@@ -34,7 +34,9 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ## Where the product is — 2026-07-30 (second session)
 
-**Eight pull requests landed this session.** In order: **#31** the demo-state catalog and its two isolation guards · **#32** the appliers, the CLI, the one-command database and four demo-backed visual states · **#33** Stats Intelligence — persisted weekly matchups, typed facts, the calibrated significance policy, the board socket · **#34** seatless managers through their own door · **#35** the Collection and Showcase shelf. **#36** the art-slot contract and the photographable reveal · **#37** the retired-manager boundary and the independent Stats verification · **#38** the reveal plate saying what was earned and offering another.
+**Nine pull requests landed this session.** In order: **#31** the demo-state catalog and its two isolation guards · **#32** the appliers, the CLI, the one-command database and four demo-backed visual states · **#33** Stats Intelligence — persisted weekly matchups, typed facts, the calibrated significance policy, the board socket · **#34** seatless managers through their own door · **#35** the Collection and Showcase shelf. **#36** the art-slot contract and the photographable reveal · **#37** the retired-manager boundary and the independent Stats verification · **#38** the reveal plate saying what was earned and offering another · **#40** Tony owning both ends of the pizza-box loop.
+
+**#40 also caught a false green in the harness.** The nine `reveal-*` states are resolved by the **server** through `previewReveal(…, process.env)`, and the workflow set `DEMO_FIXTURES=1` only on the driver step. Every one of them had been photographing an ordinary parlor page, filing it as `390-reveal-legendary.png`, and passing — with the `rarity-contrast` gate measuring nothing on the surface it was written for. The wiring is fixed *and* a `reveal` gate now fails a reveal state that contains no reveal, because a wiring fix protects one cause and a gate protects the symptom.
 
 ### The M2 loop, walked and scored
 
@@ -44,15 +46,20 @@ The bar is the commissioner's emotional sequence, not the subsystem list. Walked
 |---|---|
 | enter Tony's Pizza | ✅ warm, in-world, legible immediately |
 | immediately understand | ✅ Tony opens with a line built from your real record |
-| receive a welcome box | ⚠️ it is *there* and lit; nobody hands it over. **Tony should.** |
-| become excited to open it | ⚠️ the glow is the only signal |
+| receive a welcome box | ✅ #40 — Tony hands it over: *"First one's on the house. Box is right there."* |
+| become excited to open it | ✅ #40 — his line names the box; the glow is no longer the only signal |
 | enjoy opening it | ✅ anticipation, rise, rarity flash, plate |
-| receive a collectible | ✅ |
+| receive a collectible | ⚠️ correct and **placeholder art** — all 24 items draw the same tagged parcel |
 | understand what they earned | ✅ #38 — first / *n* of 24 / the whole shelf |
-| want to open another | ✅ #38 — the offer, with its price, absent when unaffordable |
+| want to open another | ✅ #40 — Tony offers, in his own voice, with the price in the sentence |
 | continue into Collection or Showcase | ✅ |
 
-**The one open beat is Tony's.** He is the natural voice for "here, first one's on the house" and for "want another?", and both are *curated content* — a new greeting group governed by `assertOnlyApprovedGroups`, which is a content decision rather than an implementation one. Two derived tags would carry it: an unopened welcome box, and an empty tray with enough on the tab. Not added silently.
+**Both of Tony's beats closed in #40**, from the two dialogue groups approved on 2026-07-30. Each is curated content on its own surface, chosen server-side and governed by `assertOnlyApprovedGroups`:
+
+- **`content/counter-greetings.md` A24–A31** — five `first_welcome_box` variants and three `box_waiting`, selected by *moment tags* (`lib/parlor/moment.ts`). A moment tag outranks every standing line without a priority field, because the homepage computes audience over `leagueTags` — which holds no moment tags, so a welcome line's audience is zero and the existing smallest-audience rule picks it.
+- **`content/box-offer.md` O1–O7** — the post-reveal offer, on surface `counter_box_offer` (`lib/counter/offer.ts`). Four gates before a line is even considered: an open season, a seat, a stored economy, and a balance that covers the price. Any one false and there is **no offer and no link** — not a greyed-out one.
+
+**The one beat still open is art**, not behaviour.
 
 ### Corrections applied after the first report
 
@@ -171,8 +178,8 @@ Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requi
 
 | Gate | Result | Where |
 |---|---|---|
-| `npm run check` | green — **691 tests, 44 files** | local, throwaway Postgres |
-| `npm run visual:qa` | green — **27 states × 3 widths**, production build | local |
+| `npm run check` | green — **726 tests, 46 files** | local, throwaway Postgres |
+| `npm run visual:qa` | green — **33 states × 3 widths**, production build, on a freshly reset database **and a server carrying `DEMO_FIXTURES=1`** — without which the nine reveal states photograph nothing and pass | local |
 | `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
 | PR #23 (integration → `main`) | green on final head `c91548c`; **merged** as `238dfca` | PR #23 |
 | Live production URL | ❌ **never loaded.** Proxy denies CONNECT to `*.vercel.app` | — |
@@ -261,11 +268,14 @@ Visual QA needs a **production build** on port 3111:
 
 ```bash
 npm run build
-setsid nohup npx next start -p 3111 > /tmp/next.log 2>&1 < /dev/null & disown
+# DEMO_FIXTURES on the SERVER, not just on the driver — see the note below.
+setsid env DEMO_FIXTURES=1 nohup npx next start -p 3111 > /tmp/next.log 2>&1 < /dev/null & disown
 export PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium-1194/chrome-linux/chrome
-npm run visual:qa                              # all required states
-npm run visual:qa -- --state=tray-reveal       # required; buys its own box per width
+DEMO_FIXTURES=1 npm run visual:qa              # all required states
+DEMO_FIXTURES=1 npm run visual:qa -- --state=tray-reveal   # required; buys its own box per width
 ```
+
+**`DEMO_FIXTURES=1` belongs on both processes, and forgetting the server is silent.** `?preview_reveal=` is resolved inside the render by `previewReveal(…, process.env)`, so a server without it answers every preview request with an ordinary parlor page — and the driver photographs a calm room, files it as `390-reveal-legendary.png`, and passes. That is exactly what CI was doing until #40. The `reveal` gate now fails on it, so the mistake announces itself; the line above is still the fix.
 
 Gotchas that have cost time:
 - Sign in as **Alex by name** via `/door`, never by UUID — reseeding regenerates every id. Script PIN is `461902`.
@@ -284,7 +294,7 @@ Gotchas that have cost time:
 ## Unresolved / carried forward
 
 - **Reward weights provisional** until the P3 simulation. `PROVISIONAL_RARITY_MASS` in `lib/counter/rewards.ts`.
-- **Collectible art is placeholder**, so an unopened box and an unfinished collectible are drawn as the same carton. Specified behaviour; the plate carries identity and every reveal is lifted so the moment reads. Real art is a registry row.
+- **Collectible art is placeholder for all 24.** The box draws a flat carton and the collectible a tagged parcel — different silhouettes since #36, but one silhouette for every item. Specified behaviour; the plate carries identity and the item now stands centred on it. Real art is a registry row. **This is the last thing between M2 and the commissioner's "complete".**
 - **Group B content still needs commissioner approval**; seed Group A only.
 - **No token sink other than boxes, and no weekly income.** Matchup wins and weekly high scores need a played season and the two cron jobs (`16 §4.3`) that would award them. The reason codes exist; nothing is wired to them. Do not invent a reward that fires on nothing.
 - **Salvage for duplicates** is unbuilt and P3-gated.

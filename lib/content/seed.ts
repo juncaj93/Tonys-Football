@@ -7,8 +7,10 @@ import { now } from '@/lib/clock';
 import { type Database } from '@/lib/db';
 import { contentEntries } from '@/lib/db/schema';
 
+import { BOX_OFFER_COOLDOWN_DAYS, BOX_OFFER_SURFACE } from '@/lib/counter/offer';
+
 import { GREETING_COOLDOWN_DAYS, GREETING_SURFACE } from './greeting';
-import { parseCounterGreetings, type ParsedGreeting } from './parse';
+import { parseBoxOffers, parseCounterGreetings, type ParsedLine } from './parse';
 
 /**
  * Seeding the content engine from the authored markdown.
@@ -23,6 +25,7 @@ import { parseCounterGreetings, type ParsedGreeting } from './parse';
  */
 
 export const COUNTER_GREETINGS_PATH = path.join('content', 'counter-greetings.md');
+export const BOX_OFFERS_PATH = path.join('content', 'box-offer.md');
 
 export interface SeedSummary {
   readonly inserted: number;
@@ -31,20 +34,55 @@ export interface SeedSummary {
   readonly keys: readonly string[];
 }
 
-export function readCounterGreetings(root = process.cwd()): readonly ParsedGreeting[] {
+export function readCounterGreetings(root = process.cwd()): readonly ParsedLine[] {
   return parseCounterGreetings(readFileSync(path.join(root, COUNTER_GREETINGS_PATH), 'utf8'));
+}
+
+export function readBoxOffers(root = process.cwd()): readonly ParsedLine[] {
+  return parseBoxOffers(readFileSync(path.join(root, BOX_OFFERS_PATH), 'utf8'));
 }
 
 export async function seedCounterGreetings(
   db: Database,
-  entries: readonly ParsedGreeting[],
+  entries: readonly ParsedLine[],
+): Promise<SeedSummary> {
+  return seedSurface(db, entries, {
+    surface: GREETING_SURFACE,
+    path: COUNTER_GREETINGS_PATH,
+    cooldownDays: GREETING_COOLDOWN_DAYS,
+  });
+}
+
+/**
+ * Tony's other end of the loop.
+ *
+ * A separate call rather than a second branch inside the greeting seeder,
+ * because the two files are edited independently and the deactivation sweep is
+ * **scoped to one surface**: seeding the greetings must not retire the offers
+ * merely because they are not in that file.
+ */
+export async function seedBoxOffers(
+  db: Database,
+  entries: readonly ParsedLine[],
+): Promise<SeedSummary> {
+  return seedSurface(db, entries, {
+    surface: BOX_OFFER_SURFACE,
+    path: BOX_OFFERS_PATH,
+    cooldownDays: BOX_OFFER_COOLDOWN_DAYS,
+  });
+}
+
+async function seedSurface(
+  db: Database,
+  entries: readonly ParsedLine[],
+  surface: { surface: string; path: string; cooldownDays: number },
 ): Promise<SeedSummary> {
   const at = now();
 
   const existing = await db
     .select({ key: contentEntries.key })
     .from(contentEntries)
-    .where(eq(contentEntries.surface, GREETING_SURFACE));
+    .where(eq(contentEntries.surface, surface.surface));
 
   const existingKeys = new Set(existing.map((row) => row.key));
   const keys = entries.map((entry) => entry.key);
@@ -55,20 +93,23 @@ export async function seedCounterGreetings(
       .values({
         key: entry.key,
         kind: 'tony_line',
-        surface: GREETING_SURFACE,
+        surface: surface.surface,
         requiredTags: [...entry.requiredTags],
         excludedTags: [],
         templateText: entry.templateText,
         expression: entry.expression,
         weight: 100,
-        cooldownDays: GREETING_COOLDOWN_DAYS,
+        cooldownDays: surface.cooldownDays,
         maxUsesPerSeason: null,
-        // Nothing in Group A is restricted. The gate exists from the first line
-        // rather than being retrofitted around content already live.
+        // Nothing approved so far is restricted. The gate exists from the first
+        // line rather than being retrofitted around content already live.
         sensitivity: 'ordinary',
+        // `A` is "approved by the commissioner", which is what the guard below
+        // checks. It is not "the section headed Group A" — the box offers live
+        // in their own file and are approved in their own ruling.
         approvalGroup: 'A',
         active: true,
-        sourceRef: `${COUNTER_GREETINGS_PATH}#${entry.key}`,
+        sourceRef: `${surface.path}#${entry.key}`,
         updatedAt: at,
       })
       .onConflictDoUpdate({
@@ -91,7 +132,7 @@ export async function seedCounterGreetings(
           .set({ active: false, updatedAt: at })
           .where(
             and(
-              eq(contentEntries.surface, GREETING_SURFACE),
+              eq(contentEntries.surface, surface.surface),
               notInArray(contentEntries.key, keys),
               eq(contentEntries.active, true),
             ),
@@ -107,12 +148,14 @@ export async function seedCounterGreetings(
 }
 
 /**
- * Guard against Group B reaching production.
+ * Guard against unapproved content reaching production.
  *
- * Group B is unapproved and, until four Sleeper accounts are confidently
- * mapped, could land a joke on the wrong person. This is asserted rather than
- * assumed because the failure is invisible: a Group B row would simply start
- * appearing in greetings with nothing to signal that it should not have.
+ * `A` means **approved by the commissioner**, on any surface. Group B in the
+ * greetings file is the unapproved set: it draws on character canon rather than
+ * imported data and, until four Sleeper accounts are confidently mapped, could
+ * land a joke on the wrong person. This is asserted rather than assumed because
+ * the failure is invisible — a Group B row would simply start appearing with
+ * nothing to signal that it should not have.
  */
 export async function assertOnlyApprovedGroups(db: Database): Promise<void> {
   const [row] = await db

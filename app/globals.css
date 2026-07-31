@@ -607,6 +607,28 @@ body[data-parlor-focus='reveal'] .tony-line {
     0 -1px 0 var(--color-amber-glow);
 }
 
+/*
+ * A name written on an empty shelf.
+ *
+ * The same device as `board-paint` and for the same reason: the ground it sits
+ * on is a *drawing*, not a colour. An unowned collection spot has no surface
+ * behind it by ruling — an empty spot is empty, not a dark card — so the name
+ * lands on whatever the parlor happens to have painted there, which over the
+ * counter's red-and-cream checker is nearly as light as the ink.
+ *
+ * One hard pixel of the room's darkest tone on all four sides. **No blur**: a
+ * soft halo is the one thing that would make this read as a web label dropped on
+ * a screenshot, which is what the whole surface vocabulary exists to avoid. It
+ * costs no layout and it makes every one of the twenty-four names hold at 360.
+ */
+.shelf-label {
+  text-shadow:
+    1px 0 0 #1c1113,
+    -1px 0 0 #1c1113,
+    0 1px 0 #1c1113,
+    0 -1px 0 #1c1113;
+}
+
 .tony-mark {
   transition: transform 260ms ease-out;
 }

@@ -27,9 +27,13 @@ Captured at every width, every run:
 
 `idle` · `tony-dialogue` · `tonight-board` · `banner-completed` · `banner-current-tbd` · `rack` · `prediction` · `receipt` · `counter` · `back-hall` · `keyboard-focus` · `six-banners` · `tray-owned-box` · `tray-reveal` · `collection` · `collection-filtered` · `showcase` · `showcase-chosen`
 
-Plus four on **demo seats** (`lib/demo/`): `demo-tray-empty` · `demo-collection-full` · `demo-counter-broke` · `demo-showcase-chosen`.
+Plus eight on **demo seats** (`lib/demo/`): `demo-tray-empty` · `demo-collection-full` · `demo-counter-broke` · `demo-showcase-chosen` · `demo-pull-while-broke` · `demo-box-waiting` · `demo-welcome-box` · `demo-collection-empty`.
+
+`demo-collection-empty` is the shelf a brand-new player sees — twenty-four named spots and nothing on any of them. Like `demo-tray-empty` it could not be captured from a seeded manager, because every one of them owns something by the time the driver arrives, and it is where the unowned names' contrast defect was found.
 
 Plus the **four rarity treatments**: `reveal-common` · `reveal-rare` · `reveal-epic` · `reveal-legendary`, via `?preview_reveal=` (`lib/demo/preview.ts`). These are the states this driver could never produce — the roll happens inside `openBox`, so `tray-reveal` photographs whatever the table gave, and the epic and legendary treatments had never once been reviewed. Nothing is rolled or written, so they are repeatable and show the same item at every width.
+
+Plus the **plate's other three compositions**, via `?preview_stage=`: `reveal-first-offer` · `reveal-complete-offer` · `reveal-no-offer`. The plate ends in two lines that change together — what the pull meant for the shelf, and whether Tony offers another — and only the middle case had ever been looked at. `reveal-no-offer` captures an **absence** on purpose: an unaffordable box produces no pitch at all, and "no offer" and "no reveal" are indistinguishable in a file listing.
 
 Loading, empty and error states are reviewed when the surface that owns them changes.
 
@@ -67,6 +71,7 @@ Purchase fixed it properly rather than by contrivance. Each width now **buys its
 | `glow` | Nothing in the room carries a `drop-shadow` filter except the tray's own box states and a rarity treatment | `18` allows one persistent affordance — a Door with something to say. A glow arriving on a Display, or a second Door lighting up, teaches the room's grammar wrong. |
 | `overflow` | Zero horizontal document overflow | |
 | `rarity-contrast` | Every `.rarity-word` clears **4.5:1** against its own nearest opaque background | `18` makes rarity *the printed word first*, colour third — a rarity word nobody can read is the primary signal missing. This shipped twice: `LEGENDARY` was invisible on cream, was repaired on the surfaces that existed then, and was still invisible on the **reveal plate**, which no screenshot could reach until `?preview_reveal=` existed. It then found that `on-paper`'s own inks had never cleared AA either — legendary at 2.24:1 and common at 3.42:1. |
+| `reveal` | Every reveal state actually contains a reveal: a plate, a collectible, a rarity word, Tony's offer present or absent as that state names, **and his order pad yielded** (opacity ≤ 0.05) | The gate against a **false green**. The nine preview reveals are resolved by the *server*, which needs `DEMO_FIXTURES=1`; the workflow set it only on the driver. So the driver photographed a calm room nine times, filed it as `390-reveal-legendary.png`, and reported **passed** — with `rarity-contrast` above measuring nothing on the one surface it was written for. A missing state is visible in a file listing. A state that captured the wrong thing is a green tick on evidence nobody re-examines. The pad check is the machine half of *"do not stack an independent dialogue panel on top of the reveal"* — the driver had been dismissing the pad before every reveal capture, which is removing the one thing that could collide before photographing whether anything collided. |
 | `console` | No console errors or failed requests | This is the gate that caught the `/underground` 404. |
 
 ### Why `object-map` counts markers and not anchors

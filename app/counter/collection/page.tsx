@@ -312,9 +312,27 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
      * name, because hiding it would make the shelf a mystery instead of a set,
      * and the catalog is not secret.
      */
+    /*
+     * ## It was legible on the shelf board and not on the checkerboard
+     *
+     * The name was `text-[14px] text-paper-mid/55`, written straight onto the
+     * dimmed parlor — and the parlor is not one colour. Over the booths it read
+     * fine; over the counter's red-and-cream checker and the floor tiles, a
+     * 55%-opacity cream at 14px is close to the *"light grey on wood"* case
+     * `VISUAL_ACCEPTANCE.md §7` lists among the defects that have already
+     * shipped once. Twenty-four of these are the entire route for a manager who
+     * owns nothing, so it is the first screen of the shelf, not a detail.
+     *
+     * 15px at 80% rather than a plate behind it. The ruling is that **an empty
+     * spot is empty, not a dark card** — putting a surface back to fix contrast
+     * would undo #35 to fix #40. Raising the ink is the change that makes the
+     * name readable without making the gap look filled.
+     */
     return (
       <li className="flex h-full flex-col justify-end px-0.5 pb-1.5 text-center">
-        <span className="text-[14px] leading-[1.2] text-paper-mid/55">{entry.name}</span>
+        <span className="shelf-label text-[15px] leading-[1.25] text-paper-mid/80">
+          {entry.name}
+        </span>
       </li>
     );
   }

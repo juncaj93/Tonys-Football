@@ -7,6 +7,10 @@ import {
   ROOM_OBJECTS,
   TONY,
   TONY_TAP_TOP,
+  TRAY_BOX,
+  TRAY_PLATE_ANCHOR,
+  TRAY_REVEAL,
+  TRAY_SURFACE,
   bannerPartitions,
   overlaps,
   roomObject,
@@ -201,5 +205,51 @@ describe('the banner row', () => {
   it('clears the Tonight board below it', () => {
     const [, boardTop] = roomObject('tonight').rect;
     expect(BANNER.hitTop + BANNER.hitHeight).toBeLessThanOrEqual(boardTop);
+  });
+});
+
+/**
+ * The reveal, as a composition.
+ *
+ * Three numbers decide whether the most important moment in the product looks
+ * composed or looks like a card dropped on a screenshot, and all three had been
+ * wrong at some point — each in a way that no test could see and every
+ * screenshot could. They are asserted here so the next edit has to mean it.
+ */
+describe('the collectible and the plate that names it', () => {
+  const centreOf = (x: number, width: number) => x + width / 2;
+
+  it('stands the item on the plate’s own axis, not the tray’s', () => {
+    /*
+     * The defect this replaces: the item rested on the tray's centre (203) while
+     * the plate is centred on the room (160), so it stood on the right-hand
+     * quarter of its own nameplate. A thing and its label share an axis.
+     */
+    expect(centreOf(TRAY_REVEAL[0], TRAY_REVEAL[2])).toBe(
+      centreOf(TRAY_PLATE_ANCHOR.x, TRAY_PLATE_ANCHOR.width),
+    );
+  });
+
+  it('stands it on the plate rather than above it or through it', () => {
+    // The room has no floating things in it. The item's base is the plate's top
+    // edge — one number, shared, so a nudge to either cannot open a gap.
+    expect(TRAY_REVEAL[1] + TRAY_REVEAL[3]).toBe(TRAY_PLATE_ANCHOR.y);
+  });
+
+  it('keeps the plate inside the room with a margin on both sides', () => {
+    const left = TRAY_PLATE_ANCHOR.x;
+    const right = ROOM.width - (TRAY_PLATE_ANCHOR.x + TRAY_PLATE_ANCHOR.width);
+    expect(left).toBeGreaterThanOrEqual(24);
+    expect(right).toBeGreaterThanOrEqual(24);
+    // Symmetric, which is the whole reason it is centred.
+    expect(left).toBe(right);
+  });
+
+  it('leaves the box on the tray, where the tray is drawn', () => {
+    // Only the *reveal* moved. The unopened box is still an object sitting on a
+    // drawn surface, and moving it would put a box hovering over the counter.
+    const [tx, , tw] = TRAY_SURFACE;
+    expect(TRAY_BOX[0]).toBeGreaterThanOrEqual(tx);
+    expect(TRAY_BOX[0] + TRAY_BOX[2]).toBeLessThanOrEqual(tx + tw);
   });
 });

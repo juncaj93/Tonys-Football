@@ -6,8 +6,9 @@ import { requireUser } from '@/lib/auth/current-user';
 import { openBox, purchaseBox } from '@/lib/counter/boxes';
 import { type Rarity } from '@/lib/counter/catalog';
 import { collectionFor } from '@/lib/counter/collection';
+import { offerAnotherBox, type BoxOffer } from '@/lib/counter/offer';
 import { setShowcase } from '@/lib/counter/showcase';
-import { economyFor, openSeason, wallet } from '@/lib/counter/tokens';
+import { openSeason } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
 
 /**
@@ -63,13 +64,22 @@ export interface RevealPayload {
   /** The catalog's size — the denominator that makes `distinct` mean something. */
   readonly total: number;
   /**
-   * The price of the next box, or null when they cannot afford one.
+   * Tony offering another box, or null.
    *
-   * Null covers "no tab" and "not enough" together, because the plate says the
-   * same thing to both: nothing. It never renders a price they cannot meet —
-   * an offer you cannot take is worse than no offer.
+   * **Null is every unavailable case at once** — no open season, no seat, no
+   * stored economy, not enough on the tab — because the plate says the same
+   * thing to all of them: nothing. Commissioner ruling, 2026-07-30: do not
+   * advertise an unavailable purchase, do not shame the manager, do not display
+   * a disabled sales pitch.
+   *
+   * It carries a **sentence**, not a price beside a button. `lib/counter/offer.ts`
+   * argues the point at length; the short version is that this is Tony handing
+   * something across a counter rather than the application listing a second SKU.
+   *
+   * Chosen on the server, so it is fixed for this reveal — remounting the plate
+   * cannot reroll what he said.
    */
-  readonly nextBoxPrice: number | null;
+  readonly offer: BoxOffer | null;
 }
 
 export type OpenBoxResponse =
@@ -154,30 +164,41 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
   /*
    * Read *after* the open, so the count includes what they just pulled.
    *
-   * Both are cheap and neither is allowed on the client: a collection count is a
-   * fact about somebody's property, and a price the client picked would be a
-   * price the client could change.
+   * Cheap, and not allowed on the client: a collection count is a fact about
+   * somebody's property, and a price the client picked would be a price the
+   * client could change.
    */
   const db = getDb();
-  const [collection, season] = await Promise.all([collectionFor(db, user.id), openSeason(db)]);
+  const collection = await collectionFor(db, user.id);
 
-  let nextBoxPrice: number | null = null;
-  if (season !== null) {
-    const held = await wallet(db, { userId: user.id, seasonId: season.id });
-    if (held !== null) {
-      try {
-        const { values } = await economyFor(db, season.id);
-        // Offered only when they can actually take it. See the field's note.
-        if (held.balance >= values.standardBoxPriceTokens) {
-          nextBoxPrice = values.standardBoxPriceTokens;
-        }
-      } catch {
-        // No stored economy is a seeding failure, not something to tell a
-        // manager about mid-reveal. The plate simply makes no offer.
-        nextBoxPrice = null;
-      }
-    }
-  }
+  /*
+   * And then Tony, who has been watching all this from two feet away.
+   *
+   * The offer is drawn here rather than in the component for two reasons the
+   * ruling states directly: eligibility must come from authoritative server
+   * state, and the line must not reroll when React remounts the plate. Both are
+   * satisfied by the draw happening once, on this request, and travelling back
+   * as text.
+   *
+   * It reads `distinct`, so "first one was free" is only ever said to somebody
+   * for whom it is true.
+   *
+   * ## Not on a replay
+   *
+   * *"A second look is not a moment"* — the component skips the anticipation
+   * beat for exactly this case, and an offer **is** a moment. A duplicate tap
+   * that lost the race, or a refresh that re-resolved the same open box, is a
+   * manager looking at their collectible again; Tony does not re-pitch, and a
+   * draw is not spent. Without this, every retry would burn a variant off the
+   * cooldown for a sentence nobody asked to hear twice.
+   */
+  const offer = reveal.replayed
+    ? null
+    : await offerAnotherBox(db, {
+        userId: user.id,
+        distinct: collection.distinct,
+        total: collection.total,
+      });
 
   return {
     ok: true,
@@ -189,7 +210,7 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
       replayed: reveal.replayed,
       distinct: collection.distinct,
       total: collection.total,
-      nextBoxPrice,
+      offer,
     },
   };
 }

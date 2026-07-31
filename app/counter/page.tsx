@@ -84,29 +84,50 @@ export default async function CounterPage() {
         <div className="mx-auto w-full max-w-[420px] px-4 pt-6 pb-10">
           <SignPlate>Tony&rsquo;s counter</SignPlate>
 
-          <p className="mt-4 text-[17px] leading-[1.5] text-paper-mid/80">
-            {unopenedBoxes > 0
-              ? 'There is a box on the tray with your name on it. Open it out front — Tony likes to watch.'
-              : 'Tony wipes the counter and waits. The tray is empty.'}
+          {/*
+            * What is true when you walk up, in Tony's voice — including the
+            * count, which used to be a panel of its own.
+            *
+            * *"There is a box on the tray with your name on it"* and a panel
+            * headed ON THE TRAY reading *"1 unopened box"* are the same fact
+            * rendered twice, three lines apart. The panel lost: a shopkeeper
+            * tells you there is one waiting, he does not also hand you a card
+            * about it.
+            */}
+          <p
+            /*
+             * The count, as a marker as well as a sentence.
+             *
+             * The visual driver has to know when a purchase has landed, and it
+             * used to know by waiting for the words *"unopened box"* — which is
+             * a test coupled to prose, and it broke the moment the prose
+             * improved. A number in an attribute is a contract the copy can be
+             * rewritten around, the same way `data-room-object` lets the room's
+             * labels change without moving the object map.
+             */
+            data-unopened-boxes={String(unopenedBoxes)}
+            className="mt-4 text-[17px] leading-[1.5] text-paper-mid/85"
+          >
+            {unopenedBoxes === 0
+              ? 'Tony wipes the counter and waits. The tray is empty.'
+              : unopenedBoxes === 1
+                ? 'There is a box on the tray with your name on it. Open it out front — Tony likes to watch.'
+                : `There are ${String(unopenedBoxes)} boxes on the tray with your name on them. They open out front — Tony likes to watch.`}
           </p>
 
-          <div className="mt-6 space-y-4">
-            {/*
-              * On the tray first, per the landing priority. A manager who already
-              * owns a box should be told to go and open it before being sold
-              * another one.
-              */}
-            {unopenedBoxes > 0 && (
-              <PixelPanel className="px-4 py-4">
-                <PanelHeading>On the tray</PanelHeading>
-                <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
-                  {plural(unopenedBoxes, 'unopened box', 'unopened boxes')}. It opens out at the
-                  tray, not in here.
-                </p>
-              </PixelPanel>
-            )}
-
-            <PixelPanel className="px-4 py-4">
+          {/*
+            * **One panel, because one thing is for sale.**
+            *
+            * There were three, identical in tone, size and heading style, stacked
+            * down the screen — which reads as a list of cards rather than as a
+            * counter with something on it (`docs/VISUAL_DEBT.md` 3). The other
+            * two were not carrying a panel's worth of weight: one repeated the
+            * line above it, and one was a sentence and a link.
+            *
+            * A panel is for the thing you can *act on*. That is the box.
+            */}
+          <div className="mt-6">
+            <PixelPanel className="px-4 pt-4 pb-4">
               <PanelHeading>Standard pizza box</PanelHeading>
               <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
                 Mostly the ordinary stuff off the shelves. Now and then something that
@@ -138,38 +159,35 @@ export default async function CounterPage() {
                 />
               )}
             </PixelPanel>
+          </div>
 
-            {/*
-              * The shelf's summary, and the way through to it.
-              *
-              * This panel once said "nothing collected yet" unconditionally, which
-              * became a false statement about a manager's own property the moment a
-              * box could be opened. It now counts, and `/counter/collection` is
-              * where the pieces actually are.
-              */}
-            <PixelPanel className="px-4 py-4">
-              <PanelHeading>Your collection</PanelHeading>
-              <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
-                {collectiblesOwned > 0
-                  ? `${plural(collectiblesOwned, 'collectible', 'collectibles')}, kept permanently, across every season.`
-                  : 'Nothing collected yet. What you pull is yours permanently, across every season.'}
-              </p>
+          {/*
+            * The way to the back, printed on the counter rather than boxed.
+            *
+            * A sentence and a link do not need a bevelled surface around them.
+            * Sitting straight on the dimmed room they read as what they are —
+            * the direction the shelves are in — instead of as a third product
+            * card. Set on the room's own ink so it stays legible against the
+            * parlor behind (`VISUAL_ACCEPTANCE.md §4`).
+            *
+            * Offered even when the shelf is empty: set progress is the reason to
+            * go and look, and hiding the route until somebody has pulled
+            * something would make the counter's claim about permanence
+            * unverifiable.
+            */}
+          <div className="mt-7">
+            <p className="text-[17px] leading-[1.5] text-paper-mid/85">
+              {collectiblesOwned > 0
+                ? `${plural(collectiblesOwned, 'collectible', 'collectibles')} on your shelf, kept permanently, across every season.`
+                : 'Nothing on your shelf yet. What you pull is yours permanently, across every season.'}
+            </p>
 
-              {/*
-                * Through to the shelf.
-                *
-                * It is offered even when the shelf is empty: set progress is the
-                * reason to go and look, and hiding the route until somebody has
-                * pulled something would make the counter's own claim about
-                * permanence unverifiable.
-                */}
-              <Link
-                href="/counter/collection"
-                className="mt-3 flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-ink-700/85 uppercase underline decoration-ink-700/30 underline-offset-2 active:translate-y-px"
-              >
-                Look at the shelves
-              </Link>
-            </PixelPanel>
+            <Link
+              href="/counter/collection"
+              className="mt-1 flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-amber-glow uppercase underline decoration-amber-glow/40 underline-offset-4 active:translate-y-px"
+            >
+              Look at the shelves
+            </Link>
           </div>
 
           <div className="mt-8">

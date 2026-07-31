@@ -421,20 +421,70 @@ function Revealed({
         </p>
 
         {/*
-          * The way on to the counter.
+          * Tony, offering another one.
           *
-          * It is here because the tray's destination is conditional: while a box
-          * is on it, tapping opens the box rather than navigating, so this is
-          * where `/counter` is reached from without waiting for the tray to be
-          * empty. It is also the honest next thought after a pull — *where does
-          * this live?*
+          * ## Last, and that ordering is the ruling
           *
-          * A text link rather than a plate-within-a-plate: a second bevelled
-          * surface inside a surface this size would be the loudest thing in the
-          * room. It names its destination, so its accessible name is a
-          * destination rather than a mood.
+          * *"Sequence: collectible → rarity/identity → collection meaning → then
+          * Tony's offer."* Everything above this line is about the thing they
+          * just got; this is the only part that is about the next one, and it
+          * comes after all of it. A manager who reads three lines and stops has
+          * missed nothing they earned.
+          *
+          * ## In the plate, not on top of it
+          *
+          * *"Do not stack an independent dialogue panel on top of the reveal"*
+          * and *"do not let Tony's dialogue cover the collectible, rarity,
+          * collection progress, or the primary continuation action."* A second
+          * floating box would do both — the tray's own order pad already sits at
+          * the bottom of the screen, and a third surface would be the "two panels
+          * stacked over the lower third" the room's focus rule was written
+          * against. So it is one more line inside the surface that is already
+          * there, in normal flow, covering nothing by construction.
+          *
+          * ## Why it is a sentence and not a price
+          *
+          * This read `ANOTHER — 50` beside a link, which is a shop. The
+          * commissioner asked for the feeling of *"Tony handing something across
+          * the counter, not the application generating inventory"*, so the price
+          * is spoken. `lib/counter/offer.ts` chooses which sentence, on the
+          * server, from state the browser cannot influence.
+          *
+          * ## Attributed the way the order pad attributes
+          *
+          * A red rule and his name in signage type — the same two devices
+          * `tony-toy.tsx` uses, at plate scale. Without them a quoted sentence on
+          * a cream surface is just more interface copy, and `MANDATE §9` is
+          * precisely about words having an author.
           */}
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-0.5">
+        {reveal.offer !== null && (
+          <div className="mt-2.5 border-t-2 border-red-dark/25 pt-1.5">
+            <p className="font-display text-[9px] leading-none tracking-[0.12em] text-wood-mid uppercase">
+              Tony
+            </p>
+            <p className="mt-1 text-[15px] leading-[1.3] text-ink-900">{reveal.offer.line}</p>
+          </div>
+        )}
+
+        {/*
+          * The ways on.
+          *
+          * The shelf is here because the tray's destination is conditional: while
+          * a box is on it, tapping opens the box rather than navigating, so this
+          * is where `/counter/collection` is reached from without waiting for the
+          * tray to be empty. It is also the honest next thought after a pull —
+          * *where does this live?*
+          *
+          * Text links rather than plates-within-a-plate: a second bevelled
+          * surface inside a surface this size would be the loudest thing in the
+          * room. Each names its destination, so its accessible name is a
+          * destination rather than a mood.
+          *
+          * The counter link appears **only alongside an offer**, and carries no
+          * price — Tony has just said it, and printing it again two lines below
+          * is the same fact rendered twice.
+          */}
+        <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5">
           <Link
             href="/counter/collection"
             className="flex min-h-[26px] items-center font-display text-[10px] tracking-wide text-ink-700/80 uppercase underline decoration-ink-700/30 underline-offset-2 active:translate-y-px"
@@ -442,26 +492,12 @@ function Revealed({
             Put it on the shelf
           </Link>
 
-          {/*
-            * *"Want to open another"* is one of the nine beats, and until now
-            * nothing anywhere said another box existed. The loop simply ended:
-            * bare tray, Tony silent, no price on anything.
-            *
-            * So the offer is made at the one moment the player is certainly
-            * looking, and it carries the **price** — an offer without one is an
-            * invitation to go and find out, which is a different and worse
-            * feeling.
-            *
-            * Absent when they cannot afford it (`nextBoxPrice` is null). An
-            * offer you cannot take is worse than no offer, and it is also how a
-            * shop starts feeling like a store.
-            */}
-          {reveal.nextBoxPrice !== null && (
+          {reveal.offer !== null && (
             <Link
               href="/counter"
               className="flex min-h-[26px] items-center font-display text-[10px] tracking-wide text-red-dark uppercase underline decoration-red-dark/40 underline-offset-2 active:translate-y-px"
             >
-              Another&nbsp;&mdash;&nbsp;{String(reveal.nextBoxPrice)}
+              Take another
             </Link>
           )}
         </div>
