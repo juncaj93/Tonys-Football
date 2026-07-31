@@ -169,6 +169,32 @@ hole rather than off a face, a soft-sided bag with a fabric handle loop, and a d
 pattern that has to survive the 23 px Showcase draw. It needs nothing from the commissioner until
 Batch B is in hand.
 
+### The next executable task, in order
+
+1. **Integrate the Batch B collectible art** the moment the eight PNGs arrive. One command now:
+   `art/incoming/<slug>_01.png` → `npm run art:batch` → look at the screenshots →
+   `npm run art:batch -- B2 --register`. **No feature code changes.** Still the only thing between
+   M2 and closure.
+2. **Tony's Line, bounties and the chalkboard prediction** (`16 §9`). All three read the fact packet
+   that now exists; all three need a live season to settle against, so they are authored now and
+   settle in September. One table with a type discriminator.
+3. **The commissioner review queue** for the Slice. `16 §9` makes approval mandatory in season one
+   and the manual hold switch permanent. Not built — the historical issue on the rack does not need
+   it, a live one does.
+4. **Batch B2** when Batch B is in hand. Specified, paste-ready, needs nothing from anybody until
+   then.
+5. **Visual debt 3** — the order pad's arrival and dismissal timing against the reveal's.
+
+### What this session did not start, and why
+
+- **M3 character identity (#24).** Unchanged: do not destabilise M2 before the representative art
+  batch has proven the asset system.
+- **The Back Hall boundary.** Specification work only, and it must not delay Slice polish or Batch B.
+- **Safari and hosted-only hardening beyond the seed.** The sandbox proxy denies CONNECT to
+  `*.vercel.app`, so viewport-height, back-forward cache and safe-area behaviour cannot be observed
+  here — only asserted statically. The seed's idempotency was the one item in that list that is
+  fully checkable locally, so it was the one taken.
+
 ---
 
 ## Where the product is — 2026-07-31
