@@ -97,7 +97,16 @@ Equipping is a **state change on a collectible somebody owns**, and it must obey
 | A base configuration is a row of small integers | `body` · `face` · `hair` variant ids, plus a palette id. Never a serialized image and never JSON with free-form keys |
 | Changing a configuration is **recoverable** | Append-only history, or at minimum a previous-value column. A manager who taps the wrong hair and loses a look they spent time on is a support request nobody can answer |
 
-**Wearables are not in the 24-item collectible catalog.** `CATALOG_SIZE = 24` is asserted and must not be satisfied by adding wearables to it (`AUTONOMY.md §5` — never delete or repurpose an approved slug to satisfy a count). Wearables are a separate registry family with their own slugs, and the twelve in `03` are the launch set.
+**Wearables are not in the 24-item collectible catalog** — **commissioner ruling, 2026-07-31**, settling what was an open contradiction. The two are separate product families and separate progression surfaces:
+
+| | Family | Slugs | How you get one |
+|---|---|---|---|
+| Pizza-box collectibles | `collectible` | 24 × `collectible_*` | the loot box |
+| Character equipment | `avatar` | 12 × `wear_*` | the character system |
+
+`CATALOG_SIZE = 24` is asserted and must not be satisfied by adding wearables to it (`AUTONOMY.md §5` — never delete or repurpose an approved slug to satisfy a count). The mechanism is the registry family, not a convention: `catalog()` is `assetRegistry.byFamily('collectible')`, so a wearable cannot reach the reward table without somebody editing a `family` row.
+
+**Crossover is not approved.** A future explicit ruling may let a box award a collectible, a wearable, or a mixed reward. Until that ruling exists, the absence of a crossover is a **product decision**, not an unimplemented feature — and `lib/character/separation.test.ts` fails the build in every direction that could quietly turn it into one, including the inventory comment that was wrong for a week while every test passed.
 
 ---
 

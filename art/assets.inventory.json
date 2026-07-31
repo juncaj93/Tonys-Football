@@ -432,7 +432,7 @@
       }
     },
     "_wearables_B2": {
-      "$comment": "12 earned wearables. These ARE part of the 24-item catalog, not additional to it.",
+      "$comment": "12 earned wearables for the modular character system (M3). COMMISSIONER RULING 2026-07-31: these are NOT part of the 24-item pizza-box collectible catalog. Collectibles and wearables are separate product families — a pizza box awards collectible_*, character equipment uses wear_*. This comment previously claimed the opposite; that claim was wrong and contradicted the seeded reward table. Crossover rewards are not approved and must not be implemented without a later explicit ruling.",
       "wear_head_pizza_visor": {
         "family": "avatar",
         "canvas": "32x48",

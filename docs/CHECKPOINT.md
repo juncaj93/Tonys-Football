@@ -40,22 +40,25 @@ GitHub-side deploy and nothing more.
 to be requested again, and the repository does not idle waiting for them. The ingestion path stays
 ready: `art/incoming/<slug>_01.png` → `npm run art:batch` → `--register`.
 
-### ⚠️ One contradiction the commissioner has to settle
+### ✅ Settled — collectibles and wearables are separate systems
 
-`art/assets.inventory.json`, group `_wearables_B2`, carries the comment:
+**Commissioner ruling, 2026-07-31.** The contradiction reported below is resolved in favour of the
+implemented product. `art/assets.inventory.json` claimed the twelve wearables were *inside* the
+24-item catalog; **that claim was wrong** and the comment is corrected.
 
-> *"12 earned wearables. **These ARE part of the 24-item catalog**, not additional to it."*
+| | Family | Slugs | How you get one |
+|---|---|---|---|
+| Pizza-box collectibles | `collectible` | 24 × `collectible_*` | the loot box |
+| Character equipment | `avatar` | 12 × `wear_*` | the character system (M3) |
 
-**The implemented product disagrees.** `lib/counter/catalog.ts` holds 24 `collectible_*` slugs and no
-`wear_*` ones; those 24 are what `reward_tables` is seeded with; `CATALOG_SIZE` asserts the count.
+Preserved unchanged: the 24-item catalog, reward-table behaviour, the rarity structure, M2's
+persistence and idempotency, and the Batch B art contracts. **Crossover is not approved** — a box
+awarding a wearable or a mixed reward needs a later explicit ruling, so the gap is a product decision
+rather than an unimplemented feature.
 
-They cannot both be true and the difference is not cosmetic — **if the comment is right, the pizza
-box should be dropping wearables and M2's shipped economy is wrong.**
-
-The code follows the implemented catalog, because `16` and a seeded reward table outrank a comment in
-an art file (`AUTONOMY.md §1`) and because changing it would silently alter a live economy.
-`lib/character/character.test.ts` pins the implemented behaviour so a change is deliberate.
-**Reported rather than resolved** (`CLAUDE.md`).
+`lib/character/separation.test.ts` guards it from every direction it could be undone from: the
+catalog, the **reward table** itself, both registry families, and the inventory comment that was
+wrong for a week while every test passed.
 
 ### The Slice, walked at real size
 
