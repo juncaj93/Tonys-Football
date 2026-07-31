@@ -1,16 +1,26 @@
 # Implementation Handoff
 
 **For:** the engineer picking up the next assignment
-**Last completed:** V0 Pipeline · V1 Doors Open · **M2 slice 1 — the loot box on the tray**
 **Authority:** `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` for ordering · `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` for the room · `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` for everything else
 
-> **V0, V1 and M2 slice 1 are shipped.** What follows is kept as the record of
-> the V1 assignment; §"Where V1 landed" and §"Where M2 slice 1 landed" at the
-> bottom are what a reader needs now.
+> ## ⚠️ This file is a historical record, not the current assignment
 >
-> **The next assignment is M2 slice 2 — token acquisition.** Boxes are currently
-> granted by the seed as a fixture; slice 2 makes them purchasable through
-> `apply_token_delta`. See §"What slice 2 owns".
+> **`docs/CHECKPOINT.md` is where the current assignment lives.** It carries the
+> execution-status table, the exact next task, and the gate results, and it is
+> updated every time a slice lands. This file is not.
+>
+> It said *"the next assignment is M2 slice 2 — token acquisition"* for four
+> sessions after slice 2, the whole of M2, Stats, the Slice and M3 had shipped.
+> `CLAUDE.md` lists it in the reading order, so a new session was being pointed
+> at a stale instruction by a document it was told to trust — exactly the drift
+> `AUTONOMY.md §1` says to correct in the loser rather than preserve.
+>
+> **Shipped since this file was written:** M2 slices 2–4 · the demo system ·
+> Stats Intelligence · the retired-manager boundary · the deterministic Tuesday
+> Slice · M3 character identity, data through surface.
+>
+> What is still worth reading below: §"Where V1 landed" and §"Where M2 slice 1
+> landed", as the record of how those two were scoped.
 
 ---
 

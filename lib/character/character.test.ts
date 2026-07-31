@@ -103,16 +103,15 @@ describe('the catalog and the registry agree', () => {
 
   it('keeps wearables out of the twenty-four collectible catalog', () => {
     /*
-     * **An unresolved contradiction, pinned rather than settled.**
+     * **Settled by commissioner ruling, 2026-07-31.** Collectibles and wearables
+     * are separate systems: a pizza box awards `collectible_*`, character
+     * equipment uses `wear_*`. `_wearables_B2` used to claim the twelve were
+     * inside the 24; it was wrong and is corrected.
      *
-     * `_wearables_B2` says the twelve wearables *"ARE part of the 24-item
-     * catalog"*. The implemented catalog says otherwise, and the reward table is
-     * seeded from it — so if the comment were right, the pizza box would drop
-     * wearables and M2's shipped economy is wrong.
-     *
-     * This asserts the implemented behaviour so a change to it is deliberate. The
-     * disagreement is recorded in `docs/CHECKPOINT.md` for the commissioner
-     * (`CLAUDE.md`: do not silently resolve material contradictions).
+     * The full guard — the reward table, both registry families, and the
+     * inventory comment itself — is `separation.test.ts`. This line stays because
+     * it is the assertion in the file somebody editing the character catalog is
+     * actually looking at.
      */
     const collectibleSlugs = new Set(catalog().map((item) => item.slug));
     for (const item of WEARABLES) {

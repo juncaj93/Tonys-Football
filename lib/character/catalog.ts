@@ -19,22 +19,27 @@ import { type BaseLayer, type WearableSlot } from './layers';
  * unrecoverable and nobody notices for a week. Same rule as
  * `lib/counter/catalog.ts`, same reason.
  *
- * ## An unresolved contradiction, reported rather than settled
+ * ## Collectibles and wearables are separate systems
  *
- * `_wearables_B2` carries the comment *"12 earned wearables. These ARE part of
- * the 24-item catalog, not additional to it."* The implemented catalog disagrees:
- * `lib/counter/catalog.ts` holds **24 `collectible_*` slugs and no `wear_*`
- * ones**, those 24 are what the reward table is seeded with, and `CATALOG_SIZE`
- * asserts the count.
+ * **Commissioner ruling, 2026-07-31**, settling the contradiction this file used
+ * to carry. `_wearables_B2` said *"These ARE part of the 24-item catalog"*; the
+ * implemented catalog said otherwise, and **the implemented catalog was right.**
  *
- * The two cannot both be true, and the difference is not cosmetic — if wearables
- * were inside the 24, the pizza box would drop them and M2's shipped economy is
- * wrong. This code follows the implemented catalog, because `16` and a seeded
- * reward table outrank a comment in an art file (`AUTONOMY.md §1`), and because
- * changing it would silently alter a live economy.
+ * | | Family | Slugs | How you get one |
+ * |---|---|---|---|
+ * | Pizza-box collectibles | `collectible` | 24 × `collectible_*` | the loot box |
+ * | Character equipment | `avatar` | 12 × `wear_*` | the character system (M3) |
  *
- * **It is recorded in `docs/CHECKPOINT.md` for the commissioner rather than
- * resolved here** (`CLAUDE.md`: do not silently resolve material contradictions).
+ * They are two product families and two progression surfaces. A pizza box awards
+ * a `collectible_*` and nothing else. **Crossover — a box that could award a
+ * wearable, or a mixed reward — is explicitly not approved** and needs a later
+ * ruling before anybody implements it.
+ *
+ * This is not merely a convention: the collectible catalog is
+ * `assetRegistry.byFamily('collectible')`, and every wearable is registered
+ * `family: "avatar"`, so a wearable cannot reach the reward table without
+ * somebody changing a registry family. `separation.test.ts` fails the build in
+ * every direction that could undo it, including the inventory comment above.
  */
 
 export interface BaseVariant {

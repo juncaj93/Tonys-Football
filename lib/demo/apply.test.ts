@@ -66,7 +66,22 @@ describe('the demo catalog and its appliers agree', () => {
     for (const key of BLOCKED_ON_M3) {
       expect(APPLIED_STATES).not.toContain(key);
     }
-    expect(BLOCKED_ON_M3.length).toBeGreaterThan(0);
+  });
+
+  it('has nothing blocked, now that M3 exists', () => {
+    /*
+     * `equipped-wearable` was the list's only entry from M2 until M3's surface
+     * landed: it was declared because the commissioner declared it, and refused
+     * because there was no character for a wearable to attach to.
+     *
+     * Asserted as **empty** rather than deleted along with the mechanism. The
+     * mechanism is how *"a state that cannot be produced yet is honest; a state
+     * quietly absent is not"* is enforced, and the next milestone that declares
+     * a state ahead of its feature will need it. This line makes parking a state
+     * there a deliberate edit that changes a test, rather than a leftover nobody
+     * notices.
+     */
+    expect(BLOCKED_ON_M3).toEqual([]);
   });
 
   it('resolves a roll to the slug the table would resolve it back to', () => {
@@ -178,9 +193,23 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
   });
 
   it('refuses a state that is blocked on a later milestone rather than faking it', async () => {
-    await expect(applyDemoState(db!, 'equipped-wearable', ALLOWED)).rejects.toBeInstanceOf(
-      DemoBlocked,
-    );
+    /*
+     * There is nothing blocked any more — `equipped-wearable`, the only entry
+     * this ever had, applies since M3 — so the refusal is exercised against a
+     * state parked deliberately. The **behaviour** is what matters and is what
+     * the next milestone will rely on; testing it only through whichever state
+     * happens to be blocked today means the mechanism goes untested the moment
+     * the list empties, which is exactly now.
+     */
+    const parked = ['collection-empty'];
+    await expect(
+      applyDemoState(db!, 'collection-empty', ALLOWED, parked),
+    ).rejects.toBeInstanceOf(DemoBlocked);
+  });
+
+  it('applies the state that was blocked until M3', async () => {
+    const applied = await applyDemoState(db!, 'equipped-wearable', ALLOWED);
+    expect(applied.evidence['wearing']).toBe('wear_head_pizza_visor');
   });
 
   it('refuses a state nobody named', async () => {
@@ -210,7 +239,26 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
       // A second run that granted another box or minted another collectible
       // would still *look* right on screen; this is the assertion that catches it.
       expect(boxes.length).toBe(new Set(boxes.map((box) => box.grantKey)).size);
-      expect(items.length).toBe(new Set(items.map((item) => item.sourceOpeningId)).size);
+
+      /*
+       * **Two ways a collectible arrives, and two different natural keys.**
+       *
+       * A pulled collectible is guarded by `source_opening_id UNIQUE` — one
+       * opening can never mint two. An **awarded** one has no opening, so its
+       * `source_opening_id` is null, and null is not distinct from null: the
+       * single-set assertion this replaced collapsed eight wearables into one
+       * and reported the second run as a duplicate mint.
+       *
+       * That is the assertion being wrong rather than the product, but the
+       * property it was checking is real for both — so both are checked, each by
+       * the key that actually guards it. An awarded item's key is
+       * `(user_id, slug)`, from `collectibles_one_wearable_each`.
+       */
+      const pulled = items.filter((item) => item.sourceOpeningId !== null);
+      const awarded = items.filter((item) => item.sourceOpeningId === null);
+
+      expect(pulled.length).toBe(new Set(pulled.map((item) => item.sourceOpeningId)).size);
+      expect(awarded.length).toBe(new Set(awarded.map((item) => item.slug)).size);
     },
   );
 

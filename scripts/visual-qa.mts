@@ -98,6 +98,15 @@ const BANNED_IN_CHROME = ['#3B2050', '#3b2050'];
 
 type StateName =
   | 'idle'
+  | 'character-empty'
+  | 'character-dressed'
+  | 'character-equipped'
+  | 'character-default'
+  | 'character-tallest'
+  | 'character-widest'
+  | 'character-balding-visor'
+  | 'character-every-slot'
+  | 'character-long-hair-apron'
   | 'tony-dialogue'
   | 'tonight-board'
   | 'banner-completed'
@@ -185,6 +194,20 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   // and the one state of this route nobody had ever photographed — every seeded
   // manager owns something by the time the driver reaches here.
   'demo-collection-empty': 'collection-empty',
+  /*
+   * M3's three manager-backed states.
+   *
+   * `character-empty` is the one that matters most: **nothing awards a wearable
+   * yet**, so an empty wardrobe is what every real manager meets. A feature
+   * reviewed only in its fully-stocked state is a feature reviewed in the state
+   * nobody is in.
+   *
+   * `character-equipped` is `equipped-wearable`, which sat in the demo catalog
+   * declared-and-refused from M2 until M3 gave a wearable something to attach to.
+   */
+  'character-empty': 'character-empty',
+  'character-dressed': 'character-dressed',
+  'character-equipped': 'equipped-wearable',
 };
 
 interface DemoApplied {
@@ -628,6 +651,41 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
     }
 
+    /*
+     * The manager-backed customiser states. The demo runner has already signed
+     * this driver in at the reserved seat, so the route is all that is left.
+     */
+    case 'character-empty':
+    case 'character-dressed':
+    case 'character-equipped':
+      await page.goto(`${BASE}/profile/character`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-character-customiser]', { state: 'attached' });
+      return;
+
+    /*
+     * The geometry fixtures — the silhouettes that could clip.
+     *
+     * `?character=` is resolved on the **server** behind the demo guard
+     * (`lib/character/previews.ts`), so `DEMO_FIXTURES=1` has to be set on the
+     * server process as well as on this driver. Same wiring, same reason, and
+     * the same false green as `?edition=` and `?preview_reveal=` if it is
+     * missed — which is why the wait below is on the preview's own marker rather
+     * than on a timeout.
+     */
+    case 'character-default':
+    case 'character-tallest':
+    case 'character-widest':
+    case 'character-balding-visor':
+    case 'character-every-slot':
+    case 'character-long-hair-apron': {
+      const key = state.slice('character-'.length);
+      await page.goto(`${BASE}/profile/character?character=${key}`, {
+        waitUntil: 'networkidle',
+      });
+      await page.waitForSelector(`[data-character-preview="${key}"]`, { state: 'attached' });
+      return;
+    }
+
     case 'slice':
       await page.goto(`${BASE}/slice`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1200);
@@ -772,6 +830,17 @@ const ALL_STATES: readonly StateName[] = [
   'demo-box-waiting',
   'demo-welcome-box',
   'demo-collection-empty',
+  // M3. Manager-backed first (each signs in at its own seat), then the geometry
+  // fixtures, which need only the demo guard and no particular manager.
+  'character-empty',
+  'character-dressed',
+  'character-equipped',
+  'character-default',
+  'character-tallest',
+  'character-widest',
+  'character-balding-visor',
+  'character-every-slot',
+  'character-long-hair-apron',
   'slice',
   'slice-offseason',
   'slice-preseason',

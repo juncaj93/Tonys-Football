@@ -49,8 +49,15 @@ describe('the demo catalog', () => {
      *  - **box-waiting** — Tony says something different to a manager being
      *    handed their first box and to one who has opened before. Both approved
      *    line groups needed a state or only one could be reviewed.
+     *  - **character-empty** — the list names *"equipped wearable"* and nothing
+     *    for the manager who owns none, which is **every manager today** because
+     *    nothing awards a wearable yet. A feature reviewed only in its
+     *    fully-stocked state is a feature reviewed in the state nobody is in, and
+     *    this one caught a third of the page repeating the same sentence.
+     *  - **character-dressed** — one item per slot cannot show whether a *row of
+     *    choices with one of them selected* reads at 360. Two per slot can.
      */
-    const CARRIED_BEYOND_THE_LIST = 3;
+    const CARRIED_BEYOND_THE_LIST = 5;
     expect(DEMO_STATES.length).toBe(REQUIRED.length + CARRIED_BEYOND_THE_LIST);
   });
 

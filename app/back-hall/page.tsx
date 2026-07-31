@@ -53,10 +53,18 @@ export default async function BackHallPage() {
             <Link href="/rooms" className="block outline-none">
               <PixelPanel className="px-4 py-4 active:translate-y-px">
                 <PanelHeading>Down the stairs</PanelHeading>
-                <p className="mt-1.5 text-[15px] leading-[1.45] text-ink-700">
+                <p className="mt-1.5 text-[17px] leading-[1.45] text-ink-700">
                   A light is on at the bottom and somebody has been moving boxes.
                 </p>
-                <p className="mt-2 font-display text-[9px] text-amber-mid/70 uppercase">
+                {/*
+                  * A **closed door with a line**, never a disabled control
+                  * (`BACK_HALL_BOUNDARY §2`). It was set at 9px in `amber-mid/70`
+                  * on cream — under the 16–18px floor (`MANDATE §6`) and around
+                  * 1.6:1 against the surface it sits on. A line nobody can read
+                  * is not atmospheric; it is absent, and this one is the entire
+                  * statement that the downstairs exists.
+                  */}
+                <p className="mt-2.5 font-display text-[12px] text-ink-500 uppercase">
                   Chained — later
                 </p>
               </PixelPanel>
@@ -82,10 +90,22 @@ export default async function BackHallPage() {
               */}
             <PixelPanel className="px-4 py-4">
               <PanelHeading>The curtained door</PanelHeading>
-              <p className="mt-1.5 text-[15px] leading-[1.45] text-ink-700">
+              <p className="mt-1.5 text-[17px] leading-[1.45] text-ink-700">
                 Heavy curtain, no handle you can see, no sign on it.
               </p>
-              <p className="mt-2 font-display text-[9px] text-amber-mid/70 uppercase">
+              {/*
+                * **The whole reveal of the Underground**, and it shipped at 9px
+                * in `amber-mid/70` on cream — the single least readable thing in
+                * the product, carrying the one line `18 §5` fixes verbatim.
+                *
+                * It is somebody answering a question, so it is set like speech
+                * rather than like a status label: full body size, `ink-900`, and
+                * the quotation marks kept because the joke is that a person said
+                * it. (The Slice's ban on quotation marks is about *fabricated
+                * testimony* in generated prose — this is fixed curated copy from
+                * the navigation map, on a surface with no renderer.)
+                */}
+              <p className="mt-2.5 text-[17px] leading-[1.45] text-ink-900">
                 &ldquo;Don&rsquo;t worry about it.&rdquo;
               </p>
             </PixelPanel>

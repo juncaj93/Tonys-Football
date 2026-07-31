@@ -1,11 +1,13 @@
 import Link from 'next/link';
 
 import { signOutAction, signOutEverywhereAction } from '@/app/actions/auth';
+import { CharacterView } from '@/components/character/character-view';
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
 import { listDevices } from '@/lib/auth/service';
+import { characterFor } from '@/lib/character/service';
 import { getDb } from '@/lib/db';
 
 /**
@@ -28,7 +30,11 @@ const ACTION =
 
 export default async function ProfilePage() {
   const { user, session } = await requireUser();
-  const devices = await listDevices(getDb(), user.id, session.id);
+  const db = getDb();
+  const [devices, character] = await Promise.all([
+    listDevices(db, user.id, session.id),
+    characterFor(db, user.id),
+  ]);
 
   return (
     <>
@@ -42,9 +48,28 @@ export default async function ProfilePage() {
               {user.isAdmin && <SignPlate tone="red">Commissioner</SignPlate>}
             </div>
 
-            <div className="mt-3">
-              <PanelHeading>{user.displayName}</PanelHeading>
-            </div>
+            {/*
+              * Your name beside the person it belongs to.
+              *
+              * The character is drawn small here rather than large: this page is
+              * the key ring, and the character's own page is one tap away. A hero
+              * portrait on a page about revoking sessions would be the tail
+              * wagging the dog — but a name with nobody attached to it was the
+              * thing that made `/profile` read as an account settings screen
+              * rather than as somewhere in a pizza parlor.
+              */}
+            <Link
+              href="/profile/character"
+              className="mt-3 flex items-center gap-3 outline-none active:translate-y-px"
+            >
+              <CharacterView composite={character.composite} scale="row" label={user.displayName} />
+              <span className="min-w-0 flex-1">
+                <PanelHeading>{user.displayName}</PanelHeading>
+                <span className="mt-1 block text-[16px] leading-[1.4] text-ink-700">
+                  Change how you look
+                </span>
+              </span>
+            </Link>
 
             {/*
               * The device list, ruled like a docket rather than mounted on the

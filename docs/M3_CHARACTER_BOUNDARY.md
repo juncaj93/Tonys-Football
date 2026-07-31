@@ -1,6 +1,14 @@
 # M3 — the character boundary, prepared
 
-**Status:** partly implemented, 2026-07-31. The data layer, the compositor and the service exist (`drizzle/0008_character_identity.sql`, `lib/character/`); the manager-facing surface does not. Tony's homepage rendering is untouched.
+**Status:** implemented, 2026-07-31. The data layer, the compositor, the service **and the manager-facing surface** all exist — `drizzle/0008_character_identity.sql`, `drizzle/0009_wearable_ownership.sql`, `lib/character/`, `components/character/`, `/profile/character`. Tony's homepage rendering is untouched, as `§1` requires.
+
+> **Three corrections this document earned when the surface was built.**
+>
+> - **`§9` said no M3 migration touches `collectibles`.** `0009` adds a partial unique index scoped to `wear_%` slugs. It is a **recorded deviation, not drift**: there are no `wear_%` rows, no path creates one from a box, and it constrains zero existing behaviour. The rule's purpose — do not destabilise M2's economy — is intact, and the migration's own comment carries the reasoning.
+> - **`§8` proposed the fixture catalog and got its job half right.** `?character=` fixtures are for **geometry** — the silhouettes that could clip. An empty wardrobe, a staged-but-unsaved change and a refused save are states of a *manager and a session*, not of a composite, and they come from demo seats. A fixture faking them would be photographing a mock.
+> - **`§7`'s clipping tests are better than alpha arithmetic while the art is a stand-in.** The placeholder figure is data, so a bounding box is exact rather than sampled and the same array feeds the renderer. When real PNGs arrive, `art:validate` reads the same five rules off the alpha channel instead.
+>
+> `§7` also predicted rule 5 would fail on a specific pair rather than systemically. It did not — but two rules it does not list did, and both were found by looking rather than by testing: a hand item drawn over a hairstyle, and a layer detached from itself at a corner. Both are now rules, and each of them immediately found a second instance the eye had missed.
 
 > **Correction, 2026-07-31.** `§2` below proposed a seven-layer set with `back` and `bottoms` slots at a `64 × 64` canvas. **That was invented, and it was wrong.** The slots, the canvas and all twenty slugs were already canon in `art/assets.inventory.json` — `avatar_hair_01`, `wear_head_pizza_visor`, `32 × 48`, slots `hair` · `body` · `face` · `head` · `hand`. `lib/character/layers.ts` implements the canonical set and `lib/character/character.test.ts` fails the build if the two ever disagree. The reasoning in `§2`–`§7` about *ordering*, *ownership*, *clipping* and *registry conventions* all survives; only the specific layer names and the canvas were wrong. Read the code, not `§2`'s table.
 
@@ -97,7 +105,16 @@ Equipping is a **state change on a collectible somebody owns**, and it must obey
 | A base configuration is a row of small integers | `body` · `face` · `hair` variant ids, plus a palette id. Never a serialized image and never JSON with free-form keys |
 | Changing a configuration is **recoverable** | Append-only history, or at minimum a previous-value column. A manager who taps the wrong hair and loses a look they spent time on is a support request nobody can answer |
 
-**Wearables are not in the 24-item collectible catalog.** `CATALOG_SIZE = 24` is asserted and must not be satisfied by adding wearables to it (`AUTONOMY.md §5` — never delete or repurpose an approved slug to satisfy a count). Wearables are a separate registry family with their own slugs, and the twelve in `03` are the launch set.
+**Wearables are not in the 24-item collectible catalog** — **commissioner ruling, 2026-07-31**, settling what was an open contradiction. The two are separate product families and separate progression surfaces:
+
+| | Family | Slugs | How you get one |
+|---|---|---|---|
+| Pizza-box collectibles | `collectible` | 24 × `collectible_*` | the loot box |
+| Character equipment | `avatar` | 12 × `wear_*` | the character system |
+
+`CATALOG_SIZE = 24` is asserted and must not be satisfied by adding wearables to it (`AUTONOMY.md §5` — never delete or repurpose an approved slug to satisfy a count). The mechanism is the registry family, not a convention: `catalog()` is `assetRegistry.byFamily('collectible')`, so a wearable cannot reach the reward table without somebody editing a `family` row.
+
+**Crossover is not approved.** A future explicit ruling may let a box award a collectible, a wearable, or a mixed reward. Until that ruling exists, the absence of a crossover is a **product decision**, not an unimplemented feature — and `lib/character/separation.test.ts` fails the build in every direction that could quietly turn it into one, including the inventory comment that was wrong for a week while every test passed.
 
 ---
 
