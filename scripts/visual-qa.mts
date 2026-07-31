@@ -460,7 +460,8 @@ async function reach(page: Page, state: StateName): Promise<void> {
       // than for a fixed delay, so a slow runner does not photograph a stale page.
       await page.getByText(/unopened box/i).first().waitFor({ timeout: 15_000 });
       await home(page);
-      await dismissTony(page);
+      // The pad stays up here too: this is the *real* path, so it is the
+      // strongest place to prove the room yields when the box opens.
       await page.getByRole('button', { name: /Open your pizza box/i }).click({ force: true });
 
       /*
@@ -561,7 +562,15 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'reveal-legendary': {
       const rarity = state.slice('reveal-'.length);
       await page.goto(`${BASE}/?preview_reveal=${rarity}`, { waitUntil: 'networkidle' });
-      await dismissTony(page);
+      /*
+       * Tony's pad is **not** dismissed here, and that is the point.
+       *
+       * It used to be, on every reveal state — which meant the driver was
+       * removing the one thing that could collide with the plate before
+       * photographing whether anything collided with the plate. The room yields
+       * on its own (`data-parlor-focus`), and `checkRevealPresent` now measures
+       * that it did.
+       */
       // Past the rise (420ms) and the plate's deliberate late arrival.
       await page.waitForTimeout(1600);
       return;
@@ -591,7 +600,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.goto(`${BASE}/?preview_reveal=rare&preview_stage=${stage}`, {
         waitUntil: 'networkidle',
       });
-      await dismissTony(page);
+      // Pad left up on purpose — see the note on the four rarity states above.
       await page.waitForTimeout(1600);
       return;
     }
@@ -998,17 +1007,25 @@ async function checkOnlyTheTrayGlows(page: Page, width: number): Promise<void> {
 async function checkRevealPresent(page: Page, width: number, state: string): Promise<void> {
   const found = await page.evaluate(
     'JSON.stringify((function () {' +
+      'var pad = document.querySelector(".tony-line");' +
+      'var padOpacity = pad === null ? 0 : Number(getComputedStyle(pad).opacity);' +
       'var plate = document.querySelector(\'[role="status"]\');' +
-      'if (plate === null) return { plate: false, item: false, text: "" };' +
+      'if (plate === null) return { plate: false, item: false, text: "", padOpacity: padOpacity };' +
       'return {' +
       '  plate: true,' +
       '  item: document.querySelector(".reveal-rise") !== null,' +
       '  text: (plate.textContent || "").trim(),' +
+      '  padOpacity: padOpacity,' +
       '};' +
       '})())',
   );
 
-  const seen = JSON.parse(found as string) as { plate: boolean; item: boolean; text: string };
+  const seen = JSON.parse(found as string) as {
+    plate: boolean;
+    item: boolean;
+    text: string;
+    padOpacity: number;
+  };
 
   if (!seen.plate || !seen.item) {
     fail(
@@ -1037,6 +1054,25 @@ async function checkRevealPresent(page: Page, width: number, state: string): Pro
 
   if ((state === 'reveal-first-offer' || state === 'reveal-complete-offer') && !offered) {
     fail('reveal', `@${String(width)} ${state} shows no offer, which is what it is for`);
+  }
+
+  /*
+   * **Tony's order pad is not on screen while the plate is.**
+   *
+   * *"Do not stack an independent dialogue panel on top of the reveal."* The
+   * room already has the mechanism — `data-parlor-focus` on `body`, which
+   * `globals.css` uses to fade the pad — but until now nothing checked that it
+   * fired. It is one `useEffect` away from silently not firing, and the symptom
+   * is two cream panels over the lower third: the exact defect the focus rule
+   * was written against, and one the driver was hiding from itself by
+   * dismissing the pad before every reveal screenshot.
+   */
+  if (seen.padOpacity > 0.05) {
+    fail(
+      'reveal',
+      `@${String(width)} ${state} shows Tony's order pad at opacity ` +
+        `${seen.padOpacity.toFixed(2)} on top of the reveal — the room's focus never yielded`,
+    );
   }
 }
 
@@ -1234,7 +1270,7 @@ async function run(): Promise<void> {
 
           // Every reveal state must actually contain a reveal. See the note on
           // `checkRevealPresent` — this gate exists because nine of them did not.
-          if (state.startsWith('reveal-')) {
+          if (state.startsWith('reveal-') || state === 'tray-reveal') {
             await checkRevealPresent(page, width, state);
           }
         }
