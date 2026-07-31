@@ -144,12 +144,35 @@ export async function greetingFor(
     days: request.daysUntilKickoff === null ? null : String(request.daysUntilKickoff),
   };
 
-  // Already greeted today? Say the same thing again, and log nothing.
+  /*
+   * Already greeted today? Say the same thing again, and log nothing.
+   *
+   * **Unless it has stopped being true.** Two ways that can happen, and the
+   * second one only started existing when moment tags did:
+   *
+   *   - the line no longer *renders* — a variable has emptied, a fact has gone
+   *     stale. Caught by `renderTemplate` returning null.
+   *   - the line is no longer *eligible* — the manager no longer holds a tag it
+   *     requires. A standing tag like `champion_2025` does not change during a
+   *     day, so this never mattered. A **moment** tag changes the instant they
+   *     tap something (`lib/parlor/moment.ts`).
+   *
+   * The second was a real defect, found by walking the loop rather than by any
+   * test: Tony greeted a new manager with *"New season, new box. Tony does not
+   * charge for the first one"*, they opened the box, came back to the room, and
+   * he said it again — about a box that no longer existed. The day-cache was
+   * repeating a sentence whose whole premise had been consumed thirty seconds
+   * earlier, which is the same class of failure as *"last year"* that this file
+   * already refuses elsewhere: a still-grammatical line that has quietly started
+   * lying.
+   *
+   * So the repeat is re-checked against the tags held **now**. Falling through
+   * draws a fresh line, which is the correct behaviour — the moment is over and
+   * the standing lines take back over.
+   */
   const today = alreadyShownToday(candidates, usage, at);
-  if (today !== null) {
+  if (today !== null && stillTrue(today, request.tags)) {
     const text = renderTemplate(today.templateText, variables);
-    // A line that no longer renders — a fact that has gone stale, a variable
-    // that has emptied — is not repeated. Falling through draws a fresh one.
     if (text !== null) return asGreeting(today, text);
   }
 
@@ -183,6 +206,20 @@ export async function greetingFor(
   });
 
   return asGreeting(selection.entry, selection.text);
+}
+
+/**
+ * Whether a line the manager was already given is still one they could be given.
+ *
+ * The same two conditions `selectContent` applies, and only those two — this is
+ * deliberately not the whole pipeline. Cooldowns and season caps are about *not
+ * repeating*, and repeating is exactly what the caller is trying to do.
+ */
+function stillTrue(entry: GreetingEntry, tags: ReadonlySet<string>): boolean {
+  return (
+    entry.requiredTags.every((tag) => tags.has(tag)) &&
+    !entry.excludedTags.some((tag) => tags.has(tag))
+  );
 }
 
 function asGreeting(entry: GreetingEntry, text: string): Greeting {
