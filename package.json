@@ -31,7 +31,8 @@
     "art:process": "tsx scripts/process-art.ts",
     "art:prepare": "tsx scripts/prepare-b0.ts",
     "art:validate": "tsx scripts/validate-collectible.ts",
-    "visual:qa": "tsx scripts/visual-qa.mts"
+    "visual:qa": "tsx scripts/visual-qa.mts",
+    "art:batch": "tsx scripts/art-batch.ts"
   },
   "overrides": {
     "brace-expansion": "^5.0.8",

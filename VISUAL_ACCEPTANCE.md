@@ -27,7 +27,15 @@ Captured at every width, every run:
 
 `idle` · `tony-dialogue` · `tonight-board` · `banner-completed` · `banner-current-tbd` · `rack` · `prediction` · `receipt` · `counter` · `back-hall` · `keyboard-focus` · `six-banners` · `tray-owned-box` · `tray-reveal` · `collection` · `collection-filtered` · `showcase` · `showcase-chosen`
 
-Plus `slice` — the rack, carrying the last issue the deterministic renderer produced from a real finalized week. A renderer nobody can look at is a renderer nobody has reviewed.
+Plus `slice` — the rack as an ordinary manager finds it, carrying the last issue the deterministic renderer produced from a real finalized week. A renderer nobody can look at is a renderer nobody has reviewed.
+
+Plus the **fifteen named editions of the Slice** (`lib/slice/editions.ts`), each via `?edition=<key>`:
+
+`slice-offseason` · `slice-preseason` · `slice-normal-week` · `slice-blowout` · `slice-close-finish` · `slice-record-score` · `slice-weak-news` · `slice-incomplete-week` · `slice-standings-shakeup` · `slice-playoff-week` · `slice-championship` · `slice-historical-recap` · `slice-no-stories` · `slice-one-story` · `slice-competing-stories`
+
+Thirteen of these will not occur naturally before September, and several will not occur in this league for years — a tie, a record, a week with nothing worth printing. Each is either a **real week of a finalized season** or a **frozen fixture**, and both go through the identical `deriveStories → selectStories → assemblePacket → renderEdition → validateEdition` path. Nothing is written to the database, so a Slice demo cannot contaminate a record the way a loot demo could if its seat isolation ever failed.
+
+The two that matter most to look at are the ones a live season will produce first and that no test can judge: **`slice-no-stories`**, where the paper says a quiet week was quiet rather than promoting an ordinary result, and **`slice-incomplete-week`**, where the books are open and no result may be printed at all.
 
 Plus eight on **demo seats** (`lib/demo/`): `demo-tray-empty` · `demo-collection-full` · `demo-counter-broke` · `demo-showcase-chosen` · `demo-pull-while-broke` · `demo-box-waiting` · `demo-welcome-box` · `demo-collection-empty`.
 
@@ -74,6 +82,7 @@ Purchase fixed it properly rather than by contrivance. Each width now **buys its
 | `overflow` | Zero horizontal document overflow | |
 | `rarity-contrast` | Every `.rarity-word` clears **4.5:1** against its own nearest opaque background | `18` makes rarity *the printed word first*, colour third — a rarity word nobody can read is the primary signal missing. This shipped twice: `LEGENDARY` was invisible on cream, was repaired on the surfaces that existed then, and was still invisible on the **reveal plate**, which no screenshot could reach until `?preview_reveal=` existed. It then found that `on-paper`'s own inks had never cleared AA either — legendary at 2.24:1 and common at 3.42:1. |
 | `reveal` | Every reveal state actually contains a reveal: a plate, a collectible, a rarity word, Tony's offer present or absent as that state names, **and his order pad yielded** (opacity ≤ 0.05) | The gate against a **false green**. The nine preview reveals are resolved by the *server*, which needs `DEMO_FIXTURES=1`; the workflow set it only on the driver. So the driver photographed a calm room nine times, filed it as `390-reveal-legendary.png`, and reported **passed** — with `rarity-contrast` above measuring nothing on the one surface it was written for. A missing state is visible in a file listing. A state that captured the wrong thing is a green tick on evidence nobody re-examines. The pad check is the machine half of *"do not stack an independent dialogue panel on top of the reveal"* — the driver had been dismissing the pad before every reveal capture, which is removing the one thing that could collide before photographing whether anything collided. |
+| `slice-edition` | Every `slice-<key>` state stamps `data-slice-edition` equal to the key that was asked for | The same class of gate as `reveal`, added *before* it could fail silently rather than after. `?edition=` is resolved on the **server**, so a server without `DEMO_FIXTURES=1` renders the ordinary rack and the driver files the screenshot under the edition's name. `lib/slice/driver-coverage.test.ts` closes the other half — an edition in `SLICE_EDITIONS` that the driver never photographs at all. |
 | `console` | No console errors or failed requests | This is the gate that caught the `/underground` 404. |
 
 ### Why `object-map` counts markers and not anchors

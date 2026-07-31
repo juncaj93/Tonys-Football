@@ -146,22 +146,57 @@ function scan(text: string, packet: FactPacket, into: Violation[]): void {
  * copy, contain no facts, and saying *"nothing happened that week worth the
  * ink"* is the shop telling the truth.
  */
+/**
+ * Every piece of prose an issue puts in front of a reader.
+ *
+ * Enumerated in one place so *"the validator checks the whole page"* is a fact
+ * about this list rather than about whoever last edited `validateEdition`. A
+ * field added to `Edition` and forgotten here would be unchecked prose on a
+ * published surface — which is the shape of every validation failure this
+ * project has shipped, in every subsystem, without exception.
+ *
+ * The scoreboard is included. Two numbers off a stored row assert nothing on
+ * their own, but a name beside them does: a results table naming somebody who may
+ * not be published is exactly the leak the boundary exists to stop, and it is the
+ * surface nobody thinks to check.
+ */
+function prose(edition: Edition): readonly string[] {
+  return [
+    edition.dateline,
+    edition.headline,
+    edition.deck ?? '',
+    edition.body,
+    edition.column,
+    ...edition.secondary.flatMap((story) => [story.headline, story.deck ?? '', story.body]),
+    ...edition.scoreboard.flatMap((row) => [
+      row.leftName,
+      row.leftPoints,
+      row.rightName,
+      row.rightPoints,
+    ]),
+  ];
+}
+
 export function validateEdition(edition: Edition, packet: FactPacket): Verdict {
   const violations: Violation[] = [];
 
   if (edition.nothingToPrint !== null) {
     // Still scanned for banned terms and quotes — house copy is copy — but the
-    // week's numbers are not in play because there are none.
-    for (const { pattern, why } of BANNED) {
-      const found = pattern.exec(edition.nothingToPrint);
-      if (found !== null) violations.push({ kind: 'banned-term', value: found[0], why });
+    // week's numbers are not in play because there are none. The dateline and
+    // the column are scanned too: both print on an empty rack.
+    for (const text of [edition.nothingToPrint, edition.dateline, edition.column]) {
+      for (const { pattern, why } of BANNED) {
+        const found = pattern.exec(text);
+        if (found !== null) violations.push({ kind: 'banned-term', value: found[0], why });
+      }
+      for (const match of text.matchAll(/["“”]/g)) {
+        violations.push({ kind: 'invented-quote', value: match[0] });
+      }
     }
     return { publishable: violations.length === 0, violations };
   }
 
-  scan(edition.headline, packet, violations);
-  scan(edition.lead, packet, violations);
-  for (const line of edition.alsoRan) scan(line, packet, violations);
+  for (const text of prose(edition)) scan(text, packet, violations);
 
   return { publishable: violations.length === 0, violations };
 }

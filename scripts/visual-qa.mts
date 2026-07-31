@@ -124,6 +124,21 @@ type StateName =
   | 'demo-welcome-box'
   | 'demo-collection-empty'
   | 'slice'
+  | 'slice-offseason'
+  | 'slice-preseason'
+  | 'slice-normal-week'
+  | 'slice-blowout'
+  | 'slice-close-finish'
+  | 'slice-record-score'
+  | 'slice-weak-news'
+  | 'slice-incomplete-week'
+  | 'slice-standings-shakeup'
+  | 'slice-playoff-week'
+  | 'slice-championship'
+  | 'slice-historical-recap'
+  | 'slice-no-stories'
+  | 'slice-one-story'
+  | 'slice-competing-stories'
   | 'reveal-common'
   | 'reveal-rare'
   | 'reveal-epic'
@@ -579,6 +594,40 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * because "does this read like a paper" is exactly the judgement no test
      * makes.
      */
+    /*
+     * The fifteen named editions of the Slice.
+     *
+     * `?edition=` is resolved on the **server** behind the demo guard
+     * (`lib/slice/editions.ts`), so `DEMO_FIXTURES=1` has to be set on the
+     * *server process* as well as on this driver — exactly like `?preview_reveal=`,
+     * and for exactly the reason recorded there: without it the server answers
+     * with an ordinary rack, the driver photographs it, files it as
+     * `390-slice-championship.png` and passes.
+     *
+     * The `slice-empty` gate below is the symptom check, because a wiring fix
+     * protects one cause and a gate protects the symptom.
+     */
+    case 'slice-offseason':
+    case 'slice-preseason':
+    case 'slice-normal-week':
+    case 'slice-blowout':
+    case 'slice-close-finish':
+    case 'slice-record-score':
+    case 'slice-weak-news':
+    case 'slice-incomplete-week':
+    case 'slice-standings-shakeup':
+    case 'slice-playoff-week':
+    case 'slice-championship':
+    case 'slice-historical-recap':
+    case 'slice-no-stories':
+    case 'slice-one-story':
+    case 'slice-competing-stories': {
+      const key = state.slice('slice-'.length);
+      await page.goto(`${BASE}/slice?edition=${key}`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-slice-edition]', { state: 'attached' });
+      return;
+    }
+
     case 'slice':
       await page.goto(`${BASE}/slice`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1200);
@@ -724,6 +773,21 @@ const ALL_STATES: readonly StateName[] = [
   'demo-welcome-box',
   'demo-collection-empty',
   'slice',
+  'slice-offseason',
+  'slice-preseason',
+  'slice-normal-week',
+  'slice-blowout',
+  'slice-close-finish',
+  'slice-record-score',
+  'slice-weak-news',
+  'slice-incomplete-week',
+  'slice-standings-shakeup',
+  'slice-playoff-week',
+  'slice-championship',
+  'slice-historical-recap',
+  'slice-no-stories',
+  'slice-one-story',
+  'slice-competing-stories',
   // The four rarity treatments, side by side and repeatable. Signed in as
   // whoever the previous demo state left us as, which is fine: the payload is
   // synthesised and does not depend on what that seat owns.
@@ -856,6 +920,31 @@ async function checkNoLegacy(page: Page, width: number): Promise<void> {
 
   for (const [pattern, name, why] of banned) {
     if (pattern.test(html)) fail('legacy', `@${String(width)} page references ${name} — ${why}`);
+  }
+}
+
+/**
+ * A named Slice edition must be the edition that was asked for.
+ *
+ * The same class of gate as `checkRevealPresent`, added for the same reason
+ * before it could fail silently: `?edition=` is resolved on the **server**, so a
+ * server without `DEMO_FIXTURES=1` renders the ordinary rack and the driver
+ * photographs it under the edition's name. The page stamps
+ * `data-slice-edition` only when a preview really resolved, so the check is
+ * exact rather than pictorial.
+ */
+async function checkEditionPresent(page: Page, width: number, state: string): Promise<void> {
+  const expected = state.slice('slice-'.length);
+  const found = await page.evaluate(
+    () => document.querySelector('[data-slice-edition]')?.getAttribute('data-slice-edition') ?? null,
+  );
+
+  if (found !== expected) {
+    fail(
+      'slice-edition',
+      `@${String(width)} ${state} rendered edition "${String(found)}" — expected "${expected}". ` +
+        `The server almost certainly lacks DEMO_FIXTURES=1; see VISUAL_ACCEPTANCE.md.`,
+    );
   }
 }
 
@@ -1337,6 +1426,11 @@ async function run(): Promise<void> {
           // `checkRevealPresent` — this gate exists because nine of them did not.
           if (state.startsWith('reveal-') || state === 'tray-reveal') {
             await checkRevealPresent(page, width, state);
+          }
+
+          // Every named Slice edition must actually be that edition.
+          if (state.startsWith('slice-')) {
+            await checkEditionPresent(page, width, state);
           }
         }
 

@@ -69,12 +69,28 @@ export async function latestEdition(db: Queryable): Promise<Edition | null> {
    * scanning to week zero.
    */
   for (let week = Number(latest.week); week >= 1; week--) {
-    const packet = await factPacket(db, { season: latest.year, week });
-    if (packet.refusal !== null) continue;
-
-    const issue = renderEdition(packet);
-    if (validateEdition(issue, packet).publishable) return issue;
+    const issue = await editionFor(db, { season: latest.year, week });
+    if (issue !== null) return issue;
   }
 
   return null;
+}
+
+/**
+ * One named week, rendered and checked — or null if it may not be published.
+ *
+ * The whole pipeline behind one call, so a caller that wants a *specific* issue
+ * (a historical recap, a demo edition, the commissioner review queue when it
+ * arrives) gets the identical path the rack does. A second assembly written for
+ * one of those callers would be a second thing to keep correct.
+ */
+export async function editionFor(
+  db: Queryable,
+  input: { readonly season: number; readonly week: number },
+): Promise<Edition | null> {
+  const packet = await factPacket(db, input);
+  if (packet.refusal !== null) return null;
+
+  const issue = renderEdition(packet);
+  return validateEdition(issue, packet).publishable ? issue : null;
 }

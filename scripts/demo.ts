@@ -28,10 +28,12 @@ import { DemoBlocked, applyDemoState } from '@/lib/demo/apply';
 import { DemoRefused } from '@/lib/demo/guard';
 import { retireDemoSeats } from '@/lib/demo/seat';
 import { BLOCKED_ON_M3, DEMO_STATES } from '@/lib/demo/states';
+import { SLICE_EDITIONS, SLICE_EDITION_CATALOG } from '@/lib/slice/editions';
 
 const USAGE = `
 Usage:
   npm run demo -- list
+  npm run demo -- editions
   npm run demo -- apply <state> [--json]
   npm run demo -- reset
 
@@ -51,6 +53,32 @@ async function main(): Promise<void> {
 
   if (command === 'list') {
     listStates();
+    return;
+  }
+
+  /*
+   * The Slice's states are a different kind of thing, so they get their own
+   * command rather than being mixed into `list`.
+   *
+   * Nothing here touches the database. An edition is a frozen week or a real
+   * finalized one, rendered through the production pipeline and thrown away — so
+   * there is no seat to sign in as, no state to apply and nothing to retire. The
+   * URL *is* the demo.
+   */
+  if (command === 'editions') {
+    const width = Math.max(...SLICE_EDITIONS.map((key) => key.length));
+    console.log(`\n${String(SLICE_EDITION_CATALOG.length)} Slice editions\n`);
+    for (const entry of SLICE_EDITION_CATALOG) {
+      console.log(
+        `  /slice?edition=${entry.key.padEnd(width)}  ${entry.source.padEnd(10)} ${entry.shows}`,
+      );
+    }
+    console.log(
+      '\n  historical  a real week of a finalized season, printed as production prints it' +
+        '\n  fixture     a frozen week, for a state history does not contain' +
+        '\n  rack        the shelf itself, with no issue on it' +
+        '\n\n  Needs DEMO_FIXTURES=1 on the *server process*, not only in this shell.\n',
+    );
     return;
   }
 
