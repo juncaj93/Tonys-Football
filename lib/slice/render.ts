@@ -1,6 +1,7 @@
 import { type Intensity } from '@/lib/stats/significance';
+import { type StoryCandidate, type StoryDetail } from '@/lib/stats/stories';
 
-import { margin, points, type FactPacket, type SliceStory } from './packet';
+import { margin, points, type FactPacket, type ScoreLine } from './packet';
 
 /**
  * The deterministic renderer — the one that always works.
@@ -12,39 +13,88 @@ import { margin, points, type FactPacket, type SliceStory } from './packet';
  *
  * ## Every sentence is assembled, never generated
  *
- * A template per intensity, filled from the packet. That is what makes the
+ * A template per story kind, filled from the packet. That is what makes the
  * output checkable: the validator can insist every number and proper noun came
  * from the packet precisely because nothing here can invent one.
  *
  * ## The intensity comes from the policy, not from the prose
  *
- * `PROVISIONAL_TIERS` classifies a margin against an absolute floor *and* a
- * league-relative percentile (`lib/stats/significance.ts`). The renderer's job
- * is to say the word the classifier chose — never to reach for a bigger one
- * because the number looked large. `MANDATE §9`: the interface does not derive a
- * fantasy fact for itself, and "how big a deal was this" is a fantasy fact.
+ * `lib/stats/stories.ts` decides what a result meant and how much of a deal it
+ * was. The renderer's job is to say the word that was chosen — never to reach for
+ * a bigger one because the number looked large. `MANDATE §9`: the interface does
+ * not derive a fantasy fact for itself, and *"how big a deal was this"* is a
+ * fantasy fact.
  *
- * Two guards on that, both from the commissioner's brief:
+ * ## Variety without randomness
  *
- *   - **Weekly rank alone never justifies dramatic language.** The templates key
- *     off `intensity`, which requires two independent reasons above `beat`.
- *   - **Prefer fewer strong stories.** `lead()` takes one, and the rest of the
- *     week is a list of results in plain language rather than five paragraphs
- *     competing to be the headline.
+ * The first version of this file had **one** sentence per tier, so every issue
+ * read identically — four "Matt Lee handles…" headlines in eight weeks, and the
+ * same closing line under all of them. A reader saw the machine on the second
+ * issue.
+ *
+ * So each template is a small set of curated variants and the choice is a hash of
+ * `season · week · story id`. That is stable — the same week renders the same way
+ * forever, which is what a *published* issue has to do and what a screenshot test
+ * needs — while consecutive weeks read differently because their seeds differ.
+ * **`Math.random()` would be wrong twice over**: the room's injected-RNG rule
+ * (`lib/counter/rng.ts`) and the fact that a paper cannot re-word itself on
+ * reload.
+ *
+ * ## Numerical density is a rule, not a preference
+ *
+ * The old lead printed three numbers in twelve words and the third was derivable
+ * from the first two. Now: the two scores lead, and the margin appears **only
+ * where the margin is the story** — a blowout or a nail-biter. Everywhere else it
+ * is left for the reader to do, which is what a reader of a sports page does.
  */
 
 /** What a rendered issue is, before anybody has approved it. */
 export interface Edition {
   readonly season: number;
   readonly week: number;
+  /** `TUESDAY EDITION · SEASON 2025 · WEEK 14`. */
+  readonly dateline: string;
+  /** Drives the paper's furniture and Tony's column. */
+  readonly character: EditionCharacter;
   readonly headline: string;
-  /** The lead story, two or three sentences. Empty when the week refuses. */
-  readonly lead: string;
-  /** Every other publishable game, one flat line each. */
-  readonly alsoRan: readonly string[];
-  /** Set when there is nothing to print, in the shop's voice. */
+  /** One line under the headline. The score, usually. Null when the headline is whole. */
+  readonly deck: string | null;
+  /** The lead story. Two or three sentences. Empty on a quiet week. */
+  readonly body: string;
+  /** Smaller stories under the lead. Same three parts, smaller type. */
+  readonly secondary: readonly {
+    readonly headline: string;
+    readonly deck: string | null;
+    readonly body: string;
+  }[];
+  /** Every publishable game of the week, whether or not it was a story. */
+  readonly scoreboard: readonly RenderedScore[];
+  /** Tony, in his own voice, about the *issue* — never about a game. */
+  readonly column: string;
+  /** Set when there is nothing to print at all, in the shop's voice. */
   readonly nothingToPrint: string | null;
 }
+
+export interface RenderedScore {
+  readonly key: string;
+  readonly leftName: string;
+  readonly leftPoints: string;
+  readonly rightName: string;
+  readonly rightPoints: string;
+  /** The left side won. False on a tie, where neither did. */
+  readonly leftWon: boolean;
+  readonly tie: boolean;
+}
+
+/**
+ * What kind of issue this is.
+ *
+ * Derived from what actually ran, never chosen. It decides Tony's column and how
+ * loud the page is allowed to look — which makes *"strong-news versus weak-news
+ * editions"* a property of the data rather than a styling decision somebody makes
+ * per week.
+ */
+export type EditionCharacter = 'title' | 'record' | 'loud' | 'ordinary' | 'quiet' | 'empty';
 
 /**
  * The verb for each tier, and nothing louder than the tier earned.
@@ -62,108 +112,586 @@ export const VERB: Record<Intensity, string> = {
 };
 
 /**
- * The headline, per tier.
+ * Headlines, per story kind, in variants.
  *
- * Short, factual, and escalating only as far as the classification does. `{w}`
- * and `{l}` are the two managers; nothing else is substituted, so a headline
- * cannot contain a number the packet did not allow.
+ * `{w}` winner · `{l}` loser · `{m}` the subject · `{o}` their opponent ·
+ * `{n}` the story's own number · `{k}` the week. **No literal digits**, ever: a
+ * digit inside a curated string is a number the packet never allowed, and the
+ * validator would be right to refuse it.
  */
-export const HEADLINE: Record<Intensity, string> = {
-  edged: '{w} gets out of week {k} alive',
-  beat: '{w} takes week {k}',
-  handled: '{w} handles {l}',
-  crushed: '{w} crushes {l}',
-  obliterated: '{w} leaves nothing of {l}',
+export const HEADLINES = {
+  championship: ['{w} takes the title', 'The season ends with {w}', '{w} finishes it'],
+  'record-margin': [
+    'The widest gap in the book',
+    'Nothing on record like it',
+    '{w} sets the margin',
+  ],
+  'record-score': [
+    '{m} sets the mark',
+    'The biggest number in the book',
+    'Nobody has scored like {m}',
+  ],
+  'blowout-obliterated': [
+    '{w} leaves nothing of {l}',
+    '{w} takes {l} apart',
+    'It stopped being a game',
+  ],
+  'blowout-crushed': ['{w} crushes {l}', '{w} runs {l} over', '{l} never got going'],
+  'nail-biter': ['{w} survives {l}', '{w} gets out alive', 'A hair in it'],
+  tie: ['Nobody wins', 'Dead level', '{a} and {b} cannot be split'],
+  'high-score': ['{m} hangs {n} on the league', '{m} goes off', 'Big afternoon for {m}'],
+  'low-score': ['A quiet afternoon for {m}', '{m} never found it', 'Cold week for {m}'],
+  elimination: ['{l} is done for the year', '{w} sends {l} home', 'End of the road for {l}'],
+  upset: ['{w} was not supposed to win that', '{w} turns one over', '{l} never saw {w} coming'],
+  streak: ['{m} makes it {n} in a row', '{n} straight for {m}', '{m} will not lose'],
+  'standings-up': ['{m} climbs', '{m} is on the move', '{m} goes up the table'],
+  'standings-down': ['{m} slides', '{m} drops down the table', 'A costly week for {m}'],
+  quiet: ['A quiet week at the shop', 'Not a lot to report', 'Week {k}, and not much in it'],
+} as const;
+
+/**
+ * The result sentence, per shape.
+ *
+ * Two numbers and two names. The margin is a separate sentence and only appears
+ * where the margin is the point.
+ */
+export const RESULT = {
+  streak: ['That is {n} in a row.', 'It is now {n} straight.'],
+  streakNamed: ['That is {n} in a row for {m}.', '{m} has now won {n} straight.'],
+  standings: ['From {a} to {b} in the table.', 'That is {a} to {b} in one afternoon.'],
+  standingsNamed: [
+    '{m} moved from {a} to {b} in the table.',
+    'That is {m}, from {a} to {b}.',
+  ],
+  upset: [
+    '{w} came in on {a} wins, {l} on {b}.',
+    'That is {a} wins against {b}, the wrong way round.',
+  ],
+} as const;
+
+/**
+ * A number-free line of context, for the kinds whose deck already carries every
+ * number they have.
+ *
+ * Each of these is **evidenced by construction** rather than asserted: a
+ * `high-score` story is by definition the best score of its week, so *"the best
+ * anybody managed"* is not a new claim. A line here that needed checking would
+ * belong in the fact layer instead.
+ */
+export const FRAME = {
+  'record-margin': ['The widest anybody has been beaten by, in either season on file.'],
+  'record-score': ['The biggest single afternoon anybody has had, in either season on file.'],
+  'high-score': ['The best anybody managed that week.'],
+  'low-score': ['The lowest anybody managed that week.'],
+  tie: ['Level to the point, with nothing to separate them.'],
+} as const;
+
+/** The margin sentence, used only where the margin *is* the story. */
+export const GAP = [
+  'That is {g} between them.',
+  '{g} in it at the end.',
+  'A gap of {g}.',
+] as const;
+
+/** One sentence of meaning per tier, and nothing louder than the tier earned. */
+export const COLOUR: Record<Intensity, readonly string[]> = {
+  edged: [
+    'Tony has seen closer. Not many.',
+    'The kind of week that turns on one bad afternoon.',
+    'Nobody in the shop breathed for the last hour.',
+  ],
+  beat: [
+    'A win is a win, and Tony writes them all down the same.',
+    'Ordinary, and there is no shame in ordinary.',
+    'It counts the same in the table.',
+  ],
+  handled: [
+    'Comfortable, and Tony would like that noted.',
+    'Never really in doubt after the middle of the afternoon.',
+    'Handled, in the way the word is meant.',
+  ],
+  crushed: [
+    'Tony put the paper down for that one.',
+    'The shop went quiet watching it.',
+    'One of those afternoons that gets brought up in March.',
+  ],
+  obliterated: [
+    'Tony has been running this shop a while and does not remember worse.',
+    'There is no kind way to write that one up.',
+    'The kind of result that follows somebody around.',
+  ],
 };
 
-/** One sentence of context per tier, added after the result. */
-export const COLOUR: Record<Intensity, string> = {
-  edged: 'Tony has seen closer. Not many.',
-  beat: 'A win is a win, and Tony writes them all down the same.',
-  handled: 'Comfortable, and Tony would like that noted.',
-  crushed: 'Tony put the paper down for that one.',
-  obliterated: 'Tony has been running this shop a while and does not remember worse.',
-};
+/** Meaning lines for the kinds that are not about a margin. */
+export const KIND_COLOUR = {
+  championship: [
+    'That is the season. Everything else was on the way here.',
+    'The banner goes up, and it stays up.',
+    'A whole year settled on one afternoon.',
+  ],
+  /*
+   * These sit *after* a `FRAME` line, so they must not restate it.
+   *
+   * `record-score` used to read *"The biggest single afternoon anybody has had,
+   * in either season on file. No number in the book is bigger."* — two sentences
+   * making one claim. The frame states the fact; the colour is Tony's reaction to
+   * it, which is the division of labour the whole file is built on.
+   */
+  'record-margin': [
+    'Tony went back through the record and found nothing wider.',
+    'The book behind the counter needed a new line.',
+  ],
+  'record-score': [
+    'Tony checked the record twice before he set the type.',
+    'The book behind the counter needed a new line.',
+  ],
+  'high-score': [
+    'Very few afternoons in the book look like that one.',
+    'Tony had the radio on for that one and forgot the oven.',
+  ],
+  'low-score': [
+    'It happens, and it happens to everybody eventually.',
+    'Some weeks nothing comes off the bench at all.',
+  ],
+  elimination: [
+    'The bracket does not care how the season went before it.',
+    'One afternoon and the year is over.',
+  ],
+  upset: [
+    'The table said one thing and the afternoon said another.',
+    'Records are earned on Sunday, not before it.',
+  ],
+  streak: [
+    'Nobody in the shop wants to draw them at the moment.',
+    'A run like that starts to feel like a habit.',
+  ],
+  'standings-move': [
+    'The table looks different this morning.',
+    'A week like that reorders the whole middle of the table.',
+  ],
+  tie: [
+    'Tony has no idea where to file it.',
+    'The board has no column for that.',
+  ],
+} as const;
+
+/**
+ * Tony's column, keyed to what kind of issue this is.
+ *
+ * Curated, and deliberately **factless** — no names, no numbers, nothing that
+ * could be wrong. `CLAUDE.md` restricts generative AI to the Slice and requires
+ * ordinary Tony dialogue to be curated; this is Tony being a columnist, not Tony
+ * reporting, and the separation is what keeps him safe to print.
+ */
+export const COLUMN: Record<EditionCharacter, readonly string[]> = {
+  title: [
+    'Tony says he has cleaned that same table for nine months to get to this page.',
+    'The shop stayed open late for this one. Tony is not sorry.',
+  ],
+  record: [
+    'Tony keeps the book behind the counter and does not enjoy rewriting it.',
+    'Something went in the record this week. Tony has opinions about that.',
+  ],
+  loud: [
+    'Tony had to go and check a couple of these before he set the type.',
+    'A loud week. The shop was busy and so was the printer.',
+  ],
+  ordinary: [
+    'An ordinary week, and Tony prints those the same as the other kind.',
+    'Nothing much to shout about, so Tony did not shout.',
+  ],
+  quiet: [
+    'Quiet week. Tony would rather say that than pretend otherwise.',
+    'Not much happened, and the paper is not going to invent any of it.',
+  ],
+  empty: [
+    'Tony has nothing for you this week, and would rather say so.',
+  ],
+} as const;
 
 /**
  * The fixed prose that is not a headline, a colour line or a refusal.
  *
- * Extracted as constants for one reason: `houseWords()` below builds the
- * validator's ordinary-word set by reading the curated strings, and a sentence
- * written inline inside a function is curated but **invisible** to it. That is
- * not hypothetical — `That is 50.5 between them.` was inline, and the validator
- * duly reported `That` as an unknown proper noun on every week of both seasons.
+ * Extracted as constants for one reason: `houseWords()` builds the validator's
+ * ordinary-word set by reading the curated strings, and a sentence written inline
+ * inside a function is curated but **invisible** to it. That is not hypothetical
+ * — `That is 50.5 between them.` was inline, and the validator duly reported
+ * `That` as an unknown proper noun on every week of both seasons.
  *
- * The rule this encodes: **if the renderer can print it, `houseWords()` has to
- * be able to see it.**
+ * The rule this encodes: **if the renderer can print it, `houseWords()` has to be
+ * able to see it.**
  */
 export const PHRASES = {
-  gap: 'That is {m} between them.',
-  emptyHeadline: 'Week {k}',
+  dateline: 'Tuesday edition',
+  datelineSeason: 'Season',
+  datelineWeek: 'Week',
+  datelinePlayoffs: 'Playoffs',
+  emptyHeadline: 'Week',
+  quietBody:
+    'Results, no arguments, and nothing that needed a headline. The board is below.',
 } as const;
-
-function fill(template: string, story: SliceStory, week: number): string {
-  return template
-    .replaceAll('{w}', story.fact.winnerDisplayName)
-    .replaceAll('{l}', story.fact.loserDisplayName)
-    .replaceAll('{k}', String(week));
-}
-
-/**
- * The lead story.
- *
- * Result, then margin, then one line of colour. The margin is written to one
- * decimal place because that is how it is spoken; the scores keep both places
- * because a score is a measurement. Both forms are in the packet's allowed set.
- */
-function lead(story: SliceStory): string {
-  const { fact } = story;
-
-  const result =
-    `${fact.winnerDisplayName} ${VERB[fact.intensity]} ${fact.loserDisplayName}, ` +
-    `${points(fact.winnerPoints)} to ${points(fact.loserPoints)}.`;
-
-  const gap = PHRASES.gap.replace('{m}', margin(fact.margin));
-
-  return `${result} ${gap} ${COLOUR[fact.intensity]}`;
-}
-
-/** One flat line per remaining game. No adjectives — the lead has those. */
-function alsoRan(story: SliceStory): string {
-  const { fact } = story;
-  return (
-    `${fact.winnerDisplayName} ${points(fact.winnerPoints)}, ` +
-    `${fact.loserDisplayName} ${points(fact.loserPoints)}.`
-  );
-}
 
 /** Nothing to print, said as a fact about the rack rather than an error. */
 export const REFUSALS = {
   'no-season': 'Nothing on file for that season yet.',
-  'no-story': 'Nothing happened that week worth the ink.',
+  'no-week': 'That week was never played.',
+  'not-final': 'That week is still open. Tony does not print a result he might have to take back.',
   'nobody-publishable': 'Nothing on the rack this week.',
 } as const;
 
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Pick a curated variant, deterministically.
+ *
+ * FNV-1a over the seed. Not cryptographic and not trying to be — it needs to be
+ * stable across machines and versions of Node, which `Math.random()` is not and
+ * which a hash written here is, forever.
+ */
+export function pick<T>(variants: readonly T[], seed: string): T {
+  let hash = 0x811c9dc5;
+  for (let i = 0; i < seed.length; i++) {
+    hash ^= seed.charCodeAt(i);
+    hash = Math.imul(hash, 0x01000193) >>> 0;
+  }
+  return variants[hash % variants.length]!;
+}
+
+function fill(template: string, values: Readonly<Record<string, string>>): string {
+  let out = template;
+  for (const [token, value] of Object.entries(values)) {
+    out = out.replaceAll(`{${token}}`, value);
+  }
+  return out;
+}
+
+/** The variant seed for one story. Stable per season, week and story. */
+function seedFor(story: StoryCandidate, salt: string): string {
+  return `${String(story.season)}:${String(story.week)}:${story.id}:${salt}`;
+}
+
+function headlineKey(detail: StoryDetail): keyof typeof HEADLINES {
+  switch (detail.kind) {
+    case 'blowout':
+      return detail.intensity === 'obliterated' ? 'blowout-obliterated' : 'blowout-crushed';
+    case 'standings-move':
+      return detail.climbed ? 'standings-up' : 'standings-down';
+    case 'championship':
+    case 'record-margin':
+    case 'record-score':
+    case 'nail-biter':
+    case 'tie':
+    case 'high-score':
+    case 'low-score':
+    case 'elimination':
+    case 'upset':
+    case 'streak':
+      return detail.kind;
+  }
+}
+
+/** Everything a template may substitute, for one story. */
+function tokensFor(detail: StoryDetail, week: number): Record<string, string> {
+  const base: Record<string, string> = { k: String(week) };
+
+  switch (detail.kind) {
+    case 'championship':
+    case 'blowout':
+    case 'nail-biter':
+    case 'elimination':
+    case 'record-margin':
+      return {
+        ...base,
+        w: detail.winner,
+        l: detail.loser,
+        pw: points(detail.winnerPoints),
+        pl: points(detail.loserPoints),
+        g: margin(detail.margin),
+      };
+    case 'tie':
+      return { ...base, a: detail.a, b: detail.b, p: points(detail.points) };
+    case 'record-score':
+    case 'high-score':
+    case 'low-score':
+      return {
+        ...base,
+        m: detail.manager,
+        o: detail.opponent,
+        p: points(detail.points),
+        n: points(detail.opponentPoints),
+      };
+    case 'upset':
+      return {
+        ...base,
+        w: detail.winner,
+        l: detail.loser,
+        pw: points(detail.winnerPoints),
+        pl: points(detail.loserPoints),
+        a: String(detail.winnerWins),
+        b: String(detail.loserWins),
+      };
+    case 'streak':
+      return { ...base, m: detail.manager, n: String(detail.length) };
+    case 'standings-move':
+      return { ...base, m: detail.manager, a: String(detail.from), b: String(detail.to) };
+  }
+}
+
+/**
+ * A headline that names the score, when the score is not already in the deck.
+ *
+ * `high-score` is the one kind whose headline wants the number — *"hangs 184.12
+ * on the league"* is the story — so `{n}` there means the subject's own points
+ * rather than the opponent's. Handled at the token level so the template stays
+ * readable.
+ */
+function headlineTokens(detail: StoryDetail, week: number): Record<string, string> {
+  const tokens = tokensFor(detail, week);
+  if (detail.kind === 'high-score' || detail.kind === 'record-score') {
+    return { ...tokens, n: points(detail.points) };
+  }
+  return tokens;
+}
+
+function headlineOf(story: StoryCandidate): string {
+  const variants = HEADLINES[headlineKey(story.detail)];
+  return fill(pick(variants, seedFor(story, 'headline')), headlineTokens(story.detail, story.week));
+}
+
+/** The one line under a headline: the numbers, so the body does not have to lead with them. */
+function deckOf(story: StoryCandidate): string | null {
+  const { detail } = story;
+  switch (detail.kind) {
+    case 'championship':
+    case 'blowout':
+    case 'nail-biter':
+    case 'elimination':
+    case 'record-margin':
+    case 'upset':
+      return `${detail.winner} ${points(detail.winnerPoints)} — ${detail.loser} ${points(detail.loserPoints)}`;
+    case 'record-score':
+    case 'high-score':
+    case 'low-score':
+      return `${detail.manager} ${points(detail.points)} — ${detail.opponent} ${points(detail.opponentPoints)}`;
+    case 'tie':
+      return `${detail.a} ${points(detail.points)} — ${detail.b} ${points(detail.points)}`;
+    case 'streak':
+    case 'standings-move':
+      return null;
+  }
+}
+
+/**
+ * The body: a result sentence, sometimes a gap sentence, then one line of meaning.
+ *
+ * The gap sentence appears **only** for the two kinds where the margin is the
+ * story. Everywhere else the two scores in the deck already say it, and repeating
+ * the subtraction is the numerical density the commissioner asked to lose.
+ */
+function bodyOf(story: StoryCandidate, namedInHeadline: boolean): string {
+  const { detail } = story;
+  const tokens = tokensFor(detail, story.week);
+  const sentences: string[] = [];
+
+  /*
+   * The deck already carries the scores, so the body does not repeat them.
+   *
+   * The old lead printed the two scores in the deck and then again in the first
+   * sentence, then subtracted them into a third number — *"Brandon 183.94 — Joe
+   * 95.60 / Brandon 183.94, Joe 95.60. That is 88.3 between them."* Three numbers
+   * and two of them twice. A body sentence now earns its place only by carrying a
+   * number the deck does not have: the margin, a record of wins, a streak length,
+   * a table position.
+   */
+  switch (detail.kind) {
+    case 'championship':
+    case 'blowout':
+    case 'nail-biter':
+    case 'elimination':
+    case 'record-margin':
+      sentences.push(fill(pick(GAP, seedFor(story, 'gap')), tokens));
+      break;
+    case 'record-score':
+    case 'high-score':
+    case 'low-score':
+    case 'tie':
+      sentences.push(pick(FRAME[detail.kind], seedFor(story, 'frame')));
+      break;
+    case 'upset':
+      sentences.push(fill(pick(RESULT.upset, seedFor(story, 'result')), tokens));
+      break;
+    case 'streak':
+      // The headline usually names them and gives the number. Repeating both in
+      // the next sentence is the manager-name repetition the commissioner asked
+      // to lose, so the body drops the name when the headline already had it.
+      sentences.push(
+        fill(
+          pick(namedInHeadline ? RESULT.streak : RESULT.streakNamed, seedFor(story, 'result')),
+          tokens,
+        ),
+      );
+      break;
+    case 'standings-move':
+      sentences.push(
+        fill(
+          pick(
+            namedInHeadline ? RESULT.standings : RESULT.standingsNamed,
+            seedFor(story, 'result'),
+          ),
+          tokens,
+        ),
+      );
+      break;
+  }
+
+  sentences.push(colourOf(story));
+  return sentences.join(' ');
+}
+
+/** Does this headline already name the story's subject? */
+function namesSubject(headline: string, detail: StoryDetail): boolean {
+  const subject =
+    detail.kind === 'streak' || detail.kind === 'standings-move'
+      ? detail.manager
+      : null;
+  return subject !== null && headline.includes(subject);
+}
+
+/** Headline, deck and body for one story, with the name-repetition rule applied. */
+function storyParts(story: StoryCandidate): {
+  headline: string;
+  deck: string | null;
+  body: string;
+} {
+  const headline = headlineOf(story);
+  return {
+    headline,
+    deck: deckOf(story),
+    body: bodyOf(story, namesSubject(headline, story.detail)),
+  };
+}
+
+/**
+ * The meaning line.
+ *
+ * Margin-shaped stories take the tier's own words, so the loudest available
+ * sentence is the one the classifier licensed. Everything else takes its kind's.
+ */
+function colourOf(story: StoryCandidate): string {
+  const { detail } = story;
+  if (detail.kind === 'blowout' || detail.kind === 'nail-biter') {
+    return pick(COLOUR[detail.intensity], seedFor(story, 'colour'));
+  }
+  return pick(KIND_COLOUR[detail.kind], seedFor(story, 'colour'));
+}
+
+function characterOf(packet: FactPacket): EditionCharacter {
+  if (packet.refusal !== null) return 'empty';
+  if (packet.lead === null) return 'quiet';
+
+  const stories = [packet.lead, ...packet.rest];
+  if (stories.some((story) => story.kind === 'championship')) return 'title';
+  if (stories.some((story) => story.kind === 'record-margin' || story.kind === 'record-score')) {
+    return 'record';
+  }
+  return packet.lead.significance >= 700 ? 'loud' : 'ordinary';
+}
+
+function datelineOf(packet: FactPacket): string {
+  const tail =
+    packet.weekType === 'playoff'
+      ? `${PHRASES.datelinePlayoffs}, ${PHRASES.datelineWeek.toLowerCase()} ${String(packet.week)}`
+      : `${PHRASES.datelineWeek} ${String(packet.week)}`;
+  return `${PHRASES.dateline} · ${PHRASES.datelineSeason} ${String(packet.season)} · ${tail}`;
+}
+
+function scoreboardOf(lines: readonly ScoreLine[]): readonly RenderedScore[] {
+  return lines.map((line): RenderedScore => {
+    if (line.tie && line.tieNames !== null && line.tiePoints !== null) {
+      return {
+        key: line.key,
+        leftName: line.tieNames[0],
+        leftPoints: points(line.tiePoints),
+        rightName: line.tieNames[1],
+        rightPoints: points(line.tiePoints),
+        leftWon: false,
+        tie: true,
+      };
+    }
+    return {
+      key: line.key,
+      leftName: line.winnerName ?? '',
+      leftPoints: points(line.winnerPoints ?? 0),
+      rightName: line.loserName ?? '',
+      rightPoints: points(line.loserPoints ?? 0),
+      leftWon: true,
+      tie: false,
+    };
+  });
+}
+
 export function renderEdition(packet: FactPacket): Edition {
-  if (packet.refusal !== null || packet.stories.length === 0) {
+  const character = characterOf(packet);
+  const column = pick(COLUMN[character], `${String(packet.season)}:${String(packet.week)}:column`);
+
+  if (packet.refusal !== null) {
     return {
       season: packet.season,
       week: packet.week,
-      headline: PHRASES.emptyHeadline.replace('{k}', String(packet.week)),
-      lead: '',
-      alsoRan: [],
-      nothingToPrint: REFUSALS[packet.refusal ?? 'no-story'],
+      dateline: datelineOf(packet),
+      character,
+      headline: `${PHRASES.emptyHeadline} ${String(packet.week)}`,
+      deck: null,
+      body: '',
+      secondary: [],
+      scoreboard: [],
+      column,
+      nothingToPrint: REFUSALS[packet.refusal],
     };
   }
 
-  const [top, ...rest] = packet.stories;
+  const scoreboard = scoreboardOf(packet.scoreboard);
+
+  if (packet.lead === null) {
+    /*
+     * A quiet edition.
+     *
+     * The commissioner's rule, applied rather than intended: *"a weak-news week
+     * should publish fewer stories rather than exaggerate ordinary events."* The
+     * scoreboard still prints — the week happened — and nothing is promoted to a
+     * headline it did not earn.
+     */
+    return {
+      season: packet.season,
+      week: packet.week,
+      dateline: datelineOf(packet),
+      character,
+      headline: fill(
+        pick(HEADLINES.quiet, `${String(packet.season)}:${String(packet.week)}:quiet`),
+        { k: String(packet.week) },
+      ),
+      deck: null,
+      body: PHRASES.quietBody,
+      secondary: [],
+      scoreboard,
+      column,
+      nothingToPrint: null,
+    };
+  }
+
+  const lead = storyParts(packet.lead);
 
   return {
     season: packet.season,
     week: packet.week,
-    headline: fill(HEADLINE[top!.fact.intensity], top!, packet.week),
-    lead: lead(top!),
-    alsoRan: rest.map(alsoRan),
+    dateline: datelineOf(packet),
+    character,
+    headline: lead.headline,
+    deck: lead.deck,
+    body: lead.body,
+    secondary: packet.rest.map(storyParts),
+    scoreboard,
+    column,
     nothingToPrint: null,
   };
 }
@@ -188,8 +716,13 @@ export function renderEdition(packet: FactPacket): Edition {
  */
 export function houseWords(): ReadonlySet<string> {
   const curated = [
-    ...Object.values(HEADLINE),
-    ...Object.values(COLOUR),
+    ...Object.values(HEADLINES).flat(),
+    ...Object.values(RESULT).flat(),
+    ...Object.values(FRAME).flat(),
+    ...GAP,
+    ...Object.values(COLOUR).flat(),
+    ...Object.values(KIND_COLOUR).flat(),
+    ...Object.values(COLUMN).flat(),
     ...Object.values(VERB),
     ...Object.values(REFUSALS),
     ...Object.values(PHRASES),

@@ -17,13 +17,202 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #40 | Real collectible art is the only thing left; see "the one thing that needs the commissioner" |
 | **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36, #40 | Collection empty-state pacing (visual debt 1) |
 | **Stats & Data** | `TECH_LEAD_IMPLEMENTING`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
-| **Tuesday Slice** | `TECH_LEAD_IMPLEMENTING`, independently verified | `claude/resume-tonys-delivery-tech-lead-evndmy` | this branch | Tony's Line, bounties, the chalkboard prediction, and the commissioner review queue |
+| **Tuesday Slice** | `TECH_LEAD_IMPLEMENTING`, independently verified | `claude/tonys-pizza-autonomous-jizv8b` | this branch | Tony's Line, bounties, the chalkboard prediction, and the commissioner review queue |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **blocked on the commissioner** | — | — | Supply the files; the slot is enforced |
 | **M3 character identity** | `QUEUED_NOT_ACTIVE` | — | — | Issue #24 |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-07-31 (second session)
+
+**PR #43 merged.** `main` was `6740408` at the start of this session. The work below is on
+`claude/tonys-pizza-autonomous-jizv8b`.
+
+### The Slice is a newspaper
+
+The first implementation printed. It also printed the same three sentences every week, reported
+**two of five games**, and read as a list of templated facts — which is what the commissioner
+asked to fix, and what looking at nineteen consecutive issues in one column makes undeniable.
+
+What an issue is now: a **masthead and dateline** · a **lead** with a headline, a score deck and a
+short body · up to **two secondary stories** · **the board**, every publishable game of the week ·
+**Tony's column**, curated and factless · a colophon. One sheet of paper, sections divided by
+printed rules rather than by cards.
+
+**A newspaper needs more than two shapes of story**, so the fact layer gained them. `lib/stats/`:
+
+| new | what it owns |
+|---|---|
+| `week.ts` | the complete week — every paired game, resolved to the people who held those seats |
+| `standings.ts` | the table *as it stood after week k*, recomputed from the games; `season_memberships` only holds the final one |
+| `stories.ts` | twelve typed, evidenced, gated story kinds: blowout · nail-biter · tie · record margin · record score · high score · low score · upset · streak · standings move · championship · elimination |
+
+Every kind above the floor needs a reason that is not *"biggest one this week"* — the same
+two-independent-reasons discipline `significance.ts` already applied to margins. An upset needs a
+**defensible baseline**, and the only one this product has is wins already on the board; there is no
+projection and `16 §9` bans implying one.
+
+`lib/slice/select.ts` is the desk: rank by significance, then **same-game**, **same-kind**,
+**manager-repeat** and **novelty** across the previous two issues, every drop recorded with a
+reason. Two floors mean a weak week publishes *fewer* stories — `LEAD_FLOOR` produces a **quiet
+edition** that prints the board and says it was quiet, rather than promoting an ordinary result.
+
+### Four defects the walk found, and one lesson worth keeping
+
+1. **A retired manager could consume a story slot.** The publication boundary was applied to the
+   finished story list. 2024 week seven was decided by 2.82 points between two current managers and
+   the paper led with a streak, because the week's *overall* closest game involved somebody retired,
+   the nail-biter candidate was built for that game, and it was then dropped with **nothing taking
+   its place**. The boundary is now applied before derivation (`publishableWeek`). Pinned.
+2. **Novelty silenced a real story.** The first cut subtracted the recency discount before the
+   floors, and 2024 week ten printed *"A quiet week at the shop"* above a board showing a
+   fifty-one-point win. **Novelty reorders; it never silences.** A front page that contradicts its
+   own scoreboard is worse than a repeated headline.
+3. **A hard-coded count in curated prose.** The quiet body said *"Five results"*; four is common,
+   because retired managers' games are not on the board. Numbers come from the packet or they do not
+   appear — a test now fails any curated string containing a digit.
+4. **The record nobody can print.** The largest team-week on record is **188.02** and the widest
+   margin **140.72**, and both belong to retired managers, so neither can ever be published. The
+   comparison population still includes them, deliberately: a record measured only against
+   publishable games would announce a record that is not one. `record-score` is therefore a fixture,
+   and that is the layer being right rather than a gap.
+
+### Fifteen editions, reachable by name
+
+`lib/slice/editions.ts` — `/slice?edition=<key>`, resolved on the server behind the demo guard.
+Eight are **real weeks of finalized seasons**; five are **frozen fixtures** for states history does
+not contain; two are the empty rack. All go through the identical production pipeline, and
+**nothing is written to the database** — a Slice demo has no state to isolate.
+
+`npm run demo -- editions` lists them. Three things throw rather than rendering something plausible:
+a key declared and not implemented, a fixture the validator refuses, and a driver state with no arm.
+`lib/slice/driver-coverage.test.ts` fails the build for an edition the driver would never photograph
+— the quiet failure that leaves no trace at all.
+
+### Independent Stats verification, widened
+
+`lib/stats/independent-verification.test.ts` is **6 tests → 19**, still recomputing from
+`fixtures/sleeper/**` with `JSON.parse` and arithmetic in the file, calling nothing in `lib/stats`.
+Added: ties · weekly high and low · closest and widest per week · the finalized population size ·
+percentile placement · score-magnitude and margin-plausibility invariants · participants resolving
+inside the right season · finalized-season immutability · canonical name versus Sleeper handle ·
+retired managers absent from every published surface **and still present in the fact layer**.
+
+### Exact repository state
+
+| | |
+|---|---|
+| `main` | `6740408` — PR #43 merged |
+| Branch | `claude/tonys-pizza-autonomous-jizv8b` |
+| `npm run check` | green — **831 tests across 52 files** |
+| `npm run visual:qa` | green — **49 states × 3 widths**, production build, `DEMO_FIXTURES=1` on server *and* driver |
+
+### Tony may mention a result, and may not change one
+
+`lib/parlor/aside.ts` + `content/counter-stats.md` (approved 2026-07-31, eight lines, surface
+`parlor_stats_aside`). The greeting stays the default — `17 §3`'s criterion is *one verified thing
+about you* — and this is the exception, with a **fortnight** cooldown against the greeting's three
+days.
+
+Four rules, each enforced rather than intended:
+
+1. **Only finalized facts.** The input is a `FactPacket`, which refuses an open season outright and
+   has already applied the publication boundary. There is no path from an unfinalized week here.
+2. **No calculation in dialogue code.** Every number is read off a published fact and written with
+   the packet's *own* formatters.
+3. **Nothing may change.** The rendered sentence goes through **the Slice's validator**, against the
+   fact's own declared allowed sets. A name or number the fact did not supply is refused and Tony
+   says nothing about football. One validator, not two — a second would drift, and it would drift on
+   the quieter surface.
+4. **Never during a moment.** Skipped whenever a moment tag is held, so it cannot collide with the
+   welcome box, the waiting box or a reveal.
+
+**One extension the validator needed.** `validateProse` now takes the *templates* a line was rendered
+from and treats their capitalised words as house copy. A template contains `{winner}`, never
+`Brandon` — a proper noun can only enter through substitution — so this is the same rule
+`houseWords()` applies to the Slice's own tables, extended to a surface whose curated strings live in
+Markdown. Without it, *"He is not going to pretend that was a game"* was refused because `He` is a
+word the Slice's headlines never use.
+
+The champion is a **fallback, not a competitor**: a banner is always true and never news, so it only
+speaks when the week itself had nothing loud in it.
+
+### The deploy's seed is idempotent, and now provably so
+
+`scripts/seed-idempotency.test.ts` runs the **real** `scripts/seed.ts` twice in a subprocess and
+asserts the second run changes nothing: identical counts across every seeded table, an identical
+content fingerprint, and no manager holding two welcome boxes.
+
+`vercel-build` is `migrate → seed → build`, so this runs against a live database on every merge to
+`main`. A non-idempotent seed would not error and would not fail a gate — it would show up weeks
+later as Tony repeating himself twice as often as his cooldown allows, or as free loot proportional
+to how often anybody merged.
+
+### Batch B is one command away
+
+`npm run art:batch` matches filenames, refuses a missing or duplicated asset **by name**, processes,
+validates all ten mechanical rules, checks the registry row, captures Reveal / Collection / Showcase,
+and prints a per-asset status table. `--register` flips `art_status` to `final` — kept a separate,
+deliberate act because `art/ASSET_PIPELINE.md` makes registration a reviewed edit.
+
+`lib/assets/batches.ts` is the manifest and `lib/assets/batches.test.ts` fails the build if it and the
+handoff document ever disagree about which sprites a batch contains — a mismatch that would otherwise
+surface as a filename error on the one day it is most expensive.
+
+**Batch B2 is specified** — `docs/art/BATCH_B2_COLLECTIBLES_HANDOFF.md`, paste-ready, four sprites
+chosen to *expand* coverage rather than repeat it: the only wide silhouette, light escaping through a
+hole rather than off a face, a soft-sided bag with a fabric handle loop, and a draped repeating
+pattern that has to survive the 23 px Showcase draw. It needs nothing from the commissioner until
+Batch B is in hand.
+
+### The next executable task, in order
+
+1. **Integrate the Batch B collectible art** the moment the eight PNGs arrive. One command now:
+   `art/incoming/<slug>_01.png` → `npm run art:batch` → look at the screenshots →
+   `npm run art:batch -- B2 --register`. **No feature code changes.** Still the only thing between
+   M2 and closure.
+2. **Tony's Line, bounties and the chalkboard prediction** (`16 §9`). All three read the fact packet
+   that now exists; all three need a live season to settle against, so they are authored now and
+   settle in September. One table with a type discriminator.
+3. **The commissioner review queue** for the Slice. `16 §9` makes approval mandatory in season one
+   and the manual hold switch permanent. Not built — the historical issue on the rack does not need
+   it, a live one does.
+4. **Batch B2** when Batch B is in hand. Specified, paste-ready, needs nothing from anybody until
+   then.
+5. **Visual debt 3** — the order pad's arrival and dismissal timing against the reveal's.
+
+### Two boundaries prepared, neither started
+
+- **`docs/M3_CHARACTER_BOUNDARY.md`** — the decisions M3 would otherwise make under pressure, made
+  now. **Tony stays baked and the compositor is for managers only**, so every M3 defect lands on a
+  surface that does not exist yet. Seven layers in a fixed order, with the order in the registry
+  rather than in a switch; a hand item as a `top`-slot overlay rather than a split arm; ownership by
+  trigger because an FK cannot say *your* collectible; wearables in their own registry family because
+  `CATALOG_SIZE = 24` must never be satisfied by adding to it. The clipping tests are arithmetic over
+  the alpha channel, **not screenshots** — geometry read off a screenshot is wrong, and the eye kept
+  confidently reporting it had measured something it had not.
+- **`docs/BACK_HALL_BOUNDARY.md`** — route contracts, the flag-based state boundary (nobody *earns* a
+  hallway; progression is not in this product), navigation flow, the five asset slots, demo
+  requirements. It corrects an assumption made before reading the page: the Underground is
+  deliberately not a route and is handled correctly, with the reasoning already in the file.
+
+**Two real findings, recorded as visual debt rather than fixed** — fixing them would have interrupted
+Batch B. *"Don't worry about it."*, the entire reveal of the Underground, is set at **9px** in amber
+on cream; and the Back Hall is three stacked panels with headings, which is the menu card `18 §5`
+forbids (blocked on art — building the scene against placeholders means building it twice).
+
+### What this session did not start, and why
+
+- **M3 character identity (#24).** Unchanged: do not destabilise M2 before the representative art
+  batch has proven the asset system.
+- **Safari and hosted-only hardening beyond the seed.** The sandbox proxy denies CONNECT to
+  `*.vercel.app`, so viewport-height, back-forward cache and safe-area behaviour cannot be observed
+  here — only asserted statically. The seed's idempotency was the one item in that list that is
+  fully checkable locally, so it was the one taken.
 
 ---
 

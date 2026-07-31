@@ -1,9 +1,10 @@
-import { desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, desc, eq, isNotNull, sql } from 'drizzle-orm';
 
 import { type Queryable } from '@/lib/db';
-import { fantasyMatchups, seasons } from '@/lib/db/schema';
+import { fantasyMatchups, seasonMemberships, seasons, users } from '@/lib/db/schema';
+import { activeManagerIds } from '@/lib/league/membership';
 
-import { factPacket } from './packet';
+import { factPacket, type FactPacket } from './packet';
 import { renderEdition, type Edition } from './render';
 import { validateEdition } from './validate';
 
@@ -69,12 +70,104 @@ export async function latestEdition(db: Queryable): Promise<Edition | null> {
    * scanning to week zero.
    */
   for (let week = Number(latest.week); week >= 1; week--) {
+    const issue = await editionFor(db, { season: latest.year, week });
+    if (issue !== null) return issue;
+  }
+
+  return null;
+}
+
+/**
+ * One named week, rendered and checked — or null if it may not be published.
+ *
+ * The whole pipeline behind one call, so a caller that wants a *specific* issue
+ * (a historical recap, a demo edition, the commissioner review queue when it
+ * arrives) gets the identical path the rack does. A second assembly written for
+ * one of those callers would be a second thing to keep correct.
+ */
+export async function editionFor(
+  db: Queryable,
+  input: { readonly season: number; readonly week: number },
+): Promise<Edition | null> {
+  const packet = await factPacket(db, input);
+  if (packet.refusal !== null) return null;
+
+  const issue = renderEdition(packet);
+  return validateEdition(issue, packet).publishable ? issue : null;
+}
+
+/**
+ * The packet behind the last issue Tony printed.
+ *
+ * The same walk `latestEdition` does, stopping at the packet rather than at the
+ * rendered paper — because a surface that wants to *mention* a result needs the
+ * allowed sets to be checked against, not the prose. Returning the rendered
+ * edition and re-deriving a packet from it would be two answers to one question.
+ */
+export async function latestPacket(db: Queryable): Promise<FactPacket> {
+  const [latest] = await db
+    .select({
+      year: seasons.year,
+      week: sql<number>`max(${fantasyMatchups.week})`.as('week'),
+    })
+    .from(fantasyMatchups)
+    .innerJoin(seasons, eq(seasons.id, fantasyMatchups.seasonId))
+    .where(isNotNull(seasons.finalizedAt))
+    .groupBy(seasons.year)
+    .orderBy(desc(seasons.year))
+    .limit(1);
+
+  const nothing: FactPacket = {
+    season: 0,
+    week: 0,
+    weekType: 'unscored',
+    finalized: false,
+    lead: null,
+    rest: [],
+    scoreboard: [],
+    suppressed: [],
+    demoted: [],
+    quiet: false,
+    allowedNumbers: [],
+    allowedNames: [],
+    refusal: 'no-season',
+  };
+
+  if (latest === undefined) return nothing;
+
+  for (let week = Number(latest.week); week >= 1; week--) {
     const packet = await factPacket(db, { season: latest.year, week });
     if (packet.refusal !== null) continue;
 
     const issue = renderEdition(packet);
-    if (validateEdition(issue, packet).publishable) return issue;
+    if (validateEdition(issue, packet).publishable) return packet;
   }
 
-  return null;
+  return nothing;
+}
+
+/**
+ * Who won the most recent finalized season.
+ *
+ * `season_memberships.final_rank` — recorded at import from the bracket and
+ * never inferred (`lib/sleeper/placements.ts`). Filtered through the publication
+ * boundary like everything else: a retired champion is a true fact and not a
+ * printable one.
+ */
+export async function mostRecentChampion(
+  db: Queryable,
+): Promise<{ displayName: string; season: number } | null> {
+  const publishable = await activeManagerIds(db);
+
+  const rows = await db
+    .select({ year: seasons.year, userId: users.id, displayName: users.displayName })
+    .from(seasonMemberships)
+    .innerJoin(seasons, eq(seasons.id, seasonMemberships.seasonId))
+    .innerJoin(users, eq(users.id, seasonMemberships.userId))
+    .where(and(isNotNull(seasons.finalizedAt), eq(seasonMemberships.finalRank, 1)))
+    .orderBy(desc(seasons.year))
+    .limit(4);
+
+  const found = rows.find((row) => publishable.has(row.userId));
+  return found === undefined ? null : { displayName: found.displayName, season: found.year };
 }

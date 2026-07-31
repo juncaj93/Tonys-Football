@@ -8,9 +8,10 @@ import { type Database } from '@/lib/db';
 import { contentEntries } from '@/lib/db/schema';
 
 import { BOX_OFFER_COOLDOWN_DAYS, BOX_OFFER_SURFACE } from '@/lib/counter/offer';
+import { ASIDE_COOLDOWN_DAYS, ASIDE_SURFACE } from '@/lib/parlor/aside';
 
 import { GREETING_COOLDOWN_DAYS, GREETING_SURFACE } from './greeting';
-import { parseBoxOffers, parseCounterGreetings, type ParsedLine } from './parse';
+import { parseBoxOffers, parseCounterGreetings, parseStatsAsides, type ParsedLine } from './parse';
 
 /**
  * Seeding the content engine from the authored markdown.
@@ -26,6 +27,7 @@ import { parseBoxOffers, parseCounterGreetings, type ParsedLine } from './parse'
 
 export const COUNTER_GREETINGS_PATH = path.join('content', 'counter-greetings.md');
 export const BOX_OFFERS_PATH = path.join('content', 'box-offer.md');
+export const STATS_ASIDES_PATH = path.join('content', 'counter-stats.md');
 
 export interface SeedSummary {
   readonly inserted: number;
@@ -40,6 +42,10 @@ export function readCounterGreetings(root = process.cwd()): readonly ParsedLine[
 
 export function readBoxOffers(root = process.cwd()): readonly ParsedLine[] {
   return parseBoxOffers(readFileSync(path.join(root, BOX_OFFERS_PATH), 'utf8'));
+}
+
+export function readStatsAsides(root = process.cwd()): readonly ParsedLine[] {
+  return parseStatsAsides(readFileSync(path.join(root, STATS_ASIDES_PATH), 'utf8'));
 }
 
 export async function seedCounterGreetings(
@@ -69,6 +75,24 @@ export async function seedBoxOffers(
     surface: BOX_OFFER_SURFACE,
     path: BOX_OFFERS_PATH,
     cooldownDays: BOX_OFFER_COOLDOWN_DAYS,
+  });
+}
+
+/**
+ * Tony mentioning a result.
+ *
+ * Its own call for the same reason the offers have one: the deactivation sweep
+ * is scoped to a single surface, so seeding one file must never retire another's
+ * lines merely because they are not in it.
+ */
+export async function seedStatsAsides(
+  db: Database,
+  entries: readonly ParsedLine[],
+): Promise<SeedSummary> {
+  return seedSurface(db, entries, {
+    surface: ASIDE_SURFACE,
+    path: STATS_ASIDES_PATH,
+    cooldownDays: ASIDE_COOLDOWN_DAYS,
   });
 }
 

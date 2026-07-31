@@ -1,10 +1,13 @@
-import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
+import { PanelHeading, PixelPanel, ReturnPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
+import { Newspaper } from '@/components/slice/newspaper';
 import { requireUser } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
 import { seasonClock } from '@/lib/parlor/season';
 import { latestEdition } from '@/lib/slice/edition';
+import { previewEdition, type PreviewEdition } from '@/lib/slice/editions';
+import { type Edition } from '@/lib/slice/render';
 
 /**
  * The rack by the door.
@@ -33,106 +36,132 @@ import { latestEdition } from '@/lib/slice/edition';
  * says the rack is empty. Printing something the validator rejected because it
  * was the only thing available is the exact failure the validator exists to
  * prevent, and it would land on the one surface nobody thinks to check.
+ *
+ * ## The page holds no opinions
+ *
+ * Every string below that is not furniture came out of a validated `Edition`.
+ * The page does not format a score, subtract a margin or decide what a result
+ * meant — `MANDATE §9`. The one thing it decides is *how the rack looks when
+ * there is no paper on it*, which is a fact about the shop rather than about
+ * football.
  */
 
 export const dynamic = 'force-dynamic';
 
-export default async function SlicePage() {
+export default async function SlicePage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await requireUser();
   const clock = seasonClock();
-  const issue = await latestEdition(getDb());
+
+  /*
+   * A named demo edition, resolved on the **server**.
+   *
+   * The same shape as `?preview_reveal=` (`lib/demo/preview.ts`) and for the same
+   * reason: a demo state that the browser could fabricate would be a demo of the
+   * browser. `previewEdition` refuses outright in production and returns null
+   * without `DEMO_FIXTURES`, so an ordinary request never reaches it.
+   */
+  const requested = (await searchParams)['edition'];
+  const preview = await previewEdition(getDb(), requested, process.env);
+
+  const state = preview ?? ({
+    mode: 'rack',
+    rack: 'offseason',
+    issue: await latestEdition(getDb()),
+  } satisfies PreviewEdition);
+
+  const issue: Edition | null = state.mode === 'issue' ? state.issue : state.issue;
 
   return (
     <>
       <RoomBehind />
 
       <Page>
-        <div className="mx-auto w-full max-w-[420px] px-4 pt-6 pb-10">
-          <SignPlate tone="red">Tony&rsquo;s Tuesday Slice</SignPlate>
-
+        {/*
+          * The marker the visual driver checks.
+          *
+          * Present only when a named edition really resolved on the server. Without
+          * `DEMO_FIXTURES` on the *server process* the preview is null, the rack
+          * renders as normal, and a driver that only looked at pixels would file the
+          * screenshot under the edition's name and pass — which is precisely what the
+          * nine reveal states did for two milestones (`docs/CHECKPOINT.md`).
+          */}
+        <div
+          className="mx-auto w-full max-w-[440px] px-3 pt-4 pb-10"
+          data-slice-edition={preview === null ? undefined : String(requested)}
+        >
           {issue === null ? (
-            <>
-              <p className="mt-4 text-[17px] leading-[1.5] text-paper-mid/85">
-                Three shelves, all of them empty, and a price card nobody has updated since the
-                shop opened.
-              </p>
-              <div className="mt-6">
-                <PixelPanel className="px-4 py-4">
-                  <PanelHeading>Nothing on the rack</PanelHeading>
-                  <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
-                    {clock.daysUntilKickoff === null
-                      ? 'The first issue prints the Tuesday after week one.'
-                      : `The first issue goes on the rack the Tuesday after week one — ${String(clock.daysUntilKickoff)} days out.`}
-                  </p>
-                </PixelPanel>
-              </div>
-            </>
+            <EmptyRack
+              preseason={state.mode === 'rack' && state.rack === 'preseason'}
+              daysUntilKickoff={clock.daysUntilKickoff}
+            />
           ) : (
             <>
               {/*
-                * The masthead line. It names the season as well as the week,
-                * because a paper about 2025 sitting on the rack in July 2026 has
-                * to be unambiguous about which one it is — the same reason every
-                * Group A greeting names its year.
-                */}
-              <p className="mt-4 font-display text-[11px] leading-[1.5] tracking-[0.12em] text-paper-mid/75 uppercase">
-                {String(issue.season)} &middot; Week {String(issue.week)} &middot; Last printed
-              </p>
-
-              <div className="mt-3">
-                <PixelPanel className="px-4 pt-4 pb-4">
-                  {/*
-                    * The headline, in the paper's display face at the size a
-                    * headline is. Sized to the type rather than the type to a
-                    * box, so a long one takes a second line.
-                    */}
-                  <h1 className="font-display text-[19px] leading-[1.3] text-ink-900 uppercase">
-                    {issue.headline}
-                  </h1>
-
-                  <p className="mt-3 text-[17px] leading-[1.5] text-ink-700">{issue.lead}</p>
-
-                  {issue.alsoRan.length > 0 && (
-                    <>
-                      {/*
-                        * The rest of the week, under a printed rule. Flat lines,
-                        * no adjectives — the lead has those, and a page where
-                        * every result is dramatic has no lead at all.
-                        */}
-                      <p className="mt-4 border-t-2 border-red-dark/25 pt-2 font-display text-[10px] leading-[1.5] tracking-[0.12em] text-wood-mid uppercase">
-                        Also that week
-                      </p>
-                      <ul className="mt-1.5 space-y-1">
-                        {issue.alsoRan.map((line) => (
-                          <li key={line} className="text-[15px] leading-[1.4] text-ink-700">
-                            {line}
-                          </li>
-                        ))}
-                      </ul>
-                    </>
-                  )}
-                </PixelPanel>
-              </div>
-
-              {/*
-                * How the paper was made, printed on the paper.
+                * The paper that is on the rack today is last season's.
                 *
-                * `MANDATE §9`–`§10` require a fantasy fact to carry its
-                * provenance. One line in signage type rather than a disclaimer
-                * panel, because it is a fact about the paper and not an apology
-                * for it.
+                * Said once, above the masthead, in the rack's voice rather than
+                * the paper's — the issue itself is dated and does not need to
+                * apologise for being old. Only in the offseason: a live issue is
+                * the current one and labelling it would be wrong.
                 */}
-              <p className="mt-3 font-display text-[10px] leading-[1.5] tracking-wide text-paper-mid/70 uppercase">
-                Set from the league&rsquo;s own records. Every number checked before it printed.
-              </p>
+              {state.mode === 'rack' && (
+                <p className="mb-2 text-center font-display text-[13px] leading-[1.5] tracking-[0.08em] text-paper-mid/70 uppercase">
+                  Last one Tony printed
+                </p>
+              )}
+              <Newspaper issue={issue} />
             </>
           )}
 
-          <div className="mt-8">
+          <div className="mt-7">
             <ReturnPlate />
           </div>
         </div>
       </Page>
     </>
+  );
+}
+
+/**
+ * Nothing on the rack.
+ *
+ * Two shelves and a note, in the shop's voice (`05 §8.5`). It says *when* the
+ * first issue arrives rather than apologising, because a countdown is information
+ * and an apology is not.
+ */
+function EmptyRack({
+  preseason,
+  daysUntilKickoff,
+}: {
+  preseason: boolean;
+  daysUntilKickoff: number | null;
+}) {
+  return (
+    <PixelPanel tone="paper" className="px-4 pt-4 pb-4">
+      <div aria-hidden="true" className="h-[3px] bg-red-dark" />
+      <h1 className="mt-2 text-center font-display text-[22px] leading-[1.05] text-red-dark uppercase">
+        Tony&rsquo;s Tuesday Slice
+      </h1>
+      <div aria-hidden="true" className="mt-2 h-[3px] bg-red-dark" />
+
+      <div className="mt-4">
+        <PanelHeading>Nothing on the rack</PanelHeading>
+      </div>
+
+      <p className="mt-2 text-[18px] leading-[1.5] text-ink-700">
+        Three shelves, all of them empty, and a price card nobody has updated since the shop
+        opened.
+      </p>
+
+      <p className="mt-3 border-t-2 border-ink-900/20 pt-2.5 text-[17px] leading-[1.5] text-ink-700">
+        {preseason || daysUntilKickoff === null
+          ? 'The first issue prints the Tuesday after week one.'
+          : `The first issue goes on the rack the Tuesday after week one — ${String(daysUntilKickoff)} days out.`}
+      </p>
+    </PixelPanel>
   );
 }

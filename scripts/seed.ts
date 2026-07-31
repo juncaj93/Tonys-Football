@@ -31,8 +31,10 @@ import {
   assertOnlyApprovedGroups,
   readBoxOffers,
   readCounterGreetings,
+  readStatsAsides,
   seedBoxOffers,
   seedCounterGreetings,
+  seedStatsAsides,
 } from '@/lib/content/seed';
 import { closePool, getDb } from '@/lib/db';
 import { seasonMemberships, users } from '@/lib/db/schema';
@@ -144,6 +146,15 @@ async function main(): Promise<void> {
       `Content  ${String(offers.keys.length)} box offers · ` +
         `${String(offers.inserted)} new · ${String(offers.updated)} updated · ` +
         `${String(offers.deactivated)} retired`,
+    );
+
+    // Tony mentioning a result the fact layer verified
+    // (`content/counter-stats.md`). Approved 2026-07-31.
+    const asides = await seedStatsAsides(db, readStatsAsides());
+    console.log(
+      `Content  ${String(asides.keys.length)} stats asides · ` +
+        `${String(asides.inserted)} new · ${String(asides.updated)} updated · ` +
+        `${String(asides.deactivated)} retired`,
     );
 
     await assertOnlyApprovedGroups(db);

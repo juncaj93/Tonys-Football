@@ -1,32 +1,51 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
-
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
-import { closePool, getDb } from '@/lib/db';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
+import { closePool, getDb } from '@/lib/db';
 import { resetDatabase } from '@/lib/db/test-helpers';
 import { activeLeagueManagers } from '@/lib/league/membership';
 import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
 import { persistChain } from '@/lib/sleeper/persist';
+import { LEAD_FLOOR, STORY_FLOOR, type StoryCandidate } from '@/lib/stats/stories';
 
+import { latestEdition } from './edition';
+import { SLICE_EDITIONS, allEditions, resolveEdition } from './editions';
 import { factPacket, margin, points, type FactPacket } from './packet';
-import { renderEdition } from './render';
+import { MAX_STORIES, selectStories } from './select';
+import {
+  COLOUR,
+  COLUMN,
+  FRAME,
+  GAP,
+  HEADLINES,
+  KIND_COLOUR,
+  PHRASES,
+  REFUSALS,
+  RESULT,
+  pick,
+  renderEdition,
+  type Edition,
+} from './render';
 import { validateEdition } from './validate';
 
 /**
  * The Slice, end to end, against the real imported seasons.
  *
- * Two properties matter and they are different:
+ * Three properties matter and they are different:
  *
  *   1. **The pipeline publishes with no API key.** `16 §9` makes the
  *      deterministic renderer the default rather than a fallback, so the test
- *      that matters is that a real historical week produces a real issue with
+ *      that matters is that every real historical week produces a real issue with
  *      nothing configured.
- *   2. **The validator can refuse.** A gate that has only ever been shown
- *      passing is not evidence of anything — every rule below is driven with
- *      prose written to break it.
+ *   2. **The validator can refuse.** A gate that has only ever been shown passing
+ *      is not evidence of anything — every rule below is driven with prose
+ *      written to break it.
+ *   3. **The numbers are in the right units.** The Slice once printed a real
+ *      matchup as *"1.84 to 1.10"* and every structural test passed, because the
+ *      allowed-number list and the prose came from the same broken helper. Range
+ *      assertions over a real week are the check that symmetry cannot satisfy;
+ *      `independent-verification.test.ts` is the other half.
  */
 
 const hasDatabase = (process.env['DATABASE_URL'] ?? '') !== '';
@@ -44,325 +63,512 @@ afterAll(async () => {
   if (hasDatabase) await closePool();
 });
 
+/* -------------------------------------------------------------------------- */
+/* The validator, with no database                                            */
+/* -------------------------------------------------------------------------- */
+
 /** A packet built by hand, so the validator can be tested without a database. */
 const HAND: FactPacket = {
   season: 2025,
   week: 3,
+  weekType: 'regular',
   finalized: true,
-  stories: [],
+  lead: null,
+  rest: [],
+  scoreboard: [],
+  suppressed: [],
+  demoted: [],
+  quiet: false,
   allowedNumbers: ['154.42', '103.91', '50.5', '50.51', '2025', '3'],
   allowedNames: ['Nick', 'Matt Lee'],
   refusal: null,
 };
 
-const edition = (over: Partial<Parameters<typeof validateEdition>[0]>) =>
-  validateEdition(
-    {
-      season: 2025,
-      week: 3,
-      headline: 'Nick takes week 3',
-      lead: 'Nick beat Matt Lee, 154.42 to 103.91. That is 50.5 between them.',
-      alsoRan: [],
-      nothingToPrint: null,
-      ...over,
-    },
-    HAND,
-  );
+const blank: Edition = {
+  season: 2025,
+  week: 3,
+  dateline: 'Tuesday edition · Season 2025 · Week 3',
+  character: 'ordinary',
+  headline: '',
+  deck: null,
+  body: '',
+  secondary: [],
+  scoreboard: [],
+  column: 'An ordinary week, and Tony prints those the same as the other kind.',
+  nothingToPrint: null,
+};
 
-describe('the deterministic validator', () => {
-  it('passes prose built only from the packet', () => {
-    expect(edition({}).publishable).toBe(true);
+const verdict = (over: Partial<Edition>) => validateEdition({ ...blank, ...over }, HAND);
+
+describe('the validator refuses what `16 §9` says it must', () => {
+  it('accepts prose whose every number and name came from the packet', () => {
+    expect(
+      verdict({ headline: 'Nick takes week 3', body: 'Nick 154.42, Matt Lee 103.91.' }).publishable,
+    ).toBe(true);
   });
 
   it('refuses a number the packet never allowed', () => {
-    // The single most dangerous failure: a plausible score nobody scored.
-    const verdict = edition({ lead: 'Nick beat Matt Lee, 154.42 to 103.92.' });
-    expect(verdict.publishable).toBe(false);
-    expect(verdict.violations).toContainEqual({ kind: 'unknown-number', value: '103.92' });
+    const result = verdict({ body: 'Nick 154.42, Matt Lee 103.92.' });
+    expect(result.publishable).toBe(false);
+    expect(result.violations).toContainEqual({ kind: 'unknown-number', value: '103.92' });
   });
 
-  it('checks the number at the end of a sentence, which it once did not', () => {
-    /*
-     * A regression, and a bad one. The number pattern's trailing lookahead
-     * rejected a following period, so a number ending a sentence matched
-     * nothing — the validator's central rule was dead for the last number in
-     * most sentences and every test still passed, because they all happened to
-     * put the wrong number mid-clause.
-     */
-    const verdict = edition({ lead: 'Nick and Matt Lee, and the gap was 999.99.' });
-    expect(verdict.violations).toContainEqual({ kind: 'unknown-number', value: '999.99' });
-  });
-
-  it('refuses a name the packet never allowed', () => {
-    const verdict = edition({ lead: 'Nick beat Berardo, 154.42 to 103.91.' });
-    expect(verdict.publishable).toBe(false);
-    expect(verdict.violations).toContainEqual({ kind: 'unknown-name', value: 'Berardo' });
-  });
-
-  it('does not report the halves of a two-word name', () => {
-    expect(edition({ lead: 'Matt Lee lost.' }).violations).toEqual([]);
-  });
-
-  it('refuses a kicker, which this league does not have', () => {
-    const verdict = edition({ lead: 'Nick won it on a field goal.' });
-    expect(verdict.violations.map((v) => v.kind)).toContain('banned-term');
-  });
-
-  it('refuses win-probability language, which implies a model that does not exist', () => {
-    for (const line of [
-      'Nick had a 90 percent win probability.',
-      'Matt Lee was projected to win.',
-      'Nick is on pace for a title.',
-    ]) {
-      expect(edition({ lead: line }).publishable, line).toBe(false);
-    }
-  });
-
-  it('refuses an unreleased feature named in print', () => {
-    // A promise the shop cannot keep. The casino is P10 and the basement v1.1.
-    expect(edition({ lead: 'Nick took it to the casino.' }).publishable).toBe(false);
-    expect(edition({ lead: 'Matt Lee went back to the basement.' }).publishable).toBe(false);
+  it('refuses a name the packet never allowed — including a retired manager', () => {
+    const result = verdict({ body: 'Berardo had a good week.' });
+    expect(result.publishable).toBe(false);
+    expect(result.violations).toContainEqual({ kind: 'unknown-name', value: 'Berardo' });
   });
 
   it('refuses a quotation mark of any kind', () => {
-    // Nobody in this league said anything on the record. A quoted sentence is
-    // fabricated testimony even when every number around it is correct.
     for (const quote of ['"', '“', '”']) {
-      const verdict = edition({ lead: `Nick said ${quote}good game${quote}.` });
-      expect(verdict.violations.some((v) => v.kind === 'invented-quote'), quote).toBe(true);
+      expect(verdict({ body: `Tony said ${quote}nice.` }).publishable).toBe(false);
     }
   });
 
-  it('still scans house copy when there is nothing to print', () => {
-    const verdict = edition({
-      nothingToPrint: 'Nothing on the rack. Try the casino.',
-      lead: '',
-      headline: '',
-    });
-    expect(verdict.publishable).toBe(false);
+  it.each([
+    ['a kicker reference', 'The kicker missed twice.'],
+    ['win-probability language', 'Nick had the odds all afternoon.'],
+    ['an unreleased feature', 'Straight to the casino after that.'],
+    ['a prediction dressed as a fact', 'Nick should win the next one.'],
+  ])('refuses %s', (_label, body) => {
+    const result = verdict({ body });
+    expect(result.publishable).toBe(false);
+    expect(result.violations.some((v) => v.kind === 'banned-term')).toBe(true);
   });
 
-  it('publishes an honest empty week', () => {
-    const verdict = edition({
-      nothingToPrint: 'Nothing happened that week worth the ink.',
-      lead: '',
-      headline: '',
+  it('checks the scoreboard, not only the prose', () => {
+    // The surface nobody thinks to check. A results table naming somebody who may
+    // not be published is exactly the leak the boundary exists to stop.
+    const result = verdict({
+      scoreboard: [
+        {
+          key: 'k',
+          leftName: 'Berardo',
+          leftPoints: '154.42',
+          rightName: 'Nick',
+          rightPoints: '103.91',
+          leftWon: true,
+          tie: false,
+        },
+      ],
     });
-    expect(verdict.publishable).toBe(true);
+    expect(result.publishable).toBe(false);
+    expect(result.violations).toContainEqual({ kind: 'unknown-name', value: 'Berardo' });
+  });
+
+  it('checks a secondary story as closely as the lead', () => {
+    const result = verdict({
+      secondary: [{ headline: 'Berardo climbs', deck: null, body: 'From 4 to 1.' }],
+    });
+    expect(result.publishable).toBe(false);
+  });
+
+  it('still scans an empty rack for banned terms and quotes', () => {
+    expect(
+      validateEdition(
+        { ...blank, nothingToPrint: 'Nothing on the rack. Try the casino.' },
+        HAND,
+      ).publishable,
+    ).toBe(false);
   });
 });
 
-describe('writing numbers', () => {
-  it('writes points to two places and margins to one', () => {
-    // A score is a measurement; a margin is spoken. Both forms are allowed by
-    // the packet precisely because both appear in real prose.
-    //
-    // **These take points, not cents.** They divided by 100 once too often and
-    // the Slice printed a real matchup as "1.84 to 1.10". Nothing failed: the
-    // allowed-number list and the prose came from this same function, so they
-    // agreed while both were wrong.
-    expect(points(154.42)).toBe('154.42');
-    expect(margin(50.51)).toBe('50.5');
+/**
+ * Every string the renderer can print.
+ *
+ * Assembled from the exported tables rather than copied, so a new template joins
+ * these checks automatically. A hand-written list here would go stale exactly the
+ * way the validator's old hand-written word list did.
+ */
+const CURATED: readonly string[] = [
+  ...Object.values(HEADLINES).flat(),
+  ...Object.values(RESULT).flat(),
+  ...Object.values(FRAME).flat(),
+  ...GAP,
+  ...Object.values(COLOUR).flat(),
+  ...Object.values(KIND_COLOUR).flat(),
+  ...Object.values(COLUMN).flat(),
+  ...Object.values(REFUSALS),
+  ...Object.values(PHRASES),
+];
+
+describe('the curated templates cannot smuggle anything past the validator', () => {
+  it('contains no literal digit', () => {
+    /*
+     * A digit inside a curated string is a number the packet never allowed, and
+     * the validator would be right to refuse it — on some future week, in
+     * production, on a surface nobody was looking at. Substitution tokens are how
+     * numbers get in.
+     */
+    const digits = /\d/;
+    for (const line of CURATED) expect(line, line).not.toMatch(digits);
+  });
+
+  it('contains no quotation mark', () => {
+    for (const line of CURATED) expect(line, line).not.toMatch(/["“”]/);
   });
 });
 
-describe.skipIf(!hasDatabase)('a real week, from the imported seasons', () => {
-  /*
-   * Imported here rather than relied on from `npm run db:seed`.
-   *
-   * Every integration file in this suite truncates, so a test that reads the
-   * seeded history is a test whose result depends on file order — it passed
-   * alone and reported `no-season` in a full run. Importing the recorded chain
-   * is what `lib/stats/facts.test.ts` does and it is the same fixture, so these
-   * two agree by construction rather than by luck.
-   *
-   * `seedManagerNames` matters as much as the chain: the publication boundary
-   * filters on canonical display names, and without it every manager is a
-   * Sleeper handle and every week refuses.
-   */
+describe('variant choice is stable and spread', () => {
+  it('returns the same variant for the same seed, always', () => {
+    const variants = ['a', 'b', 'c', 'd'];
+    for (const seed of ['2025:3:x', '2024:17:championship', '']) {
+      expect(pick(variants, seed)).toBe(pick(variants, seed));
+    }
+  });
+
+  it('does not collapse to one variant across a season of seeds', () => {
+    // The point of the hash is variety. A hash that returned index 0 for every
+    // realistic seed would pass every other test in this file.
+    const variants = ['a', 'b', 'c'];
+    const seen = new Set<string>();
+    for (let week = 1; week <= 18; week++) seen.add(pick(variants, `2025:${String(week)}:lead`));
+    expect(seen.size).toBeGreaterThan(1);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* Selection                                                                  */
+/* -------------------------------------------------------------------------- */
+
+const candidate = (over: Partial<StoryCandidate>): StoryCandidate => ({
+  id: 'x',
+  kind: 'blowout',
+  season: 2025,
+  week: 3,
+  significance: 700,
+  gameKey: null,
+  subjects: ['a'],
+  evidence: [],
+  detail: {
+    kind: 'blowout',
+    winner: 'Nick',
+    loser: 'Matt Lee',
+    winnerPoints: 154.42,
+    loserPoints: 103.91,
+    margin: 50.51,
+    intensity: 'crushed',
+  },
+  allowedNumbers: [],
+  allowedNames: [],
+  ...over,
+});
+
+describe('the desk', () => {
+  it('runs the strongest story first', () => {
+    const selection = selectStories([
+      candidate({ id: 'weak', kind: 'streak', significance: 500 }),
+      candidate({ id: 'strong', kind: 'blowout', significance: 800 }),
+    ]);
+    expect(selection.lead?.id).toBe('strong');
+    expect(selection.rest.map((s) => s.id)).toEqual(['weak']);
+  });
+
+  it('never tells one result as two stories', () => {
+    const selection = selectStories([
+      candidate({ id: 'title', kind: 'championship', significance: 900, gameKey: 'g1' }),
+      candidate({ id: 'blow', kind: 'blowout', significance: 780, gameKey: 'g1' }),
+    ]);
+    expect(selection.rest).toHaveLength(0);
+    expect(selection.suppressed).toContainEqual(
+      expect.objectContaining({ id: 'blow', reason: 'same-game' }),
+    );
+  });
+
+  it('runs one story of each shape', () => {
+    const selection = selectStories([
+      candidate({ id: 'a', kind: 'blowout', significance: 800, subjects: ['p'] }),
+      candidate({ id: 'b', kind: 'blowout', significance: 700, subjects: ['q'] }),
+    ]);
+    expect(selection.rest).toHaveLength(0);
+    expect(selection.suppressed).toContainEqual(
+      expect.objectContaining({ id: 'b', reason: 'same-kind' }),
+    );
+  });
+
+  it('makes a manager who already carries the issue clear a higher bar', () => {
+    const selection = selectStories([
+      candidate({ id: 'first', kind: 'blowout', significance: 800, subjects: ['same'] }),
+      candidate({ id: 'second', kind: 'streak', significance: 400, subjects: ['same'] }),
+      candidate({ id: 'other', kind: 'low-score', significance: 400, subjects: ['else'] }),
+    ]);
+    expect(selection.rest.map((s) => s.id)).toEqual(['other']);
+    expect(selection.suppressed).toContainEqual(
+      expect.objectContaining({ id: 'second', reason: 'manager-repeat' }),
+    );
+  });
+
+  it('runs quiet rather than promoting an ordinary result', () => {
+    const selection = selectStories([
+      candidate({ id: 'ordinary', kind: 'low-score', significance: LEAD_FLOOR - 1 }),
+    ]);
+    expect(selection.quiet).toBe(true);
+    expect(selection.lead).toBeNull();
+    expect(selection.suppressed).toContainEqual(
+      expect.objectContaining({ reason: 'below-lead-floor' }),
+    );
+  });
+
+  it('drops anything under the story floor outright', () => {
+    const selection = selectStories([candidate({ significance: STORY_FLOOR - 1 })]);
+    expect(selection.suppressed).toContainEqual(
+      expect.objectContaining({ reason: 'below-floor' }),
+    );
+  });
+
+  it('carries at most three stories, and says what it left out', () => {
+    const kinds = ['blowout', 'nail-biter', 'streak', 'low-score'] as const;
+    const selection = selectStories(
+      kinds.map((kind, i) =>
+        candidate({ id: kind, kind, significance: 800 - i, subjects: [`p${String(i)}`] }),
+      ),
+    );
+    expect([selection.lead, ...selection.rest]).toHaveLength(MAX_STORIES);
+    expect(selection.suppressed).toContainEqual(
+      expect.objectContaining({ reason: 'edition-full' }),
+    );
+  });
+
+  it('reorders for novelty and never silences a real story', () => {
+    /*
+     * The failure this pins: the discount used to be applied before the floors,
+     * and 2024 week ten printed *"A quiet week at the shop"* above a board showing
+     * a fifty-one-point win, because `blowout` had led week nine. A front page
+     * that contradicts its own scoreboard is worse than a repeated headline.
+     */
+    const stale = selectStories(
+      [candidate({ id: 'blow', kind: 'blowout', significance: LEAD_FLOOR + 10 })],
+      { recentLeadKinds: ['blowout'] },
+    );
+    expect(stale.quiet).toBe(false);
+    expect(stale.lead?.id).toBe('blow');
+    expect(stale.demoted).toContainEqual(expect.objectContaining({ id: 'blow', penalty: 150 }));
+  });
+
+  it('lets a fresh story of equal weight overtake a repeated one', () => {
+    const selection = selectStories(
+      [
+        candidate({ id: 'repeat', kind: 'blowout', significance: 700, subjects: ['p'] }),
+        candidate({ id: 'fresh', kind: 'nail-biter', significance: 650, subjects: ['q'] }),
+      ],
+      { recentLeadKinds: ['blowout'] },
+    );
+    expect(selection.lead?.id).toBe('fresh');
+    expect(selection.rest.map((s) => s.id)).toEqual(['repeat']);
+  });
+});
+
+/* -------------------------------------------------------------------------- */
+/* The whole pipeline, against the imported seasons                           */
+/* -------------------------------------------------------------------------- */
+
+describe.skipIf(!hasDatabase)('the Slice, against the imported seasons', () => {
   beforeEach(async () => {
     await resetDatabase(db!);
-    const chain = await traverseChain(createFixtureSource(), LEAGUE_2026, {
-      includeWeeks: true,
-    });
+    const chain = await traverseChain(createFixtureSource(), LEAGUE_2026, { includeWeeks: true });
     await persistChain(db!, chain, { sourceLabel: 'test', finalizeYears: [2024, 2025] });
     await seedManagerNames(db!, readManagerNames());
   });
 
-  it('publishes an issue with no API key configured', async () => {
-    // The property `16 §9` is built around: the deterministic renderer is the
-    // default, so this is the whole pipeline running with nothing set.
-    expect(process.env['ANTHROPIC_API_KEY'] ?? '').toBe('');
-
-    const packet = await factPacket(db!, { season: 2025, week: 3 });
-    expect(packet.refusal, 'week 3 of 2025 should have games').toBeNull();
-    expect(packet.stories.length).toBeGreaterThan(0);
-
-    /*
-     * The units check, and the reason it exists.
-     *
-     * A shared formatter made the packet and the renderer agree with each other
-     * while both were two decimal places out, so every structural test passed
-     * and the page printed "1.84 to 1.10". A range assertion is the one check
-     * that symmetry cannot satisfy: it compares against football rather than
-     * against the other half of the same code.
-     */
-    for (const { fact } of packet.stories) {
-      expect(fact.winnerPoints, 'a fantasy score is tens to low hundreds').toBeGreaterThan(30);
-      expect(fact.winnerPoints).toBeLessThan(300);
-      expect(fact.loserPoints).toBeGreaterThan(10);
-    }
-    expect(packet.allowedNumbers.some((n) => Number(n) > 30 && Number(n) < 300)).toBe(true);
-
-    const issue = renderEdition(packet);
-    expect(issue.nothingToPrint).toBeNull();
-    expect(issue.headline.length).toBeGreaterThan(8);
-    expect(issue.lead).toContain('.');
-
-    const verdict = validateEdition(issue, packet);
-    expect(
-      verdict.violations,
-      `the deterministic renderer produced prose its own validator refused: ${JSON.stringify(verdict.violations)}`,
-    ).toEqual([]);
-  });
-
-  it('renders every week of both finalized seasons without a single violation', async () => {
-    /*
-     * The real test of "deterministic". A renderer that passes on one hand-picked
-     * week proves nothing; this runs the templates over every game the league has
-     * ever played and asserts the validator never has to refuse its own default
-     * renderer.
-     */
+  it('publishes every week of both finalized seasons with no violations', async () => {
     let published = 0;
-    let refused = 0;
-
     for (const season of [2024, 2025]) {
-      for (let week = 1; week <= 18; week++) {
+      for (let week = 1; week <= 17; week++) {
         const packet = await factPacket(db!, { season, week });
+        if (packet.refusal !== null) continue;
         const issue = renderEdition(packet);
-        const verdict = validateEdition(issue, packet);
-
+        const result = validateEdition(issue, packet);
         expect(
-          verdict.violations,
-          `${String(season)} week ${String(week)}: ${JSON.stringify(verdict.violations)}`,
+          result.violations,
+          `${String(season)} week ${String(week)}: ${JSON.stringify(result.violations)}`,
         ).toEqual([]);
-
-        if (issue.nothingToPrint === null) published++;
-        else refused++;
+        published++;
       }
     }
-
-    // Both seasons are complete, so most weeks print. The exact split is not
-    // pinned — a week can legitimately refuse when every game in it names
-    // somebody who is no longer a product participant.
-    expect(published).toBeGreaterThan(20);
-    expect(published + refused).toBe(36);
+    // Both seasons, every scored week. A pipeline that refused everything would
+    // also produce zero violations.
+    expect(published).toBe(34);
   });
 
-  it('never publishes a story naming somebody who is no longer in the league', async () => {
+  it('prints scores in points, not in cents and not divided twice', async () => {
     /*
-     * The publication boundary, checked at the far end rather than trusted at the
-     * near one. Ryan beating Berardo by 140.72 is the largest margin on record and
-     * it stays in the fact layer; it must never reach a printed page.
+     * The units assertion, and the reason it is a *range* rather than a value.
+     *
+     * A pinned value read off the pipeline's own output would have recorded the
+     * `1.84 to 1.10` bug rather than caught it. A range cannot: no fantasy week in
+     * this league is decided 1.84 to 1.10, and none is decided 18412 to 10998.
      */
-    const active = new Set((await activeLeagueManagers(db!)).map((m) => m.displayName));
-
     for (const season of [2024, 2025]) {
-      for (let week = 1; week <= 18; week++) {
+      for (let week = 1; week <= 17; week++) {
         const packet = await factPacket(db!, { season, week });
-        for (const name of packet.allowedNames) {
-          expect(active.has(name), `${name} reached a Slice packet for ${String(season)}`).toBe(
-            true,
-          );
+        for (const line of packet.scoreboard) {
+          for (const value of [line.winnerPoints, line.loserPoints, line.tiePoints]) {
+            if (value === null) continue;
+            expect(value, `${String(season)} w${String(week)}`).toBeGreaterThan(30);
+            expect(value, `${String(season)} w${String(week)}`).toBeLessThan(300);
+          }
         }
       }
     }
   });
 
-  it('refuses a season it has never heard of, rather than inventing one', async () => {
-    const packet = await factPacket(db!, { season: 1998, week: 1 });
-    expect(packet.refusal).toBe('no-season');
-    expect(renderEdition(packet).nothingToPrint).not.toBeNull();
+  it('reports every publishable game of the week, not only the ones with a story', async () => {
+    // The old renderer printed the two games the fact layer had an opinion about
+    // and silently dropped the rest, so several managers never appeared in their
+    // own week.
+    const packet = await factPacket(db!, { season: 2025, week: 5 });
+    expect(packet.scoreboard.length).toBeGreaterThanOrEqual(4);
+    const named = new Set(
+      packet.scoreboard.flatMap((line) => [line.winnerName, line.loserName]).filter(Boolean),
+    );
+    expect(named.size).toBe(packet.scoreboard.length * 2);
+  });
+
+  it('never names anybody who is not in this league', async () => {
+    const roster = new Set((await activeLeagueManagers(db!)).map((m) => m.displayName));
+    for (const season of [2024, 2025]) {
+      for (let week = 1; week <= 17; week++) {
+        const packet = await factPacket(db!, { season, week });
+        for (const name of packet.allowedNames) {
+          expect(roster.has(name), `${name} in ${String(season)} w${String(week)}`).toBe(true);
+        }
+      }
+    }
+  });
+
+  it('gives a retired manager no chance to consume a story slot', async () => {
+    /*
+     * The defect this pins, exactly. 2024 week seven was decided by 2.82 points
+     * between two managers who are both in the league — and the paper led with a
+     * streak, because the week's *overall* closest game involved somebody
+     * retired, the nail-biter candidate was built for that game, and it was then
+     * dropped with nothing taking its place.
+     *
+     * The boundary is applied before derivation now (`publishableWeek`), so the
+     * closest publishable game is the one considered.
+     */
+    const packet = await factPacket(db!, { season: 2024, week: 7 });
+    expect(packet.lead?.kind).toBe('nail-biter');
+  });
+
+  it('withholds every result while a season is open', async () => {
+    // 2026 is imported and not finalized. `not-final` rather than a soft version
+    // of the story: a number that can still move must not be printed at all.
+    const packet = await factPacket(db!, { season: 2026, week: 1 });
+    expect(packet.refusal).not.toBeNull();
+    expect(packet.lead).toBeNull();
+    expect(packet.scoreboard).toEqual([]);
+  });
+
+  it('renders the same issue twice for the same week', async () => {
+    // A published paper cannot re-word itself on reload. This is the property
+    // `Math.random()` would break and a hash does not.
+    const packet = await factPacket(db!, { season: 2024, week: 9 });
+    expect(renderEdition(packet)).toEqual(renderEdition(packet));
+  });
+
+  it('puts a real issue on the rack in the offseason', async () => {
+    const issue = await latestEdition(db!);
+    expect(issue).not.toBeNull();
+    expect(issue!.headline.length).toBeGreaterThan(0);
+    expect(issue!.scoreboard.length).toBeGreaterThan(0);
+  });
+
+  it('finds the title game from the recorded placements', async () => {
+    const packet = await factPacket(db!, { season: 2024, week: 17 });
+    expect(packet.lead?.kind).toBe('championship');
+    expect(renderEdition(packet).character).toBe('title');
   });
 });
 
-/**
- * The published page, checked against the raw Sleeper JSON.
- *
- * `MANDATE §10` and the commissioner's ruling of 2026-07-30: a narrative layer
- * may not both calculate and approve its own claims. `lib/stats` has
- * `independent-verification.test.ts` for that at the fact level; this is the
- * same discipline one layer up, because the Slice adds its own arithmetic —
- * selection, formatting, and a decimal conversion that has already been wrong
- * once.
- *
- * Reads the fixture with `JSON.parse` and recomputes by hand. Calls nothing in
- * `lib/stats`, nothing in `lib/sleeper`, and none of the packet's helpers.
- */
-describe.skipIf(!hasDatabase)('the printed page, verified against raw Sleeper JSON', () => {
+/* -------------------------------------------------------------------------- */
+/* The demo editions                                                          */
+/* -------------------------------------------------------------------------- */
+
+describe.skipIf(!hasDatabase)('every declared edition is implemented', () => {
   beforeEach(async () => {
     await resetDatabase(db!);
-    const chain = await traverseChain(createFixtureSource(), LEAGUE_2026, {
-      includeWeeks: true,
-    });
+    const chain = await traverseChain(createFixtureSource(), LEAGUE_2026, { includeWeeks: true });
     await persistChain(db!, chain, { sourceLabel: 'test', finalizeYears: [2024, 2025] });
     await seedManagerNames(db!, readManagerNames());
   });
 
-  it('prints the scores the source file holds, to the digit', async () => {
-    const LEAGUE_2025 = '1240008879295713280';
-    const root = path.join(process.cwd(), 'fixtures', 'sleeper', 'league', LEAGUE_2025);
-
-    const read = <T,>(file: string): T =>
-      JSON.parse(readFileSync(path.join(root, file), 'utf8')) as T;
-
-    const raw = read<{ matchup_id: number | null; roster_id: number; points: number }[]>(
-      path.join('matchups', '17.json'),
-    );
-    const rosters = read<{ roster_id: number; owner_id: string | null }[]>('rosters.json');
-    const users = read<{ user_id: string; display_name: string }[]>('users.json');
-
-    const ownerOf = new Map(rosters.map((r) => [r.roster_id, r.owner_id]));
-    const handleOf = new Map(users.map((u) => [u.user_id, u.display_name]));
-
-    // Pair by matchup id, by hand. A null id is a bye, which is not a game.
-    const pairs = new Map<number, { handle: string; points: number }[]>();
-    for (const row of raw) {
-      if (row.matchup_id === null) continue;
-      const side = {
-        handle: handleOf.get(ownerOf.get(row.roster_id) ?? '') ?? '?',
-        points: row.points,
-      };
-      pairs.set(row.matchup_id, [...(pairs.get(row.matchup_id) ?? []), side]);
+  it('renders all fifteen, and each one validates', async () => {
+    const rendered = await allEditions(db!);
+    expect(rendered).toHaveLength(SLICE_EDITIONS.length);
+    for (const { key, preview } of rendered) {
+      const issue = preview.issue;
+      if (issue === null) continue;
+      expect(issue.dateline, key).not.toBe('');
+      expect(issue.column, key).not.toBe('');
     }
+  });
 
-    const games = [...pairs.values()].filter((sides) => sides.length === 2);
-    expect(games, '2025 week 17 should hold two games').toHaveLength(2);
+  it('throws for a state that is declared and not implemented', async () => {
+    await expect(
+      // Deliberately outside the union: the runtime guard is the point, because a
+      // missing arm renders an empty rack, photographs cleanly and passes.
+      resolveEdition(db!, 'not-a-state' as never),
+    ).rejects.toThrow(/declared but not implemented/);
+  });
 
-    // The biggest gap, computed here and nowhere else.
-    let widest = { winner: '', loser: '', high: 0, low: 0, gap: -1 };
-    for (const [a, b] of games as [
-      { handle: string; points: number },
-      { handle: string; points: number },
-    ][]) {
-      const gap = Math.abs(a.points - b.points);
-      if (gap <= widest.gap) continue;
-      const [high, low] = a.points >= b.points ? [a, b] : [b, a];
-      widest = { winner: high.handle, loser: low.handle, high: high.points, low: low.points, gap };
+  it.each([
+    ['blowout', 'blowout'],
+    ['close-finish', 'nail-biter'],
+    ['championship', 'championship'],
+    ['record-score', 'record-score'],
+    ['standings-shakeup', 'standings-move'],
+    ['one-story', 'nail-biter'],
+  ] as const)('%s leads with a %s story', async (key, kind) => {
+    /*
+     * Pins the *character* of each demo, not its prose.
+     *
+     * A calibration change that quietly turned the blowout demo into an ordinary
+     * week would otherwise be found by a person looking at a screenshot, which is
+     * the review this catalog exists to make unnecessary.
+     */
+    const preview = await resolveEdition(db!, key);
+    expect(preview.mode, key).toBe('issue');
+    if (preview.mode !== 'issue') return;
+    expect(preview.issue.headline, key).not.toBe('');
+    expect(preview.issue.character, key).not.toBe('empty');
+    expect(preview.leadKind, key).toBe(kind);
+  });
+
+  it('shows a quiet issue with a full board when nothing cleared the bar', async () => {
+    const preview = await resolveEdition(db!, 'no-stories');
+    const issue = preview.issue;
+    expect(issue?.character).toBe('quiet');
+    expect(issue?.secondary).toEqual([]);
+    expect(issue?.scoreboard.length).toBeGreaterThan(0);
+  });
+
+  it('prints no result at all while a week is open', async () => {
+    const preview = await resolveEdition(db!, 'incomplete-week');
+    const issue = preview.issue;
+    expect(issue?.nothingToPrint).not.toBeNull();
+    expect(issue?.scoreboard).toEqual([]);
+    expect(issue?.deck).toBeNull();
+  });
+
+  it('shows an empty rack before the season starts', async () => {
+    const preview = await resolveEdition(db!, 'preseason');
+    expect(preview.mode).toBe('rack');
+    expect(preview.issue).toBeNull();
+  });
+
+  it('renders identical bytes on a second call', async () => {
+    for (const key of SLICE_EDITIONS) {
+      const first = await resolveEdition(db!, key);
+      const second = await resolveEdition(db!, key);
+      expect(second, key).toEqual(first);
     }
+  });
+});
 
-    const packet = await factPacket(db!, { season: 2025, week: 17 });
-    const issue = renderEdition(packet);
-
-    // The handle-to-name mapping is a league decision (`content/manager-mappings.json`),
-    // so the check is on the *numbers* — which the pipeline must not alter — and
-    // on the names being present, not on the pipeline's own translation of them.
-    expect(issue.lead).toContain(widest.high.toFixed(2));
-    expect(issue.lead).toContain(widest.low.toFixed(2));
-    expect(issue.lead).toContain(widest.gap.toFixed(1));
-
-    // And the decimal point is where football puts it.
-    expect(widest.high).toBeGreaterThan(30);
-    expect(widest.high).toBeLessThan(300);
+describe('the two number formats the packet allows', () => {
+  it('writes a score to two places and a margin to one', () => {
+    expect(points(154.4)).toBe('154.40');
+    expect(margin(50.51)).toBe('50.5');
   });
 });

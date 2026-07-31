@@ -94,7 +94,12 @@ const NOT_A_MANAGER: ReadonlySet<string> = new Set([...houseWords(), 'Tony', 'To
 
 const CAPITALISED = /\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?\b/g;
 
-function scan(text: string, packet: FactPacket, into: Violation[]): void {
+function scan(
+  text: string,
+  packet: FactPacket,
+  into: Violation[],
+  ordinary: ReadonlySet<string> = NOT_A_MANAGER,
+): void {
   if (text === '') return;
 
   for (const match of text.matchAll(NUMBER)) {
@@ -115,7 +120,7 @@ function scan(text: string, packet: FactPacket, into: Violation[]): void {
   for (const match of text.matchAll(CAPITALISED)) {
     const value = match[0];
     if (packet.allowedNames.includes(value)) continue;
-    if (NOT_A_MANAGER.has(value)) continue;
+    if (ordinary.has(value)) continue;
     if (nameParts.has(value)) continue;
     into.push({ kind: 'unknown-name', value });
   }
@@ -146,22 +151,100 @@ function scan(text: string, packet: FactPacket, into: Violation[]): void {
  * copy, contain no facts, and saying *"nothing happened that week worth the
  * ink"* is the shop telling the truth.
  */
+/**
+ * Every piece of prose an issue puts in front of a reader.
+ *
+ * Enumerated in one place so *"the validator checks the whole page"* is a fact
+ * about this list rather than about whoever last edited `validateEdition`. A
+ * field added to `Edition` and forgotten here would be unchecked prose on a
+ * published surface — which is the shape of every validation failure this
+ * project has shipped, in every subsystem, without exception.
+ *
+ * The scoreboard is included. Two numbers off a stored row assert nothing on
+ * their own, but a name beside them does: a results table naming somebody who may
+ * not be published is exactly the leak the boundary exists to stop, and it is the
+ * surface nobody thinks to check.
+ */
+function prose(edition: Edition): readonly string[] {
+  return [
+    edition.dateline,
+    edition.headline,
+    edition.deck ?? '',
+    edition.body,
+    edition.column,
+    ...edition.secondary.flatMap((story) => [story.headline, story.deck ?? '', story.body]),
+    ...edition.scoreboard.flatMap((row) => [
+      row.leftName,
+      row.leftPoints,
+      row.rightName,
+      row.rightPoints,
+    ]),
+  ];
+}
+
+/**
+ * Check any prose against a packet — not only a newspaper.
+ *
+ * `MANDATE §9` applies to every surface, not to the one that happens to look
+ * like journalism. When Tony mentions a result at the counter he is making the
+ * same class of claim the Slice makes, so he goes through the same gate: a line
+ * that changed a name, a score, a margin or a tier is refused and he says
+ * nothing about football instead.
+ *
+ * Sharing the validator rather than writing a second one is the point. A second
+ * one would drift, and it would drift on the quieter surface — the one nobody
+ * re-reads — which is where an unchecked claim does its damage.
+ */
+export function validateProse(
+  texts: readonly string[],
+  packet: FactPacket,
+  /**
+   * The curated source the prose was rendered from, when there is one.
+   *
+   * A template contains `{winner}`, not `Brandon` — a proper noun can only enter
+   * a rendered line through **substitution**, so every capitalised word already
+   * present in the template is curated prose by construction. Deriving the
+   * ordinary-word set from it is the same rule `houseWords()` applies to the
+   * Slice's own tables (*if the renderer can print it, the checker has to be able
+   * to see it*), extended to a surface whose curated strings live in a Markdown
+   * file rather than in a TypeScript constant.
+   *
+   * Without this, `He is not going to pretend that was a game` is refused because
+   * `He` is a capitalised word the Slice's headlines never use — which is the
+   * validator being right about its own vocabulary and wrong about this one.
+   */
+  templates: readonly string[] = [],
+): Verdict {
+  const ordinary = new Set(NOT_A_MANAGER);
+  for (const template of templates) {
+    for (const match of template.matchAll(/\b[A-Z][a-z]+\b/g)) ordinary.add(match[0]);
+  }
+
+  const violations: Violation[] = [];
+  for (const text of texts) scan(text, packet, violations, ordinary);
+  return { publishable: violations.length === 0, violations };
+}
+
 export function validateEdition(edition: Edition, packet: FactPacket): Verdict {
   const violations: Violation[] = [];
 
   if (edition.nothingToPrint !== null) {
     // Still scanned for banned terms and quotes — house copy is copy — but the
-    // week's numbers are not in play because there are none.
-    for (const { pattern, why } of BANNED) {
-      const found = pattern.exec(edition.nothingToPrint);
-      if (found !== null) violations.push({ kind: 'banned-term', value: found[0], why });
+    // week's numbers are not in play because there are none. The dateline and
+    // the column are scanned too: both print on an empty rack.
+    for (const text of [edition.nothingToPrint, edition.dateline, edition.column]) {
+      for (const { pattern, why } of BANNED) {
+        const found = pattern.exec(text);
+        if (found !== null) violations.push({ kind: 'banned-term', value: found[0], why });
+      }
+      for (const match of text.matchAll(/["“”]/g)) {
+        violations.push({ kind: 'invented-quote', value: match[0] });
+      }
     }
     return { publishable: violations.length === 0, violations };
   }
 
-  scan(edition.headline, packet, violations);
-  scan(edition.lead, packet, violations);
-  for (const line of edition.alsoRan) scan(line, packet, violations);
+  for (const text of prose(edition)) scan(text, packet, violations);
 
   return { publishable: violations.length === 0, violations };
 }
