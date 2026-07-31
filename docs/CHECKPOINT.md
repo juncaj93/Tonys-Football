@@ -125,9 +125,16 @@ stats aside drew a fresh line on every render. That fix was per-cause; the sympt
 somewhere else, which suggests the parlor has a class of non-determinism rather than one instance of
 it.
 
-Recorded as **visual debt 6** with what is known and what would find it: a run against the
-non-minified React build, because minified `#418` names only *"HTML"*. **It is not to be dismissed as
-flaky** — the gate is working, and the mismatch is on the first screen a real manager sees.
+Recorded as **visual debt 6**, with a hunt already run and **everything it ruled out written down** —
+six parlor round-trips in dev mode where React names the diffing element, the driver's exact first
+eight states from a fresh sign-in in dev, the same eight states three times on a **production build
+against a freshly reset database**, and a source audit of every `window` / `sessionStorage` /
+`matchMedia` call in the parlor's client components. All clean; all of them are inside `useEffect`.
+
+**It is not to be dismissed as flaky** — the gate is working, and the mismatch is on the first screen
+a real manager sees. The most promising untried lead is in the debt entry: the greeting Tony draws
+varies run to run, CI gets a fresh database every run and local runs usually do not, so *which line
+was drawn* is the most obvious difference between a red run and a green one.
 
 ### The next executable task, in order
 
