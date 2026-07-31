@@ -14,7 +14,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 | Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
 |---|---|---|---|---|
-| **M3 — character identity** | `TECH_LEAD_IMPLEMENTING` | `claude/tonys-pizza-tech-lead-s11qsw` · **PR #48** | `5093f91` | Nothing. The vertical slice is complete: data, compositor, service, surface, previews, demo states, gates |
+| **M3 — character identity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #48 | Nothing. The vertical slice is complete: data, compositor, service, surface, previews, demo states, gates. Wearable *sources* are a later milestone and none is approved |
 | **Back Hall as a room** | `QUEUED_NOT_ACTIVE` | — | — | **The next executable slice.** Unblocked by the 2026-07-31 ruling; see below |
 | **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
@@ -29,8 +29,12 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ## Where the product is — 2026-07-31 (fourth session)
 
-**PR #47 merged** (`30da0bc`, checkpoint correction). Work below is on
-`claude/tonys-pizza-tech-lead-s11qsw`, open as **PR #48**.
+**PR #47 and #48 are merged.** `main` is **`b0ce940`** — both gates green on real runners, and the
+merge deployed. The integrated head was re-verified locally after the merge: 907 tests, 56 files.
+
+**Not verified in a browser.** The sandbox proxy denies CONNECT to `*.vercel.app`. Local evidence is
+a production build on a fresh database and 58 visual states × 3 widths; hosted evidence is a green
+GitHub-side deploy and nothing more.
 
 ### The wearables contradiction is settled
 
@@ -99,25 +103,48 @@ something about to be discarded.
 
 | | |
 |---|---|
-| `main` | `30da0bc` — PR #47 merged |
-| Branch / PR | `claude/tonys-pizza-tech-lead-s11qsw` · **PR #48** |
+| `main` | **`b0ce940`** — PR #48 merged |
+| Branch | `claude/tonys-pizza-tech-lead-s11qsw`, restarted from `main` after the merge |
 | `npm run check` | green — **907 tests across 56 files** (was 867 / 53) |
 | `npm run visual:qa` | green — **58 states × 3 widths**, production build, fresh database (was 49) |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
 
+### A hydration race the gate caught on a PR with no code in it
+
+**PR #49 is checkpoint-only and its screenshot gate failed** on React #418 — a hydration mismatch —
+at 390 during the `receipt` state. The identical tree passed on #48's run and on a full local sweep,
+so it is a **race**, and re-running until green is the wrong response.
+
+Two facts settle attribution: `receipt` runs at **position 8**, before every state M3 added, and every
+`window` / `sessionStorage` / `matchMedia` call in the parlor's client components is already inside
+`useEffect`. Nothing in #48 is upstream of it.
+
+**This is the second instance of the same shape.** #46 found one against `demo-collection-empty` — a
+page with nothing to do with the counter — because signing in redirects through the parlor and the
+stats aside drew a fresh line on every render. That fix was per-cause; the symptom has returned from
+somewhere else, which suggests the parlor has a class of non-determinism rather than one instance of
+it.
+
+Recorded as **visual debt 6** with what is known and what would find it: a run against the
+non-minified React build, because minified `#418` names only *"HTML"*. **It is not to be dismissed as
+flaky** — the gate is working, and the mismatch is on the first screen a real manager sees.
+
 ### The next executable task, in order
 
-1. **The Back Hall as a room** — visual debt 5, and now unblocked. The commissioner's ruling is
+1. **The parlor's hydration race** — visual debt 6. Small, and it is a correctness defect on the
+   product's most-seen surface. Do it before the Back Hall, because the Back Hall adds a route rather
+   than removing a source of doubt from the one that already exists.
+2. **The Back Hall as a room** — visual debt 5, and now unblocked. The commissioner's ruling is
    explicit: *"Do not block all Back Hall development on final art… use deliberate in-world
    placeholder architecture."* **M3 has just shown what that looks like** — a drawn stand-in at the
    right size, as geometry data, rather than a sign — so the old "building it against placeholders
    means building it twice" reasoning no longer holds. `docs/BACK_HALL_BOUNDARY.md` carries the route
    contracts, the flag-based state boundary (nobody *earns* a hallway), the five asset slots and the
    five demo states, all as flag combinations needing no database writes.
-2. **The casino foundation** — one game, server-authoritative, after the Back Hall.
-3. **Tony's Line, bounties, the chalkboard prediction** — all read the fact packet that exists.
-4. **The commissioner review queue** for live Slice publication.
-5. **Batch B**, whenever the PNGs arrive. One command.
+3. **The casino foundation** — one game, server-authoritative, after the Back Hall.
+4. **Tony's Line, bounties, the chalkboard prediction** — all read the fact packet that exists.
+5. **The commissioner review queue** for live Slice publication.
+6. **Batch B**, whenever the PNGs arrive. One command.
 
 ### What this session did not start, and why
 
