@@ -39,7 +39,40 @@ Recorded so the next session starts from evidence instead of repeating the hunt.
 
 **The repro harness**, worth rebuilding rather than guessing at: one Playwright context, sign in as Alex at `/door` by name, then walk the eight states above through the driver's own helpers, collecting `console` and `pageerror` events matching `/hydrat|did not match|#418|server rendered/i`. Attribute each to the state in flight.
 
-**The most promising untried lead:** the content Tony says differs run to run — a greeting is drawn at random from the eligible set on the first visit of a day, and CI gets a fresh database every run while local runs often do not. That makes *which line is drawn* the most obvious thing that varies between a red run and a green one, and it is worth pinning the drawn line and replaying it rather than hunting the race again.
+### The diagnosis — a non-deterministic server component
+
+Following the lead above found it, and it is not a rendering detail.
+
+**`lib/content/select.ts:116` is `const random = input.random ?? Math.random`**, and the parlor's
+server component calls it without supplying one. So **the greeting is drawn with `Math.random()`
+inside an async server component**.
+
+That is the documented React hazard: a server component may be **re-invoked** — replayed after a
+suspended `await` resolves — and it must therefore be deterministic. When the replay happens, the
+second draw returns a *different greeting*, so the streamed HTML and the flight payload carry
+different text, and React reports a hydration mismatch.
+
+Every observed property follows from it:
+
+| Observed | Explained by |
+|---|---|
+| Intermittent | It needs a replay, which depends on how the awaits resolve |
+| Attributed to the parlor, from unrelated states | Signing in redirects through `/`, exactly as #46 found |
+| Far likelier in CI than locally | The draw is only random on the **first visit of a day**; after that the usage log pins the line. CI gets a **fresh database every run**, so every run is a first visit |
+| No `window` / storage / effect cause | There is none. The divergence is on the server, not the client |
+
+**The fix is a seed, not a cache.** The draw must be deterministic per `(manager, day)` so a replay
+reproduces the same line — which is also what the standing constraint has always required:
+*"randomness only via `lib/counter/rng.ts`"* (`docs/CHECKPOINT.md`). Content selection never adopted
+it, and **nothing enforces it**: the injected clock has a lint rule and the injected RNG does not.
+That asymmetry is why this drifted, and it is worth closing at the same time — otherwise the next
+`Math.random()` in a server component arrives the same way.
+
+`statsAsideFor` draws through the same helper and has the same defect.
+
+**Not fixed here.** It changes which line a manager is greeted with, so it needs its own tests
+(same seed → same line; a replay → the same line; the usage log still pins subsequent visits) and its
+own gated run.
 | 1 | `/counter/collection`, empty state | Roughly two screens of scroll for a manager who owns nothing. Now photographed (`demo-collection-empty`) and the pacing is defensible — the earlier note's "eight screens" was an estimate, not a measurement. Left open only as a question of *rhythm*, not of legibility. | The information is right and now readable; changing the length touches `18 §4`'s ruling that the whole catalog is shown. |
 | 2 | Reveal plate, all widths | The collectible is 46 units against a plate that is now six or seven rows tall. It is on the plate's axis and standing on it, so it no longer reads as accidental — but the *caption still outweighs the thing it captions*. | Waiting on real collectible art. All 24 items are `art_status: placeholder`, so tuning focal weight now means tuning to a tagged parcel that is about to be replaced by 24 different silhouettes. |
 | 3 | Tony's dialogue | The order pad landed in #30 and reads as Tony's. The *timing* of its arrival and dismissal has never been reviewed against the reveal's timing — two transient things that must never compete (`MANDATE §6`). | Needs the reveal states, which only became photographable in #36. Now unblocked. |

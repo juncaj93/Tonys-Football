@@ -131,16 +131,35 @@ eight states from a fresh sign-in in dev, the same eight states three times on a
 against a freshly reset database**, and a source audit of every `window` / `sessionStorage` /
 `matchMedia` call in the parlor's client components. All clean; all of them are inside `useEffect`.
 
-**It is not to be dismissed as flaky** — the gate is working, and the mismatch is on the first screen
-a real manager sees. The most promising untried lead is in the debt entry: the greeting Tony draws
-varies run to run, CI gets a fresh database every run and local runs usually do not, so *which line
-was drawn* is the most obvious difference between a red run and a green one.
+**Then the lead paid off, and it is diagnosed rather than open.**
+
+`lib/content/select.ts:116` is `const random = input.random ?? Math.random`, and the parlor's server
+component supplies none — so **the greeting is drawn with `Math.random()` inside an async server
+component**. A server component may be *replayed* after a suspended await resolves, and it must
+therefore be deterministic; when the replay happens the second draw returns a different line, the
+streamed HTML and the flight payload disagree, and React reports a hydration mismatch.
+
+Every observed property follows: intermittent because it needs a replay · attributed to the parlor
+from unrelated states because signing in redirects through `/` · far likelier in CI because the draw
+is only random on the **first visit of a day** and CI gets a fresh database every run.
+
+**The fix is a seed, not a cache** — deterministic per `(manager, day)`, which is what the standing
+constraint *"randomness only via `lib/counter/rng.ts`"* already required. Content selection never
+adopted it and **nothing enforces it**: the injected clock has a lint rule, the injected RNG does not.
+Worth closing that asymmetry at the same time, or the next `Math.random()` in a server component
+arrives the same way. `statsAsideFor` shares the helper and the defect.
+
+**Deliberately not fixed in this session.** It changes which line a manager is greeted with, so it
+needs its own tests — same seed → same line, a replay → the same line, the usage log still pinning
+later visits — and its own gated run, which the Actions-minute conservation defers.
 
 ### The next executable task, in order
 
-1. **The parlor's hydration race** — visual debt 6. Small, and it is a correctness defect on the
-   product's most-seen surface. Do it before the Back Hall, because the Back Hall adds a route rather
-   than removing a source of doubt from the one that already exists.
+1. **Seed the content draw** — visual debt 6, now **diagnosed**: `Math.random()` in an async server
+   component. Give `selectContent` a seed derived from `(manager, Eastern day)`, do the same for
+   `statsAsideFor`, and add the lint rule that the injected RNG has always been owed. Do it before the
+   Back Hall: it is a correctness defect on the product's most-seen surface, and it is now a known
+   change rather than a hunt.
 2. **The Back Hall as a room** — visual debt 5, and now unblocked. The commissioner's ruling is
    explicit: *"Do not block all Back Hall development on final art… use deliberate in-world
    placeholder architecture."* **M3 has just shown what that looks like** — a drawn stand-in at the
