@@ -1,7 +1,8 @@
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
-import { readCounterGreetings } from '@/lib/content/seed';
+import { greetingFor } from '@/lib/content/greeting';
+import { readCounterGreetings, seedCounterGreetings } from '@/lib/content/seed';
 import { closePool, getDb } from '@/lib/db';
 import { seasonMemberships, seasons, users } from '@/lib/db/schema';
 import { resetDatabase } from '@/lib/db/test-helpers';
@@ -86,6 +87,62 @@ describe.skipIf(!hasDatabase)('what is true right now', () => {
 
     // Never both at once: the two describe different people.
     expect(await momentTags(db!, nick.id)).toEqual(new Set([BOX_WAITING]));
+  });
+
+  /**
+   * The day-cache must not outlive the moment.
+   *
+   * The defect this pins was found by **walking the loop**, not by any test: a
+   * new manager was greeted with "New season, new box — Tony does not charge for
+   * the first one", opened the box, came back to the room, and was told it
+   * again. `greetingFor` repeats the day's line rather than drawing a fresh one
+   * every page load, which is right for a standing fact about a season and wrong
+   * for a fact that was true thirty seconds ago.
+   *
+   * Driven end to end — a real grant, a real open, and the real greeting service
+   * either side of it — because the bug lived precisely in the seam between two
+   * things that were each correct on their own.
+   */
+  it('stops repeating the day’s welcome line once the box is opened', async () => {
+    const nick = await manager();
+    await seedCounterGreetings(db!, readCounterGreetings());
+    await grantBox(db!, { userId: nick.id, grantKey: 'welcome', source: 'seed' });
+
+    /*
+     * A real-sized league, because the selector ranks by **audience**.
+     *
+     * With `leagueTags: []` every line has an audience of zero, the
+     * smallest-audience bucket is "all of them", and an untagged fallback wins —
+     * which is a property of the empty array, not of the product. Ten sets is
+     * what the parlor page actually passes, and against it a `first_welcome_box`
+     * line is true of nobody else while the untagged lines are true of ten.
+     */
+    const league = Array.from({ length: 10 }, () => new Set<string>());
+
+    const greetWith = async (tags: Set<string>) =>
+      greetingFor(db!, {
+        userId: nick.id,
+        displayName: 'Nick',
+        tags,
+        leagueTags: league,
+        daysUntilKickoff: 42,
+        random: () => 0,
+      });
+
+    const first = await greetWith(await momentTags(db!, nick.id));
+    expect(first?.entryKey, 'should have drawn a welcome line').toMatch(/^A2[4-8]$/);
+
+    const box = await ownedBox(db!, nick.id);
+    setFixedRoll(0);
+    await openBox(db!, { userId: nick.id, boxId: box!.id });
+    clearRandomSource();
+
+    // Same Eastern day, so the cache would hand back the same entry — but the
+    // tag that selected it is gone, and the sentence is now false.
+    const second = await greetWith(await momentTags(db!, nick.id));
+
+    expect(second?.entryKey).not.toBe(first?.entryKey);
+    expect(second?.text ?? '').not.toMatch(/first one/i);
   });
 
   afterAll(() => {

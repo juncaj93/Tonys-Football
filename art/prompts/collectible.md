@@ -1,8 +1,24 @@
 # Prompt Template — Collectibles
 
-**Family:** `collectible` · **Canvas:** 32 × 32
+**Family:** `collectible` · **Canvas:** 46 × 46 · **Anchor:** bottom-centre
 
-One source asset serves three contexts: inventory thumbnail (16px), display case (32px), and reveal (96px). **Readability at 16px is the binding constraint** — design for the smallest, not the largest.
+> **Corrected 2026-07-31.** This file said **32 × 32**, and named three display
+> sizes — 16px, 32px, 96px — that no surface in the product uses. Both numbers
+> predate the implemented slots. A source drawn at 32 is resampled into the
+> reveal at **1.4375×**, which is fractional and forbidden. `ART_SPEC §2.3` has
+> the measurement; `lib/assets/art-slots.test.ts` fails the build if the registry
+> drifts from it again.
+
+One source serves three surfaces, at sizes measured off the running product:
+
+| Surface | Drawn at | Ratio to the 46 × 46 source |
+|---|---|---|
+| Reveal, on the tray | 46 room units — **56.06 CSS px** at 390 | 1 art pixel = 1 room unit |
+| Collection shelf | **46 CSS px** | exactly 1 : 1 |
+| Showcase, the manager's own | **56 CSS px** | 1.217× |
+| Showcase, a league row | **23 CSS px** | exactly 0.5× |
+
+**Readability at 23px is the binding constraint** — design for the smallest, not the largest.
 
 Twenty-four items ship in the launch catalog. Twelve receive finished art at launch; the rest ship as `placeholder_pizza_box` — an item still in its box, which is thematically perfect rather than obviously unfinished — and upgrade on any Tuesday without a code change.
 
@@ -22,8 +38,10 @@ Twenty-four items ship in the launch catalog. Twelve receive finished art at lau
 SUBJECT TYPE: A single object, isolated, presented straight-on as if photographed for a
 catalogue. One object only. No scene, no setting, no hands holding it, no surface beneath it.
 
-COMPOSITION: Centered, filling most of the frame with a small even margin. The object's
-most identifiable angle. No dramatic foreshortening.
+COMPOSITION: The object RESTS ON THE BOTTOM EDGE of the frame, horizontally centered.
+Its lowest pixel is the bottom row. Empty space goes ABOVE it, never below and never
+split evenly. A short object is short, not floating. Horizontally it is centered with a
+small even margin. The object's most identifiable angle. No dramatic foreshortening.
 
 SILHOUETTE: The object must be identifiable from its outline alone. If filled with a
 single flat color it should still be recognizable. This is the primary requirement —
@@ -75,7 +93,9 @@ rarity framing is composited separately at runtime.
 
 `collectible_pizza_cutter` (rolling cutter, wooden handle) · `collectible_parmesan_shaker` (glass shaker, perforated metal top) · `collectible_napkin_dispenser` (chrome countertop dispenser with napkins showing) · `collectible_ketchup_bottle` (red plastic squeeze bottle, unbranded) · `collectible_paper_menu` (single folded paper menu, illegible text shapes) · `collectible_booth_cushion` (red vinyl booth cushion, buttoned, slightly split seam) · `collectible_arcade_token` (brass token with an abstract embossed design, no lettering) · `collectible_receipt_spike` (metal spike on a weighted base, blank receipts impaled) · `collectible_coffee_mug` (thick white diner mug with a colored stripe) · `collectible_checkered_cloth` (folded red-and-white checkered tablecloth)
 
-### System item
+### System item — **not one of the 24 collectibles**
+
+Listed here because it shares the family's style, not because it is in the catalog. The launch catalog is 10 common · 8 rare · 4 epic · 2 legendary, and a championship ring is none of them — it is a season award. Do not count it toward a collectible batch.
 
 | Slug | Subject |
 |---|---|
@@ -92,7 +112,8 @@ rarity framing is composited separately at runtime.
 
 ## Acceptance
 
-- Identifiable at **16px** — test this before anything else
+- Identifiable at **23px** — test this before anything else
+- **Sits on the bottom edge.** Nothing floats; the slot is bottom-centre anchored
 - Silhouette test passes
 - Reads correctly at all three display sizes from one source
 - No rarity framing baked into the asset

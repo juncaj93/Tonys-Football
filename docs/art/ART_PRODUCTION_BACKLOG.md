@@ -59,22 +59,41 @@ Geometry, measured, in `lib/parlor/objects.ts`: `TRAY_SURFACE [156, 284, 94, 25]
 
 ## Batch B — the first collectibles
 
-The catalog is 24 items and the set list is already fixed in the registry. Batch B is **eight** of them, chosen to prove every treatment rather than to fill the shelf:
+**The brief is now [`BATCH_B_COLLECTIBLES_HANDOFF.md`](BATCH_B_COLLECTIBLES_HANDOFF.md)** — paste-ready, with a measured per-item brief for all eight. This section is the index into it.
 
-| Tier | Item | Why this one |
+The catalog is 24 items and the set list is fixed in the registry. Batch B is **eight** of them, chosen to prove every treatment rather than to fill the shelf:
+
+| Tier | Slug | Why this one |
 |---|---|---|
-| common | `collectible_arcade_token` | The smallest silhouette in the set — proves legibility at the floor. |
-| common | `collectible_diner_coffee_mug` | An everyday object with a handle; proves alpha around a hole. |
-| rare | `collectible_can_whipped_cream` | **The commissioner's named example.** Tall, cylindrical, a nozzle. |
-| rare | `collectible_receipt_spike` | Thin and vertical — the hardest thing to keep readable at 46 units. |
-| epic | `collectible_burn_barrel` | Wide and heavy; proves the epic treatment on a dark object. |
-| legendary | `collectible_championship_ring` | Tiny and bright; proves gold reads without a baked glow. |
-| wearable | one hat or apron | M3 needs a wearable that is also a collectible. |
-| junk | one deliberately worthless item | The set's humour depends on it. |
+| common | `collectible_arcade_token` | The smallest silhouette. Most likely to be drawn floating or oversized. |
+| common | `collectible_coffee_mug` | Visually simple, with a real hole in the alpha (the handle) |
+| rare | `collectible_singing_fish` | Humorous junk, and the widest silhouette |
+| rare | `collectible_reddiwip` | **The commissioner's named reference piece.** Tall and slim. |
+| epic | `collectible_arcade_cabinet` | The detail-budget ceiling |
+| epic | `collectible_neon_tony_sign` | Emissive material without a baked rarity glow |
+| legendary | `collectible_signed_jersey_legend` | Wearable candidate, and the frame trap |
+| legendary | `collectible_bapple_tree` | Canon humour, and the only organic silhouette |
 
-**Size: 46 × 46**, the reveal slot, bottom-centre anchor. **Corrected 2026-07-30:** every collectible was registered at `32x32` while the slot it draws into is 46 — a 1.4375× resample, fractional, and a breach of rule 4 above. Nothing looked wrong because the stand-in is CSS and CSS does not care; it would have become visible only after twenty-four sprites were drawn at the wrong size. The registry now says `46x46` and `lib/assets/art-slots.test.ts` fails the build if it drifts. The Collection and Showcase draw at 46 and 23 — native and a whole division — for the same reason. The same file serves the Collection grid and the Showcase — both scale it by a whole number, so one source is enough. An item that does not fill 46 × 46 should be **short, not floating**: bottom-aligned with empty space above.
+### The list this replaces named four slugs that do not exist
 
-`collectible_can_whipped_cream` is the reference piece. Exact perspective, crop and anchor are recorded here once the first one is measured against the real reveal slot rather than described in advance — the Technical Lead owes that measurement before Batch B is generated, not after.
+Recorded because generating against it would have produced eight files `art:process` refuses by design, after they were drawn:
+
+| Was listed | Reality |
+|---|---|
+| `collectible_diner_coffee_mug` | The slug is `collectible_coffee_mug` |
+| `collectible_can_whipped_cream` | The slug is `collectible_reddiwip` |
+| `collectible_championship_ring` | **Not a collectible.** `item_championship_ring` is a season award in another family; the two legendaries are the framed jersey and the Bapple Tree. |
+| "one hat or apron" · "one deliberately worthless item" | Never named. No wearable exists in the 24 — the framed jersey is the only future-wearable candidate. |
+
+**Size: 46 × 46**, the reveal slot, bottom-centre anchor. **Corrected 2026-07-30:** every collectible had been registered at `32x32` while the slot it draws into is 46 — a 1.4375× resample, fractional, and a breach of the pipeline's one-pixel-one-unit rule. Nothing looked wrong because the stand-in is CSS and CSS does not care; it would have become visible only after twenty-four sprites were drawn at the wrong size. `lib/assets/art-slots.test.ts` fails the build if it drifts.
+
+**Corrected again 2026-07-31:** `ART_SPEC §2` and `art/prompts/collectible.md` were *still* carrying 32 × 32, and the prompt template still said "centered in the frame" — which floats every short object in a bottom-anchored slot — and named 16px as the readability target when the smallest real surface is 23px. All three are fixed. The measured display sizes are in the handoff.
+
+An item that does not fill 46 × 46 should be **short, not floating**: bottom-aligned with the empty space above it.
+
+Geometry, measured, in `lib/parlor/objects.ts`: `TRAY_SURFACE [156, 284, 94, 25]` · `TRAY_BOX [181, 276, 44, 30]` · `TRAY_REVEAL [137, 262, 46, 46]`.
+
+**Validation is mechanical.** `npm run art:validate` measures every delivered PNG against the slot — canvas, alpha hardness, palette closure, the bottom-row contact point, horizontal centring, the landing-overshoot margin, and whether the silhouette survives being halved for the Showcase row. Each rule is tested against a deliberately-broken image in `scripts/validate-collectible.test.ts`.
 
 ---
 
