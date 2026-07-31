@@ -24,7 +24,7 @@ Visual QA finds something that is genuinely worth improving and genuinely not wo
 | | Where | What | Why it waited |
 |---|---|---|---|
 | 1 | `/counter/collection`, empty state | Twenty-four unowned rows is roughly eight screens of scrolling for a manager who owns nothing. The shelf is correct — `18 §4` shows the whole catalog and set progress is a statement about the gap — but the *pacing* on day one is not reviewed. | The information is right; only the rhythm is in question, and changing it touches the ruling about showing the whole set. |
-| 2 | Reveal plate, 360 | The collectible sits small and to the right of a plate that is now four lines tall. Legible, and not yet *composed* — the item should dominate more than its caption does. | Waiting on real collectible art. Judging focal weight against a placeholder carton means tuning to a shape that is about to change. |
+| 2 | Reveal plate, all widths | The collectible is 46 units against a plate that is now six or seven rows tall. It is on the plate's axis and standing on it, so it no longer reads as accidental — but the *caption still outweighs the thing it captions*. | Waiting on real collectible art. All 24 items are `art_status: placeholder`, so tuning focal weight now means tuning to a tagged parcel that is about to be replaced by 24 different silhouettes. |
 | 3 | `/counter`, all widths | Three stacked cream panels read as a list of cards rather than as a counter. Less generic than it was, still not furniture. | The Collection and Showcase were the louder defects and shipped first. This is the next one down. |
 | 4 | Tier rail, `/counter/collection` | `2/10` and the tier word are both display type at 10–13px. Legible and slightly cramped; the rail could breathe. | Cosmetic. The rail replaced two blocks and already bought a screen back. |
 | 5 | Tony's dialogue | The order pad landed in #30 and reads as Tony's. The *timing* of its arrival and dismissal has never been reviewed against the reveal's timing — two transient things that must never compete (`MANDATE §6`). | Needs the reveal states, which only became photographable in #36. Now unblocked. |
@@ -41,3 +41,6 @@ Visual QA finds something that is genuinely worth improving and genuinely not wo
 | — | `ReturnPlate` labelled "back to the counter" while on `/counter` | #35 |
 | — | The reveal ended at a label — no meaning, no set progress, no way to want another | #38 |
 | — | The loop ended in a silent room: bare tray, no price on anything, nothing to do next | #38 |
+| — | The collectible stood on the right-hand quarter of its own nameplate — the tray's centre is 43 units right of the room's, and only a screenshot showed it | #40, and now pinned in `objects.test.ts` |
+| — | The offer was `ANOTHER — 50` beside a link: a price next to a button, which is a store | #40 — Tony says it |
+| — | Nine `reveal-*` states photographed a calm room and the run reported **passed**; the rarity-contrast gate was measuring nothing | #40 — the server was missing `DEMO_FIXTURES`, and `checkRevealPresent` now fails an empty reveal |

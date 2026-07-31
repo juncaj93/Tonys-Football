@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import { RARITIES } from '@/lib/counter/catalog';
+import { renderTemplate } from '@/lib/content/select';
+import { readBoxOffers } from '@/lib/content/seed';
+import { PROVISIONAL_ECONOMY } from '@/lib/counter/tokens';
 
-import { previewReveal } from './preview';
+import { PREVIEW_STAGES, previewReveal } from './preview';
 
 /**
  * The preview reveal, and mostly what it refuses.
@@ -54,6 +57,55 @@ describe('the preview reveal', () => {
       expect((payload?.name ?? '').length).toBeGreaterThan(2);
       expect(payload?.replayed).toBe(false);
     }
+  });
+
+  /**
+   * The preview's offer lines are literals, so that a review-only screenshot
+   * does not put a filesystem read on the parlor's hot path. That has one way to
+   * go wrong — an approved line is edited and nobody remembers these copies —
+   * and this is the test that makes it a build failure instead of a stale
+   * screenshot nobody questions.
+   */
+  it('quotes every approved offer line exactly, or fails', () => {
+    const approved = readBoxOffers();
+
+    for (const stage of PREVIEW_STAGES) {
+      const payload = previewReveal('rare', ALLOWED, stage);
+      const offer = payload?.offer ?? null;
+
+      if (offer === null) continue;
+
+      const entry = approved.find((candidate) => candidate.key === offer.entryKey);
+      expect(entry, `${stage} names ${offer.entryKey}, which is not in the file`).toBeDefined();
+
+      expect(offer.line, stage).toBe(
+        renderTemplate(entry!.templateText, {
+          price: String(PROVISIONAL_ECONOMY.standardBoxPriceTokens),
+        }),
+      );
+      expect(offer.price, stage).toBe(PROVISIONAL_ECONOMY.standardBoxPriceTokens);
+    }
+  });
+
+  it('reaches every composition the plate has', () => {
+    // The point of the parameter. Each of these renders a different pair of
+    // lines at the bottom of the plate, and before it existed only `mid` had
+    // ever been looked at.
+    expect(previewReveal('rare', ALLOWED, 'first')?.distinct).toBe(1);
+    expect(previewReveal('rare', ALLOWED, 'mid')?.distinct).toBe(7);
+    expect(previewReveal('rare', ALLOWED, 'complete')?.distinct).toBe(
+      previewReveal('rare', ALLOWED, 'complete')?.total,
+    );
+
+    // The one that matters most: no offer at all. Not a disabled one.
+    expect(previewReveal('rare', ALLOWED, 'broke')?.offer).toBeNull();
+  });
+
+  it('falls back to the middle rather than blanking the room', () => {
+    // A typo in the second parameter must not cost the caller the rarity they
+    // did ask for correctly.
+    expect(previewReveal('rare', ALLOWED, 'FIRST')).toEqual(previewReveal('rare', ALLOWED));
+    expect(previewReveal('rare', ALLOWED, ['first'])).toEqual(previewReveal('rare', ALLOWED));
   });
 
   it('shows the same item at every width, so screenshots compare', () => {

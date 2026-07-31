@@ -120,10 +120,15 @@ type StateName =
   | 'demo-counter-broke'
   | 'demo-showcase-chosen'
   | 'demo-pull-while-broke'
+  | 'demo-box-waiting'
+  | 'demo-welcome-box'
   | 'reveal-common'
   | 'reveal-rare'
   | 'reveal-epic'
-  | 'reveal-legendary';
+  | 'reveal-legendary'
+  | 'reveal-first-offer'
+  | 'reveal-complete-offer'
+  | 'reveal-no-offer';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -150,6 +155,14 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   // The reveal plate with **no** onward offer, because the tab cannot take it.
   // Every reveal screenshot before this was of somebody who could afford another.
   'demo-pull-while-broke': 'pull-while-broke',
+  // Tony's other approved line group: a box waiting for somebody who has
+  // opened one before.
+  'demo-box-waiting': 'box-waiting',
+  // And the first half of it: a manager who has never opened anything, being
+  // handed their first box by name. This is beat 3 of the commissioner's
+  // emotional sequence, and until the demo seats existed it could only be seen
+  // on a manager who had not yet been used for anything else.
+  'demo-welcome-box': 'welcome-box',
 };
 
 interface DemoApplied {
@@ -449,8 +462,31 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await home(page);
       await dismissTony(page);
       await page.getByRole('button', { name: /Open your pizza box/i }).click({ force: true });
+
+      /*
+       * **Nothing is said while the box is opening.**
+       *
+       * The commissioner's ruling lists "dialogue suppressed during the opening
+       * animation" as its own required state, and it is the one state that
+       * cannot be photographed usefully — a screenshot of a shuddering box is a
+       * screenshot of a box. So it is asserted instead, here, on the real path,
+       * partway through the real beat.
+       *
+       * It holds by construction: the plate and Tony's offer live inside
+       * `Revealed`, which only renders at `phase === 'reveal'`. The check is
+       * cheap and the construction is one `&&` away from changing.
+       */
+      await page.waitForTimeout(400);
+      if ((await page.locator('[role="status"]').count()) > 0) {
+        fail(
+          'reveal',
+          `@${String(page.viewportSize()?.width ?? 0)} the plate is on screen 400ms into ` +
+            `an 1100ms anticipation beat — Tony is talking over the box opening`,
+        );
+      }
+
       // The anticipation beat is 1100ms and the rise is 420ms.
-      await page.waitForTimeout(2200);
+      await page.waitForTimeout(1800);
       return;
 
     /*
@@ -493,6 +529,20 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
 
     /*
+     * Tony's returning-manager line, with the pad still up — the point is what
+     * he says and that it does not cover the box he is pointing at.
+     */
+    case 'demo-box-waiting':
+    /*
+     * Tony handing over the first box, with the pad still up — the point is
+     * what he says, that it names the box, and that it does not cover the lit
+     * box it is pointing at.
+     */
+    case 'demo-welcome-box':
+      await home(page);
+      return;
+
+    /*
      * The reveal, at each rarity, on purpose.
      *
      * These are the four states this driver could never produce. The roll
@@ -513,6 +563,35 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.goto(`${BASE}/?preview_reveal=${rarity}`, { waitUntil: 'networkidle' });
       await dismissTony(page);
       // Past the rise (420ms) and the plate's deliberate late arrival.
+      await page.waitForTimeout(1600);
+      return;
+    }
+
+    /*
+     * The plate's other three compositions, which differ only in the two lines
+     * under the item's name — and which is exactly why they need photographing
+     * separately. `mid` above is the one that had always been reviewed.
+     *
+     *   first    — their first collectible, and "first one was free"
+     *   complete — the whole shelf, and an offer that admits it is a spare
+     *   no-offer — the tab is short, so Tony says nothing about another box and
+     *              there is no second link. The absence *is* the state
+     *              (commissioner ruling: no disabled sales pitch), so it is
+     *              captured rather than assumed.
+     */
+    case 'reveal-first-offer':
+    case 'reveal-complete-offer':
+    case 'reveal-no-offer': {
+      const stage =
+        state === 'reveal-first-offer'
+          ? 'first'
+          : state === 'reveal-complete-offer'
+            ? 'complete'
+            : 'broke';
+      await page.goto(`${BASE}/?preview_reveal=rare&preview_stage=${stage}`, {
+        waitUntil: 'networkidle',
+      });
+      await dismissTony(page);
       await page.waitForTimeout(1600);
       return;
     }
@@ -569,6 +648,8 @@ const ALL_STATES: readonly StateName[] = [
   'demo-counter-broke',
   'demo-showcase-chosen',
   'demo-pull-while-broke',
+  'demo-box-waiting',
+  'demo-welcome-box',
   // The four rarity treatments, side by side and repeatable. Signed in as
   // whoever the previous demo state left us as, which is fine: the payload is
   // synthesised and does not depend on what that seat owns.
@@ -576,6 +657,11 @@ const ALL_STATES: readonly StateName[] = [
   'reveal-rare',
   'reveal-epic',
   'reveal-legendary',
+  // The plate's remaining compositions: the first pull, the finished shelf, and
+  // the one where Tony makes no offer at all.
+  'reveal-first-offer',
+  'reveal-complete-offer',
+  'reveal-no-offer',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
@@ -880,6 +966,80 @@ async function checkOnlyTheTrayGlows(page: Page, width: number): Promise<void> {
  * So it is arithmetic now. WCAG AA for normal text is 4.5:1, and these are small
  * uppercase display type where less than that is unreadable at arm's length.
  */
+/**
+ * A reveal state must contain a reveal.
+ *
+ * ## The false green this exists to stop
+ *
+ * The nine `reveal-*` states are all driven by `?preview_reveal=`, which the
+ * **server** resolves behind `assertDemoAllowed(process.env)`. The workflow set
+ * `DEMO_FIXTURES=1` on the *driver* step and not on the step that starts the
+ * server, so every one of those requests came back as an ordinary parlor page —
+ * and the driver photographed a calm room nine times, named the files
+ * `reveal-legendary` and friends, and reported **passed**.
+ *
+ * That is the worst failure this harness can have. A missing state is visible in
+ * the file list; a state that captured the wrong thing is a green tick on
+ * evidence nobody re-examines, and the rarity-contrast gate above was silently
+ * measuring nothing on the one surface it was written for.
+ *
+ * The workflow is fixed. This is here because a wiring fix protects one cause
+ * and this protects the *symptom* — an empty artifact fails the build whatever
+ * made it empty.
+ *
+ * ## What it asserts
+ *
+ * The plate, the rarity word, and — for the three composition states — whether
+ * Tony's offer is present or absent, which is the whole point of each of them.
+ * `reveal-no-offer` asserting the **absence** matters as much as the others:
+ * the commissioner's ruling is that an unaffordable box produces no pitch at
+ * all, and "no offer" and "no reveal" look identical in a file listing.
+ */
+async function checkRevealPresent(page: Page, width: number, state: string): Promise<void> {
+  const found = await page.evaluate(
+    'JSON.stringify((function () {' +
+      'var plate = document.querySelector(\'[role="status"]\');' +
+      'if (plate === null) return { plate: false, item: false, text: "" };' +
+      'return {' +
+      '  plate: true,' +
+      '  item: document.querySelector(".reveal-rise") !== null,' +
+      '  text: (plate.textContent || "").trim(),' +
+      '};' +
+      '})())',
+  );
+
+  const seen = JSON.parse(found as string) as { plate: boolean; item: boolean; text: string };
+
+  if (!seen.plate || !seen.item) {
+    fail(
+      'reveal',
+      `@${String(width)} ${state} photographed no reveal — the plate ` +
+        `${seen.plate ? 'is' : 'is not'} present and the collectible ` +
+        `${seen.item ? 'is' : 'is not'}. The server needs DEMO_FIXTURES=1.`,
+    );
+    return;
+  }
+
+  // Every reveal names its tier. Without this the state could "pass" on a plate
+  // that rendered but lost the signal the plate exists to carry.
+  if (!/rare|common|epic|legendary/i.test(seen.text)) {
+    fail('reveal', `@${String(width)} ${state} shows a plate with no rarity word`);
+  }
+
+  const offered = /Tony/.test(seen.text);
+
+  if (state === 'reveal-no-offer' && offered) {
+    fail(
+      'reveal',
+      `@${String(width)} ${state} makes an offer. An unaffordable box gets no pitch at all.`,
+    );
+  }
+
+  if ((state === 'reveal-first-offer' || state === 'reveal-complete-offer') && !offered) {
+    fail('reveal', `@${String(width)} ${state} shows no offer, which is what it is for`);
+  }
+}
+
 async function checkRarityContrast(page: Page, width: number, state: string): Promise<void> {
   /*
    * The page returns **strings**; every calculation happens in Node.
@@ -1070,6 +1230,12 @@ async function run(): Promise<void> {
             await checkTargets(page, width);
             await checkObjectMap(page, width);
             await checkOnlyTheTrayGlows(page, width);
+          }
+
+          // Every reveal state must actually contain a reveal. See the note on
+          // `checkRevealPresent` — this gate exists because nine of them did not.
+          if (state.startsWith('reveal-')) {
+            await checkRevealPresent(page, width, state);
           }
         }
 

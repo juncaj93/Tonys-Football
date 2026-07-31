@@ -48,6 +48,12 @@ export const DEMO_STATES: readonly DemoState[] = [
   { key: 'no-box', shows: 'an empty tray with tokens to spend', reach: 'arranged', route: '/' },
   { key: 'one-box', shows: 'one unopened standard box', reach: 'arranged', route: '/' },
   { key: 'many-boxes', shows: 'several unopened boxes', reach: 'arranged', route: '/' },
+  {
+    key: 'box-waiting',
+    shows: 'a returning manager with another box shut',
+    reach: 'arranged',
+    route: '/',
+  },
 
   { key: 'pull-common', shows: 'a common pull on the tray', reach: 'arranged', route: '/' },
   { key: 'pull-rare', shows: 'a rare pull on the tray', reach: 'arranged', route: '/' },

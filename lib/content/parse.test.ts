@@ -23,9 +23,12 @@ const byKey = new Map(entries.map((entry) => [entry.key, entry]));
 
 describe('the committed Counter Greetings', () => {
   it('reads every Group A line', () => {
-    expect(entries).toHaveLength(23);
+    // A1–A23 are the original Group A. A24–A31 are "The box on the counter",
+    // approved 2026-07-30 — five `first_welcome_box` variants and three
+    // `box_waiting` ones, so Tony hands over the box himself.
+    expect(entries).toHaveLength(31);
     expect(entries.map((entry) => entry.key)).toEqual(
-      Array.from({ length: 23 }, (_, index) => `A${String(index + 1)}`),
+      Array.from({ length: 31 }, (_, index) => `A${String(index + 1)}`),
     );
   });
 

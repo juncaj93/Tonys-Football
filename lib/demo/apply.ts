@@ -366,6 +366,28 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
     return { evidence: { unopenedBoxes: await unopenedCount(db, seat) } };
   },
 
+  /**
+   * Somebody who has opened one before, with another waiting.
+   *
+   * The second of the two moments Tony speaks to (`lib/parlor/moment.ts`). It is
+   * not `one-box` with extra steps: a manager holding a box and *no*
+   * collectibles is being handed their first, and Tony says something different
+   * to each. Both had to be reachable or only one of the two approved line
+   * groups could ever be reviewed.
+   */
+  'box-waiting': async (db, seat) => {
+    await openTab(db, seat);
+    await pull(db, seat, 0, firstOfRarity('common'));
+    await grantBoxes(db, seat, 2);
+
+    return {
+      evidence: {
+        unopenedBoxes: await unopenedCount(db, seat),
+        collected: (await collectionFor(db, seat.userId)).distinct,
+      },
+    };
+  },
+
   /* --- the reveal ------------------------------------------------------ */
 
   'pull-common': pullState('common'),

@@ -98,7 +98,22 @@ jobs:
       - name: Build
         run: npm run build
 
+      # `DEMO_FIXTURES=1` is the demo system's opt-in (`lib/demo/guard.ts`), and
+      # it is needed **here as well as on the driver**. `?preview_reveal=` is
+      # resolved by the *server* — `previewReveal(…, process.env)` runs inside
+      # the render — so a server without the opt-in answers every preview request
+      # with an ordinary parlor page.
+      #
+      # It was missing here, and the consequence was the worst kind: the nine
+      # `reveal-*` states photographed a calm room, were filed under names like
+      # `390-reveal-legendary.png`, and the run reported **passed**. The
+      # rarity-contrast gate written specifically for that surface was measuring
+      # nothing. `checkRevealPresent` in the driver now fails a reveal state that
+      # contains no reveal, so this line being deleted again is caught rather than
+      # believed.
       - name: Start
+        env:
+          DEMO_FIXTURES: '1'
         run: |
           npx next start -p 3111 > server.log 2>&1 &
           for i in $(seq 1 60); do
@@ -108,10 +123,8 @@ jobs:
           done
           echo "server never became ready"; cat server.log; exit 1
 
-      # `DEMO_FIXTURES=1` is the demo system's opt-in (`lib/demo/guard.ts`). It is
-      # set here rather than inside the driver on purpose: the opt-in exists so
-      # that whoever starts a run has said which database it points at, and this
-      # is that statement. `DATABASE_URL` above is the throwaway service
+      # The driver needs it too: it shells out to the demo CLI, which carries the
+      # same opt-in on its own path. `DATABASE_URL` above is the throwaway service
       # container, destroyed with the runner.
       - name: Visual QA
         run: npm run visual:qa

@@ -46,8 +46,11 @@ describe('the demo catalog', () => {
      *  - **pull-while-broke** — the reveal plate offers another box only when the
      *    tab can take it, and the *absent* offer had no state. Every reveal
      *    screenshot ever taken was of somebody who could afford another one.
+     *  - **box-waiting** — Tony says something different to a manager being
+     *    handed their first box and to one who has opened before. Both approved
+     *    line groups needed a state or only one could be reviewed.
      */
-    const CARRIED_BEYOND_THE_LIST = 2;
+    const CARRIED_BEYOND_THE_LIST = 3;
     expect(DEMO_STATES.length).toBe(REQUIRED.length + CARRIED_BEYOND_THE_LIST);
   });
 

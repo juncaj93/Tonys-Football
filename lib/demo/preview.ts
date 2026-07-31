@@ -52,26 +52,90 @@ export interface PreviewReveal {
   /** Synthetic, like the rest of it — see the note on `previewReveal`. */
   readonly distinct: number;
   readonly total: number;
-  readonly nextBoxPrice: number | null;
+  /**
+   * Tony's offer, synthesised rather than drawn.
+   *
+   * The real one comes from `content_entries` through `offerAnotherBox`, which
+   * logs a use and therefore changes what he would say next. A preview must be
+   * repeatable at three widths, so a stage takes a **fixed approved line**
+   * rather than consuming a draw. What is being reviewed here is the
+   * composition: whether his voice sits under the collection line without
+   * crowding it.
+   */
+  readonly offer: {
+    readonly price: number;
+    readonly line: string;
+    readonly entryKey: string;
+  } | null;
 }
+
+/**
+ * Where in the loop the pull happened — `?preview_stage=first`.
+ *
+ * The plate has **four compositions**, and until now only one of them could be
+ * photographed. They differ in two lines that sit directly under each other, so
+ * reviewing one and assuming the rest is exactly the mistake that let
+ * `LEGENDARY` ship invisible on cream:
+ *
+ *   - `first` — their very first collectible, and Tony's "first one was free"
+ *   - `mid` — the ordinary middle, `7 of 24`, and the plain offer
+ *   - `complete` — the whole shelf, and Tony pointing out it would be a spare
+ *   - `broke` — the tab is short, so **there is no offer and no link**, which is
+ *     the composition the ruling cares most about being seen: no greyed-out
+ *     price, no explanation, nothing
+ *
+ * `mid` is the default, so an unqualified `?preview_reveal=` behaves as before.
+ */
+export const PREVIEW_STAGES = ['first', 'mid', 'complete', 'broke'] as const;
+export type PreviewStage = (typeof PREVIEW_STAGES)[number];
+
+/**
+ * The plate each stage produces, spelled out rather than read off disk.
+ *
+ * The page that calls this is a server component on the hot path; reaching for
+ * the filesystem to render a review-only screenshot would put a synchronous read
+ * in front of every parlor load for the sake of a state nobody in production can
+ * reach. So the sentences are literals — and `preview.test.ts` asserts each is
+ * character-for-character the entry it names in `content/box-offer.md` at the
+ * provisional price, so an edit to an approved line fails the build rather than
+ * quietly leaving the preview showing an old one.
+ */
+const STAGES: Record<PreviewStage, { distinct: number; entryKey: string | null; line: string | null }> =
+  {
+    first: { distinct: 1, entryKey: 'O1', line: "First one was free. Next one's 50." },
+    mid: { distinct: 7, entryKey: 'O3', line: '50 tokens gets you another.' },
+    complete: {
+      distinct: CATALOG_SIZE,
+      entryKey: 'O7',
+      line: "Shelf's full. Another's 50, and it'd be a spare.",
+    },
+    broke: { distinct: 7, entryKey: null, line: null },
+  };
 
 function isRarity(value: string): value is Rarity {
   return (RARITIES as readonly string[]).includes(value);
 }
 
+function isStage(value: string): value is PreviewStage {
+  return (PREVIEW_STAGES as readonly string[]).includes(value);
+}
+
 /**
- * Resolve `?preview_reveal=legendary` to a payload, or null.
+ * Resolve `?preview_reveal=legendary&preview_stage=first` to a payload, or null.
  *
  * Null is the answer for every ordinary request, and for every request in an
  * environment where demos are not allowed — the caller renders the room exactly
  * as it would have.
  *
  * The item shown is the **first of the tier in catalog order**, so a screenshot
- * at 390 and one at 360 are the same item and can be compared.
+ * at 390 and one at 360 are the same item and can be compared. An unreadable
+ * stage falls back to `mid` rather than refusing: the rarity is what the caller
+ * asked for, and a typo in the second parameter should not blank the room.
  */
 export function previewReveal(
   raw: string | string[] | undefined,
   env: Record<string, string | undefined>,
+  stageRaw?: string | string[] | undefined,
 ): PreviewReveal | null {
   if (typeof raw !== 'string' || raw === '') return null;
 
@@ -89,17 +153,16 @@ export function previewReveal(
   const item = catalog().find((candidate) => candidate.rarity === raw);
   if (item === undefined) return null;
 
+  const stage = STAGES[typeof stageRaw === 'string' && isStage(stageRaw) ? stageRaw : 'mid'];
+
   /*
-   * A plausible middle of the loop, fixed.
+   * A fixed point in the loop, chosen rather than counted.
    *
-   * These three drive the plate's meaning line and its offer, and the point of
-   * this route is to review how those *look* — so they are pinned rather than
-   * read from a database. Nobody's real collection is consulted and nothing is
-   * counted: a preview at 390 and one at 360 must show the same plate.
-   *
-   * `PREVIEW_DISTINCT` is deliberately not 1 and not 24, so the meaning line
-   * renders its ordinary case rather than either edge. The edges are worth
-   * reviewing too and they are reachable from a real pull.
+   * These drive the plate's meaning line and its offer, and the point of this
+   * route is to review how those *look* — so they are pinned. Nobody's real
+   * collection is consulted and nothing is drawn from the content engine: a
+   * preview at 390 and one at 360 must show the same plate, and a draw would
+   * log a use and change what Tony said next.
    */
   return {
     slug: item.slug,
@@ -107,11 +170,15 @@ export function previewReveal(
     rarity: item.rarity,
     replayed: false,
     asset: resolveAsset(item.slug),
-    distinct: PREVIEW_DISTINCT,
+    distinct: stage.distinct,
     total: CATALOG_SIZE,
-    nextBoxPrice: PROVISIONAL_ECONOMY.standardBoxPriceTokens,
+    offer:
+      stage.entryKey === null || stage.line === null
+        ? null
+        : {
+            price: PROVISIONAL_ECONOMY.standardBoxPriceTokens,
+            line: stage.line,
+            entryKey: stage.entryKey,
+          },
   };
 }
-
-/** A mid-collection pull — neither the first nor the last. */
-const PREVIEW_DISTINCT = 7;

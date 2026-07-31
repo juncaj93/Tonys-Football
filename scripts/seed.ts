@@ -29,7 +29,9 @@ import { standardRewardTable } from '@/lib/counter/rewards';
 import { ensureSignificancePolicy, standardPolicy } from '@/lib/stats/significance';
 import {
   assertOnlyApprovedGroups,
+  readBoxOffers,
   readCounterGreetings,
+  seedBoxOffers,
   seedCounterGreetings,
 } from '@/lib/content/seed';
 import { closePool, getDb } from '@/lib/db';
@@ -133,6 +135,15 @@ async function main(): Promise<void> {
       `Content  ${String(seeded.keys.length)} Counter Greetings · ` +
         `${String(seeded.inserted)} new · ${String(seeded.updated)} updated · ` +
         `${String(seeded.deactivated)} retired`,
+    );
+
+    // The other end of the pizza-box loop: what Tony says when a box has just
+    // been opened and another is affordable (`content/box-offer.md`).
+    const offers = await seedBoxOffers(db, readBoxOffers());
+    console.log(
+      `Content  ${String(offers.keys.length)} box offers · ` +
+        `${String(offers.inserted)} new · ${String(offers.updated)} updated · ` +
+        `${String(offers.deactivated)} retired`,
     );
 
     await assertOnlyApprovedGroups(db);

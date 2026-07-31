@@ -158,6 +158,39 @@ is what makes the pairing land.
 
 ---
 
+### The box on the counter — approved 2026-07-30
+
+**Commissioner ruling:** Tony personally hands over the first box. *"The experience should feel like Tony is handing something across the counter, not like the application generated inventory."*
+
+These carry a **moment tag** (`lib/parlor/moment.ts`) rather than a standing one — they are true of somebody *right now* rather than across a season, which is why they outrank every line above while they apply. `first_welcome_box` means they have never opened anything and something is waiting; `box_waiting` means they have opened before and there is another.
+
+Enough variants that the same manager does not hear the same line twice in a row. None of them implies money, chance, a limited-time offer, a guaranteed rarity, or any urgency — the box is a gift and it will still be there tomorrow.
+
+**A24** · `first_welcome_box` · *pleased*
+> {name}. First one's on the house. Box is right there.
+
+**A25** · `first_welcome_box` · *neutral*
+> That one on the counter is yours, {name}. Go on.
+
+**A26** · `first_welcome_box` · *unimpressed*
+> I put a box aside for you, {name}. Don't make me regret it.
+
+**A27** · `first_welcome_box` · *pleased*
+> Welcome in, {name}. First one's free. That is the whole pitch.
+
+**A28** · `first_welcome_box` · *neutral*
+> New season, new box, {name}. Tony does not charge for the first one.
+
+**A29** · `box_waiting` · *neutral*
+> There's a box with your name on it, {name}. Still shut.
+
+**A30** · `box_waiting` · *unimpressed*
+> That box has been sitting there a while, {name}. It is not going to open itself.
+
+**A31** · `box_waiting` · *pleased*
+> Back again, {name}. Something on the counter for you.
+
+
 # Group B — Canon-based · **needs commissioner approval**
 
 These draw on the approved character canon in `11`, not on imported data. The canon is approved as *canon*; putting it in Tony's mouth on the first screen a manager ever sees is a separate call. **Do not seed without sign-off.**
@@ -211,6 +244,7 @@ Computed from imported history. Booleans, recomputed on import and after each fi
 
 **From canon (`11`), commissioner-set rather than derived**
 `commissioner` · `no_trades` · `most_trades` · `collector` · `gambler` · `complainer` · `decisive_trader` · `lions_fan` · `young_trash_talker` · `bapple`
+
 
 ### Template variables
 
