@@ -14,16 +14,119 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 | Workstream | Mode | Branch / PR | Last implementation commit | Next executable task |
 |---|---|---|---|---|
-| **M2 — loot loop** | `TECH_LEAD_IMPLEMENTING` | `main` | #40 | Real collectible art is the only thing left; see "the one thing that needs the commissioner" |
-| **SW Initial Product** | `TECH_LEAD_IMPLEMENTING` | `main` | #35, #36, #40 | Collection empty-state pacing (visual debt 1) |
-| **Stats & Data** | `TECH_LEAD_IMPLEMENTING`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
-| **Tuesday Slice** | `TECH_LEAD_IMPLEMENTING`, independently verified | `claude/tonys-pizza-autonomous-jizv8b` | this branch | Tony's Line, bounties, the chalkboard prediction, and the commissioner review queue |
-| **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **blocked on the commissioner** | — | — | Supply the files; the slot is enforced |
-| **M3 character identity** | `QUEUED_NOT_ACTIVE` | — | — | Issue #24 |
+| **M3 — character identity** | `TECH_LEAD_IMPLEMENTING` | `claude/tonys-pizza-tech-lead-s11qsw` · **PR #48** | `5093f91` | Nothing. The vertical slice is complete: data, compositor, service, surface, previews, demo states, gates |
+| **Back Hall as a room** | `QUEUED_NOT_ACTIVE` | — | — | **The next executable slice.** Unblocked by the 2026-07-31 ruling; see below |
+| **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
+| **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
+| **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Tony's Line, bounties, the chalkboard prediction, and the commissioner review queue |
+| **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-07-31 (fourth session)
+
+**PR #47 merged** (`30da0bc`, checkpoint correction). Work below is on
+`claude/tonys-pizza-tech-lead-s11qsw`, open as **PR #48**.
+
+### The wearables contradiction is settled
+
+**Commissioner ruling: collectibles and wearables are separate systems.** The 24 `collectible_*`
+items are the pizza-box economy; the 12 `wear_*` assets belong to the modular character system. A box
+awards `collectible_*` only. **Crossover is not approved** — its absence is a product decision, not
+an omission somebody should close.
+
+`art/assets.inventory.json` claimed the opposite for a week while every test passed, which is the
+shape of defect the guard is written against rather than the sentence.
+`lib/character/separation.test.ts` asserts it from the catalog, **the reward table itself**, both
+registry families, and the inventory comment. Nothing about the shipped economy changed.
+
+### M3's surface — built, walked, and fixed
+
+`/profile/character`, under your keys rather than off the parlor: `18 §3` fixes the homepage at eight
+objects, and the surface a character belongs to is a basement, which `16` defers to v1.1.
+
+**The placeholder had to be drawn.** All twenty character slugs are placeholders and the universal
+stand-in is a taped-up sign; six of those composite to six identical signs — no silhouette, no
+visible layer order, and *nothing changes when you change your hair*. So the figure is flat
+rectangles in palette colours, the precedent the pizza box and the collectible already set. Every
+slug still resolves `placeholder` and `CharacterView` draws the PNG **per layer** the moment one
+exists.
+
+Because the stand-in is **data**, the clipping rules are arithmetic over the artwork the renderer
+actually uses — exact rather than sampled, and a test cannot pass against geometry the screen does
+not use.
+
+**Six defects, and the pattern is the point.** Three were found by *looking*, and each rule written
+from one immediately found a second instance the eye had missed:
+
+| Found by | Defect |
+|---|---|
+| looking | The ponytail hung beside the head, meeting the cap at a single corner — satisfying every bounding-box, clipping and contact-row rule. The rule (*a layer is one connected piece; corner contact is detached*) then found the same defect in `avatar_hair_05` |
+| looking | The pizza peel covered the ponytail completely. The rule (*a hand item never draws over a hairstyle*) then found a second instance, one column wide, in long hair |
+| looking | The hoodie was two columns wider than the shirt and covered its own sleeves and hands — a head on a slab with **no arms** |
+| walking | **Every section heading was `ink-900` on the dark room and invisible** — "Build", "Colouring", all four slot names. The inverse of the cream-on-cream defect that shipped on three routes. Fixed by making it one panel, which is also what stopped it reading as a website component |
+| walking | The empty wardrobe — **what every manager meets today** — said *"Nothing for this yet."* four times across a third of the screen. The same defect already recorded against `/counter` |
+| a test | The demo idempotency assertion collapsed eight wearables into one, because it keyed on `source_opening_id` and an **awarded** collectible has none. The assertion was wrong, not the product; both kinds are now checked by the key that actually guards them |
+
+**Decisions worth knowing about:** one Save is one transaction and the equipment it sends is complete
+rather than a patch, so a slot left out is emptied · preview is local because `composeCharacter` is
+pure and nothing is public until you save, the opposite call to the Showcase picker for the opposite
+reason · `drizzle/0009` touches `collectibles`, which `M3_CHARACTER_BOUNDARY §9` forbids, recorded as
+a deviation with its reasoning — a partial unique index scoped to `wear_%`, zero existing rows
+affected, giving a wearable grant a **natural key** so a future award system can hand one over
+idempotently without rewriting M3.
+
+**Nothing awards a wearable, and nothing here invented a source.** `16` approves none, so the empty
+wardrobe is the honest state and it is the state that got the most design attention.
+
+`equipped-wearable` — declared and refused since M2 — applies. `BLOCKED_ON_M3` is empty, and
+asserted empty so parking a state there stays a deliberate edit.
+
+### The Back Hall's 9px line is fixed; its structure is not
+
+Visual debt 4 is closed. *"Don't worry about it."* — the whole reveal of the Underground — was set at
+**9px in `amber-mid/70` on cream**, around 1.6:1, and is now set like speech at 17px `ink-900`.
+
+**The panel structure was deliberately left alone.** It is three stacked cards, which is the menu
+card `18 §5` forbids, and it is being replaced by a room — polishing it further would be polishing
+something about to be discarded.
+
+### Exact repository state
+
+| | |
+|---|---|
+| `main` | `30da0bc` — PR #47 merged |
+| Branch / PR | `claude/tonys-pizza-tech-lead-s11qsw` · **PR #48** |
+| `npm run check` | green — **907 tests across 56 files** (was 867 / 53) |
+| `npm run visual:qa` | green — **58 states × 3 widths**, production build, fresh database (was 49) |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
+
+### The next executable task, in order
+
+1. **The Back Hall as a room** — visual debt 5, and now unblocked. The commissioner's ruling is
+   explicit: *"Do not block all Back Hall development on final art… use deliberate in-world
+   placeholder architecture."* **M3 has just shown what that looks like** — a drawn stand-in at the
+   right size, as geometry data, rather than a sign — so the old "building it against placeholders
+   means building it twice" reasoning no longer holds. `docs/BACK_HALL_BOUNDARY.md` carries the route
+   contracts, the flag-based state boundary (nobody *earns* a hallway), the five asset slots and the
+   five demo states, all as flag combinations needing no database writes.
+2. **The casino foundation** — one game, server-authoritative, after the Back Hall.
+3. **Tony's Line, bounties, the chalkboard prediction** — all read the fact packet that exists.
+4. **The commissioner review queue** for live Slice publication.
+5. **Batch B**, whenever the PNGs arrive. One command.
+
+### What this session did not start, and why
+
+**The Back Hall room itself.** It is the next slice and it is scoped, not begun. Building it needs
+the scene architecture, the flag boundary, five demo states, driver states and at least two
+walk-and-fix rounds — the same shape as M3's surface, which took most of this session. Starting it
+with a fraction of that would have produced exactly what the boundary document warns against: a card
+grid with better paint. The typography defect inside it was small, real and independent, so that was
+taken and the structure was not.
 
 ---
 
