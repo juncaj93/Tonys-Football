@@ -185,11 +185,30 @@ Batch B is in hand.
    then.
 5. **Visual debt 3** — the order pad's arrival and dismissal timing against the reveal's.
 
+### Two boundaries prepared, neither started
+
+- **`docs/M3_CHARACTER_BOUNDARY.md`** — the decisions M3 would otherwise make under pressure, made
+  now. **Tony stays baked and the compositor is for managers only**, so every M3 defect lands on a
+  surface that does not exist yet. Seven layers in a fixed order, with the order in the registry
+  rather than in a switch; a hand item as a `top`-slot overlay rather than a split arm; ownership by
+  trigger because an FK cannot say *your* collectible; wearables in their own registry family because
+  `CATALOG_SIZE = 24` must never be satisfied by adding to it. The clipping tests are arithmetic over
+  the alpha channel, **not screenshots** — geometry read off a screenshot is wrong, and the eye kept
+  confidently reporting it had measured something it had not.
+- **`docs/BACK_HALL_BOUNDARY.md`** — route contracts, the flag-based state boundary (nobody *earns* a
+  hallway; progression is not in this product), navigation flow, the five asset slots, demo
+  requirements. It corrects an assumption made before reading the page: the Underground is
+  deliberately not a route and is handled correctly, with the reasoning already in the file.
+
+**Two real findings, recorded as visual debt rather than fixed** — fixing them would have interrupted
+Batch B. *"Don't worry about it."*, the entire reveal of the Underground, is set at **9px** in amber
+on cream; and the Back Hall is three stacked panels with headings, which is the menu card `18 §5`
+forbids (blocked on art — building the scene against placeholders means building it twice).
+
 ### What this session did not start, and why
 
 - **M3 character identity (#24).** Unchanged: do not destabilise M2 before the representative art
   batch has proven the asset system.
-- **The Back Hall boundary.** Specification work only, and it must not delay Slice polish or Batch B.
 - **Safari and hosted-only hardening beyond the seed.** The sandbox proxy denies CONNECT to
   `*.vercel.app`, so viewport-height, back-forward cache and safe-area behaviour cannot be observed
   here — only asserted statically. The seed's idempotency was the one item in that list that is
