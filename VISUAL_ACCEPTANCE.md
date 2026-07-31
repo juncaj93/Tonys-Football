@@ -27,7 +27,9 @@ Captured at every width, every run:
 
 `idle` · `tony-dialogue` · `tonight-board` · `banner-completed` · `banner-current-tbd` · `rack` · `prediction` · `receipt` · `counter` · `back-hall` · `keyboard-focus` · `six-banners` · `tray-owned-box` · `tray-reveal` · `collection` · `collection-filtered` · `showcase` · `showcase-chosen`
 
-Plus seven on **demo seats** (`lib/demo/`): `demo-tray-empty` · `demo-collection-full` · `demo-counter-broke` · `demo-showcase-chosen` · `demo-pull-while-broke` · `demo-box-waiting` · `demo-welcome-box`.
+Plus eight on **demo seats** (`lib/demo/`): `demo-tray-empty` · `demo-collection-full` · `demo-counter-broke` · `demo-showcase-chosen` · `demo-pull-while-broke` · `demo-box-waiting` · `demo-welcome-box` · `demo-collection-empty`.
+
+`demo-collection-empty` is the shelf a brand-new player sees — twenty-four named spots and nothing on any of them. Like `demo-tray-empty` it could not be captured from a seeded manager, because every one of them owns something by the time the driver arrives, and it is where the unowned names' contrast defect was found.
 
 Plus the **four rarity treatments**: `reveal-common` · `reveal-rare` · `reveal-epic` · `reveal-legendary`, via `?preview_reveal=` (`lib/demo/preview.ts`). These are the states this driver could never produce — the roll happens inside `openBox`, so `tray-reveal` photographs whatever the table gave, and the epic and legendary treatments had never once been reviewed. Nothing is rolled or written, so they are repeatable and show the same item at every width.
 

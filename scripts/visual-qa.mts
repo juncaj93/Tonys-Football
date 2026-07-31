@@ -122,6 +122,7 @@ type StateName =
   | 'demo-pull-while-broke'
   | 'demo-box-waiting'
   | 'demo-welcome-box'
+  | 'demo-collection-empty'
   | 'reveal-common'
   | 'reveal-rare'
   | 'reveal-epic'
@@ -163,6 +164,11 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   // emotional sequence, and until the demo seats existed it could only be seen
   // on a manager who had not yet been used for anything else.
   'demo-welcome-box': 'welcome-box',
+  // The shelf a brand-new player sees: twenty-four named spots and nothing on
+  // any of them. It is the last beat of the commissioner's emotional sequence
+  // and the one state of this route nobody had ever photographed — every seeded
+  // manager owns something by the time the driver reaches here.
+  'demo-collection-empty': 'collection-empty',
 };
 
 interface DemoApplied {
@@ -524,6 +530,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
 
     case 'demo-collection-full':
+    case 'demo-collection-empty':
       await page.goto(`${BASE}/counter/collection`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1200);
       return;
@@ -678,6 +685,7 @@ const ALL_STATES: readonly StateName[] = [
   'demo-pull-while-broke',
   'demo-box-waiting',
   'demo-welcome-box',
+  'demo-collection-empty',
   // The four rarity treatments, side by side and repeatable. Signed in as
   // whoever the previous demo state left us as, which is fine: the payload is
   // synthesised and does not depend on what that seat owns.

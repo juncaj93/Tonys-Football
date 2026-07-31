@@ -179,7 +179,7 @@ Stats (#26) is sequenced **before** the Slice deliberately: `MANDATE §10` requi
 | Gate | Result | Where |
 |---|---|---|
 | `npm run check` | green — **726 tests, 46 files** | local, throwaway Postgres |
-| `npm run visual:qa` | green — **32 states × 3 widths**, production build, on a freshly reset database **and a server carrying `DEMO_FIXTURES=1`** — without which the nine reveal states photograph nothing and pass | local |
+| `npm run visual:qa` | green — **33 states × 3 widths**, production build, on a freshly reset database **and a server carrying `DEMO_FIXTURES=1`** — without which the nine reveal states photograph nothing and pass | local |
 | `ci.yml` + `visual-qa.yml` | green on real runners for every M2 slice | PRs #19 #20 #21 #22 |
 | PR #23 (integration → `main`) | green on final head `c91548c`; **merged** as `238dfca` | PR #23 |
 | Live production URL | ❌ **never loaded.** Proxy denies CONNECT to `*.vercel.app` | — |
