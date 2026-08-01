@@ -1394,16 +1394,33 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
     return frames;
   };
 
+  /**
+   * Sample from now until `page time` reaches `until`.
+   *
+   * The windows this gate needs are fixed points on the *arrival's* clock —
+   * 1600ms, 4900ms — so the sample has to end at a page time rather than run
+   * for a duration measured from whenever the harness happened to get here. A
+   * fixed duration on a loaded machine ends early and the coverage assertions
+   * below start failing for a reason that has nothing to do with Tony.
+   */
+  const sampleUntil = async (until: number): Promise<TonyFrame[]> => {
+    const now = (await page.evaluate('performance.now()')) as number;
+    return sample(Math.max(1200, until - now));
+  };
+
   const covers = (frames: readonly TonyFrame[], lo: number, hi: number): boolean =>
     frames.some((f) => f.t >= lo && f.t <= hi);
+
+  /** Past the reveal's 4900ms end plus its ramp, with room to spare. */
+  const WINDOW_ENDS = 6600;
 
   /* --- A. Nobody touches anything ------------------------------------- */
 
   await firstVisit();
   // The entrance genuinely moves him — that is `tony-steps-up`, by design. It
   // ends at 980ms and `arriving` comes off at 1100ms, so 1300 is clear of it.
-  await page.waitForTimeout(1300);
-  const undisturbed = await sample(5300);
+  await page.waitForFunction(() => performance.now() >= 1300, undefined, { timeout: 10_000 });
+  const undisturbed = await sampleUntil(WINDOW_ENDS);
   const quietA = undisturbed.filter((f) => !f.speaking);
   assertSteady(quietA, width, 'pass A (untouched homepage)', 60);
 
@@ -1422,13 +1439,19 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
   /* --- B. The same window, with his line put away --------------------- */
 
   await firstVisit();
-  // Immediately: dismissing unmounts `SpokenLine`, whose cleanup clears
-  // `speaking`, so the whole window from 1300ms on is a still frame — including
-  // the 300ms before the reveal turns on, which is the interval pass A cannot
-  // reach and the one that makes the lift visible as a *change*.
-  await dismissTony(page);
-  await page.waitForTimeout(400);
-  const dismissed = await sample(5300);
+  /*
+   * Dismissed as early as the button can be clicked, and sampled from that
+   * instant rather than after a settling wait.
+   *
+   * Dismissing unmounts `SpokenLine`, whose cleanup clears `speaking`, so
+   * everything from here is a still frame — including the interval **before**
+   * the reveal turns on, which pass A cannot reach because the greeting is
+   * still typing through it, and which is the one that makes the lift visible
+   * as a *change* rather than as a constant.
+   */
+  const dismiss = page.getByRole('button', { name: /Dismiss what Tony said/i });
+  if ((await dismiss.count()) > 0) await dismiss.click({ force: true });
+  const dismissed = await sampleUntil(WINDOW_ENDS);
   const quietB = dismissed.filter((f) => !f.speaking);
   assertSteady(quietB, width, 'pass B (line dismissed)', 120);
 
