@@ -142,6 +142,15 @@ deploying to verify routine work.
 or billing/usage evidence the session can read directly. "It is probably a new month" is not
 authorization.
 
+**Commissioner, 2026-08-01 — one coherent PR per completed slice is authorized.** The
+direction that opened and merged #51 and then assigned the homepage slice says it in the
+instruction itself: *"One coherent homepage-polish PR; no cosmetic micro-PRs; do not rerun
+red workflows unchanged. After green: merge, verify deployment."* That is the explicit
+statement the paragraph above asks for, and it is narrow: **one** PR when a slice is
+finished and every gate has already passed locally, on a production build against a fresh
+database. Everything else in the prohibited list still stands — no micro-PRs, no pushes to
+`main`, no manual dispatch, no re-running a red run unchanged, and CI is never the debugger.
+
 **No release gate is weakened by any of this.** `npm run check` and `npm run visual:qa` still
 run in full, on a production build against a fresh database, every time — only their *GitHub
 execution* is deferred. When the allowance returns, the branch becomes one meaningful CI and
