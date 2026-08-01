@@ -58,7 +58,25 @@ describe('the demo catalog', () => {
      *    choices with one of them selected* reads at 360. Two per slot can.
      */
     const CARRIED_BEYOND_THE_LIST = 5;
-    expect(DEMO_STATES.length).toBe(REQUIRED.length + CARRIED_BEYOND_THE_LIST);
+
+    /*
+     * The press desk, added with the review chain (`16 §9`, `08 §22`).
+     *
+     * The mandate's list predates the approval gate, so it names none of them —
+     * and the review screen is the one surface in the product where a person
+     * makes a decision the whole league then reads as true. Six, because the
+     * decision has six distinct shapes and each one is a different screen:
+     * nothing waiting · something waiting · something the validator refused ·
+     * approved and not yet printed · printed · and the press stopped.
+     *
+     * `review-empty` is the one that matters most, for the reason
+     * `demo-tray-empty` did: it is **what a commissioner meets today**, and a
+     * feature reviewed only in its busy state is a feature reviewed in the state
+     * nobody is in.
+     */
+    const PRESS_DESK = 6;
+
+    expect(DEMO_STATES.length).toBe(REQUIRED.length + CARRIED_BEYOND_THE_LIST + PRESS_DESK);
   });
 
   it('gives every state a stable key, a route, and a sentence', () => {

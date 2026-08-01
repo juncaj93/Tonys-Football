@@ -194,7 +194,27 @@ type StateName =
    * interaction, and `boards.test.ts` asserts the `board-*` set equals the
    * fixture catalog exactly.
    */
-  | 'pick-refused';
+  | 'pick-refused'
+  /*
+   * The press desk — the commissioner review chain (`16 §9`, `08 §22`).
+   *
+   * Six states because the decision has six shapes, and `review-empty` leads for
+   * the reason `demo-tray-empty` did: it is **what a commissioner meets today**,
+   * and a screen reviewed only in its busy state is a screen reviewed in the
+   * state nobody is in.
+   *
+   * Each signs in at its own reserved seat, which carries the commissioner's
+   * keys — `requireAdmin()` answers `notFound()`, so an ordinary seat would
+   * photograph a 404 and file it under the state's name.
+   */
+  | 'review-empty'
+  | 'review-waiting'
+  | 'review-refused'
+  | 'review-approved'
+  | 'review-published'
+  | 'review-held'
+  /** One draft, opened from the queue. The screen where the decision is made. */
+  | 'review-draft';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -248,6 +268,20 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'character-empty': 'character-empty',
   'character-dressed': 'character-dressed',
   'character-equipped': 'equipped-wearable',
+
+  /*
+   * The press desk. Every one of these seats is an admin seat — set by
+   * `ensureDemoSeat` behind both demo guards, so the flag can only ever land on
+   * a `demo:`-prefixed fixture and can never be set in production at all.
+   */
+  'review-empty': 'review-empty',
+  'review-waiting': 'review-waiting',
+  'review-refused': 'review-refused',
+  'review-approved': 'review-approved',
+  'review-published': 'review-published',
+  'review-held': 'review-held',
+  // The detail screen, reached by opening the queue's one waiting draft.
+  'review-draft': 'review-waiting',
 };
 
 interface DemoApplied {
@@ -688,6 +722,87 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
 
     /*
+     * The press desk (`16 §9`, `08 §22`).
+     *
+     * The wait is on the queue's own marker rather than on a timeout, and that
+     * is the whole gate against a false green here: `requireAdmin()` answers
+     * `notFound()`, so a seat without the commissioner's keys renders a 404 —
+     * which photographs cleanly, files under the state's name, and passes. The
+     * nine `reveal-*` states cost a milestone to exactly that shape of mistake.
+     */
+    /*
+     * The empty desk, as a rendering — `?desk=empty`, resolved on the server
+     * behind the demo guard.
+     *
+     * It cannot be a driven state: an issue belongs to the league rather than to
+     * a seat, so once any other press-desk demo has drafted something the desk is
+     * not empty for anybody — and this driver loops **widths on the outside**, so
+     * the 375 and 360 passes would photograph a populated desk under this name
+     * and pass. `checkReviewDesk` asserts the marker says `empty`, which is what
+     * makes the parameter's failure loud instead of silent.
+     */
+    case 'review-empty':
+      await page.goto(`${BASE}/admin/slice?desk=empty`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-review-queue]', { state: 'attached' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * The desk itself: with work on it, and with the press stopped.
+     *
+     * Only these two belong on the queue. The other three are about **one
+     * draft**, and the queue cannot show them apart — an issue belongs to the
+     * league rather than to a seat, so the sections accumulate as each state is
+     * applied, and by the last one every desk looks the same. The screenshots
+     * settled it: four states photographed byte-identically.
+     */
+    case 'review-waiting':
+    case 'review-held':
+      await page.goto(`${BASE}/admin/slice`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-review-queue]', { state: 'attached' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * One draft, opened the way a commissioner opens it — from the queue.
+     *
+     * Navigated rather than deep-linked, because the version id is a uuid the
+     * driver has no business knowing and because *"can you get to the decision
+     * from the desk"* is part of what is being reviewed. Each picks its row out
+     * of the section that names the state it is about, so the screen photographed
+     * is the one where that state means something: the approve-or-refuse
+     * controls, the validator's violations, the Print button, the printed stamp.
+     */
+    case 'review-draft':
+    case 'review-refused':
+    case 'review-approved':
+    case 'review-published': {
+      await page.goto(`${BASE}/admin/slice`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-review-queue]', { state: 'attached' });
+
+      const row =
+        state === 'review-refused'
+          ? page.locator('[data-review-refused]')
+          : state === 'review-draft'
+            ? page.locator('[data-review-section="waiting"] a:not([data-review-refused])')
+            : page.locator(
+                `[data-review-section="${state === 'review-approved' ? 'approved' : 'published'}"] a`,
+              );
+
+      if ((await row.count()) === 0) {
+        throw new Error(
+          `${state}: the desk had no row to open. The applier ran but the section is empty, ` +
+            `which means the state was not produced — not that the screen is broken.`,
+        );
+      }
+
+      await row.first().click();
+      await page.waitForSelector('[data-review-version]', { state: 'attached' });
+      await page.waitForTimeout(400);
+      return;
+    }
+
+    /*
      * The pull is already done by the applier, so this is the room *after* it —
      * the tray empty and the tab short. What it proves is a negative: the plate
      * makes no offer it could not honour, and the counter says the true reason.
@@ -1099,6 +1214,17 @@ const ALL_STATES: readonly StateName[] = [
   'board-retired-excluded',
   'board-long-names',
   'pick-refused',
+  /*
+   * The press desk, last: each signs in at its own commissioner seat, and every
+   * manager-backed state above expects to still be whoever it signed in as.
+   */
+  'review-empty',
+  'review-waiting',
+  'review-draft',
+  'review-refused',
+  'review-approved',
+  'review-published',
+  'review-held',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
@@ -1806,6 +1932,123 @@ const BOARD_EXPECTATIONS: Readonly<
   'board-long-names': { stakes: 3, states: ['awaiting-week'] },
 };
 
+/**
+ * What each press-desk state must actually contain.
+ *
+ * Written as a table for the same reason `BOARD_EXPECTATIONS` is: the useful
+ * question about a publication gate is *"what does this screenshot prove"*, and
+ * that is only answerable if every state's claim is in one place.
+ *
+ * The counts are **at least**, deliberately. Press-desk states are league-scoped
+ * and additive — an issue belongs to the league rather than to a seat — so by the
+ * time `review-published` runs, the drafts the earlier states made are still
+ * waiting. Asserting equality would encode the run order into the gate, and a
+ * gate that breaks when states are reordered gets reordered around.
+ *
+ * `review-empty` is the exception and asserts the marker instead: it is a
+ * rendering (`?desk=empty`), and the thing that can silently fail is the
+ * parameter not resolving on the server.
+ */
+const DESK_EXPECTATIONS: Record<
+  string,
+  {
+    readonly desk?: 'empty' | 'live';
+    readonly hold?: 'on' | 'off';
+    readonly atLeast?: Partial<Record<'waiting' | 'approved' | 'published' | 'refused', number>>;
+    /** The detail screen rather than the queue: the version's own status. */
+    readonly version?: string;
+    /** And whether the validator passed it. */
+    readonly publishable?: 'yes' | 'no';
+  }
+> = {
+  'review-empty': { desk: 'empty', hold: 'off', atLeast: { waiting: 0, published: 0 } },
+  'review-waiting': { desk: 'live', hold: 'off', atLeast: { waiting: 1 } },
+  'review-held': { desk: 'live', hold: 'on', atLeast: { approved: 1 } },
+  'review-draft': { version: 'needs_review', publishable: 'yes' },
+  // The validator's refusal, on the screen where it is explained rather than on
+  // the row where it is only labelled.
+  'review-refused': { version: 'needs_review', publishable: 'no' },
+  'review-approved': { version: 'approved' },
+  'review-published': { version: 'published' },
+};
+
+/**
+ * The gate against a press-desk false green.
+ *
+ * `requireAdmin()` answers with `notFound()`, so a demo seat that failed to get
+ * the commissioner's keys renders a **404** — which photographs cleanly, files
+ * under the state's name, and passes every other gate in this file. The nine
+ * `reveal-*` states cost a milestone to exactly that, so the marker is checked
+ * rather than the pixels.
+ */
+async function checkReviewDesk(page: Page, width: number, state: string): Promise<void> {
+  const expected = DESK_EXPECTATIONS[state];
+  if (expected === undefined) {
+    fail('review-desk', `@${String(width)} ${state} has no entry in DESK_EXPECTATIONS`);
+    return;
+  }
+
+  const at = `@${String(width)} ${state}`;
+
+  const found = await page.evaluate(() => {
+    const queue = document.querySelector('[data-review-queue]');
+    const version = document.querySelector('[data-review-version]');
+    const sections: Record<string, number> = {};
+    for (const el of document.querySelectorAll('[data-review-section]')) {
+      sections[el.getAttribute('data-review-section') ?? ''] = Number(
+        el.getAttribute('data-review-count') ?? '0',
+      );
+    }
+    return {
+      desk: queue?.getAttribute('data-review-queue') ?? null,
+      hold: queue?.getAttribute('data-review-hold') ?? null,
+      version: version?.getAttribute('data-review-version') ?? null,
+      publishable: version?.getAttribute('data-review-publishable') ?? null,
+      sections,
+    };
+  });
+
+  if (expected.version !== undefined) {
+    if (found.version !== expected.version) {
+      fail(
+        'review-desk',
+        `${at} expected a draft at "${expected.version}", found ${String(found.version)}`,
+      );
+    }
+    if (expected.publishable !== undefined && found.publishable !== expected.publishable) {
+      fail(
+        'review-desk',
+        `${at} expected the check to have said "${expected.publishable}", found ${String(found.publishable)}`,
+      );
+    }
+    return;
+  }
+
+  if (found.desk === null) {
+    fail('review-desk', `${at} the press desk did not render — is the seat a commissioner?`);
+    return;
+  }
+
+  if (expected.desk !== undefined && found.desk !== expected.desk) {
+    fail('review-desk', `${at} expected desk "${expected.desk}", found "${found.desk}"`);
+  }
+
+  if (expected.hold !== undefined && found.hold !== expected.hold) {
+    fail('review-desk', `${at} expected the hold ${expected.hold}, found ${String(found.hold)}`);
+  }
+
+  for (const [section, minimum] of Object.entries(expected.atLeast ?? {})) {
+    const actual = found.sections[section] ?? 0;
+    if (actual < minimum) {
+      fail(
+        'review-desk',
+        `${at} expected at least ${String(minimum)} in "${section}", found ${String(actual)}`,
+      );
+    }
+  }
+
+}
+
 async function checkBoard(page: Page, width: number, state: string): Promise<void> {
   const expected = BOARD_EXPECTATIONS[state];
   if (expected === undefined) return;
@@ -2418,6 +2661,11 @@ async function run(): Promise<void> {
           // Every named board state must actually be that board.
           if (state.startsWith('board-')) {
             await checkBoard(page, width, state);
+          }
+
+          // Every press-desk state must actually be that desk.
+          if (state.startsWith('review-')) {
+            await checkReviewDesk(page, width, state);
           }
         }
 

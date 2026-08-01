@@ -11,7 +11,11 @@ import { standardRewardTable } from '@/lib/counter/rewards';
 import { clearRandomSource } from '@/lib/counter/rng';
 import { leagueShowcase, showcaseFor } from '@/lib/counter/showcase';
 import { applyTokenDelta, ensureEconomyConfig, wallet } from '@/lib/counter/tokens';
+import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import { tonightBoard } from '@/lib/parlor/tonight';
+import { traverseChain } from '@/lib/sleeper/chain';
+import { createFixtureSource } from '@/lib/sleeper/fixtures';
+import { persistChain } from '@/lib/sleeper/persist';
 
 import { APPLIED_STATES, DemoBlocked, applyDemoState, rollForSlug } from './apply';
 import { DemoRefused, isDemoSeat } from './guard';
@@ -43,6 +47,9 @@ const db = hasDatabase ? getDb() : null;
 
 /** The environment a demo is allowed in. Passed explicitly; never read from the process. */
 const ALLOWED = { DEMO_FIXTURES: '1' } as const;
+
+/** The chain's head. The fixtures walk back to 2024 from here. */
+const LEAGUE_2026 = '1385016656425668608';
 
 // One pool for the file. A per-suite `afterAll` closes it out from under the
 // next suite in the same file, which fails as a truncate error and reads like a
@@ -106,16 +113,27 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
     clearRandomSource();
   });
 
-  /** An open season with one real manager seated in it, holding a real tab. */
+  /**
+   * The recorded league: 2024 and 2025 finalized, 2026 open, real managers.
+   *
+   * It used to be a hand-built 2026 season with one manager in it, which was
+   * enough for every loot state and is **not** enough for the press desk: a
+   * drafted issue needs a finalized week with results in it, and inventing one
+   * would mean inventing scores — the thing `MANDATE §9` forbids most directly.
+   *
+   * So the fixture is the same import the seed runs. It costs a few hundred
+   * milliseconds per test and it means a demo state is exercised against the data
+   * the product actually holds rather than against a shape somebody wrote to make
+   * the assertion pass.
+   */
   async function league() {
-    const [season] = await db!.insert(seasons).values({ year: 2026 }).returning();
-    const [manager] = await db!
-      .insert(users)
-      .values({ displayName: 'Alex', sleeperUserId: '735291046122594304' })
-      .returning();
-    await db!
-      .insert(seasonMemberships)
-      .values({ seasonId: season!.id, userId: manager!.id, rosterId: 1 });
+    const chain = await traverseChain(createFixtureSource(), LEAGUE_2026, { includeWeeks: true });
+    await persistChain(db!, chain, { sourceLabel: 'test', finalizeYears: [2024, 2025] });
+    await seedManagerNames(db!, readManagerNames());
+
+    const [season] = await db!.select().from(seasons).where(eq(seasons.year, 2026));
+    const [manager] = await db!.select().from(users).where(eq(users.displayName, 'Alex'));
+
     await ensureEconomyConfig(db!, season!.id);
     await applyTokenDelta(db!, {
       userId: manager!.id,

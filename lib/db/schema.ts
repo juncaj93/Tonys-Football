@@ -1,5 +1,6 @@
 import { sql } from 'drizzle-orm';
 import {
+  bigint,
   boolean,
   check,
   index,
@@ -1681,3 +1682,221 @@ export const stakeResolutions = pgTable(
   },
   (table) => [check('stake_resolutions_week_positive', sql`${table.resolvedWeek} > 0`)],
 );
+
+// ---------------------------------------------------------------------------
+// The Slice review chain
+// ---------------------------------------------------------------------------
+
+/**
+ * Where one rendering of an issue sits in the chain (`08 §23`).
+ *
+ * The status lives on the **version**, not on the issue, because a correction to
+ * a published week is a new version in review while the published one is still
+ * on the rack. Two states on one row is how a publication gate gets bypassed by
+ * accident.
+ *
+ * `rejected` is terminal for that version. Revision means a new version, so the
+ * prose that was refused survives beside the prose that replaced it — which is
+ * what `08 §23`'s *"do not silently rewrite league history"* asks for.
+ */
+export const sliceVersionStatus = pgEnum('slice_version_status', [
+  'draft',
+  'needs_review',
+  'approved',
+  'published',
+  'rejected',
+  'superseded',
+]);
+
+/**
+ * Which renderer produced the prose.
+ *
+ * `template` is the only value anything writes today: `16 §9` makes the
+ * deterministic renderer the default rather than a fallback, and `AUTONOMY.md
+ * §4` keeps the API key unset by standing decision. The column exists so a
+ * published version *records* what wrote it instead of leaving it to be inferred
+ * from a deploy date.
+ */
+export const sliceRenderer = pgEnum('slice_renderer', ['template', 'llm']);
+
+/** What happened to a version. `08 §22`: all edits and approvals are audit logged. */
+export const sliceReviewAction = pgEnum('slice_review_action', [
+  'generated',
+  'submitted',
+  'approved',
+  'rejected',
+  'published',
+  'superseded',
+]);
+
+/**
+ * One week's issue — the identity a version belongs to.
+ *
+ * `UNIQUE(season_id, week)` is the stable draft identity `16 §4.3`'s Tuesday job
+ * needs: running it twice finds the same issue rather than starting a second one.
+ */
+export const sliceIssues = pgTable(
+  'slice_issues',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    week: integer('week').notNull(),
+
+    /** What is on the rack. Null until something is published. */
+    publishedVersionId: uuid('published_version_id'),
+
+    /** From the injected clock — a business date, not the database's. */
+    publishedAt: timestamp('published_at', { withTimezone: true }),
+
+    ...timestamps,
+  },
+  (table) => [
+    unique('slice_issues_one_per_week').on(table.seasonId, table.week),
+    check('slice_issues_week_positive', sql`${table.week} > 0`),
+  ],
+);
+
+/**
+ * One rendering of one issue. Content append-only, status mutable.
+ *
+ * `08 §28`: *"the published issue is stored content, not live-generated
+ * content."* Re-deriving it at read time would let a stat correction landing in
+ * March silently reword an issue printed in October.
+ */
+export const sliceIssueVersions = pgTable(
+  'slice_issue_versions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    issueId: uuid('issue_id')
+      .notNull()
+      .references(() => sliceIssues.id, { onDelete: 'restrict' }),
+
+    /** 1, 2, 3 … within the issue. What a correction note refers to. */
+    version: integer('version').notNull(),
+
+    status: sliceVersionStatus('status').notNull().default('draft'),
+
+    renderer: sliceRenderer('renderer').notNull().default('template'),
+
+    /** The rendered `Edition`, exactly as the rack will serve it. */
+    content: jsonb('content').$type<Record<string, unknown>>().notNull(),
+
+    /**
+     * A digest of `content`, and the idempotency key for regeneration.
+     *
+     * `UNIQUE(issue_id, content_hash)` — the renderer is deterministic, so an
+     * unchanged week re-renders to the same bytes and the second insert is a
+     * no-op the caller reads back. The same natural-key idempotency `0004` used
+     * for opening a box.
+     */
+    contentHash: text('content_hash').notNull(),
+
+    /** The validator's verdict, stored with the version it judged. */
+    verdict: jsonb('verdict').$type<Record<string, unknown>>().notNull(),
+
+    publishable: boolean('publishable').notNull(),
+
+    /** Candidates, scores, suppressions, allowed facts — everything `08 §22` shows. */
+    packet: jsonb('packet').$type<Record<string, unknown>>().notNull(),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+
+    /** When it last moved. Null while it is a draft nobody has acted on. */
+    decidedAt: timestamp('decided_at', { withTimezone: true }),
+  },
+  (table) => [
+    unique('slice_versions_numbered').on(table.issueId, table.version),
+    unique('slice_versions_content_once').on(table.issueId, table.contentHash),
+    check('slice_versions_version_positive', sql`${table.version} > 0`),
+    index('slice_versions_queue_idx').on(table.status, table.createdAt),
+  ],
+);
+
+/**
+ * The audit history. Append-only, one row per thing that happened.
+ *
+ * `actor_user_id` is null only for the actions a job can take on its own —
+ * generating a draft and superseding a replaced version. Every *decision* names
+ * a person, enforced by CHECK in `0011`, which is the mechanism behind `08 §29`'s
+ * *"commissioner approval is mandatory in season one"*.
+ */
+export const sliceReviews = pgTable(
+  'slice_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /**
+     * The order things happened in.
+     *
+     * Not `occurredAt`: that comes from the injected clock, so a fixed test clock
+     * — or two decisions inside one transaction — stamps several rows with the
+     * same instant. Ordering by the timestamp printed *"put up for review"* above
+     * *"drafted"* on the review screen.
+     */
+    seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity().notNull(),
+
+    issueId: uuid('issue_id')
+      .notNull()
+      .references(() => sliceIssues.id, { onDelete: 'restrict' }),
+
+    versionId: uuid('version_id')
+      .notNull()
+      .references(() => sliceIssueVersions.id, { onDelete: 'restrict' }),
+
+    action: sliceReviewAction('action').notNull(),
+
+    actorUserId: uuid('actor_user_id').references(() => users.id, { onDelete: 'restrict' }),
+
+    /** Required on a rejection: a refusal without a reason is not reviewable. */
+    note: text('note'),
+
+    occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    /**
+     * One of each action per version, ever.
+     *
+     * The idempotency guarantee for publication **under concurrency**: ten
+     * simultaneous publishes of one approved version produced five publication
+     * rows before this existed, because the service's already-published check is
+     * a read and four transactions had read `approved` before the first
+     * committed. The same shape as `stake_resolutions.stake_id UNIQUE` — a
+     * natural key on the thing that must happen once.
+     */
+    unique('slice_reviews_one_per_action').on(table.versionId, table.action),
+    index('slice_reviews_version_idx').on(table.versionId, table.seq),
+  ],
+);
+
+/**
+ * The manual hold switch (`16 §9`, permanent).
+ *
+ * Append-only, so *"who stopped publication and why"* is answerable a year
+ * later. The current state is the highest `seq` — an identity column rather than
+ * a timestamp comparison, because two rows written in the same millisecond must
+ * still have an order.
+ */
+export const slicePublicationHolds = pgTable('slice_publication_holds', {
+  id: uuid('id').primaryKey().defaultRandom(),
+
+  seq: bigint('seq', { mode: 'number' }).generatedAlwaysAsIdentity().notNull(),
+
+  held: boolean('held').notNull(),
+
+  actorUserId: uuid('actor_user_id')
+    .notNull()
+    .references(() => users.id, { onDelete: 'restrict' }),
+
+  reason: text('reason'),
+
+  occurredAt: timestamp('occurred_at', { withTimezone: true }).notNull(),
+});
+
+export type SliceIssue = typeof sliceIssues.$inferSelect;
+export type SliceIssueVersion = typeof sliceIssueVersions.$inferSelect;
+export type SliceReview = typeof sliceReviews.$inferSelect;

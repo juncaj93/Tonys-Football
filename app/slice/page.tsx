@@ -5,7 +5,7 @@ import { Newspaper } from '@/components/slice/newspaper';
 import { requireUser } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
 import { seasonClock } from '@/lib/parlor/season';
-import { latestEdition } from '@/lib/slice/edition';
+import { rackIssue } from '@/lib/slice/publication';
 import { previewEdition, type PreviewEdition } from '@/lib/slice/editions';
 import { type Edition } from '@/lib/slice/render';
 import { StakesBand } from '@/components/slice/stakes-band';
@@ -100,13 +100,37 @@ export default async function SlicePage({
           bounty: await openBountyFor(getDb(), live.year),
         });
 
-  const state = preview ?? ({
-    mode: 'rack',
-    rack: 'offseason',
-    issue: await latestEdition(getDb()),
-  } satisfies PreviewEdition);
+  /*
+   * What is on the rack, and it is not "whatever renders".
+   *
+   * `rackIssue` prefers the most recently **published** issue — the one the
+   * commissioner approved through `lib/slice/publication.ts` — and falls back to
+   * the historical rendering only when nothing has ever been published. That
+   * ordering is `16 §9`'s approval gate made real on the reader's side: once the
+   * chain has approved anything, an unapproved rendering cannot reach a manager.
+   */
+  const rack = await rackIssue(getDb(), { openSeasonYear: live?.year ?? null });
+
+  const state =
+    preview ??
+    ({
+      mode: 'rack',
+      rack: 'offseason',
+      issue: rack?.edition ?? null,
+    } satisfies PreviewEdition);
 
   const issue: Edition | null = state.mode === 'issue' ? state.issue : state.issue;
+
+  /*
+   * The stamp comes from the rack rather than from the mode.
+   *
+   * *"Last one Tony printed"* is a claim about **which week this is**, not about
+   * which surface is rendering it — so a published issue for the current season
+   * must not carry it, and a historical fallback must. Deriving it from
+   * `state.mode` was right while the only paper was last season's and would have
+   * printed a stale caveat over the first live issue.
+   */
+  const stamp = state.mode === 'rack' ? (rack?.stamp ?? null) : null;
 
   return (
     <>
@@ -141,10 +165,7 @@ export default async function SlicePage({
               * paper, under the rules, where a stamp goes. Only in the offseason:
               * a live issue is the current one and labelling it would be wrong.
               */
-            <Newspaper
-              issue={issue}
-              stamp={state.mode === 'rack' ? 'Last one Tony printed' : null}
-            />
+            <Newspaper issue={issue} stamp={stamp} />
           )}
 
           {stakes !== null && (

@@ -39,7 +39,20 @@ export interface DemoState {
     | '/counter'
     | '/counter/collection'
     | '/counter/showcase'
-    | '/profile/character';
+    | '/profile/character'
+    | '/admin/slice';
+  /**
+   * The seat holds the commissioner's keys.
+   *
+   * Only the press-desk states. `requireAdmin()` answers `notFound()`, so a
+   * review-screen demo on an ordinary seat photographs a 404 and files it under
+   * the state's name — the same false green the nine reveal states shipped.
+   *
+   * Safe for the reasons in `guard.ts`: guard 1 refuses to run in production at
+   * all, and guard 2 means the flag can only ever be set on a `demo:` seat. It is
+   * a property of a reserved fixture, not a privilege escalation path.
+   */
+  readonly commissioner?: true;
 }
 
 /**
@@ -133,6 +146,60 @@ export const DEMO_STATES: readonly DemoState[] = [
   { key: 'purchase-ok', shows: 'a successful purchase', reach: 'driven', route: '/counter' },
   { key: 'purchase-refused', shows: 'a purchase the database refused', reach: 'driven', route: '/counter' },
   { key: 'network-retry', shows: 'a failed request, retried', reach: 'client', route: '/counter' },
+
+  /*
+   * The press desk (`16 §9`, `08 §22`).
+   *
+   * All six are `driven`: each one walks the real chain — `generateDraft`,
+   * `approveVersion`, `publishVersion`, `setPublicationHold` — so a demo that
+   * works is evidence the approval gate works. `review-refused` is the one that
+   * needs explaining, and the explanation is in `apply.ts`: the renderer and the
+   * validator agree on every week of both finalized seasons, so the *only* way
+   * to photograph a refused draft is to doctor the prose and let the **real**
+   * validator find it.
+   */
+  {
+    key: 'review-empty',
+    shows: 'the desk with nothing waiting to be read',
+    reach: 'arranged',
+    route: '/admin/slice',
+    commissioner: true,
+  },
+  {
+    key: 'review-waiting',
+    shows: 'an issue drafted and waiting on the commissioner',
+    reach: 'driven',
+    route: '/admin/slice',
+    commissioner: true,
+  },
+  {
+    key: 'review-refused',
+    shows: 'a draft the deterministic validator refused',
+    reach: 'driven',
+    route: '/admin/slice',
+    commissioner: true,
+  },
+  {
+    key: 'review-approved',
+    shows: 'an issue approved and not yet printed',
+    reach: 'driven',
+    route: '/admin/slice',
+    commissioner: true,
+  },
+  {
+    key: 'review-published',
+    shows: 'an issue on the rack, with its record beside it',
+    reach: 'driven',
+    route: '/admin/slice',
+    commissioner: true,
+  },
+  {
+    key: 'review-held',
+    shows: 'the press stopped by the manual hold',
+    reach: 'driven',
+    route: '/admin/slice',
+    commissioner: true,
+  },
 ] as const;
 
 export function demoState(key: string): DemoState {
