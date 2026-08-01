@@ -27,6 +27,21 @@ source is dark maroon: the palette has nothing between `red-dark #8C1F22` and ne
 dark reds land on wood. Accepted for B0. **It does not justify a palette change** — see
 `ASSET_PIPELINE.md §4`, which says not to add palette colours to rescue a single asset.
 
+> **Addressed 2026-08-01, without a palette change.** The commissioner saw this on the hosted
+> site and named it: the wall behind Tony reads *"burnt, scratchy, muddy"*. It was two things,
+> and the audit had correctly identified only the first. The dark reds landing on wood are the
+> **hue**; the scattered near-black singles the same snap left across them are the **texture**;
+> and a red-brown checker at very nearly Tony's own value, filling the rectangle his head
+> occupies, is a third — a **value** problem no amount of cleaning fixes.
+>
+> `scripts/clean-parlor-surfaces.ts` despeckles the alcove (strictly lone pixels, to a fixed
+> point) and takes the lit tile down one step, so the recess reads as a recess. Both are
+> post-quantization edits on the 320 × 569 grid, in the same shape as `shift-tonight-board.ts`
+> — measured, integrity-checked, idempotent, and pinned by a test that names the script when a
+> reprocess reverts it. **No palette colour was added and the source painting is untouched.**
+> The board's face was corrected in the same pass; see
+> `docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md §9`.
+
 **B1 requires separate explicit authorization.**
 
 ---
