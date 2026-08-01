@@ -108,8 +108,15 @@ export default async function SlicePage({
    * the historical rendering only when nothing has ever been published. That
    * ordering is `16 §9`'s approval gate made real on the reader's side: once the
    * chain has approved anything, an unapproved rendering cannot reach a manager.
+   *
+   * **Not asked for at all when a named edition resolved.** A preview replaces
+   * the rack outright, so computing it would be work whose result is discarded —
+   * and the fallback is not cheap: with nothing published it walks back through
+   * the season building a fact packet per week until one is publishable. Fifteen
+   * preview states each paid for a full historical walk they never looked at.
    */
-  const rack = await rackIssue(getDb(), { openSeasonYear: live?.year ?? null });
+  const rack =
+    preview === null ? await rackIssue(getDb(), { openSeasonYear: live?.year ?? null }) : null;
 
   const state =
     preview ??
