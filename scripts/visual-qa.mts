@@ -1451,6 +1451,19 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
    */
   const dismiss = page.getByRole('button', { name: /Dismiss what Tony said/i });
   if ((await dismiss.count()) > 0) await dismiss.click({ force: true });
+  /*
+   * Dismissed early, sampled from 1300ms — **both**, and the second is not
+   * optional.
+   *
+   * An earlier version dismissed and then sampled immediately, on the reasoning
+   * that starting sooner covers more of the pre-reveal interval. It covered the
+   * **entrance** instead: the click returns around 700ms and `tony-steps-up`
+   * runs to 980ms, so the first two hundred milliseconds of the window were
+   * frames of an animation that is supposed to move him. It reported
+   * `dy moved 5.52px` at all three widths — the gate catching the harness,
+   * which is the right way round.
+   */
+  await page.waitForFunction(() => performance.now() >= 1300, undefined, { timeout: 10_000 });
   const dismissed = await sampleUntil(WINDOW_ENDS);
   const quietB = dismissed.filter((f) => !f.speaking);
   assertSteady(quietB, width, 'pass B (line dismissed)', 120);
