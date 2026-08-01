@@ -1,6 +1,8 @@
 # Homepage visual cleanliness — the boundary
 
-**Status:** commissioner direction, recorded 2026-08-01. **Not yet started.**
+**Status:** commissioner direction, recorded 2026-08-01. **Delivered 2026-08-01** —
+see [§9](#9-what-was-done) for the mechanism chosen per surface, the two defects
+the timed regression found, and the evidence.
 
 **Authority:** this is a standing commissioner ruling and sits at level 1 of
 `AUTONOMY.md §1`, below only `docs/PRODUCT_DELIVERY_MANDATE.md` in the same tier.
@@ -200,3 +202,118 @@ frame-sequence coverage is required.
 7. **No new art files are required from the commissioner**
 8. Before-and-after screenshots are captured at phone size
 9. **The chosen fix mechanism is recorded for each affected surface**
+
+---
+
+## 9. What was done
+
+### The clip was one CSS rule, and there was a second one beside it
+
+**`.showing-taps .tony-mark` translated Tony `-2px`** with a 260ms eased
+transition. `arrival.tsx` turns that class on at 1600ms and off at 4900ms, so on
+an untouched homepage he rose two pixels, stood there for three and a third
+seconds, and slid back — *"a few seconds after the homepage has been sitting
+there"*, exactly. Two defects in one rule: the counter's cut moved about two
+sprite rows up his apron, into the clearance `objects.ts` calls *"the difference
+between behind and severed"*; and a 260ms eased transition put a
+nearest-neighbour sprite at fractional offsets for every frame of both ramps.
+
+It was not the hydration mismatch, and the repair for that remains untouched.
+`spoken-line.test.tsx` still compares element skeletons and still passes.
+
+The reveal keeps its meaning and loses its movement: Tony takes **a warm edge on
+his own alpha** — `18 §9.4`'s mechanism, the one the owned box already uses. It
+follows his silhouette because it *is* his silhouette, and it moves nothing.
+
+Building the regression then found a **second** fractional offset, in the
+animation that had been declared safe. `tony-talks` ran on `steps(2, end)` on the
+belief that two steps across `0 → -1px → 0` give two positions. A CSS timing
+function applies **between each pair of keyframes**, not across the animation, so
+it ran two steps in each half and the rendered sequence was `0, -0.5, -1, -0.5`.
+**Half a pixel, on every sentence Tony has ever spoken.** `step-end` holds each
+keyframe's value for its interval: two positions, one whole pixel apart, same
+cadence. No screenshot could have found this; the frame sampler reported it at
+all three widths on its first green run.
+
+### The regression, and the proof that it fails on the old behaviour
+
+`checkTonySteady` in `scripts/visual-qa.mts`, on the `tony-steady` state. It
+samples Tony **every animation frame** — the population the claim is about,
+rather than the frames a timer happened to ask for — and measures his offset from
+`[data-room-layer="counter-front"]`, so a page that scrolls does not read as a
+sprite that moved. Each frame also records what is left of him after every
+clipping ancestor, so *"no body part is briefly cropped"* is a measurement.
+
+Five passes cover the seven moments this document asks for:
+
+| pass | covers |
+|---|---|
+| A | an undisturbed first visit — several seconds idle, active idle frames, the greeting typing |
+| B | the same window with the line dismissed, so the frames *before* the reveal are still ones too |
+| C | Tony speaking, on demand |
+| D | Tony after speaking |
+| E | a Display opened and closed, then out to the Back Hall and back |
+
+Passes A and B assert they actually sampled both sides of 1600ms and both sides
+of 4900ms; a run that failed to cover the window fails rather than passing on an
+empty set.
+
+**Run against the old CSS it fails, at all three widths, in both passes**:
+
+```
+[tony-steady] @390 pass A: dy moved 2.00px (-140.17 at t=5284ms, -142.17 at t=2467ms)
+[tony-steady] @390 pass A: cy moved 2.00px (-140.17 at t=5284ms, -142.17 at t=2467ms)
+[tony-steady] @390 pass B: dy moved 2.00px (-140.17 at t=1456ms, -142.17 at t=2006ms)
+… 12 failures across 390 / 375 / 360
+```
+
+Pass B's two timestamps straddle the reveal turning on. That is the defect, in
+the gate's own words.
+
+### The mechanism, per surface
+
+| Surface | Mechanism | What was done |
+|---|---|---|
+| Tony's anchor | **Rendering** | the transform lift replaced by an alpha-derived edge; `tony-talks` moved to `step-end` |
+| The Tonight board's face | **Deterministic replacement** — §6's own example | repainted flat `paper-white` with a `paper-mid` inner shadow, `scripts/clean-parlor-surfaces.ts` |
+| The board's text | **Rendering** | `.board-paint` deleted with the ground that needed it. A pale outline existed because letters landed half on `#FFD98A` and half on `#F2A94B`; on one flat cream ground it would be a halo. `red-dark` measures 8.4:1 on it, `wood-dark` 10.6:1 |
+| The wall and the alcove | **Source artwork, targeted** | a palette-preserving despeckle over two measured rectangles |
+| The alcove behind Tony | **Source artwork, targeted** | the lit tile taken down one value step, so the recess is a recess and his silhouette is not competing with a background at his own value |
+| The ceiling | **Nothing, deliberately** | see below |
+
+**No new art files.** Both corrections are post-quantization edits to the
+committed `zone_parlor_shell.png`, in the same shape and with the same guarantees
+as `shift-tonight-board.ts`: measured, integrity-checked, idempotent, and pinned
+by `scripts/clean-parlor-surfaces.test.ts` so a reprocess that reverts them fails
+the suite by name.
+
+Neither can introduce a colour. The replacement paints two palette values; the
+despeckle only ever assigns a colour already dominant among a pixel's own
+neighbours.
+
+### Why the source could not be fixed instead
+
+Both defects are made by the downscale and the palette snap, not present in the
+941 × 1672 painting. The board's face is a smooth gradient there and a dithered
+vignette after quantization. And `SHELL_AUDIT_zone_parlor_shell.md` recorded the
+alcove itself, and accepted it: *"the alcove backsplash reads brown where the
+source is dark maroon: the palette has nothing between `red-dark #8C1F22` and
+near-black, so dark reds land on wood."* Repainting the source and reprocessing
+would produce the same output from the same 32 colours.
+
+### The ceiling is still scorched, and that is recorded rather than hidden
+
+The despeckle was run over it for one iteration and **dashed every tile grid
+line**: the ceiling draws its perspective grid as one-unit dashed diagonals, and
+a dashed diagonal is exactly what a lone-pixel filter cannot tell from noise. It
+traded a defect this document names for one it names twice. The rectangle stays
+in the script as `EXCLUDED_CEILING`, with the reasoning, because *"the ceiling
+still looks scorched"* is a fair observation and the answer is that it needs a
+different mechanism — a targeted regeneration — not this one. Carried as visual
+debt.
+
+### Evidence
+
+`docs/evidence/homepage-cleanliness/` — the board and the wall behind Tony,
+before and after, at 4× nearest-neighbour. Full-room captures at 390 / 375 / 360
+are the `tony-steady` state in the visual-QA artifacts.

@@ -312,6 +312,15 @@ export default async function ParlorPage({
               * to misalign.
               */}
             <div
+              // The stationary thing Tony is measured against.
+              //
+              // `visual-qa.mts`'s steadiness gate samples the *distance* from
+              // Tony to this layer every animation frame rather than his
+              // viewport position, so a page that scrolls a pixel does not read
+              // as a sprite that moved. The invariant it protects is exactly
+              // this pair: **nothing may move Tony relative to the counter that
+              // cuts him.**
+              data-room-layer="counter-front"
               className="absolute inset-x-0 bottom-0 z-20 overflow-hidden"
               style={{ height: `${((1 - CUT) * 100).toFixed(3)}%` }}
             >
@@ -366,19 +375,32 @@ export default async function ParlorPage({
               * `aria-hidden` because the button beneath carries the label and the
               * panel carries the prose; a screen reader should not hear the
               * headline twice on the way to the same place.
+              *
+              * ## The painted outline is gone, with the ground that needed it
+              *
+              * Both lines wore `board-paint` — one hard pixel of `amber-glow` on
+              * all four sides — because the board's face was a **dithered amber
+              * vignette** and dark-red letters kept landing half on `#FFD98A` and
+              * half on `#F2A94B`. `scripts/clean-parlor-surfaces.ts` made the face
+              * a flat cream writing surface, so there is one ground under every
+              * letter and the outline has nothing left to do. Keeping it would
+              * put a pale halo around dark text on near-white, which is the
+              * *"noisy background competing with text"* the direction bans,
+              * arriving from the fix rather than from the art.
+              *
+              * `red-dark` on `paper-white` measures 8.4:1 and `wood-dark` on it
+              * 10.6:1. Neither needs help.
               */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute flex flex-col items-center justify-center overflow-hidden text-center"
               style={place(TONIGHT_FIELD)}
             >
-              <p className="board-paint font-display text-[21px] leading-[1.1] tracking-[0.02em] text-red-dark uppercase">
+              <p className="font-display text-[21px] leading-[1.1] tracking-[0.02em] text-red-dark uppercase">
                 {face.hero}
               </p>
               {face.detail !== null && (
-                <p className="board-paint mt-1.5 text-[16px] leading-[1.25] text-wood-dark">
-                  {face.detail}
-                </p>
+                <p className="mt-1.5 text-[16px] leading-[1.25] text-wood-dark">{face.detail}</p>
               )}
             </div>
 

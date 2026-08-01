@@ -507,19 +507,42 @@ button {
  *
  * One pixel, and only vertically. Anything larger reads as a bounce, and
  * anything horizontal reads as him sliding along behind the counter.
+ *
+ * ## `step-end`, not `steps(2, end)` — and the difference is half a pixel
+ *
+ * This was `steps(2, end)`, on the belief that two steps across a 0 → -1px →
+ * 0 cycle give **two** positions. They do not. A CSS timing function is applied
+ * **between each pair of keyframes**, not across the whole animation, so
+ * `steps(2, end)` ran two steps inside the 0 → -1px half *and two more* inside
+ * the -1px → 0 half. The rendered sequence was `0, -0.5, -1, -0.5`, and
+ * **-0.5px is a pixel-art sprite resampled at a half-pixel offset** — the exact
+ * *"scaling makes the sprite look dirty"* the art direction names, on every
+ * sentence Tony has ever spoken.
+ *
+ * `step-end` holds each keyframe's value for its whole interval: 0px for the
+ * first half, -1px for the second. Two positions, one whole pixel apart, same
+ * 300ms cadence. Nothing about how it reads changes; what changes is that no
+ * frame lands between two device pixels.
+ *
+ * Found by `checkTonySteady` in `scripts/visual-qa.mts`, which measures him
+ * every animation frame and reported *"he takes 3 vertical position(s)
+ * [-1, -0.5, 0] relative to rest"* at all three widths. No screenshot would
+ * have.
  */
 @keyframes tony-talks {
-  0%,
-  100% {
+  0% {
     transform: translate3d(0, 0, 0);
   }
   50% {
     transform: translate3d(0, -1px, 0);
   }
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
 }
 
 .speaking .tony-mark {
-  animation: tony-talks 300ms steps(2, end) infinite;
+  animation: tony-talks 300ms step-end infinite;
 }
 
 @keyframes caret-blink {
@@ -614,13 +637,21 @@ body[data-parlor-focus='reveal'] .tony-line {
   }
 }
 
-.board-paint {
-  text-shadow:
-    1px 0 0 var(--color-amber-glow),
-    -1px 0 0 var(--color-amber-glow),
-    0 1px 0 var(--color-amber-glow),
-    0 -1px 0 var(--color-amber-glow);
-}
+/*
+ * `.board-paint` was here, and has been removed with the ground it existed for.
+ *
+ * It put one hard pixel of `amber-glow` on all four sides of the Tonight
+ * board's two lines, because the board's face was a dithered amber vignette and
+ * a letter would land half on `#FFD98A` and half on `#F2A94B`. The face is a
+ * flat cream writing surface now (`scripts/clean-parlor-surfaces.ts`), so the
+ * outline had nothing left to separate — and a pale halo around dark text on
+ * near-white is a defect rather than a rescue.
+ *
+ * `.shelf-label` below is the same device on a surface that still needs it: an
+ * unowned collection spot has no surface by ruling, so its name genuinely does
+ * land on a drawing. That one stays, and the note in the operating model that
+ * describes the pair now describes only it.
+ */
 
 /*
  * A name written on an empty shelf.
@@ -644,17 +675,47 @@ body[data-parlor-focus='reveal'] .tony-line {
     0 -1px 0 #1c1113;
 }
 
+/* --- Tony holds still ---------------------------------------------------- *
+ *
+ * **Nothing may move Tony relative to the counter that cuts him**, and the
+ * affordance reveal used to.
+ *
+ * `.showing-taps .tony-mark` translated him **-2px** with a 260ms ease-out
+ * transition on `.tony-mark`. The reveal turns on at 1600ms and off at 4900ms,
+ * so on an idle homepage he lifted two pixels, sat there for three and a third
+ * seconds, and slid back down — with nothing else on screen moving and nothing
+ * a manager did to cause it. That is the *"Tony briefly clips after the
+ * homepage has been sitting for a few seconds"* the commissioner saw, and it
+ * was two defects at once:
+ *
+ * 1. **The cut moved.** The counter front is a separate, stationary layer drawn
+ *    over him from row 292. `objects.ts` is emphatic that where the cut lands on
+ *    his sprite is load-bearing — six rows of apron between his hand and the
+ *    counter edge is *"the difference between behind and severed"*. Two CSS px
+ *    is about two sprite rows at these widths, so the reveal was moving the cut
+ *    into the margin that ruling bought.
+ * 2. **He was resampled.** A 260ms eased transition puts a pixel-art sprite at
+ *    fractional device-pixel offsets for every frame in between, which defeats
+ *    nearest-neighbour scaling. Measured mid-transition, his forearms and apron
+ *    strings smear — the same *"scaling makes the sprite look dirty"* the art
+ *    direction names, arriving from animation rather than from the artwork.
+ *
+ * The information the reveal carried is kept and the movement is not: he takes
+ * **a warm edge on his own alpha**, which is `18 §9.4`'s mechanism and the one
+ * the owned box already uses. It follows his silhouette because it *is* his
+ * silhouette, and it moves nothing.
+ *
+ * `.speaking` still shifts him one whole pixel on `steps(2, end)` — two integer
+ * positions, never a fraction between them — which is why that one is safe and
+ * stays.
+ */
 .tony-mark {
-  transition: transform 260ms ease-out;
+  transition: filter 260ms ease-out;
 }
 
 .showing-taps .tony-mark {
-  transform: translate3d(0, -2px, 0);
-}
-
-/* The entrance owns the transform while it is running. */
-.arriving .tony-mark {
-  transition: none;
+  filter:
+    drop-shadow(0 0 2px rgba(255, 244, 216, 0.75)) drop-shadow(0 0 10px rgba(255, 217, 138, 0.4));
 }
 
 /* --- Knowing what you can touch ------------------------------------------ *
@@ -1242,11 +1303,12 @@ body[data-parlor-focus='reveal'] .tony-line {
   }
 
   /*
-   * Zeroing the duration turns Tony's two-pixel lift from a movement into a
-   * jump, which is not what somebody asking for less motion wants. They keep
-   * the warm edges, which carry the same information without moving anything.
+   * Nothing to suppress here any more.
+   *
+   * This used to zero Tony's two-pixel lift, because zeroing the duration turned
+   * a movement into a jump — which is not what somebody asking for less motion
+   * wants. The lift is gone for everybody now, and a warm edge on his own alpha
+   * carries the same information without moving anything, so the reduced-motion
+   * path and the ordinary one are finally the same thing.
    */
-  .showing-taps .tony-mark {
-    transform: none;
-  }
 }

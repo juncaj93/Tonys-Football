@@ -98,6 +98,13 @@ const BANNED_IN_CHROME = ['#3B2050', '#3b2050'];
 
 type StateName =
   | 'idle'
+  /*
+   * The settled room, photographed *after* the arrival's reveal has come and
+   * gone — the moment the commissioner was looking at when Tony clipped. Its
+   * gate is `checkTonySteady`, which does its own timed passes; the screenshot
+   * is the still the passes are about.
+   */
+  | 'tony-steady'
   | 'character-empty'
   | 'character-dressed'
   | 'character-equipped'
@@ -363,6 +370,16 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'six-banners':
       await home(page);
       await dismissTony(page);
+      return;
+    /*
+     * A first visit, left alone until the arrival's reveal has finished — 4900ms
+     * plus its 260ms ramp. Everything before that settles is animation; this is
+     * the room as it actually sits, which is the state the clipping report was
+     * about and the one no capture in this driver had ever taken.
+     */
+    case 'tony-steady':
+      await page.evaluate(FORGET_ARRIVAL);
+      await home(page, 5400);
       return;
     case 'tonight-board':
       await home(page);
@@ -974,6 +991,7 @@ async function reachDemo(page: Page, state: StateName, demoKey: string): Promise
 
 const ALL_STATES: readonly StateName[] = [
   'idle',
+  'tony-steady',
   'tony-dialogue',
   'tonight-board',
   'banner-completed',
@@ -1121,6 +1139,400 @@ async function checkTargets(page: Page, width: number): Promise<void> {
       }
     }
   }
+}
+
+/* ------------------------------------------------------- Tony holds still -- */
+
+/**
+ * One animation frame of Tony, measured against the counter that cuts him.
+ *
+ * `t` is **page time** — `performance.now()`, whose origin is navigation start —
+ * not time since sampling began. The gate asserts which parts of the arrival
+ * timeline it actually covered, and it can only do that against the same clock
+ * `arrival.tsx` schedules on.
+ */
+interface TonyFrame {
+  readonly t: number;
+  /** Sprite offset from the counter-front layer. The invariant that matters. */
+  readonly dx: number;
+  readonly dy: number;
+  readonly w: number;
+  readonly h: number;
+  /** What is left of him after every clipping ancestor, in the same frame. */
+  readonly cx: number;
+  readonly cy: number;
+  readonly cw: number;
+  readonly ch: number;
+  readonly speaking: boolean;
+}
+
+/**
+ * Sample Tony every animation frame for `ms`.
+ *
+ * ## Why a rAF loop in the page rather than screenshots on a timer
+ *
+ * The defect is transient — two pixels, arriving 1.6s after load and leaving
+ * 3.3s later — and `18`'s own note is that a green sweep taken from one
+ * post-navigation capture is the false green this repository has shipped three
+ * times. Screenshots on a timer are the same mistake with more steps: they see
+ * whatever frames the harness happened to ask for. A rAF loop sees **every
+ * frame the compositor drew**, which is the population the claim is about.
+ *
+ * ## Measured against the counter, not against the viewport
+ *
+ * `getBoundingClientRect().top` moves when the page scrolls, so a scroll of one
+ * pixel would read as a sprite that moved. Every number here is a delta from
+ * `[data-room-layer="counter-front"]`, which is Tony's stationary neighbour and
+ * the layer whose cut across his apron `objects.ts` calls "the difference
+ * between behind and severed".
+ *
+ * ## The clip box
+ *
+ * Tony is *covered* by the counter front — a sibling drawn over him — which is
+ * design, and *clipped* by any ancestor with a non-visible `overflow`, which
+ * would not be. Rather than assert what the correct static clip is, each frame
+ * records the intersection of his box with every clipping ancestor and the gate
+ * asserts that intersection never changes. "No body part is briefly cropped" is
+ * then a measurement rather than an opinion.
+ *
+ * ## Why it is a string, and why it is an immediately-invoked one
+ *
+ * A string, because `esbuild`'s `keepNames` rewrites named function bodies with
+ * a `__name` helper that does not exist in the page: a `tsx`-compiled arrow with
+ * an inner named const handed to `page.evaluate` throws `__name is not defined`
+ * inside the browser.
+ *
+ * **Invoked in the expression**, because Playwright sets `isFunction` from
+ * `typeof pageFunction === 'function'` — which is `false` for a string — and
+ * then returns the evaluated expression *without calling it*. A string arrow
+ * therefore comes back as an unserializable function value, which arrives here
+ * as `undefined`. The first run of this gate crashed on exactly that. So the
+ * duration is interpolated in and the expression evaluates to the promise.
+ */
+function tonySampler(ms: number): string {
+  return `(() => { const ms = ${String(ms)}; return new Promise((resolve) => {
+  const mark = document.querySelector('.tony-mark');
+  const ref = document.querySelector('[data-room-layer="counter-front"]');
+  if (mark === null || ref === null) { resolve(null); return; }
+
+  // The drawn sprite when there is one, the mark itself when the asset is still
+  // a placeholder. Either way it is a descendant, so it carries every ancestor
+  // transform — which is where the movement under investigation lived.
+  const drawn = mark.querySelector('img') || mark;
+
+  const clipped = () => {
+    const box = drawn.getBoundingClientRect();
+    let top = box.top, left = box.left, right = box.right, bottom = box.bottom;
+    for (let node = drawn.parentElement; node !== null; node = node.parentElement) {
+      const style = getComputedStyle(node);
+      if (style.overflowX === 'visible' && style.overflowY === 'visible') continue;
+      const a = node.getBoundingClientRect();
+      top = Math.max(top, a.top);
+      left = Math.max(left, a.left);
+      right = Math.min(right, a.right);
+      bottom = Math.min(bottom, a.bottom);
+    }
+    return { top, left, right, bottom };
+  };
+
+  const frames = [];
+  const until = performance.now() + ms;
+  const tick = () => {
+    const d = drawn.getBoundingClientRect();
+    const r = ref.getBoundingClientRect();
+    const c = clipped();
+    frames.push({
+      t: Math.round(performance.now()),
+      dx: d.left - r.left,
+      dy: d.top - r.top,
+      w: d.width,
+      h: d.height,
+      cx: c.left - r.left,
+      cy: c.top - r.top,
+      cw: Math.max(0, c.right - c.left),
+      ch: Math.max(0, c.bottom - c.top),
+      speaking: document.querySelector('.speaking') !== null,
+    });
+    if (performance.now() < until) requestAnimationFrame(tick);
+    else resolve(frames);
+  };
+  requestAnimationFrame(tick);
+}); })()`;
+}
+
+/**
+ * Clear the once-per-session latch so the next load plays the whole arrival.
+ *
+ * Invoked in the expression for the reason above — as a bare string arrow this
+ * evaluated to a function nobody called, and every "first visit" in this gate
+ * was silently a return visit with no entrance and no reveal to sample.
+ */
+const FORGET_ARRIVAL = `(() => { try { sessionStorage.removeItem('tonys:arrived'); } catch (e) {} })()`;
+
+/**
+ * Sub-pixel arithmetic is not movement.
+ *
+ * `getBoundingClientRect` on a percentage-positioned element inside a
+ * fractionally scaled room lands on values like `215.69999694824219`, and two
+ * reads of an element that did not move can differ in the last place. The
+ * defect this gate was built for moved him **two whole CSS pixels** and put him
+ * at 214.11 and 215.35 on the way back, so a twentieth of a pixel is a floor
+ * far below anything real and far above float noise.
+ */
+const STEADY_EPS = 0.05;
+
+function spread(values: readonly number[]): number {
+  return Math.max(...values) - Math.min(...values);
+}
+
+/** Report the extremes, so a failure says what moved and when rather than that something did. */
+function describeSpread(frames: readonly TonyFrame[], key: keyof TonyFrame): string {
+  const numbers = frames.map((f) => f[key] as number);
+  const lo = frames[numbers.indexOf(Math.min(...numbers))]!;
+  const hi = frames[numbers.indexOf(Math.max(...numbers))]!;
+  return (
+    `${(Math.max(...numbers) - Math.min(...numbers)).toFixed(2)}px ` +
+    `(${(hi[key] as number).toFixed(2)} at t=${String(hi.t)}ms, ` +
+    `${(lo[key] as number).toFixed(2)} at t=${String(lo.t)}ms)`
+  );
+}
+
+const STEADY_KEYS = ['dx', 'dy', 'w', 'h', 'cx', 'cy', 'cw', 'ch'] as const;
+
+function assertSteady(
+  frames: readonly TonyFrame[],
+  width: number,
+  pass: string,
+  minimumFrames: number,
+): void {
+  if (frames.length < minimumFrames) {
+    fail(
+      'tony-steady',
+      `@${String(width)} ${pass}: only ${String(frames.length)} still frames to judge, ` +
+        `needed ${String(minimumFrames)}. A pass with nothing in it is not a pass.`,
+    );
+    return;
+  }
+
+  for (const key of STEADY_KEYS) {
+    if (spread(frames.map((f) => f[key])) > STEADY_EPS) {
+      fail('tony-steady', `@${String(width)} ${pass}: ${key} moved ${describeSpread(frames, key)}`);
+    }
+  }
+}
+
+/**
+ * Tony holds still.
+ *
+ * ## The defect
+ *
+ * The commissioner saw Tony *"briefly clip after the homepage has been sitting
+ * for a few seconds"*. He was: `.showing-taps .tony-mark` translated him -2px
+ * with a 260ms eased transition, and `arrival.tsx` turns that class on at
+ * 1600ms and off at 4900ms. So on an untouched homepage he rose two pixels,
+ * stood there for three and a third seconds, and slid back — moving the
+ * counter's cut about two sprite rows up his apron, and resampling a
+ * nearest-neighbour sprite at fractional offsets for every frame of both ramps.
+ *
+ * ## What this gate asserts
+ *
+ * That his offset from the counter, his size, and what survives every clipping
+ * ancestor are **identical in every frame he is not talking**, and that while he
+ * is talking he only ever occupies the two whole-pixel positions `tony-talks`
+ * defines. Five passes, covering the seven moments the direction names:
+ *
+ * | pass | covers |
+ * |---|---|
+ * | A | an undisturbed first visit — several seconds idle, active idle frames, the greeting typing |
+ * | B | the same window with the line dismissed, so the *pre-reveal* frames are still ones too |
+ * | C | Tony speaking, on demand |
+ * | D | Tony after speaking |
+ * | E | a room interaction — out to `/counter` — and the return visit |
+ *
+ * A and B between them put still frames on both sides of 1600ms and both sides
+ * of 4900ms, which is what makes this able to fail on the old behaviour: under
+ * it, `dy` in pass B spans 1300ms at rest, 3000ms two pixels up, and 4950ms
+ * mid-ramp at a third of a pixel. The gate was run against the old CSS before
+ * the repair was kept, and reported `dy moved 2.00px`.
+ */
+async function checkTonySteady(page: Page, width: number): Promise<void> {
+  /*
+   * The arrival timeline, from `arrival.tsx`. Duplicated deliberately: a gate
+   * that imports the constants it is checking cannot notice them changing, and
+   * these three numbers are the schedule this whole gate exists to sample
+   * across. If they move, this fails and says so, which is the point.
+   */
+  const REVEAL_AT = 1600;
+  const REVEAL_OFF = 1600 + 3300;
+  const RAMP = 260;
+
+  const firstVisit = async (): Promise<void> => {
+    await page.evaluate(FORGET_ARRIVAL);
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+  };
+
+  const sample = async (ms: number): Promise<TonyFrame[]> => {
+    const frames = (await page.evaluate(tonySampler(ms))) as TonyFrame[] | null | undefined;
+    if (frames === null || frames === undefined) {
+      throw new Error(
+        `@${String(width)} the sampler returned nothing — either .tony-mark or ` +
+          `[data-room-layer="counter-front"] is missing from the homepage`,
+      );
+    }
+    return frames;
+  };
+
+  const covers = (frames: readonly TonyFrame[], lo: number, hi: number): boolean =>
+    frames.some((f) => f.t >= lo && f.t <= hi);
+
+  /* --- A. Nobody touches anything ------------------------------------- */
+
+  await firstVisit();
+  // The entrance genuinely moves him — that is `tony-steps-up`, by design. It
+  // ends at 980ms and `arriving` comes off at 1100ms, so 1300 is clear of it.
+  await page.waitForTimeout(1300);
+  const undisturbed = await sample(5300);
+  const quietA = undisturbed.filter((f) => !f.speaking);
+  assertSteady(quietA, width, 'pass A (untouched homepage)', 60);
+
+  /*
+   * The greeting types from 1150ms for at most 1700ms, so an undisturbed page
+   * has no still frames before the reveal turns on — pass B exists for those.
+   * What A must cover is the reveal *standing* and the reveal *gone*.
+   */
+  if (!covers(quietA, REVEAL_AT + 1400, REVEAL_OFF - 100)) {
+    fail('tony-steady', `@${String(width)} pass A never sampled a still frame while lit`);
+  }
+  if (!covers(quietA, REVEAL_OFF + RAMP + 200, REVEAL_OFF + 1500)) {
+    fail('tony-steady', `@${String(width)} pass A never sampled a still frame after the reveal`);
+  }
+
+  /* --- B. The same window, with his line put away --------------------- */
+
+  await firstVisit();
+  // Immediately: dismissing unmounts `SpokenLine`, whose cleanup clears
+  // `speaking`, so the whole window from 1300ms on is a still frame — including
+  // the 300ms before the reveal turns on, which is the interval pass A cannot
+  // reach and the one that makes the lift visible as a *change*.
+  await dismissTony(page);
+  await page.waitForTimeout(400);
+  const dismissed = await sample(5300);
+  const quietB = dismissed.filter((f) => !f.speaking);
+  assertSteady(quietB, width, 'pass B (line dismissed)', 120);
+
+  for (const [lo, hi, what] of [
+    [1200, REVEAL_AT - 50, 'before the reveal'],
+    [REVEAL_AT + RAMP + 100, REVEAL_OFF - 100, 'while the reveal is lit'],
+    [REVEAL_OFF + RAMP + 200, REVEAL_OFF + 1200, 'after the reveal'],
+  ] as const) {
+    if (!covers(quietB, lo, hi)) {
+      fail(
+        'tony-steady',
+        `@${String(width)} pass B sampled nothing ${what} (${String(lo)}-${String(hi)}ms); ` +
+          `the window this gate needs was not covered, so a green result means nothing`,
+      );
+    }
+  }
+
+  const baseline = quietB[quietB.length - 1]!;
+
+  /* --- C. Talking ------------------------------------------------------ */
+
+  await page.getByRole('button', { name: /Talk to Tony/i }).click({ force: true });
+  await page.waitForFunction(() => document.querySelector('.speaking') !== null, undefined, {
+    timeout: 10_000,
+  });
+  const talking = (await sample(1200)).filter((f) => f.speaking);
+
+  if (talking.length < 20) {
+    fail(
+      'tony-steady',
+      `@${String(width)} pass C caught only ${String(talking.length)} speaking frames`,
+    );
+  } else {
+    // Width, height and horizontal position are untouched by `tony-talks`.
+    for (const key of ['dx', 'w', 'h'] as const) {
+      if (spread(talking.map((f) => f[key])) > STEADY_EPS) {
+        fail(
+          'tony-steady',
+          `@${String(width)} pass C (speaking): ${key} moved ${describeSpread(talking, key)}`,
+        );
+      }
+    }
+
+    /*
+     * Vertically he shifts, and that is the point of the animation — but on
+     * `steps(2, end)` he only ever occupies **two positions, one pixel apart**,
+     * never a fraction between them. That is the whole reason this one is safe
+     * and the reveal's eased transition was not: a pixel-art sprite resampled
+     * at 0.4px is the smearing the art direction names.
+     */
+    const offsets = [...new Set(talking.map((f) => Number((f.dy - baseline.dy).toFixed(2))))].sort(
+      (a, b) => a - b,
+    );
+    const whole = offsets.every((o) => Math.abs(o - Math.round(o)) <= STEADY_EPS);
+    if (!whole || offsets.length > 2 || Math.abs(offsets[0]!) > 1 + STEADY_EPS) {
+      fail(
+        'tony-steady',
+        `@${String(width)} pass C (speaking): he takes ${String(offsets.length)} vertical ` +
+          `position(s) [${offsets.join(', ')}] relative to rest; ` +
+          `tony-talks defines exactly two, one whole pixel apart`,
+      );
+    }
+  }
+
+  /* --- D. Done talking ------------------------------------------------- */
+
+  await page.waitForFunction(() => document.querySelector('.speaking') === null, undefined, {
+    timeout: 15_000,
+  });
+  await page.waitForTimeout(400);
+  const after = await sample(900);
+  assertSteady(after, width, 'pass D (after speaking)', 30);
+  if (Math.abs(after[0]!.dy - baseline.dy) > STEADY_EPS) {
+    fail(
+      'tony-steady',
+      `@${String(width)} pass D: he came to rest ${(after[0]!.dy - baseline.dy).toFixed(2)}px ` +
+        `from where he started`,
+    );
+  }
+
+  /* --- E. A room interaction, then out of the room and back ------------- */
+
+  /*
+   * Two interactions, because "room interaction followed by return" has two
+   * readings and both are cheap: a Display opened and closed **without leaving**
+   * — which mounts a panel and a scrim over the room and then unmounts them —
+   * and a Door taken out of the room and a walk back in.
+   */
+  await page.getByRole('button', { name: /receipt/i }).click({ force: true });
+  await page.waitForTimeout(500);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
+  const afterPanel = (await sample(700)).filter((f) => !f.speaking);
+  assertSteady(afterPanel, width, 'pass E (a panel opened and closed)', 20);
+
+  /*
+   * The Back Hall doorway rather than the counter: when a box is on the tray the
+   * counter Door is **restated as the box**, so `a[href="/counter"]` is not in
+   * the room for a manager who owns one — which is every seeded manager. The
+   * rear doorway is one of the three Doors in every state of the homepage.
+   */
+  await page.locator('a[href="/back-hall"]').first().click({ force: true });
+  await page.waitForURL((url) => url.pathname.startsWith('/back-hall'), { timeout: 20_000 });
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1200);
+  const returned = (await sample(1600)).filter((f) => !f.speaking);
+  assertSteady(returned, width, 'pass E (back from the Back Hall)', 40);
+  if (returned.length > 0 && Math.abs(returned[0]!.dy - baseline.dy) > STEADY_EPS) {
+    fail(
+      'tony-steady',
+      `@${String(width)} pass E: a return visit stands him ` +
+        `${(returned[0]!.dy - baseline.dy).toFixed(2)}px from where the first visit left him`,
+    );
+  }
+
+  await dismissTony(page);
 }
 
 /**
@@ -1875,6 +2287,15 @@ async function run(): Promise<void> {
             await checkObjectMap(page, width);
             // Nothing glows in the idle room unless a box is on the tray.
             await checkOnlyTheTrayGlows(page, width);
+          }
+
+          /*
+           * The timed passes. They navigate on their own — a first visit twice,
+           * out to the counter and back — so they run last for their state and
+           * leave the page on the homepage for the next one.
+           */
+          if (state === 'tony-steady') {
+            await checkTonySteady(page, width);
           }
 
           /*
