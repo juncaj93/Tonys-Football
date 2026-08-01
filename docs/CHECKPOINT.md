@@ -20,7 +20,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Nothing. The review queue it was waiting on is built — see below |
 | **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`), now unblocked. Authoring, settlement, week finalization and the Slice draft all exist and are idempotent; what is missing is the schedule that calls them |
-| **Slice review chain** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
+| **Slice review chain** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #53 | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
 
@@ -34,8 +34,10 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ### The Slice review chain — what the Tuesday job was actually waiting on
 
-**`main` is `27cdbc7`** (PR #52 merged). Branch:
-`claude/resume-autonomous-product-direction-6og8ui`, cut fresh from it.
+**PR #53 is merged.** `main` is **`c3dc077`**, both required gates green on real
+runners before the merge, and the merge deploys. Branch
+`claude/resume-autonomous-product-direction-6og8ui`, restarted from `main`
+afterwards.
 
 The checkpoint's queue put the Tuesday cron first. It was **not buildable**, and
 the reason had nothing to do with the operations it calls:
@@ -163,11 +165,46 @@ guards. `requireAdmin()` answers `notFound()`, so a seat without them renders a
 
 | | |
 |---|---|
-| `main` | **`27cdbc7`** — PR #52 merged |
-| Branch | `claude/resume-autonomous-product-direction-6og8ui` |
+| `main` | **`c3dc077`** — PR #53 merged |
+| Branch | `claude/resume-autonomous-product-direction-6og8ui`, restarted from `main` after the merge |
+| `Typecheck · Lint · Test · Build` | ✅ success on a real runner, **18:50:22Z**, before the merge |
+| `Screenshots · gates` | ✅ success on a real runner, **19:00:38Z**, before the merge |
 | `npm run check` | green — **1120 tests across 68 files** (was 1060 / 64) |
 | `npm run visual:qa` | green — **85 states × 3 widths** (was 77), production build, fresh database |
-| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Vercel deploys on push to `main`; that is GitHub-side evidence and nothing more |
+
+### One red gate, and what was actually done about it
+
+The **first** visual-QA run on this PR failed with a single console error:
+`React #418` at 375 attributed to `slice-blowout` — a *structure* mismatch.
+
+It was not re-run. What was done instead:
+
+- **Reproduction attempted, and failed.** 108 local loads: 48 at normal speed and
+  60 at **8× CPU throttling against CI's own database state**, with the
+  press-desk demos already applied so the published issues were there. Zero
+  console errors.
+- **The tree was checked rather than assumed.** For a `?edition=` state the page
+  takes the preview and the stamp is null in both the old and the new code, so
+  this branch changes **no element** of `slice-blowout`. The only difference was
+  server work.
+- **A real defect was found in that work and fixed:** `rackIssue` was being
+  computed on preview requests that discard it, and with nothing published its
+  fallback walks back through the season building a fact packet per week.
+  Fifteen preview states each paid for a full historical walk they never looked
+  at. **This is not claimed to have fixed the #418.**
+- **The attribution itself is weaker than it looks.** The driver records the
+  state that was current when an error *arrived*, which its own comment says —
+  so a mismatch from the previous navigation lands under the next state's name.
+
+Recorded as visual debt **12** with all of that, and the next instance should be
+attributed by **origin**, which means settling hydration before flipping
+`capturing`.
+
+One harness lesson, worth carrying: a sweep failed at `tony-steady` with *"the
+sampler returned nothing"* because `npm run test` was run against the same local
+database **while the sweep was in flight**, and it truncates league tables.
+`AUTONOMY.md §5` says exactly this. The gate was right; the operator was not.
 
 ### The next executable task, in order
 
