@@ -818,9 +818,12 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * never compete (`MANDATE §6`), and the review question here is whether the
      * board reads on its own.
      *
-     * The market is behind a flag (`18 §3.4`), so `?open=tonysLine` travels with
-     * every board state. It is inert without `DEMO_FIXTURES` and in production,
-     * exactly as the Back Hall's is.
+     * `?open=tonysLine` travels with every board URL for symmetry with the live
+     * path, and is **inert here**: a previewed board carries the market whatever
+     * the flag says, because the fixture *is* the demo of it and requiring two
+     * parameters to see one state would be ceremony. The flag is what gates the
+     * **live** board, and `backhall.test.ts` asserts it cannot be opened in
+     * production by any route.
      */
     case 'board-quiet':
     case 'board-chalkboard-open':

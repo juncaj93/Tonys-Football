@@ -113,15 +113,22 @@ export function renderStake(input: {
    * The evidence sentence carries numbers the *stake* never declared — the
    * winning score, how many cleared the line — because it is a claim about the
    * week rather than about the offer. They are admitted from the resolution's own
-   * stored values, which is the discipline `AsideFact` applies: use the fact's
-   * own values so the question stays the useful one, *did the prose introduce
+   * stored values, which is the discipline `AsideFact` applies: use the fact's own
+   * values so the question stays the useful one, *did the prose introduce
    * something the fact did not supply?*
    *
-   * Names in the evidence are admitted the same way, and only those: a claimant
-   * or a record-breaker who is in `values` was resolved out of a publishable
-   * week, so the publication boundary has already passed over them.
+   * Names are admitted the same way, and only those: a claimant or a
+   * record-breaker in `values` was resolved out of a publishable week, so the
+   * publication boundary has already passed over them.
+   *
+   * **Ids are not.** `claimantId` is a UUID the resolver stores so a payout can
+   * point at a row rather than at a display string; it is machinery, not prose,
+   * and admitting it would put a UUID on the list of things a renderer is
+   * permitted to print.
    */
-  const values = Object.values(resolution?.evidence.values ?? {});
+  const values = Object.entries(resolution?.evidence.values ?? {})
+    .filter(([key]) => !key.endsWith('Id'))
+    .map(([, value]) => value);
   const packet = {
     ...packetFor(
       stake,

@@ -27,7 +27,7 @@ import {
   type Stake,
   type Variant,
 } from './model';
-import { renderStake } from './render';
+import { packetFor, renderStake } from './render';
 import { resolveStake, settleEntry } from './resolve';
 
 /**
@@ -836,6 +836,55 @@ describe('week finality', () => {
 /* -------------------------------------------------------------------------
  * The variant set
  * ---------------------------------------------------------------------- */
+
+describe('machinery never becomes prose', () => {
+  it('keeps an id out of what a renderer is allowed to print', () => {
+    /*
+     * A bounty's resolution stores `claimantId` so the payout points at a row
+     * rather than at a display string — one rename away from paying nobody
+     * otherwise. That id is machinery. It must not join the allowed sets, or a
+     * UUID becomes a thing the validator would let through.
+     */
+    const copy = renderStake({
+      stake: stake({
+        kind: 'BOUNTY',
+        variant: VARIANTS.weekScore,
+        // `holder` as well as `target`: the bounty's claim names who set it, and
+        // a template that cannot fill refuses rather than printing a brace.
+        factRefs: refs({ target: '171.16', holder: 'Brandon' }),
+        allowedNumbers: ['100', '171.16', '2026', '5'],
+        allowedNames: ['Brandon'],
+        stakeTokens: null,
+        rewardTokens: 100,
+      }),
+      resolution: {
+        outcome: 'hit',
+        resolvedWeek: 5,
+        claimedByUserId: '7d2c1a3e-9f4b-4c8a-9e1d-2b3c4d5e6f70',
+        evidence: {
+          statementKey: 'bounty-claimed',
+          statement: 'Nick put up 180.00 in week 5, past 171.16.',
+          gameKeys: [],
+          values: {
+            target: '171.16',
+            scored: '180.00',
+            week: '5',
+            claimant: 'Nick',
+            claimantId: '7d2c1a3e-9f4b-4c8a-9e1d-2b3c4d5e6f70',
+          },
+        },
+        resolvedAt: FIXED,
+      },
+      presentation: 'resolved',
+    });
+
+    expect(copy?.evidence).toContain('180.00');
+
+    const packet = packetFor(stake(), []);
+    expect(packet.allowedNumbers.join(' ')).not.toContain('7d2c1a3e');
+    expect(packet.allowedNames.join(' ')).not.toContain('7d2c1a3e');
+  });
+});
 
 describe('a stake id from a browser is answered, never crashed on', () => {
   it('recognises a real id and refuses anything else', () => {

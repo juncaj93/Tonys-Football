@@ -100,13 +100,15 @@ async function main(): Promise<void> {
     console.log(`\n${String(BOARD_STATES.length)} board states\n`);
     for (const key of BOARD_STATES) {
       const onPaper = key.startsWith('bounty') || key === 'retired-excluded' || key === 'long-names';
-      const url = `${onPaper ? '/slice' : '/'}?board=${key}&open=tonysLine`;
+      const url = `${onPaper ? '/slice' : '/'}?board=${key}`;
       console.log(`  ${url.padEnd(width + 30)}  ${BOARD_DESCRIPTIONS[key]}`);
     }
     console.log(
       '\n  The sign carries the prediction and the market (18 §3.4);' +
         '\n  the paper carries the bounty (16 §38).' +
-        '\n\n  `open=tonysLine` opens the market flag. Inert in production.' +
+        '\n\n  A previewed board carries the market whatever the flag says;' +
+        '\n  `?open=tonysLine` is what opens it on the **live** board, and is' +
+        '\n  inert in production.' +
         '\n  Needs DEMO_FIXTURES=1 on the *server process*, not only in this shell.\n',
     );
     return;

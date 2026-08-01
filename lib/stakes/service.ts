@@ -10,7 +10,6 @@ import { buildBasis, buildWeekResult, stakeSeason, type WeekResult } from './fac
 import {
   payoutKeyFor,
   placementKeyFor,
-  type Entry,
   type Evidence,
   type FactRefs,
   type Presentation,
@@ -120,17 +119,6 @@ const STAKE_COLUMNS = {
   voidReason: weeklyStakes.voidReason,
 } as const;
 
-/** A stake, its resolution when it has one, and this manager's entry. */
-export interface StakeView {
-  readonly stake: Stake;
-  readonly resolution: Resolution | null;
-  readonly presentation: Presentation;
-  /** The signed-in manager's own pick, when they have one. */
-  readonly entry: Entry | null;
-  /** May this manager still take a side? False once the week has any result. */
-  readonly open: boolean;
-}
-
 /**
  * How a stake presents right now.
  *
@@ -182,51 +170,6 @@ export function presentationOf(stake: Stake, week: WeekResult | null): Presentat
   return 'awaiting-final';
 }
 
-export async function stakesForWeek(
-  db: Queryable,
-  input: { readonly season: number; readonly week: number; readonly userId?: string },
-): Promise<readonly StakeView[]> {
-  const season = await stakeSeason(db, input.season);
-  if (!season.found) return [];
-
-  const rows = await db
-    .select(STAKE_COLUMNS)
-    .from(weeklyStakes)
-    .where(and(eq(weeklyStakes.seasonId, season.seasonId ?? ''), eq(weeklyStakes.week, input.week)));
-
-  if (rows.length === 0) return [];
-
-  const stakes = rows.map((row) => toStake(row as StakeRow, input.season));
-  const resolutions = await resolutionsFor(db, stakes.map((stake) => stake.id));
-  const entries =
-    input.userId === undefined
-      ? new Map<string, Entry>()
-      : await entriesFor(db, stakes.map((stake) => stake.id), input.userId);
-
-  const week = buildWeekResult({ ...season, season: input.season, week: input.week });
-
-  return stakes.map((stake) => {
-    const resolution = resolutions.get(stake.id) ?? null;
-    return {
-      stake,
-      resolution,
-      presentation: presentationOf(stake, week),
-      entry: entries.get(stake.id) ?? null,
-      /*
-       * A market closes the moment the week produces a result.
-       *
-       * `18 §3.4` says the line *"closes before kickoff"*, and this product has
-       * no kickoff timestamp it can trust — Sleeper exposes none in the
-       * preseason, which is why `KICKOFF_2026` is a constant. So the closing
-       * condition is the one thing that is certainly true after kickoff and
-       * certainly false before it: **a score exists.** A manager cannot take a
-       * side on a week they have already seen played.
-       */
-      open: stake.status === 'open' && week.teams.length === 0,
-    };
-  });
-}
-
 /** Every stake still open in a season, oldest first. What the settler walks. */
 export async function openStakes(db: Queryable, season: number): Promise<readonly Stake[]> {
   const found = await stakeSeason(db, season);
@@ -270,41 +213,6 @@ async function resolutionsFor(
         claimedByUserId: row.claimedByUserId,
         evidence: row.evidence as unknown as Evidence,
         resolvedAt: row.resolvedAt,
-      },
-    ]),
-  );
-}
-
-async function entriesFor(
-  db: Queryable,
-  stakeIds: readonly string[],
-  userId: string,
-): Promise<Map<string, Entry>> {
-  if (stakeIds.length === 0) return new Map();
-
-  const rows = await db
-    .select({
-      id: stakeEntries.id,
-      stakeId: stakeEntries.stakeId,
-      userId: stakeEntries.userId,
-      side: stakeEntries.side,
-      stakedTokens: stakeEntries.stakedTokens,
-      outcome: stakeEntries.outcome,
-      payoutTokens: stakeEntries.payoutTokens,
-    })
-    .from(stakeEntries)
-    .where(and(inArray(stakeEntries.stakeId, [...stakeIds]), eq(stakeEntries.userId, userId)));
-
-  return new Map(
-    rows.map((row) => [
-      row.stakeId,
-      {
-        id: row.id,
-        userId: row.userId,
-        side: row.side as Side,
-        stakedTokens: row.stakedTokens,
-        outcome: row.outcome,
-        payoutTokens: row.payoutTokens,
       },
     ]),
   );
@@ -594,11 +502,18 @@ export async function settleStake(
 
   try {
     return await db.transaction(async (tx) => {
+      /*
+       * Who claimed it, by **id** rather than by name.
+       *
+       * The resolver records both: `claimant` is the name the sentence prints,
+       * `claimantId` is the row it points at. Matching on the printed name would
+       * make the payout depend on a display string — one rename away from paying
+       * nobody, and the identity model exists precisely because a person is not
+       * their current name (`16 §5.1`).
+       */
       const claimant =
         stake.kind === 'BOUNTY' && resolved.outcome === 'hit'
-          ? (week.teams.find(
-              (team) => team.displayName === resolved.evidence.values['claimant'],
-            )?.managerId ?? null)
+          ? (resolved.evidence.values['claimantId'] ?? null)
           : null;
 
       if (stake.kind === 'BOUNTY' && resolved.outcome === 'hit' && claimant === null) {
