@@ -219,7 +219,16 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
       )}
 
       <Section label="From behind the counter">
-        <p className={`mt-2 ${TYPE.body} text-ink-700 italic`}>{issue.column}</p>
+        {/*
+          * Tony's column takes the **dialogue** role, not body.
+          *
+          * It is the one paragraph on the sheet that is somebody talking rather
+          * than the paper reporting, and it was set at body size in italics —
+          * which on a page of body-size prose makes it a footnote. `16 §9` is
+          * specific that the column is Tony *in his own voice*, and a voice on
+          * this page should be the second-largest thing a reader meets.
+          */}
+        <p className={`mt-2 ${TYPE.dialogue} text-ink-700 italic`}>{issue.column}</p>
       </Section>
 
       {/*

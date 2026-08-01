@@ -216,9 +216,9 @@ export const TYPE = {
   /**
    * The title of a block that stops something from happening.
    *
-   * Bigger than a section heading on purpose. *"The check refused this issue"*
-   * is the answer to the only question the screen is being opened to ask, and it
-   * was set two pixels smaller than the body copy under it.
+   * Bigger than a section heading on purpose. *"Blocked by the check"* is the
+   * answer to the only question the screen is being opened to ask, and it was
+   * set four pixels smaller than the body copy underneath it.
    */
   warningTitle: 'font-display text-[17px] leading-[1.35] tracking-[0.04em] uppercase',
 
@@ -234,6 +234,7 @@ export const TYPE = {
   machine: 'font-display text-[13px] leading-[1.5] tracking-[0.02em] break-all',
 } as const;
 
+/** A role's name. Exported so a surface can take one as a prop. */
 export type TypeRole = keyof typeof TYPE;
 
 /**

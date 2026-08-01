@@ -130,7 +130,7 @@ export default async function SliceReviewPage({
             <MetadataStrip className="mt-1.5">
               Draft {detail.version} &middot; set by the {detail.renderer} press
             </MetadataStrip>
-            <p className={`mt-1 ${TYPE.machine} text-ink-500`}>{detail.contentHash}</p>
+            <MetadataStrip className="mt-1" role="machine">{detail.contentHash}</MetadataStrip>
 
             {published && (
               <div className="mt-4">

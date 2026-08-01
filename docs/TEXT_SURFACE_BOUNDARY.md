@@ -237,6 +237,13 @@ Two further corrections came from looking rather than from the brief:
   so bolding a *name* has the browser synthesise the weight and smear the glyphs —
   blurry type on a pixel face. Which side won is carried by the word between the
   names; the weight is reinforcement.
+- **Tony's column takes the `dialogue` role**, not `body`. It is the one
+  paragraph on the sheet that is somebody talking rather than the paper
+  reporting, and it was set at body size in italics — which on a page of
+  body-size prose makes it a footnote.
+- **A secondary story's headline outranks its own score line.** Both were 17px
+  display at first, which is not a hierarchy; visible only once three of them
+  stacked on a championship issue.
 - **The empty rack wears the same masthead** as the printed issue. Dropping it
   made the shelf read as a different surface from the one that carries the paper.
 
@@ -264,6 +271,13 @@ claimed — `components/slice/presentation.test.tsx` is the file.
 
 ## 8. Deliberately not done
 
+- **The champion pennant's year is the one declared exemption**, and the first
+  full sweep is what proved it had to be *declared* rather than inferred: all 612
+  failures on that run were the same thing, at 8.2px. It is capped by an 18 × 15
+  unit piece of fabric and cannot reach thirteen at any width, so it was raised
+  from 7 to 9 room units (8.2px → 10.1px), marked `data-environmental-type`, and
+  recorded as visual debt 14 rather than called fine. A second kind of marker is
+  itself a gate failure.
 - **The Tonight board's type is still fixed px**, sized from the vocabulary
   (`headlineQuiet` hero, `bodyCompact` detail) and verified to fit
   `TONIGHT_FIELD` at all three widths. It arguably belongs in room units like the

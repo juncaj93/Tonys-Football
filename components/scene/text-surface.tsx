@@ -1,4 +1,4 @@
-import { TYPE } from '@/lib/design/type';
+import { INK, TYPE, type TypeRole } from '@/lib/design/type';
 
 /**
  * The printed surfaces.
@@ -123,6 +123,7 @@ export function SectionHeading({
   ink = 'text-red-dark',
 }: {
   children: React.ReactNode;
+  /** Defaults to the paper's own red. `INK.paper.quiet` on the desk. */
   ink?: string;
 }) {
   return <h2 className={`${TYPE.sectionHeading} ${ink}`}>{children}</h2>;
@@ -137,13 +138,22 @@ export function SectionHeading({
 export function MetadataStrip({
   children,
   className = '',
-  ink = 'text-ink-500',
+  ink = INK.paper.quiet,
+  role = 'metadata',
 }: {
   children: React.ReactNode;
   className?: string;
   ink?: string;
+  /**
+   * `metadata` unless the strip is a machine string.
+   *
+   * Typed as a `TypeRole`, so a surface can only ask for a role that exists —
+   * the same guarantee `colour-tokens.test.ts` had to be written to get for
+   * colours, which Tailwind gives silently and wrongly.
+   */
+  role?: Extract<TypeRole, 'metadata' | 'machine' | 'eyebrow'>;
 }) {
-  return <p className={`${TYPE.metadata} ${ink} ${className}`}>{children}</p>;
+  return <p className={`${TYPE[role]} ${ink} ${className}`}>{children}</p>;
 }
 
 /**
@@ -352,7 +362,7 @@ export function WarningBlock({
         {tone !== 'quiet' && <WarningGlyph tone={tone === 'stop' ? 'stop' : 'go'} />}
         <div className="min-w-0 flex-1">
           <p className={`${TYPE.warningTitle} ${skin.ink}`}>{title}</p>
-          <div className={`mt-1.5 ${TYPE.warningBody} text-ink-700`}>{children}</div>
+          <div className={`mt-1.5 ${TYPE.warningBody} ${INK.paper.body}`}>{children}</div>
         </div>
       </div>
     </div>
@@ -416,21 +426,21 @@ export function LedgerRow({
 } & React.HTMLAttributes<HTMLDivElement>) {
   const label_ =
     kind === 'key'
-      ? `${TYPE.ledgerLabel} text-ink-500`
-      : `min-w-0 ${TYPE.bodyCompact} text-ink-900`;
+      ? `${TYPE.ledgerLabel} ${INK.paper.quiet}`
+      : `min-w-0 ${TYPE.bodyCompact} ${INK.paper.strong}`;
 
   return (
     <div className="border-b-2 border-ink-900/20 px-3 py-2.5 last:border-b-0" {...rest}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
         <span className={label_}>{label}</span>
         {value !== null && (
-          <span className={`ml-auto text-right whitespace-nowrap ${TYPE.ledgerValue} text-ink-900`}>
+          <span className={`ml-auto text-right whitespace-nowrap ${TYPE.ledgerValue} ${INK.paper.strong}`}>
             {value}
           </span>
         )}
       </div>
       {children !== undefined && (
-        <p className={`mt-1 ${TYPE.ledgerNote} text-ink-700`}>{children}</p>
+        <p className={`mt-1 ${TYPE.ledgerNote} ${INK.paper.body}`}>{children}</p>
       )}
     </div>
   );
