@@ -2645,20 +2645,38 @@ async function run(): Promise<void> {
       });
       const page = await ctx.newPage();
       /*
-       * Console errors, tagged with the state that produced them.
+       * Console errors, tagged with the state **and the route** that produced
+       * them.
        *
        * They used to be collected into one bare list and reported as
-       * `@375 <message>`. That is a true statement and an unusable one: the run
-       * covers twenty-two states, and locating a single hydration warning meant
-       * reproducing the whole sequence by hand. The gate now records where it
-       * was standing when the error arrived.
+       * `@375 <message>`. That is a true statement and an unusable one, so the
+       * gate started recording where it was standing when the error arrived.
+       *
+       * ## The state name alone is not where the error came from
+       *
+       * `capturing` is set **before** the navigation, so an error thrown by the
+       * *previous* page's late hydration lands under the *next* state's name.
+       * That is not hypothetical: the intermittent React #418 in visual debt 12
+       * has now been filed under three unrelated states — `slice-blowout` on
+       * CI, `demo-collection-empty` on a sweep of unmodified `main`, and
+       * `tray-owned-box` here — whose predecessors are three different routes
+       * as well. Three names for one defect is a measurement problem, not three
+       * defects.
+       *
+       * `page.url()` is read **at the moment the error arrives**, so it names
+       * the document that was actually loaded. It is the one attribution the
+       * state label cannot give, and it is visual debt 12's own recorded next
+       * step: *"the next instance should be attributed by origin."*
        */
-      const errors: { state: string; text: string }[] = [];
+      const errors: { state: string; url: string; text: string }[] = [];
       let capturing = 'sign-in';
+      const note = (text: string): void => {
+        errors.push({ state: capturing, url: new URL(page.url()).pathname, text });
+      };
       page.on('console', (m) => {
-        if (m.type() === 'error') errors.push({ state: capturing, text: m.text() });
+        if (m.type() === 'error') note(m.text());
       });
-      page.on('pageerror', (e) => errors.push({ state: capturing, text: e.message }));
+      page.on('pageerror', (e) => { note(e.message); });
 
       await signIn(page);
 
@@ -2787,7 +2805,7 @@ async function run(): Promise<void> {
       }
 
       for (const e of errors.slice(0, 5)) {
-        fail('console', `@${String(width)} during "${e.state}" — ${e.text}`);
+        fail('console', `@${String(width)} on ${e.url} during "${e.state}" — ${e.text}`);
       }
       await ctx.close();
     }
