@@ -216,11 +216,59 @@ attention.
 |---|---|
 | `main` | **`fbc6ee9`** — PR #50 merged, both gates green before the merge |
 | Branch | `claude/weekly-stakes-slice-7l8d1i` |
-| `npm run check` | green — **1058 tests across 64 files** (was 950 / 61) |
-| `npm run visual:qa` | green — **76 states × 3 widths** (was 59), production build, fresh database |
+| `npm run check` | green — **1060 tests across 64 files** (was 950 / 61) |
+| `npm run visual:qa` | **77 states × 3 widths** (was 59), production build, fresh database |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
 
+### Commissioner direction, 2026-08-01 — homepage visual cleanliness
+
+**Recorded, not started.** It arrived explicitly non-interrupting: no in-flight
+pull request or gate was to be stopped for it, and none was. It lands on the
+**next coherent homepage/parlor visual-polish slice**, or on any slice that
+already touches Tony, the Tonight board, the homepage shell, room rendering or
+visual QA.
+
+`docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md` carries the whole of it. Two things in it
+are worth surfacing here because they change what the next session does first:
+
+**1. Tony still clips briefly, seconds after the homepage settles.** Observed
+hosted. It is a **separate defect from the hydration mismatch PR #50 repaired**,
+and the direction says so explicitly — do not assume the invariant `SpokenLine`
+skeleton resolved it. `#418` is a server/client tree disagreement at hydration;
+this appears seconds after mount, long after hydration has settled. Treating the
+second as the first's residue is how a real cause goes unlooked-for.
+
+It is also **transient**, which makes one post-navigation screenshot worthless as
+evidence — the same shape as the nine reveal states that photographed a calm room
+and passed. The regression must be **timed or frame-sequenced** across the settled
+homepage, several seconds idle, active idle frames, Tony speaking, Tony after
+speaking and a return visit, at all three widths, and it must **fail on the old
+behaviour**.
+
+**2. The homepage reads as burnt, scratchy and muddy where it should read as
+clean pixel art.** The Tonight board's face, the wall behind Tony, some
+surrounding surfaces, and parts of Tony where texture or scaling smears him. The
+board becomes a calm near-white or cream writing surface; the wall stops competing
+with his silhouette; **Tony is not redesigned** — face, hairline, mustache,
+cigarette, jersey, apron, branding, proportions and palette are all preserved, and
+only rendering-or-texture dirt is cleaned.
+
+**No new art is required from the commissioner**, and the direction is specific
+about mechanism: fix CSS where rendering is the cause, regenerate a *targeted*
+surface where the artwork is, fix the pipeline where the pipeline introduces the
+noise, and use a deterministic replacement for a simple surface like the board
+face. *"Do not cover a source-art defect with a fragile CSS patch."* **Which
+mechanism was chosen for each surface is part of the deliverable.**
+
+Recorded as visual debt **7** and **8**. Debt 7 is not minor — it is on the first
+screen every manager sees — and it is on that list only because the direction that
+recorded it was non-interrupting.
+
 ### The next executable task, in order
+
+0. **The homepage visual-cleanliness slice** — commissioner direction above, and it
+   goes first among visual work. Tony's delayed clip is a correctness defect on the
+   most-seen surface; the rest is one coherent slice rather than four small fixes.
 
 1. **The Tuesday job** — `16 §4.3`'s second cron. It writes `week_finalizations`
    and calls `authorStakesForWeek` and `settleSeason`, both of which exist and are
