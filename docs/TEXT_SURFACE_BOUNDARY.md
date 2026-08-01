@@ -231,11 +231,12 @@ Two further corrections came from looking rather than from the brief:
 ## 6. The printed Slice
 
 - **The nameplate is two deliberate lines.** `TONY’S TUESDAY SLICE` at 26px
-  Silkscreen is 361px — wider than the text column of every supported width, and
-  wider than it at 22px too (306px against a 290px column at 360). So it has
-  *always* wrapped, wherever the browser chose. Choosing the break is what makes
-  it a nameplate instead of a wrapped string; shrinking the letterforms until the
-  browser stops is the mistake, not the fix.
+  Silkscreen is 361px — wider than the text column of every supported width. At
+  22px it is 306px, which fits at 390 and does not at 360, so the nameplate was
+  **one line or two depending on the handset**, broken wherever the browser
+  picked. Choosing the break is what makes it a nameplate rather than a wrapped
+  string; shrinking the letterforms until the browser stops is the mistake, not
+  the fix.
 - **The masthead carries a flag** on a title or record week — `MASTHEAD_FLAG`, a
   presentation map over `Edition['character']`, which the *renderer* derived. The
   championship issue and a Tuesday in October used to print an identical

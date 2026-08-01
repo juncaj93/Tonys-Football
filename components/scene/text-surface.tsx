@@ -205,11 +205,12 @@ export const SLICE_MASTHEAD = ['Tony\u2019s', 'Tuesday Slice'] as const;
  * as a page title.
  *
  * **The name is broken into deliberate lines by the caller.** `TONY’S TUESDAY
- * SLICE` at 26px Silkscreen is 361px, which is wider than the text column of
- * every width this product supports — and it was wider than it at 22px as well,
- * so the nameplate has always wrapped at whatever point the browser picked.
- * Choosing the break is what makes it a nameplate instead of a wrapped string,
- * and it is the caller's choice because only the caller knows the words.
+ * SLICE` at 26px Silkscreen is 361px, wider than the text column of every width
+ * this product supports — and at 22px it is 306px, which fits at 390 and does
+ * not at 360. So the nameplate was one line or two depending on the handset,
+ * broken wherever the browser picked. Choosing the break is what makes it a
+ * nameplate rather than a wrapped string, and it is the caller's choice because
+ * only the caller knows the words.
  */
 export function PressMasthead({
   title,

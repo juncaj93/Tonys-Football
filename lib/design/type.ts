@@ -117,10 +117,12 @@ export const TYPE = {
    * measurement rather than a flourish: `TONY’S TUESDAY SLICE` is twenty
    * characters, which at 26px Silkscreen is 361px — wider than the text column
    * of any phone this product supports, and wider than it at 22px too (306px
-   * against a 290px column at 360). It has therefore *always* wrapped, at some
-   * arbitrary point the browser chose, and the fix is not to shrink the
-   * letterforms until the browser stops. `TONY’S` over `TUESDAY SLICE` is 107px
-   * over 232px, fits every width, and is what a nameplate does anyway.
+   * against a 290px column at 360). So on the narrowest supported phone it has
+   * always wrapped, at whatever point the browser chose, while fitting on one
+   * line at 390 — a nameplate that is one line or two depending on the handset.
+   * The fix is not to shrink the letterforms until the browser stops. `TONY’S`
+   * over `TUESDAY SLICE` is 107px over 232px, fits every width, and is what a
+   * nameplate does anyway.
    */
   masthead: 'font-display text-[26px] leading-[1.06] tracking-[0.02em] uppercase',
 
