@@ -307,7 +307,43 @@ claimed — `components/slice/presentation.test.tsx` is the file.
 
 ---
 
-## 9. Tony's clipping — still open, and the detail that matters
+## 9. What was inspected at 390 · 375 · 360, and what was not
+
+Every state below is in `npm run visual:qa` and is photographed at all three
+widths on a production build against a fresh database.
+
+| Asked for | Where it is photographed |
+|---|---|
+| normal draft | `review-draft` |
+| refused draft | `review-refused` |
+| approved draft | `review-approved` |
+| published issue | `review-published` |
+| long validation list | `review-refused` — four findings, the longest the doctored fixture produces |
+| longest current-manager name | `board-long-names` (`SuggMyNickerbocker`), and `slice-*` for the board's own rows |
+| largest realistic score | `slice-record-score` |
+| longest approved headline | `slice-championship` and `slice-blowout` |
+| playoff issue | `slice-playoff-week` |
+| championship issue | `slice-championship` |
+| empty | `slice-offseason` (nothing on the rack) · `review-empty` (nothing on the desk) · `demo-collection-empty` |
+
+**Two are not photographed, and saying so is the point.**
+
+**Loading.** These routes are server components with `dynamic = 'force-dynamic'`
+and no client-side skeleton — there is no loading state to photograph, and
+inventing one to have something to capture would be adding a surface rather than
+reviewing one.
+
+**The refusal-reason error** (`?error=reason-required`). It renders the same
+`WarningBlock` as `review-refused`, on the same sheet, at the same width, and a
+second photograph of one component in one state is coverage on paper rather than
+in fact. A driver state was considered and deliberately not added: the driver's
+states are chosen because they are visually distinct, and four press-desk states
+already photographed **byte-identically** once for exactly that reason
+(`docs/CHECKPOINT.md`, seventh session).
+
+---
+
+## 10. Tony's clipping — still open, and the detail that matters
 
 Not touched by this slice, and kept here so the detail is not lost:
 

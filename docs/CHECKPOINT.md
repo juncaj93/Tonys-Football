@@ -152,7 +152,7 @@ renderer already derived.
    and a decision about what the job does when a week refuses to draft.
 2. **Tony's clip at the glow-off transition** — visual debt 13, and the timing is
    the finding rather than a detail. It is *not* debt 7, which is closed and has a
-   frame-sampling gate on it. `docs/TEXT_SURFACE_BOUNDARY.md §9` scopes it.
+   frame-sampling gate on it. `docs/TEXT_SURFACE_BOUNDARY.md §10` scopes it.
 3. **Visual debt 9** (the parlor ceiling) and **10** (`.affordance-on-request`).
 4. **Batch B**, whenever the PNGs arrive. One command.
 
