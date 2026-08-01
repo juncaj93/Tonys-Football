@@ -366,7 +366,19 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'tony-dialogue':
       await home(page);
       return;
+    /*
+     * `idle` settles **past the arrival's reveal** — 4900ms plus its ramp.
+     *
+     * It is the room's canonical portrait and the state where every object is
+     * live, so it is the one that must be photographed with nothing prompted.
+     * At 2500ms it was a room mid-reveal wearing the calm room's name. The
+     * other homepage states keep the shorter settle: none of them judges the
+     * unprompted room, and three seconds each across a sweep this size is real.
+     */
     case 'idle':
+      await home(page, 5400);
+      await dismissTony(page);
+      return;
     case 'six-banners':
       await home(page);
       await dismissTony(page);
@@ -1968,6 +1980,31 @@ async function checkObjectMap(page: Page, width: number): Promise<void> {
  * the room's only sanctioned glow mechanism (`18 §9.4`).
  */
 async function checkOnlyTheTrayGlows(page: Page, width: number): Promise<void> {
+  /*
+   * Measured with **nothing asked for**, which is half of what this gate says.
+   *
+   * `18 §3` is about the *unprompted* room: a Door glows because it has
+   * something to say, and nothing else advertises unasked. The affordance
+   * reveal is the other case — somebody asked *"what can I touch"*, or the
+   * arrival is answering it for them — and `globals.css` has always drawn the
+   * Displays and the Toy their edges under `.showing-taps` for exactly that.
+   *
+   * The arrival turns that class on at 1600ms and off at 4900ms, and `home()`
+   * settles at 2500. So every "idle" room this driver has ever judged was a
+   * room mid-reveal, and the gate happened to pass only because the reveal's
+   * one rendered effect at the time was a 2px lift on Tony — the defect this
+   * session removed. Replacing it with the alpha-derived edge `18 §9.4` asks
+   * for made the collision visible immediately.
+   *
+   * Waiting is the fix rather than an exemption: an exemption would stop the
+   * gate noticing a glow that arrives on a Display and *stays*.
+   */
+  await page
+    .waitForFunction(() => document.querySelector('.showing-taps') === null, undefined, {
+      timeout: 8000,
+    })
+    .catch(() => undefined);
+
   const glowing = await page.evaluate(() => {
     const room = document.querySelector('main');
     if (room === null) return [];

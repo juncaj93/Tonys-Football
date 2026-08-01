@@ -66,6 +66,27 @@ the ceiling (visual debt 9 — the despeckle dashed its diagonal grid lines, so 
 needs a targeted regeneration) and `.affordance-on-request` (visual debt 10 —
 dead CSS, and wiring it collides with the glow gate).
 
+### The Tuesday production job stays deferred, and here is the check
+
+The standing condition is that it activates only if *"the current canonical
+review and publication rules make its safe production activation fully
+defined."* They do not, and the gap is specific rather than a matter of taste:
+
+- `16 §4.3`'s Tuesday chain ends **`draft Slice → notify commissioner`**, and
+  `16 §9` requires commissioner approval before the first season publishes.
+- There is **no review queue and no approval state anywhere in the repository**.
+  `lib/slice/edition.ts` says so in its own header: the rack works *"without a
+  review queue"* because *"the approval gate belongs"* elsewhere, and elsewhere
+  has not been built.
+- There is **no `vercel.json` and no cron route**. The two allowed jobs are
+  specified and unscheduled.
+
+So activating it would either publish a Slice nobody approved or schedule a job
+whose last step has nowhere to go. Everything the job would *call* exists and is
+idempotent — authoring, settlement, week finalization, the Slice draft — which is
+why this is a scheduling and approval gap rather than a functional one. It is
+still a gap, and the job stays off until the queue exists.
+
 ---
 
 **PR #50 is merged and its integration is verified**, not assumed:
