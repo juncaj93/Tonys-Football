@@ -72,6 +72,14 @@ publication gate gets bypassed by accident.
 `rejected` is terminal for a version. Revising means generating a new one, so the
 prose that was refused survives beside the prose that replaced it.
 
+**`draft` is not reachable from the product today, and the screen handles it
+anyway.** Both callers — the desk's button and the demo appliers — pass
+`submit: true`, so a generated version goes straight into the queue. The status
+still exists because `generateDraft` allows it and a job may want to draft a week
+it is not yet ready to put in front of anybody; a screen that rendered no action
+for a status the database permits would be a dead end reachable by one API call.
+Recorded here so the branch is not read as dead code.
+
 ---
 
 ## 4. What is in the database rather than in a service
