@@ -6,7 +6,7 @@ import { activeManagerIds } from '@/lib/league/membership';
 
 import { factPacket, type FactPacket } from './packet';
 import { renderEdition, type Edition } from './render';
-import { validateEdition } from './validate';
+import { validateEdition, type Verdict } from './validate';
 
 /**
  * The last issue Tony actually printed.
@@ -31,10 +31,19 @@ import { validateEdition } from './validate';
  * validator exists to prevent — and it would land on the one surface where
  * nobody thinks to check.
  *
- * `16 §9` also requires commissioner approval before the first season publishes.
- * This is not that: it is a **historical** issue about a finished season, which
- * is why it can go on the rack without a review queue. The approval gate belongs
- * with live weekly publication, and it is not built yet.
+ * ## What this is, now that the review queue exists
+ *
+ * A **fallback**, and only that. `lib/slice/publication.ts` is the authority on
+ * what is on the rack: if any issue has ever been published, the rack serves the
+ * approved version of it and this function is not consulted. It answers the one
+ * question publication cannot — *what does the shop look like before the first
+ * issue has ever been approved* — by rendering a historical week of a finished
+ * season through the same pipeline.
+ *
+ * That is not a hole in `16 §9`'s approval gate. The gate is about **live weekly
+ * publication**, and this is a rendering of a season that closed in January,
+ * carrying a stamp that says so. The moment a live issue is approved, this stops
+ * being reachable for that season.
  */
 export async function latestEdition(db: Queryable): Promise<Edition | null> {
   /*
@@ -89,11 +98,47 @@ export async function editionFor(
   db: Queryable,
   input: { readonly season: number; readonly week: number },
 ): Promise<Edition | null> {
-  const packet = await factPacket(db, input);
-  if (packet.refusal !== null) return null;
+  const assembled = await assembleIssue(db, input);
+  if (assembled.edition === null) return null;
+  return assembled.verdict.publishable ? assembled.edition : null;
+}
 
-  const issue = renderEdition(packet);
-  return validateEdition(issue, packet).publishable ? issue : null;
+/**
+ * The whole pipeline, with its working shown.
+ *
+ * `editionFor` answers *"may this be printed"* and throws away everything the
+ * answer was made from, which is the right shape for the rack and the wrong
+ * shape for a review screen. `08 §22` requires the commissioner to see the
+ * candidates, their scores, the fact packet, the validation results and the
+ * suppressions — so the reviewing caller needs the parts, not the verdict.
+ *
+ * One assembly, two callers. A second path written for the review screen would
+ * be a second thing to keep correct, and the one place it drifted would be the
+ * place where what was approved differs from what was published.
+ *
+ * `edition` is null only when the packet **refuses** — a week with nothing in it
+ * that may be spoken about at all. A week that renders and then fails validation
+ * returns the edition *and* the failing verdict, because that is exactly the
+ * state a commissioner has to be shown rather than protected from (`08 §27`:
+ * validation failure blocks publication, it does not hide the draft).
+ */
+export interface AssembledIssue {
+  readonly packet: FactPacket;
+  readonly edition: Edition | null;
+  readonly verdict: Verdict;
+}
+
+export async function assembleIssue(
+  db: Queryable,
+  input: { readonly season: number; readonly week: number },
+): Promise<AssembledIssue> {
+  const packet = await factPacket(db, input);
+  if (packet.refusal !== null) {
+    return { packet, edition: null, verdict: { publishable: false, violations: [] } };
+  }
+
+  const edition = renderEdition(packet);
+  return { packet, edition, verdict: validateEdition(edition, packet) };
 }
 
 /**

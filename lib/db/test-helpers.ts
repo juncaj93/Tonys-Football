@@ -65,6 +65,15 @@ export async function resetDatabase(db: Database): Promise<void> {
       stake_resolutions,
       stake_entries,
       weekly_stakes,
+      week_finalizations,
+      -- The Slice review chain, listed for the same reason: versions, reviews
+      -- and holds all refuse DELETE by trigger. slice_issues and
+      -- slice_issue_versions reference each other, so both must be named in
+      -- one TRUNCATE rather than emptied in sequence.
+      slice_reviews,
+      slice_publication_holds,
+      slice_issue_versions,
+      slice_issues,
       token_transactions,
       economy_configs,
       season_memberships,

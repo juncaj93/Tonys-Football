@@ -1,10 +1,10 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
 
 import { DEFAULT_CONFIGURATION } from '@/lib/character/composite';
 import { characterFor, grantWearable, ownedWearables, saveCharacter } from '@/lib/character/service';
 import { now } from '@/lib/clock';
 import { type Database } from '@/lib/db';
-import { lootBoxes } from '@/lib/db/schema';
+import { fantasyMatchups, lootBoxes, seasons } from '@/lib/db/schema';
 import { RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
 import { ensureRewardTable, grantBox, openBox, purchaseBox } from '@/lib/counter/boxes';
 import { collectionFor } from '@/lib/counter/collection';
@@ -12,6 +12,17 @@ import { standardRewardTable } from '@/lib/counter/rewards';
 import { clearRandomSource, setFixedRoll } from '@/lib/counter/rng';
 import { setShowcase, showcaseChoices } from '@/lib/counter/showcase';
 import { applyTokenDelta, economyFor, ensureEconomyConfig, wallet } from '@/lib/counter/tokens';
+import { assembleIssue } from '@/lib/slice/edition';
+import {
+  approveVersion,
+  generateDraft,
+  publishVersion,
+  recordVersion,
+  reviewDetail,
+  setPublicationHold,
+} from '@/lib/slice/publication';
+import { type Edition } from '@/lib/slice/render';
+import { validateEdition } from '@/lib/slice/validate';
 
 import { DemoRefused, assertDemoAllowed, assertDemoSeat } from './guard';
 import { DEMO_PIN, type DemoSeat, ensureDemoSeat } from './seat';
@@ -110,7 +121,11 @@ export async function applyDemoState(
   }
 
   const index = DEMO_STATES.findIndex((candidate) => candidate.key === state.key);
-  const seat = await ensureDemoSeat(db, { stateKey: state.key, stateIndex: index });
+  const seat = await ensureDemoSeat(db, {
+    stateKey: state.key,
+    stateIndex: index,
+    commissioner: state.commissioner === true,
+  });
   assertDemoSeat(seat.sleeperUserId);
 
   // The economy and the reward table have to be stored before anything spends or
@@ -782,7 +797,256 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
       ],
     };
   },
+  /* --- the press desk -------------------------------------------------- */
+
+  /**
+   * The desk with nothing on it.
+   *
+   * Nothing is written, for the reason `no-box` gives: there is nothing to undo
+   * because nothing was done. It is also **what a commissioner meets today** —
+   * the 2026 season has no games, so the queue is genuinely empty — which makes
+   * it the state that most deserves the design attention.
+   */
+  'review-empty': async (db, seat) => {
+    await releaseHold(db, seat);
+    return { evidence: { queue: 0 } };
+  },
+
+  'review-waiting': async (db, seat) => {
+    await releaseHold(db, seat);
+    const draft = await draftWeek(db, REVIEW_SLOTS['review-waiting']!);
+    return { evidence: { ...draft, seat: seat.sleeperUserId } };
+  },
+
+  /**
+   * A draft the deterministic validator refused.
+   *
+   * The only state here that is not simply *"call the service"*, and the reason
+   * is a property of the product rather than a shortcut: the renderer and the
+   * validator **agree on every week of both finalized seasons** — that is what
+   * `slice.test.ts` asserts — so asking the pipeline for a refused draft is
+   * asking it for a defect.
+   *
+   * So the prose is doctored and the **real** `validateEdition` is run over it.
+   * The violations on the screen are computed by the shipping validator, not
+   * written by this file, and `recordVersion` writes the row rather than an
+   * INSERT the product would never issue. What is a fixture is the bad sentence;
+   * what is real is everything that then happens to it.
+   */
+  'review-refused': async (db, seat) => {
+    await releaseHold(db, seat);
+    const { season, week } = await reviewWeek(db, REVIEW_SLOTS['review-refused']!);
+    const assembled = await assembleIssue(db, { season, week });
+    if (assembled.edition === null) {
+      throw new DemoRefused(`season ${String(season)} week ${String(week)} has nothing to render`);
+    }
+
+    // A score nobody posted, in the deck a reader scans first. `unknown-number`
+    // is the violation the validator exists for, and it is the one a live LLM
+    // rendering would produce.
+    const doctored: Edition = {
+      ...assembled.edition,
+      deck: 'Somebody 213.77, Somebody Else 96.10',
+    };
+
+    const verdict = validateEdition(doctored, assembled.packet);
+    if (verdict.publishable) {
+      throw new DemoRefused(
+        'the doctored issue passed validation — the demo would photograph a clean draft ' +
+          'under a name claiming otherwise. Fix the fixture, not the assertion.',
+      );
+    }
+
+    const recorded = await recordVersion(db, {
+      season,
+      week,
+      edition: doctored,
+      packet: assembled.packet,
+      verdict,
+      actorUserId: null,
+      submit: true,
+    });
+
+    return {
+      evidence: {
+        season,
+        week,
+        violations: verdict.violations.length,
+        publishable: recorded.publishable,
+      },
+    };
+  },
+
+  'review-approved': async (db, seat) => {
+    await releaseHold(db, seat);
+    const draft = await draftWeek(db, REVIEW_SLOTS['review-approved']!);
+    await advanceTo(db, draft.versionId, seat.userId, 'approved');
+    return { evidence: { ...draft, status: 'approved' } };
+  },
+
+  'review-published': async (db, seat) => {
+    await releaseHold(db, seat);
+    const draft = await draftWeek(db, REVIEW_SLOTS['review-published']!);
+    await advanceTo(db, draft.versionId, seat.userId, 'published');
+    return { evidence: { ...draft, status: 'published' } };
+  },
+
+  /**
+   * The press stopped (`16 §9`, the permanent manual hold).
+   *
+   * An approved issue *and* the hold, because the hold's meaning is only visible
+   * when there is something it is stopping. A held desk with an empty queue would
+   * photograph as a desk with an empty queue.
+   */
+  'review-held': async (db, seat) => {
+    const draft = await draftWeek(db, REVIEW_SLOTS['review-held']!);
+    await advanceTo(db, draft.versionId, seat.userId, 'approved');
+    await setPublicationHold(db, {
+      held: true,
+      actorUserId: seat.userId,
+      reason: 'a scoring correction is still landing',
+    });
+    return { evidence: { ...draft, held: true } };
+  },
 };
+
+/**
+ * Which week each press-desk state drafts.
+ *
+ * The number is a **position**, not a week: the 0th, 1st, 2nd … most recent
+ * publishable week of the most recent finalized season. Hard-coding `2025 week
+ * 11` would work today and be wrong the first January the league rolls over, and
+ * the demo would fail with `no-season` on a screen whose whole purpose is to
+ * demonstrate that publication is governed.
+ *
+ * Distinct positions so two press-desk demos never contend for one issue —
+ * `slice_issues` is unique on `(season, week)`, so they would otherwise fight
+ * over one row and each re-apply would flip its status.
+ */
+const REVIEW_SLOTS: Readonly<Record<string, number>> = {
+  'review-waiting': 0,
+  'review-refused': 1,
+  'review-approved': 2,
+  'review-published': 3,
+  'review-held': 4,
+};
+
+/**
+ * The nth most recent publishable week of the most recent finalized season.
+ *
+ * Asked of the pipeline rather than assumed. A week can legitimately refuse —
+ * every game in it might name somebody who is no longer a product participant —
+ * so *"week 15"* is not a synonym for *"a week with an issue in it"*, and a demo
+ * that assumed it was would photograph an empty queue under a name claiming a
+ * draft was waiting.
+ *
+ * Nothing about the season is modified. A `slice_issues` row is a new record
+ * *about* a week, which is why this does not cross `MANDATE §8`'s line on
+ * finalized history — and guard 1 means none of it can happen in production.
+ */
+async function reviewWeek(db: Database, slot: number): Promise<{ season: number; week: number }> {
+  const [latest] = await db
+    .select({
+      year: seasons.year,
+      week: sql<number>`max(${fantasyMatchups.week})`.as('week'),
+    })
+    .from(fantasyMatchups)
+    .innerJoin(seasons, eq(seasons.id, fantasyMatchups.seasonId))
+    .where(isNotNull(seasons.finalizedAt))
+    .groupBy(seasons.year)
+    .orderBy(desc(seasons.year))
+    .limit(1);
+
+  if (latest === undefined) {
+    throw new DemoRefused(
+      'no finalized season has any results, so there is no week the press desk could draft. ' +
+        'Import the recorded league first (npm run sleeper:import).',
+    );
+  }
+
+  let found = 0;
+  for (let week = Number(latest.week); week >= 1; week--) {
+    const assembled = await assembleIssue(db, { season: latest.year, week });
+    if (assembled.edition === null) continue;
+    if (found === slot) return { season: latest.year, week };
+    found += 1;
+  }
+
+  throw new DemoRefused(
+    `season ${String(latest.year)} has fewer than ${String(slot + 1)} weeks that can be drafted at all. ` +
+      'A press-desk demo with no draft in it would photograph an empty queue under a name claiming otherwise.',
+  );
+}
+
+/**
+ * Put the press back into the state this demo needs it in.
+ *
+ * The hold is **league-wide and it persists**, so `review-held` leaves it on for
+ * everything applied afterwards — including the next width's pass over the same
+ * states, because the visual driver loops widths on the outside. Without this,
+ * `review-approved` photographs a stopped press at 375 and 360 and the three
+ * screenshots of one state disagree.
+ *
+ * A no-op when the press is already running (`setPublicationHold` compares
+ * before it writes), so it costs nothing and appends no history.
+ */
+async function releaseHold(db: Database, seat: DemoSeat): Promise<void> {
+  await setPublicationHold(db, { held: false, actorUserId: seat.userId });
+}
+
+/**
+ * Walk a drafted version forward to where the state needs it — and no further.
+ *
+ * Written as *"what is missing"* rather than *"do these steps"* because a demo
+ * state is applied twice by the reproducibility test and by anybody re-running
+ * the CLI. `approveVersion` on an already-published version is not a repeat of a
+ * decision, it is an illegal move, and the transition trigger refuses it — which
+ * is the trigger being right and the applier being lazy.
+ *
+ * Each step is still the real service call, so what is being demonstrated is the
+ * product's own chain.
+ */
+async function advanceTo(
+  db: Database,
+  versionId: string,
+  actorUserId: string,
+  target: 'approved' | 'published',
+): Promise<void> {
+  const before = await reviewDetail(db, versionId);
+  if (before === null) throw new DemoRefused(`the demo drafted version ${versionId} and lost it`);
+
+  if (before.status === 'needs_review') {
+    await approveVersion(db, {
+      versionId,
+      actorUserId,
+      note: 'reads straight, and the board is complete',
+    });
+  }
+
+  if (target === 'published') {
+    const after = await reviewDetail(db, versionId);
+    if (after?.status === 'approved') {
+      await publishVersion(db, { versionId, actorUserId });
+    }
+  }
+}
+
+/** Draft one week through the real service, and insist it actually produced one. */
+async function draftWeek(
+  db: Database,
+  slot: number,
+): Promise<{ season: number; week: number; versionId: string; issueId: string }> {
+  const { season, week } = await reviewWeek(db, slot);
+  const result = await generateDraft(db, { season, week, submit: true });
+
+  if (result.versionId === null || result.issueId === null) {
+    throw new DemoRefused(
+      `season ${String(season)} week ${String(week)} refused to draft (${String(result.refusal)}).`,
+    );
+  }
+
+  return { season, week, versionId: result.versionId, issueId: result.issueId };
+}
 
 /** Every state the appliers cover. The coverage test compares this to the catalog. */
 export const APPLIED_STATES: readonly string[] = Object.keys(APPLIERS);

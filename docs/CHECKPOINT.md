@@ -18,14 +18,182 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Back Hall as a room** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. It is a room: three objects, flag-gated doors, two demo states, its own gates. Real art is a registry row |
 | **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
-| **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | The commissioner review queue for live publication |
-| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`). Authoring, settlement and week finalization all exist and are idempotent; what is missing is the schedule that calls them |
-| **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
+| **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Nothing. The review queue it was waiting on is built — see below |
+| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`), now unblocked. Authoring, settlement, week finalization and the Slice draft all exist and are idempotent; what is missing is the schedule that calls them |
+| **Slice review chain** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
+| **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-01 (seventh session)
+
+### The Slice review chain — what the Tuesday job was actually waiting on
+
+**`main` is `27cdbc7`** (PR #52 merged). Branch:
+`claude/resume-autonomous-product-direction-6og8ui`, cut fresh from it.
+
+The checkpoint's queue put the Tuesday cron first. It was **not buildable**, and
+the reason had nothing to do with the operations it calls:
+
+- `16 §4.3`'s chain ends **`draft Slice → notify commissioner`**
+- `16 §9` requires commissioner approval before the first season publishes
+- there was **no review queue, no approval state and no publication record**
+  anywhere in the repository — `lib/slice/edition.ts` said so in its own header
+
+So scheduling it would have published an issue nobody approved, or dropped the
+draft on the floor. A **governance** gap rather than a functional one, which is
+why it outranked every other candidate: it is the only thing blocking the
+highest-value item already in the queue.
+
+```
+generateDraft ──► submitForReview ──► approve ──► publish ──► the rack
+     │                                   │
+     └── the validator refused it        └── reject, with a reason
+         → visible, unapprovable             → terminal; revision is a new version
+```
+
+`/admin/slice` is the desk. `/admin/slice/<version>` is one draft and the
+decision about it: the paper **as it will print**, rendered by the same
+`<Newspaper>` a manager reads, above the candidates and their significance
+scores, what was moved down the order, what was left out and why, the numbers and
+names the issue is allowed to use, and the validator's verdict (`08 §22`).
+
+**The rack changed for managers, and that is the point.** `rackIssue` prefers the
+most recently **published** issue and falls back to the historical rendering only
+while nothing has ever been published. Once the chain has approved anything, an
+unapproved rendering cannot reach a reader — which is `16 §9`'s gate made real on
+the reader's side rather than asserted on the writer's.
+
+### What is in the database rather than in a service
+
+Twenty-three tests against a real Postgres, each asking the database for the
+wrong thing:
+
+- **A version's content is immutable.** An approval that could be applied to
+  different prose than the one that was read is not an approval
+- **Regeneration is idempotent by natural key** — `UNIQUE(issue_id,
+  content_hash)`. A retried Tuesday appends nothing
+- **A version the validator refused can never be approved or published**
+- **Publication requires a recorded approval naming a person.** The trigger reads
+  `slice_reviews`, not the status column, so a service that skipped the review row
+  could not publish
+- **One published version per issue**, and the issue's pointer must agree with it
+- **The manual hold blocks publication at the database**, for every caller
+  (`16 §9` makes it permanent)
+- **Review history and holds are append-only**
+
+### Three defects the tests found
+
+1. **Ten simultaneous publishes produced five publication rows.** The
+   already-published check is a *read*, and under READ COMMITTED four
+   transactions had read `approved` before the first committed; the status update
+   then re-read a row that was already `published`, found `NEW.status =
+   OLD.status`, and returned without complaint. Fixed with a natural key —
+   `UNIQUE(version_id, action)` — not a better check.
+2. **The content digest did not survive a round trip.** `content` is `jsonb`,
+   which is a parsed structure rather than a byte store, so Postgres re-emits keys
+   in its own order. The digest is what an approval *names*; one that only matches
+   before a round trip cannot be verified. `editionHash` is canonical now.
+3. **The record printed itself out of order.** `occurred_at` comes from the
+   injected clock, so two decisions inside one transaction share an instant, and
+   the screen printed *"put up for review"* above *"drafted"*. `slice_reviews.seq`
+   is an identity column and the history orders by it.
+
+### Three defects found by looking
+
+1. **The hold ate the entire first screen** — a text field and a red STOP THE
+   PRESS as the first thing on the desk, so *"what is waiting on you"* started
+   below the fold and **three desk states photographed byte-identically**. The
+   hold's state is a banner at the top when it is on; its switch is at the foot.
+2. **`Tony&rsquo;s press`, printed as text** — an entity inside a JSX expression
+   is a string, not markup, on the one screen whose job is to be believed.
+3. **"put up for review it"** — verbs with ` it` appended, correct for five of six
+   actions. `components/slice/review.test.tsx` fails on the old behaviour.
+
+Plus *"left out, and why"* printing one sentence twice (a suppression's detail
+names what **beat** the story, not which story lost), and *"AS IT WILL PRINT"* as
+cream type on the counter's checker at 360.
+
+### The demo states, and the one that could not be driven
+
+Seven: `review-empty` · `review-waiting` · `review-held` on the desk, and
+`review-draft` · `review-refused` · `review-approved` · `review-published` on the
+draft's own screen.
+
+**Four are on the draft rather than the queue because the queue could not tell
+them apart.** An issue belongs to the **league**, not to a seat, so the desk's
+sections accumulate as each state is applied and by the last one every desk looks
+the same — four states photographed identically before this was found.
+
+**`review-empty` is a preview parameter** (`?desk=empty`), for the same reason
+plus one: the driver loops widths on the outside, so an empty desk cannot survive
+its own run.
+
+**`review-refused` doctors one sentence and nothing else.** The renderer and the
+validator agree on every week of both finalized seasons, so asking the pipeline
+for a refused draft is asking it for a defect. The demo puts a score nobody
+posted into the deck and runs the **real** validator over it; the applier
+**refuses** if the doctored issue passes.
+
+Every press-desk seat carries the commissioner's keys, set behind both demo
+guards. `requireAdmin()` answers `notFound()`, so a seat without them renders a
+**404** that photographs cleanly and passes every pixel gate — which is what
+`checkReviewDesk` and `lib/slice/review-coverage.test.ts` exist for.
+
+### What is deliberately not built
+
+`08 §22` lists fourteen things. Three are absent by decision, recorded in
+`docs/SLICE_REVIEW_BOUNDARY.md §7`:
+
+- **no prose editing** — a free-text box would let a sentence no validator passed
+  reach the surface the league reads as true. Approve, reject, regenerate is a
+  *stronger* guarantee than the one `08` asked for
+- **no candidate override** — `MANDATE §9` makes Stats the sole authority on what
+  a result meant. The screen shows the scores and the suppression reasons, which
+  is what makes the selection arguable
+- **regeneration cannot change the facts** — locked by construction rather than by
+  a rule, because the renderer is deterministic
+
+### Exact repository state
+
+| | |
+|---|---|
+| `main` | **`27cdbc7`** — PR #52 merged |
+| Branch | `claude/resume-autonomous-product-direction-6og8ui` |
+| `npm run check` | green — **1120 tests across 68 files** (was 1060 / 64) |
+| `npm run visual:qa` | green — **85 states × 3 widths** (was 77), production build, fresh database |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
+
+### The next executable task, in order
+
+1. **The Tuesday job** (`16 §4.3`'s second cron) — now unblocked, and the
+   remaining work is **operational** rather than structural: `vercel.json` with
+   the two allowed jobs, a secret-protected route, and a decision about what the
+   job does when a week refuses to draft. Everything it calls —
+   `finalizeWeek`, `authorStakesForWeek`, `settleSeason`,
+   `generateDraft(..., { submit: true })` — exists, is idempotent and is tested.
+2. **The casino foundation** — one game, server-authoritative. It brings
+   `/underground`, which makes `back-hall-both-open` photographable and turns
+   `openTo('curtain')` from a throw into one line. **Note the contradiction:**
+   `CLAUDE.md` puts the casino at P10 and explicitly *"not in v1"*, while the
+   checkpoint's older queue lists it third. Resolve before starting it.
+3. **Visual debt 9** (the parlor ceiling — a targeted regeneration, not a filter)
+   and **10** (`.affordance-on-request` — a `RoomDisplay` decision).
+4. **Batch B**, whenever the PNGs arrive. One command.
+
+### What this session did not start, and why
+
+**The Tuesday cron itself.** The slice stops at the boundary on purpose: a cron
+with a schedule is an operational commitment that runs on a timer against
+production data, and the desk's *"print a draft"* button already calls the same
+operation, so the whole chain is walkable today without one. Starting it here
+would have meant shipping a scheduler in the same change as the approval gate it
+publishes through — and the gate is the thing that needed reviewing.
 
 ---
 

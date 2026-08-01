@@ -137,7 +137,7 @@ function generationOf(sleeperUserId: string): number | null {
  */
 export async function ensureDemoSeat(
   db: Database,
-  input: { stateKey: string; stateIndex: number },
+  input: { stateKey: string; stateIndex: number; commissioner?: boolean },
 ): Promise<DemoSeat> {
   const season = await openSeason(db);
   if (season === null) {
@@ -166,15 +166,26 @@ export async function ensureDemoSeat(
         // Short, and obviously not a manager. It is what Tony prints on the
         // receipt, so it has to read as a name rather than as a fixture key —
         // the state's identity lives in the URL the CLI prints, not on screen.
-        displayName: 'Demo',
+        displayName: input.commissioner === true ? 'Demo commissioner' : 'Demo',
         sleeperUserId,
         sleeperUsername: sleeperUserId,
+        isAdmin: input.commissioner === true,
         createdAt: at,
         updatedAt: at,
       })
       .returning({ id: users.id });
     userId = inserted[0]?.id;
     if (userId === undefined) throw new Error('the demo seat was not created');
+  } else if (input.commissioner === true) {
+    /*
+     * Re-applying a press-desk state onto a seat that already exists.
+     *
+     * Guard 2 has already run above — this id carries {@link DEMO_PREFIX} — so
+     * the flag can only ever land on a reserved fixture. `requireAdmin()`
+     * answers `notFound()`, so a press-desk demo on an ordinary seat would
+     * photograph a 404 and file it under the state's name.
+     */
+    await db.update(users).set({ isAdmin: true, updatedAt: at }).where(eq(users.id, userId));
   }
 
   // Claimed up front with the fixed PIN, so signing in as the seat needs nothing

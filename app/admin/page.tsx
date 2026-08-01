@@ -1,3 +1,4 @@
+import Link from 'next/link';
 
 import { resetPinAction } from '@/app/actions/auth';
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
@@ -39,6 +40,30 @@ export default async function AdminPage() {
             <SignPlate tone="red">Staff only</SignPlate>
             <div className="mt-3">
               <PanelHeading>The office</PanelHeading>
+            </div>
+
+            {/*
+              * The press desk.
+              *
+              * `16 §9` makes commissioner approval mandatory before a Slice
+              * publishes, so the office has a second power now. It is a door
+              * rather than a panel: the queue is its own screen with its own
+              * decisions, and folding it in here would make the office a
+              * dashboard — which is exactly what the note at the top of this file
+              * says it is not.
+              */}
+            <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
+              <Link
+                href="/admin/slice"
+                className={`pixel-edge flex ${TAP_TARGET} w-full flex-col justify-center border-2 border-wood-dark bg-[#1c1113] px-3 py-2.5 active:translate-y-px`}
+              >
+                <span className="font-display text-[13px] leading-[1.5] text-paper-mid uppercase">
+                  The press desk
+                </span>
+                <span className="mt-0.5 text-[17px] leading-[1.4] text-paper-mid/70">
+                  Read the week&rsquo;s paper before it prints
+                </span>
+              </Link>
             </div>
 
             <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
