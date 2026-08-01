@@ -307,9 +307,9 @@ export function ScoreDeck({ children }: { children: React.ReactNode }) {
  * The warning glyph, drawn rather than typed.
  *
  * A `!` in the body face at a large size is a character in a paragraph; this is
- * an **object**. It is built from three filled rectangles on whole pixels inside
- * a bordered square — no rotation, because a rotated square resamples its own
- * edges, and no icon font, because the product has two faces and neither is one.
+ * an **object**. It is two filled rectangles on whole pixels inside a bordered
+ * square — no rotation, because a rotated square resamples its own edges, and no
+ * icon font, because the product has two faces and neither is one.
  *
  * The shape is the pixel-art convention: a tall bar, a gap, a square dot.
  */

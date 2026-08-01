@@ -135,6 +135,20 @@ holds it rather than asserting it in prose: the display components may not impor
 migrating — the masthead's championship flag reads `character`, which the
 renderer already derived.
 
+### Visual debt 12 reproduced, on the branch point rather than on this branch
+
+The before/after capture was for the pull request, and it answered an open
+question for free. A full 85-state sweep of **`main` at `c3dc077`, unmodified**,
+produced exactly one failure: the intermittent React **#418** structure mismatch,
+at 375, filed under **`demo-collection-empty`**.
+
+CI had filed the same error under `slice-blowout` on PR #53's run, and the note
+recorded then said the state name was weaker evidence than it looked because the
+driver attributes an error to whichever state was current when it *arrived*. Two
+sightings on two unrelated routes is that prediction coming true — it is one
+intermittent defect, not two — and it is **not introduced by this branch**, which
+is the other thing a before capture is for.
+
 ### Exact repository state
 
 | | |
