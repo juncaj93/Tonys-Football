@@ -131,6 +131,20 @@ The taped-up `PlaceholderSign` was on that list for about an hour and came off
 it: its type is fixed px like everything else's, so what it wanted was migrating,
 not excepting.
 
+### A third rule that came out of the same pass — weight
+
+Only Silkscreen ships a bold. `app/layout.tsx` installs it at 400 and 700, and
+VT323 at 400 only — and a browser asked for 700 on VT323 does not fail, it
+**synthesises** the weight by smearing the glyphs. That is blurry pixel type
+arriving from the renderer rather than from the artwork.
+
+So the rule is not *"do not use bold"*; it is that a weight must **name the face
+it is asking for**. `font-bold` without `font-display` on the same element is a
+build failure. That also closes the half a static test could not otherwise see: a
+`font-bold` span inheriting its face from three levels up looks identical in the
+source whether the ancestor is Silkscreen or VT323. The receipt's own header row
+was the instance, and it now takes the display face rather than a fake weight.
+
 ### The runtime half — `checkTypeFloor` in `scripts/visual-qa.mts`
 
 Measures the **computed** font size of every text-bearing, visible, non-zero-area

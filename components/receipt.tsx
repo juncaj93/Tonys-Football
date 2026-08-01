@@ -57,7 +57,15 @@ export function ReceiptSlip({
       )}
 
       <hr className="my-3 border-t border-dashed border-ink-300" />
-      <p className={`text-center ${TYPE.eyebrow} text-ink-500`}>
+      {/*
+        * A sentence, so it is set in the body face.
+        *
+        * It briefly became an eyebrow in the typography migration, which
+        * uppercased *"Thank you. Come again Tuesday."* into signage. A receipt's
+        * sign-off is somebody talking; `Customer copy` above it is a label, and
+        * that one is signage.
+        */}
+      <p className={`text-center ${TYPE.bodyCompact} text-ink-500`}>
         Thank you. Come again Tuesday.
       </p>
 
@@ -75,10 +83,18 @@ function Row({
   value: string;
   strong?: boolean;
 }) {
+  /*
+   * The strong row takes the **display face**, not a bold weight.
+   *
+   * VT323 ships at 400 only, so `font-bold` on it has the browser synthesise the
+   * weight — which smears a pixel face, and this is the surface a manager reads
+   * their own season off. A printed receipt distinguishes its header line by
+   * setting it in the machine's other face anyway.
+   */
   return (
     <div className="flex items-baseline justify-between gap-3 py-0.5">
-      <span className={strong ? 'font-bold' : 'text-ink-500'}>{label}</span>
-      <span className={strong ? 'font-bold' : ''}>{value}</span>
+      <span className={strong ? TYPE.subhead : 'text-ink-500'}>{label}</span>
+      <span className={strong ? `${TYPE.subhead} tabular-nums` : ''}>{value}</span>
     </div>
   );
 }

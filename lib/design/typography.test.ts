@@ -179,6 +179,47 @@ describe('the type case', () => {
   });
 });
 
+describe('bold', () => {
+  /**
+   * Only one of the two faces ships a bold, so only one may ask for one.
+   *
+   * `app/layout.tsx` installs Silkscreen at 400 **and 700**, and VT323 at 400
+   * only. Ask a browser for `font-weight: 700` on VT323 and it does not fail —
+   * it **synthesises** the weight by smearing the glyphs, which on a pixel face
+   * is the blurry type the whole art direction is written against, arriving
+   * from the renderer rather than from the artwork.
+   *
+   * The rule is therefore not "do not use bold" — it is that a weight must name
+   * the face it is asking for. That also solves the half a static test could
+   * not otherwise see: a `font-bold` span inheriting its face from three levels
+   * up looks identical in the source whether the ancestor is Silkscreen or
+   * VT323. Naming `font-display` on the same element makes it true rather than
+   * assumed. The receipt's own header row was the instance.
+   */
+  it('asks for a weight only where the face has one', () => {
+    const breaches: string[] = [];
+
+    for (const relative of sourceFiles()) {
+      if (relative.endsWith('typography.test.ts')) continue;
+      const source = readFileSync(path.join(ROOT, relative), 'utf8');
+      for (const [index, line] of source.split('\n').entries()) {
+        if (isProse(line)) continue;
+        if (!/\bfont-(bold|semibold|medium|extrabold|black)\b/.test(line)) continue;
+        if (line.includes('font-display')) continue;
+        breaches.push(`${relative}:${String(index + 1)} ${line.trim()}`);
+      }
+    }
+
+    expect(
+      breaches,
+      'A font weight was requested without naming `font-display`. Silkscreen is ' +
+        'the only face this product loads a bold for; on VT323 the browser fakes ' +
+        'it and smears a pixel font. Name the face, or carry the emphasis with ' +
+        'ink instead.',
+    ).toEqual([]);
+  });
+});
+
 describe('the size vocabulary', () => {
   const sizes = Object.values(TYPE).flatMap((role) =>
     [...role.matchAll(/text-\[(\d+)px\]/g)].map((match) => Number(match[1])),

@@ -200,9 +200,9 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
                             * side won is carried by the word between the names;
                             * this is reinforcement.
                             */}
-                          <span className={row.leftWon ? 'font-bold' : ''}>{row.leftPoints}</span>
+                          <span className={row.leftWon ? 'font-display font-bold' : ''}>{row.leftPoints}</span>
                           <span className="text-ink-500">&ndash;</span>
-                          <span className={!row.leftWon && !row.tie ? 'font-bold' : ''}>
+                          <span className={!row.leftWon && !row.tie ? 'font-display font-bold' : ''}>
                             {row.rightPoints}
                           </span>
                         </>
