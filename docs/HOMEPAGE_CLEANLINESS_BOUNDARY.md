@@ -291,6 +291,15 @@ Neither can introduce a colour. The replacement paints two palette values; the
 despeckle only ever assigns a colour already dominant among a pixel's own
 neighbours.
 
+**The board's frame is a hole in the wall's rectangle.** The first run cleaned
+straight through it and took a lone `#5E3A25` out of the frame's one-unit shadow
+line, and `shift-tonight-board.test.ts` refused: *"found a wall edge at x 185,
+but the frame colours there are not the Tonight board's."* That test was written
+to catch a reprocess reverting the board's position, and it caught a **different**
+transform quietly editing the same hand-painted frame — which is what an
+integrity check on a drawn feature is for. The hole is now explicit, and the
+despeckle's own test asserts it.
+
 ### Why the source could not be fixed instead
 
 Both defects are made by the downscale and the palette snap, not present in the

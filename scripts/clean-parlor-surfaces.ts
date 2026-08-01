@@ -241,14 +241,37 @@ export function shadeAlcove(pixels: Buffer, width: number): AlcoveAction {
 
 /* --------------------------------------------------------- the despeckle -- */
 
-/** A rectangle of the room, inclusive, and how hard to clean it. */
+/** A rectangle of the room, inclusive, with an optional hole in it. */
 interface Surface {
   readonly name: string;
   readonly x0: number;
   readonly y0: number;
   readonly x1: number;
   readonly y1: number;
+  /** Left alone. Neighbours are still *read* from inside it, only never written. */
+  readonly except?: Rect;
 }
+
+/**
+ * The Tonight board and its frame, as `shift-tonight-board.ts` measures them
+ * after the correction: x 54-185, y 79-179.
+ *
+ * ## Why this hole exists
+ *
+ * The first run despeckled straight through the board. The frame's shadow line
+ * is one unit wide and, at row 128, one pixel of it is a lone `#5E3A25` between
+ * two reds — so the filter helpfully removed it, and
+ * `shift-tonight-board.test.ts` immediately refused: *"found a wall edge at
+ * x 185, but the frame colours there are not the Tonight board's."*
+ *
+ * That test was written to catch a reprocess reverting the board's position. It
+ * caught a **different** transform quietly editing the same frame, which is
+ * exactly what an integrity check on a hand-painted feature is for.
+ *
+ * The board is not wall. Its frame is drawn, its face is replaced outright by
+ * `cleanBoardFace`, and nothing here has business in either.
+ */
+const BOARD_AND_FRAME: Rect = { left: 54, right: 185, top: 79, bottom: 179 };
 
 /**
  * The two surfaces the commissioner named, measured on the shifted shell.
@@ -259,7 +282,7 @@ interface Surface {
  * against this rectangle and nothing else.
  */
 const SURFACES: readonly Surface[] = [
-  { name: 'back-wall', x0: 30, y0: 55, x1: 205, y1: 185 },
+  { name: 'back-wall', x0: 30, y0: 55, x1: 205, y1: 185, except: BOARD_AND_FRAME },
   { name: 'alcove', x0: 58, y0: 183, x1: 154, y1: 252 },
 ];
 
@@ -320,8 +343,20 @@ function despeckleOnce(pixels: Buffer, width: number, surface: Surface): number 
   const before = Buffer.from(pixels);
   let changed = 0;
 
+  const hole = surface.except;
+
   for (let y = surface.y0; y <= surface.y1; y++) {
     for (let x = surface.x0; x <= surface.x1; x++) {
+      if (
+        hole !== undefined &&
+        x >= hole.left &&
+        x <= hole.right &&
+        y >= hole.top &&
+        y <= hole.bottom
+      ) {
+        continue;
+      }
+
       const i = (y * width + x) * 4;
       const self = packed(before, i);
 

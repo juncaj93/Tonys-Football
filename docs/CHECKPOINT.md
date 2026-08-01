@@ -19,7 +19,8 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | The commissioner review queue for live publication |
-| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | The Tuesday job (`16 §4.3`). Authoring, settlement and week finalization all exist and are idempotent; what is missing is the schedule that calls them |
+| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`). Authoring, settlement and week finalization all exist and are idempotent; what is missing is the schedule that calls them |
+| **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
@@ -29,6 +30,43 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 ---
 
 ## Where the product is — 2026-08-01 (sixth session)
+
+### The homepage-polish slice — Tony holds still, and the board is a board
+
+**PR #51 is merged**, both required gates green on real runners, `main` at
+`f79290a`. The homepage slice was built on top of it.
+
+**Tony's clip was a CSS rule and there were two of them.** `.showing-taps
+.tony-mark` lifted him 2px over a 260ms eased transition, on at 1600ms and off at
+4900ms — which is *"a few seconds after the homepage has been sitting there"*,
+exactly. The counter's cut moved about two sprite rows up his apron and he was
+resampled at fractional offsets on both ramps. It is not the hydration mismatch
+and the repair for that is untouched. The reveal keeps its meaning as an
+alpha-derived warm edge and moves nothing.
+
+**The regression is `checkTonySteady`**, and it is the useful kind: it samples
+Tony **every animation frame** across five passes at all three widths, asserts it
+covered both sides of 1600ms and 4900ms rather than passing on an empty set, and
+**fails on the old CSS with 12 failures**. On its first green run it then found a
+defect no screenshot could have: `tony-talks` was on `steps(2, end)`, and a CSS
+timing function applies between each *pair of keyframes* rather than across the
+animation — so it rendered `0, -0.5, -1, -0.5`. **Half a pixel, on every sentence
+Tony has ever spoken.** `step-end` gives the two positions it always meant.
+
+**The art is three measured corrections** in `scripts/clean-parlor-surfaces.ts`,
+in the same shape as `shift-tonight-board.ts`. The Tonight board's face is a flat
+cream writing surface; the back wall and the alcove are despeckled; the alcove
+behind Tony is one value step darker. All post-quantization, because both defects
+are made by the downscale and the palette snap rather than present in the
+painting — `SHELL_AUDIT` recorded the alcove itself and accepted it. **No new art
+files.** Mechanism per surface: `docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md §9`.
+
+Two things were deliberately **not** done and are recorded rather than omitted:
+the ceiling (visual debt 9 — the despeckle dashed its diagonal grid lines, so it
+needs a targeted regeneration) and `.affordance-on-request` (visual debt 10 —
+dead CSS, and wiring it collides with the glow gate).
+
+---
 
 **PR #50 is merged and its integration is verified**, not assumed:
 

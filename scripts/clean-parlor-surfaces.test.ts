@@ -374,6 +374,32 @@ describe('despeckle', () => {
     expect(hexAt(pixels, WIDTH, 20, 20)).toBe(MARK);
   });
 
+  it('leaves the hole alone', () => {
+    /*
+     * The regression that `shift-tonight-board.test.ts` caught: the back wall's
+     * rectangle contains the Tonight board, the board's frame has a one-unit
+     * shadow line with a lone pixel in it, and the filter removed it. A test
+     * written to catch a reprocess caught a second transform editing the same
+     * hand-painted frame.
+     */
+    const pixels = ground();
+    put(pixels, 20, 20, MARK); // inside the hole
+    put(pixels, 45, 45, MARK); // outside it
+
+    const surface = {
+      name: 'walled',
+      x0: 1,
+      y0: 1,
+      x1: WIDTH - 2,
+      y1: HEIGHT - 2,
+      except: { left: 15, right: 25, top: 15, bottom: 25 },
+    };
+
+    expect(despeckle(pixels, WIDTH, surface)).toBe(1);
+    expect(hexAt(pixels, WIDTH, 20, 20), 'the hole was despeckled').toBe(MARK);
+    expect(hexAt(pixels, WIDTH, 45, 45)).toBe(GROUND);
+  });
+
   it('is idempotent — it runs to a fixed point', () => {
     const pixels = ground();
     // A scattering that takes more than one pass: removing one speck can leave
