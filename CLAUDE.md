@@ -8,10 +8,11 @@ Before planning or implementing any feature, read:
 1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan.**
 2. `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` — **the approved implementation ordering**
 3. `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` — **how the room works. Read before touching any parlor object.**
-4. `docs/IMPLEMENTATION_HANDOFF.md` — **the current assignment**
-5. `README.md`
-6. Every numbered file inside `PROJECT_SPEC/`, in order
-7. `CLAUDE_FIRST_PROMPT.md`
+4. `docs/TEXT_SURFACE_BOUNDARY.md` — **the standing text and typography direction. Read before touching any surface that carries words.**
+5. `docs/IMPLEMENTATION_HANDOFF.md` — **the current assignment**
+6. `README.md`
+7. Every numbered file inside `PROJECT_SPEC/`, in order
+8. `CLAUDE_FIRST_PROMPT.md`
 
 The files inside `PROJECT_SPEC/` are the canonical product specification.
 
@@ -119,6 +120,8 @@ Everything a stake knows about football comes through **one Stats boundary** tha
 - **The rack now serves only what was approved.** `rackIssue` prefers the most recently published issue and falls back to the historical rendering only while nothing has ever been published — which is the approval gate made real on the reader's side.
 - Every guarantee is **in the database**: content immutable once written · regeneration idempotent by content hash · a version the validator refused unapprovable · publication requiring a recorded approval **naming a person** · one published version per issue · the manual hold blocking publication for every caller · review history and holds append-only.
 - **There is no prose editing and no candidate override**, and both absences are decisions. A free-text edit would let a sentence no validator passed reach the surface the league reads as true; a candidate override would move `MANDATE §9`'s Stats authority into the reviewer's hands. Recorded in `docs/SLICE_REVIEW_BOUNDARY.md §7`.
+
+**Commissioner direction, 2026-08-01 — text surfaces and typography.** Recorded, not started; it arrived explicitly non-interrupting and nothing was in flight. `docs/TEXT_SURFACE_BOUNDARY.md` carries the whole of it. The reference supplied is a **redrawing of this product's own `review-refused` screen** at the target standard, so it is a worked example of the gap rather than a mood board. The measured cause is named: **sixteen distinct font sizes from 8px to 26px across ~200 call sites, thirty files below 16px, seven at 8–9px, and no typography module at all** — so every surface invents its own heading. The fix is a shared set of **type roles and text-surface primitives**, applied during coherent slices in the order `§9` gives, starting with the Slice and the review screens. **No new art is required**, and presentation must stay separable from behaviour: a primitive receives typed display data and never computes a fantasy fact.
 
 **Next assignment:** **the Tuesday job** (`16 §4.3`'s second cron), now unblocked. It writes `week_finalizations`, calls `authorStakesForWeek` and `settleSeason`, and ends at `generateDraft(..., { submit: true })` — all four exist, are idempotent and are tested. What remains is operational: `vercel.json`, a secret-protected route, and what the job does when a week refuses to draft. See `docs/CHECKPOINT.md` for the durable state.
 

@@ -17,6 +17,8 @@ Visual QA finds something that is genuinely worth improving and genuinely not wo
 - **why it waited** — so the next reader can judge whether that reason still holds
 - **the screenshot**, when the run that found it is still in an artifact
 
+**Text-bearing surfaces are now governed by `docs/TEXT_SURFACE_BOUNDARY.md`** (commissioner, 2026-08-01). Items **2**, **9**, **10**, **11** and **12** below are text- or surface-related and should be re-read against it when their slice comes up — several may be resolved by the shared type roles rather than individually.
+
 ---
 
 ## Open

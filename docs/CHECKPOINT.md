@@ -22,6 +22,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`), now unblocked. Authoring, settlement, week finalization and the Slice draft all exist and are idempotent; what is missing is the schedule that calls them |
 | **Slice review chain** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #53 | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
+| **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **recorded, not started** | — | — | Define the type roles and text-surface primitives, then apply them to the Slice and the review screens. `docs/TEXT_SURFACE_BOUNDARY.md`. Non-interrupting by the commissioner's own words |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
@@ -233,6 +234,41 @@ operation, so the whole chain is walkable today without one. Starting it here
 would have meant shipping a scheduler in the same change as the approval gate it
 publishes through — and the gate is the thing that needed reviewing.
 
+### Commissioner direction, 2026-08-01 — text surfaces and typography
+
+**Recorded, not started.** It arrived explicitly non-interrupting, after #53 had
+merged and deployed, so nothing was stopped for it and nothing needed to be.
+`docs/TEXT_SURFACE_BOUNDARY.md` carries the whole of it. Three things in it change
+what the next session does:
+
+**The reference is a redrawing of this product's own `review-refused` screen** —
+same route, same copy, same structure — presented at the target standard. That
+makes it a worked example of the gap rather than a mood board, and `§1` of the
+boundary lists the eleven specific differences against what shipped: corner
+brackets on the paper, a warning glyph, the validation findings as a **bordered
+two-column ledger with the numerals right-aligned in their own column**, a dark
+plaque for *"as it will print"*, a heavier headline, and a darker outer frame so
+the sheet reads as mounted.
+
+**The cause is measured, not asserted.** Sixteen distinct font sizes from **8px to
+26px** across roughly two hundred call sites; **thirty files** below 16px; **seven
+call sites at 8–9px**, each named in `§2`; and **no typography module exists** —
+`lib/design/` holds a colour-token test and a source-byte test and nothing that
+defines a type scale. Sixteen sizes is the symptom. Nothing in the repository says
+what a *heading* is, so every surface invents one. The slice is satisfied by
+fixing that, not by re-styling screens one at a time.
+
+**Presentation must stay separable from behaviour**, as a hard requirement: a
+visual primitive receives typed display data and actions from existing services
+and never computes a fantasy fact. `MANDATE §9` at the component boundary.
+
+**No new art is required**, and Batch B is still not to be requested.
+
+Order of application is `§9`: the Slice and the commissioner review surfaces
+first, then the Tonight board and the prediction sign, then Tony's dialogue, then
+receipts, then weekly stakes, then Counter and Collection labels, then room
+signage.
+
 ### Handoff
 
 **A fresh Tech Lead chat is required to continue**, and only because this one is
@@ -245,7 +281,15 @@ runners before the merge and the post-merge push run green after it. The branch
 and carries checkpoint commits only — no unmerged work. There are **no open pull
 requests**.
 
-**The exact next executable task** is item 1 above: the Tuesday job. Concretely —
+**Two candidates, and the choice is genuinely open.** The Tuesday job is the
+functional queue's item 1 and is fully unblocked; the text-surface refresh is a
+fresh level-1 commissioner direction whose first target is the surface that
+shipped this session. Neither blocks the other. The direction is non-interrupting
+by its own words, which means it does not *have* to go first — but it is the
+newer ruling, its reference is a redrawing of a screen that is now in production,
+and `§9` names the Slice and the review screens as its highest-value target.
+
+**The exact next executable task**, if the Tuesday job is chosen —
 
 1. `vercel.json` with exactly the two jobs `16 §4.3` allows, and no others
 2. a route handler behind a shared secret (`CRON_SECRET`), refusing without it
@@ -261,6 +305,15 @@ requests**.
 
 Read `docs/SLICE_REVIEW_BOUNDARY.md` first — `§10` states exactly what is
 unblocked and what still gates a schedule.
+
+**If the text-surface refresh is chosen instead**, the first move is not a screen.
+It is `lib/design/` gaining a **type-role module** — the fifteen roles in
+`TEXT_SURFACE_BOUNDARY §3`, each with its font, size, line height, tracking,
+colour and spacing — plus a test that fails when a component sets an arbitrary
+`text-[Npx]` outside it, in the same spirit as `colour-tokens.test.ts`. Then the
+primitives in `§8`, then the Slice and the review screens, then the evidence in
+`§10`. Doing it in the other order produces re-styled screens and the same
+sixteen sizes.
 
 ---
 

@@ -222,6 +222,12 @@ Run before declaring any major visual milestone complete.
 
 If the honest answer is *"almost"* or *"good enough"*, keep polishing.
 
+### Text surfaces and typography
+
+**Standing commissioner direction, 2026-08-01.** `docs/TEXT_SURFACE_BOUNDARY.md` is the canonical account and sits above this file for anything text-bearing: the type roles, the approved writing-field families, the mobile minimums, the texture limits, and the requirement that presentation stay separable from behaviour.
+
+Two things from it bind every reviewer here. **Sub-16px is permitted only for a status, metadata, environmental or action label** — never for copy carrying information a manager has to read; `§6` above already says 16–18px and this narrows the exception. And **the writing field must be calmer than its environmental frame**: the room may be textured, the surface carrying words may not.
+
 ### Visual debt
 
 Anything minor, cosmetic and non-blocking goes to `docs/VISUAL_DEBT.md` rather than being lost. That list is meant to shrink.
