@@ -32,6 +32,10 @@ import { seasonClock } from '@/lib/parlor/season';
 import { momentTags } from '@/lib/parlor/moment';
 import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
 import { previewReveal } from '@/lib/demo/preview';
+import { featureFlags } from '@/lib/flags';
+import { BoardPanel, ChalkSlate } from '@/components/scene/chalkboard';
+import { chalkboardFor } from '@/lib/stakes/chalkboard';
+import { previewBoard } from '@/lib/stakes/boards';
 import { featuredMatchup, matchupLine } from '@/lib/stats/board';
 import { loadTags } from '@/lib/tags/repository';
 
@@ -126,6 +130,27 @@ export default async function ParlorPage({
    */
   const query = await searchParams;
   const preview = previewReveal(query['preview_reveal'], process.env, query['preview_stage']);
+
+  /*
+   * What is written on the small sign.
+   *
+   * `18 §3.4` gives it two things and only two: the weekly prediction, and
+   * Tony's Line once its flag is open. The flag is read **here, on the server**
+   * — `?open=tonysLine` is resolved behind the demo system's own two guards and
+   * is inert in production, exactly as the Back Hall's is — because a market
+   * gate a browser could flip is not a gate.
+   *
+   * Today this is the quiet board, and that is correct rather than unfinished:
+   * the 2026 season has no games, so nothing has been authored, so there is
+   * nothing to write up.
+   */
+  const previewed = await previewBoard(db, query['board'], process.env);
+  const board =
+    previewed?.board ??
+    (await chalkboardFor(db, {
+      userId: user.id,
+      flags: featureFlags(process.env, query['open']),
+    }));
 
   /*
    * Standing tags plus what is true right now.
@@ -358,24 +383,24 @@ export default async function ParlorPage({
             </div>
 
             {/*
-              * The prediction sign's slate, wiped.
+              * The prediction sign's slate.
               *
-              * Trigger-only, so there is no prediction printed here — but baked
-              * dark and rendering nothing it was the only object in the room
-              * that read as *unloaded* rather than as quiet. Everything else
-              * that is empty here is visibly empty on purpose.
+              * Trigger-only, so no sentence is printed here — the slate is 37
+              * units wide and `objects.ts` measured that a prediction does not
+              * fit on it at any size worth reading. What it carries is the
+              * board's **state**, drawn as chalk marks rather than as text:
+              * wiped when there is nothing, written when there is, struck
+              * through once the answer is in.
               *
-              * Two faint chalk strokes: the residue of something erased. No
-              * invented prediction, no fake data, no label — just a board that
-              * has been used and is currently clean.
+              * That is the difference between an object that looks quiet and
+              * one that looks unloaded, which is why the wiped treatment was
+              * introduced — and it is now the honest version of it, because the
+              * board can actually have something on it.
+              *
+              * It brightens; it never glows. `18 §3`: only Doors glow.
               */}
-            <div
-              aria-hidden="true"
-              className="pointer-events-none absolute flex flex-col justify-center gap-[8%] overflow-hidden px-[14%]"
-              style={place(PREDICTION_SLATE)}
-            >
-              <span className="h-[2px] w-full bg-paper-white/12" />
-              <span className="h-[2px] w-[62%] bg-paper-white/10" />
+            <div className="absolute" style={place(PREDICTION_SLATE)}>
+              <ChalkSlate board={board} />
             </div>
 
             {/* Displays. */}
@@ -399,10 +424,7 @@ export default async function ParlorPage({
             <BannerRail banners={banners} />
 
             <RoomDisplay spec={roomObject('prediction')} title="Tony's prediction">
-              <p className="pb-1 text-[17px] leading-[1.5] text-ink-700">
-                Tony hasn&rsquo;t called this one yet. He writes it up on Tuesday, with the
-                paper.
-              </p>
+              <BoardPanel board={board} />
             </RoomDisplay>
 
             {/*

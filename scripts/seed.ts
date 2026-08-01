@@ -220,7 +220,13 @@ async function main(): Promise<void> {
       console.log(
         `Tokens   ${String(open.year)} · config ${economy.version} · ` +
           `${String(economy.values.seasonStartTokens)} opening tokens x ${String(seated.length)} seats · ` +
-          `box ${String(economy.values.standardBoxPriceTokens)} · PROVISIONAL until the P3 simulation`,
+          `box ${String(economy.values.standardBoxPriceTokens)} · ` +
+          // Every value in the config, not a chosen two. `economyFor` now refuses
+          // a config missing a key, and this is where an operator sees which
+          // version a deploy actually stored.
+          `line ${String(economy.values.weeklyLineStakeTokens)} · ` +
+          `bounty ${String(economy.values.bountyRewardTokens)} · ` +
+          `PROVISIONAL until the P3 simulation`,
       );
     }
 

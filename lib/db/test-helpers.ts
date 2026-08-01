@@ -58,6 +58,13 @@ export async function resetDatabase(db: Database): Promise<void> {
       -- that stops emptying the moment its constraints change.
       fantasy_matchups,
       significance_policies,
+      -- Weekly stakes, listed for the reason above: every one of these tables
+      -- refuses DELETE by trigger, so a test file that tried to clean up after
+      -- itself would fail rather than leave rows behind. TRUNCATE is how a
+      -- harness that owns the database resets an append-only table.
+      stake_resolutions,
+      stake_entries,
+      weekly_stakes,
       token_transactions,
       economy_configs,
       season_memberships,

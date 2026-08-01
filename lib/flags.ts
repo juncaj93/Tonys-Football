@@ -34,9 +34,14 @@
  * Adding one is a deliberate act: `flags.test.ts` asserts the whole set, so a
  * new key has to be declared here *and* justified there.
  */
-export type FeatureKey = 'rooms' | 'underground' | 'roulette';
+export type FeatureKey = 'rooms' | 'underground' | 'roulette' | 'tonysLine';
 
-export const FEATURE_KEYS: readonly FeatureKey[] = ['rooms', 'underground', 'roulette'];
+export const FEATURE_KEYS: readonly FeatureKey[] = [
+  'rooms',
+  'underground',
+  'roulette',
+  'tonysLine',
+];
 
 /**
  * The v1 shop.
@@ -53,6 +58,24 @@ const V1: Readonly<Record<FeatureKey, boolean>> = {
   // Never. `16`: "Roulette is never built. A reserved feature-flag key is the
   // entire required scaffolding."
   roulette: false,
+  /*
+   * Tony's Line is a market, and there is no season to run one on.
+   *
+   * `18 §3.4` puts it behind a flag in so many words: *"V1: Tony's weekly
+   * prediction only. Later, behind the approved feature flag — Tony's Line."*
+   * `16 §9` puts it in v1 scope. Both are satisfied by a deploy-time flag: the
+   * feature is built, gated, and turned on for everyone at once when the season
+   * starts, which is exactly how `18 §6` says a shut destination opens.
+   *
+   * Shut is also the only honest state today. The line is a season median and
+   * the 2026 season has no games — authoring one now would be the *"weekly
+   * reward that fires on nothing"* the checkpoint warns against, with tokens
+   * attached.
+   *
+   * Unlike `roulette`, this one **is** a feature waiting for a switch, so the
+   * preview override can open it and the demo states photograph it open.
+   */
+  tonysLine: false,
 };
 
 export type FeatureFlags = Readonly<Record<FeatureKey, boolean>>;
@@ -104,7 +127,7 @@ export function featureFlags(
   for (const key of requested) {
     // `roulette` is deliberately unreachable, even here. It is not a feature
     // waiting for a switch; it is a decision with a key attached.
-    if (key === 'rooms' || key === 'underground') flags[key] = true;
+    if (key === 'rooms' || key === 'underground' || key === 'tonysLine') flags[key] = true;
   }
 
   return flags;

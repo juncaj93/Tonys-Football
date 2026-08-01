@@ -8,6 +8,11 @@ import { seasonClock } from '@/lib/parlor/season';
 import { latestEdition } from '@/lib/slice/edition';
 import { previewEdition, type PreviewEdition } from '@/lib/slice/editions';
 import { type Edition } from '@/lib/slice/render';
+import { StakesBand } from '@/components/slice/stakes-band';
+import { previewBoard } from '@/lib/stakes/boards';
+import { chalkboardFor, openBountyFor } from '@/lib/stakes/chalkboard';
+import { featureFlags } from '@/lib/flags';
+import { openSeason } from '@/lib/counter/tokens';
 
 /**
  * The rack by the door.
@@ -53,7 +58,7 @@ export default async function SlicePage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireUser();
+  const { user } = await requireUser();
   const clock = seasonClock();
 
   /*
@@ -64,8 +69,36 @@ export default async function SlicePage({
    * browser. `previewEdition` refuses outright in production and returns null
    * without `DEMO_FIXTURES`, so an ordinary request never reaches it.
    */
-  const requested = (await searchParams)['edition'];
+  const query = await searchParams;
+  const requested = query['edition'];
   const preview = await previewEdition(getDb(), requested, process.env);
+
+  /*
+   * The week's stakes, under the paper.
+   *
+   * `16 §38` puts all three here — *"the Slice ... plus this week's Tony's Line,
+   * any open bounty, and Tony's chalkboard prediction"*. The parlor's small sign
+   * carries two of them (`18 §3.4`); this is the only surface the **bounty** has,
+   * which is why it is a band rather than a repeat.
+   *
+   * It is a separate read from the edition on purpose. A stake is not a story: it
+   * has not happened yet, so it cannot go through the story pipeline, and folding
+   * it into `Edition` would put an unsettled claim inside a structure whose whole
+   * guarantee is that everything in it is finalized.
+   */
+  const previewedBoard = await previewBoard(getDb(), query['board'], process.env);
+  const live = await openSeason(getDb());
+  const stakes =
+    previewedBoard ??
+    (live === null
+      ? null
+      : {
+          board: await chalkboardFor(getDb(), {
+            userId: user.id,
+            flags: featureFlags(process.env, query['open']),
+          }),
+          bounty: await openBountyFor(getDb(), live.year),
+        });
 
   const state = preview ?? ({
     mode: 'rack',
@@ -111,6 +144,14 @@ export default async function SlicePage({
             <Newspaper
               issue={issue}
               stamp={state.mode === 'rack' ? 'Last one Tony printed' : null}
+            />
+          )}
+
+          {stakes !== null && (
+            <StakesBand
+              board={stakes.board}
+              bounty={stakes.bounty}
+              marker={previewedBoard === null ? undefined : String(query['board'])}
             />
           )}
 
