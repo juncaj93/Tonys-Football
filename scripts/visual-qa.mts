@@ -313,24 +313,45 @@ async function signIn(page: Page): Promise<void> {
  * door would stop being evidence that the front one works.
  */
 async function enterPin(page: Page, doorUrl: string, pin: string): Promise<void> {
-  const submit = async (): Promise<void> => {
+  /*
+   * Waits for the **navigation**, not for a fixed number of milliseconds.
+   *
+   * This used to `waitForTimeout(2500)` and then assert the URL, which is a race
+   * dressed as a check: the assertion is *"the door opened"* and the evidence
+   * was *"two and a half seconds elapsed"*. It aborted a sweep at 78% — thirty-
+   * four sign-ins had succeeded, the thirty-fifth was simply slower than the
+   * sleep, and the same seat signed in correctly the moment it was tried by
+   * hand. Nothing was wrong with the product; the harness had asserted a clock.
+   *
+   * `waitForURL` waits for the condition itself and gives it a real budget, so a
+   * loaded machine costs time rather than a false failure — and a genuinely
+   * broken door still fails, in fifteen seconds instead of two and a half.
+   */
+  const submit = async (): Promise<boolean> => {
     await page.fill('input[name="pin"]', pin);
     if ((await page.locator('input[name="confirm"]').count()) > 0) {
       await page.fill('input[name="confirm"]', pin);
     }
     await page.click('button[type="submit"]');
-    await page.waitForTimeout(2500);
+
+    try {
+      await page.waitForURL((url) => url.pathname === '/', { timeout: 15_000 });
+      return true;
+    } catch {
+      // The door did not open in fifteen seconds. That is either a wrong PIN —
+      // the claim-versus-sign-in case below — or a real failure, and the caller
+      // decides which by trying once more.
+      return false;
+    }
   };
 
-  await submit();
-  if (new URL(page.url()).pathname !== '/') {
-    // Already claimed on an earlier run: the same form is now sign-in.
-    await page.goto(doorUrl, { waitUntil: 'networkidle' });
-    await submit();
-  }
-  if (new URL(page.url()).pathname !== '/') {
-    throw new Error(`could not sign in at ${doorUrl}; stuck at ${page.url()}`);
-  }
+  if (await submit()) return;
+
+  // Already claimed on an earlier run: the same form is now sign-in.
+  await page.goto(doorUrl, { waitUntil: 'networkidle' });
+  if (await submit()) return;
+
+  throw new Error(`could not sign in at ${doorUrl}; stuck at ${page.url()}`);
 }
 
 async function reach(page: Page, state: StateName): Promise<void> {
