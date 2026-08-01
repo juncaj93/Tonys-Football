@@ -60,6 +60,16 @@ export function MountedSheet({
 } & React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div
+      /*
+       * `#191012` is one value step below the house `#1c1113`, and that is the
+       * whole reason it is a second near-black rather than a reuse.
+       *
+       * The mount sits **behind** paper, and the plates that sit **on** the room
+       * — `ReturnPlate`, `DeskExit`, a board-tone `PixelPanel` — are `#1c1113`.
+       * One of those lands directly under the sheet on every desk screen, so at
+       * the same value the frame and the plate under it merge into one dark
+       * shape and the sheet stops reading as mounted on anything.
+       */
       className="pixel-edge relative border-2 border-wood-dark bg-[#191012] p-[5px]"
       {...rest}
     >
@@ -170,6 +180,11 @@ export function Plaque({
   children: React.ReactNode;
   tone?: 'wood' | 'stop';
 }) {
+  /*
+   * `#2a1a12` is varnished wood rather than enamel — warmer and lighter than the
+   * mount behind it, so a plaque naming the sheet below it does not read as a
+   * hole cut in the frame.
+   */
   const tones = {
     wood: 'border-wood-light bg-[#2a1a12] text-paper-mid',
     stop: 'border-red-mid bg-red-dark text-paper-white',
@@ -399,9 +414,22 @@ export function Ledger({
  * One line of a ledger.
  *
  * The value is right-aligned and never wraps — a number that breaks across two
- * lines stops being a number. When it is long enough to collide with its own
- * label the row stacks instead, which is the honest failure mode: a label above
- * its value still reads correctly, a truncated value does not.
+ * lines stops being a number.
+ *
+ * ## Two columns, not a flex row that wraps
+ *
+ * The first version was `flex flex-wrap justify-between`, which drops the value
+ * onto its own line when the pair no longer fits. On the Slice's board that
+ * produced *one* stacked row in four — `Brandon over Cheese` is nineteen
+ * characters and every other matchup that week was shorter — so a reader saw
+ * three rows of one shape and a fourth of another, which reads as a defect
+ * rather than as a decision. Broken spacing is broken spacing whether or not
+ * the mechanism was deliberate (`VISUAL_ACCEPTANCE §4`).
+ *
+ * A grid keeps the two columns for every row: the value column takes exactly
+ * what it needs, and a long label **wraps inside its own cell** rather than
+ * pushing the number off the line. That is also the right priority when a
+ * *violation's* value is the long one — the value is the reason the row exists.
  */
 export function LedgerRow({
   label,
@@ -432,10 +460,12 @@ export function LedgerRow({
 
   return (
     <div className="border-b-2 border-ink-900/20 px-3 py-2.5 last:border-b-0" {...rest}>
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-3">
         <span className={label_}>{label}</span>
         {value !== null && (
-          <span className={`ml-auto text-right whitespace-nowrap ${TYPE.ledgerValue} ${INK.paper.strong}`}>
+          <span
+            className={`text-right whitespace-nowrap ${TYPE.ledgerValue} ${INK.paper.strong}`}
+          >
             {value}
           </span>
         )}
