@@ -1,3 +1,4 @@
+import { TYPE } from '@/lib/design/type';
 import { type Receipt } from '@/lib/parlor/receipt';
 
 /**
@@ -19,11 +20,11 @@ export function ReceiptSlip({
   name: string;
 }) {
   return (
-    <div className="relative mx-auto w-full max-w-xs bg-paper-white px-4 py-4 font-mono text-[13px] text-ink-900 shadow-[0_2px_6px_rgba(0,0,0,0.45)]">
+    <div className={`relative mx-auto w-full max-w-xs bg-paper-white px-4 py-4 ${TYPE.body} text-ink-900 shadow-[0_2px_6px_rgba(0,0,0,0.45)]`}>
       <TornEdge className="-top-[5px]" />
 
-      <p className="text-center text-[11px] tracking-[0.2em] uppercase">Tony&rsquo;s Pizza</p>
-      <p className="mt-0.5 text-center text-[10px] tracking-[0.15em] text-ink-500 uppercase">
+      <p className={`text-center ${TYPE.stamp}`}>Tony&rsquo;s Pizza</p>
+      <p className={`mt-1 text-center ${TYPE.eyebrow} text-ink-500`}>
         Customer copy
       </p>
 
@@ -31,8 +32,8 @@ export function ReceiptSlip({
 
       {receipt === null ? (
         <>
-          <p className="text-center text-[13px] font-bold">{name}</p>
-          <p className="mt-3 text-center leading-relaxed text-ink-500">
+          <p className={`text-center ${TYPE.bodyCompact} text-ink-900`}>{name}</p>
+          <p className={`mt-3 text-center ${TYPE.bodyCompact} text-ink-500`}>
             No record on file.
             <br />
             First season starts in September.
@@ -56,7 +57,7 @@ export function ReceiptSlip({
       )}
 
       <hr className="my-3 border-t border-dashed border-ink-300" />
-      <p className="text-center text-[10px] tracking-wide text-ink-500">
+      <p className={`text-center ${TYPE.eyebrow} text-ink-500`}>
         Thank you. Come again Tuesday.
       </p>
 

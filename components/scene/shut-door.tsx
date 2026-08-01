@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 
 import { roomObjectAttributes } from '@/components/scene/room-object';
+import { TYPE } from '@/lib/design/type';
 import { place, type RoomObjectSpec } from '@/lib/parlor/objects';
 
 /**
@@ -88,7 +89,7 @@ export function ShutDoor({ spec, line }: { spec: RoomObjectSpec; line: string })
         }`}
         style={{ top: `${(((spec.rect[1] + spec.rect[3] + 8) / 569) * 100).toFixed(3)}%` }}
       >
-        <span className="pixel-edge border-2 border-wood-dark bg-paper-mid px-3 py-2 text-[17px] leading-[1.45] text-ink-900">
+        <span className={`pixel-edge border-2 border-wood-dark bg-paper-mid px-3 py-2 ${TYPE.bodyCompact} text-ink-900`}>
           {saying ? line : ''}
         </span>
       </div>

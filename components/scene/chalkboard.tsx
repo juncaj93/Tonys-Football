@@ -1,3 +1,4 @@
+import { TYPE } from "@/lib/design/type";
 import { ENTRY_SIDE, fill } from "@/lib/stakes/copy";
 import { type BoardItem, type Chalkboard } from "@/lib/stakes/chalkboard";
 
@@ -153,31 +154,31 @@ export function BoardEntry({
       data-stake-state={item.presentation}
       className="pb-1"
     >
-      <p className="font-display text-[11px] leading-[1.4] tracking-[0.08em] text-ink-500 uppercase">
+      <p className={`${TYPE.eyebrow} text-ink-500`}>
         {KIND_LABELS[item.kind]} · Week {String(item.week)}
       </p>
 
       {settled && item.copy.verdict !== null ? (
         <>
-          <p className="mt-1.5 font-display text-[19px] leading-[1.25] text-red-dark">
+          <p className={`mt-2 ${TYPE.subhead} text-red-dark`}>
             {item.copy.verdict}
           </p>
-          <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
+          <p className={`mt-2 ${TYPE.bodyCompact} text-ink-700`}>
             {item.copy.line}
           </p>
           {item.copy.evidence !== null && (
-            <p className="mt-2 border-t border-ink-100/60 pt-2 text-[15px] leading-[1.45] text-ink-500">
+            <p className={`mt-2.5 border-t border-ink-900/20 pt-2.5 ${TYPE.bodyCompact} text-ink-500`}>
               {item.copy.evidence}
             </p>
           )}
         </>
       ) : (
         <>
-          <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-900">
+          <p className={`mt-2 ${TYPE.body} text-ink-900`}>
             {item.copy.line}
           </p>
           {showWaiting && item.waiting !== null && (
-            <p className="mt-2 text-[15px] leading-[1.45] text-ink-500">
+            <p className={`mt-2 ${TYPE.bodyCompact} text-ink-500`}>
               {item.waiting}
             </p>
           )}
@@ -185,7 +186,7 @@ export function BoardEntry({
       )}
 
       {item.entry !== null && (
-        <p className="mt-2.5 text-[15px] leading-[1.45] text-ink-700">
+        <p className={`mt-2.5 ${TYPE.bodyCompact} text-ink-700`}>
           {/*
            * Their own pick, always shown once made — including after it settled.
            *
@@ -218,7 +219,7 @@ export function BoardEntry({
  */
 export function QuietBoard() {
   return (
-    <p className="pb-1 text-[17px] leading-[1.5] text-ink-700">
+    <p className={`pb-1 ${TYPE.body} text-ink-700`}>
       Tony hasn&rsquo;t called this one yet. He writes it up on Tuesday, with
       the paper.
     </p>
@@ -274,7 +275,7 @@ export function BoardPanel({ board }: { board: Chalkboard }) {
         </div>
       )}
       {shared !== null && (
-        <p className="border-t border-ink-100/60 pt-2.5 text-[15px] leading-[1.45] text-ink-500">
+        <p className={`border-t border-ink-900/20 pt-3 ${TYPE.bodyCompact} text-ink-500`}>
           {shared}
         </p>
       )}

@@ -1,3 +1,5 @@
+import { TYPE } from '@/lib/design/type';
+
 import type { AssetResolution } from './types';
 
 /**
@@ -36,9 +38,9 @@ export function PlaceholderSign({
       />
 
       <span className="relative z-10">
-        <span className="block text-sm leading-tight font-semibold text-ink-900">{label}</span>
+        <span className={`block ${TYPE.subhead} text-ink-900`}>{label}</span>
         {slug !== undefined && (
-          <span className="mt-1 block font-mono text-[10px] break-all text-ink-500">{slug}</span>
+          <span className={`mt-1 block ${TYPE.machine} text-ink-500`}>{slug}</span>
         )}
       </span>
     </div>
@@ -187,7 +189,7 @@ export function AssetView({
       <div
         className={`flex min-h-24 items-center justify-center rounded-[2px] border-2 border-dashed border-red-mid px-4 py-3 text-center ${className}`}
       >
-        <span className="font-mono text-xs break-all text-red-light">
+        <span className={`${TYPE.machine} text-red-light`}>
           missing asset: {resolution.slug}
         </span>
       </div>

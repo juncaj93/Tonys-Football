@@ -1,5 +1,16 @@
-import { PixelPanel, SignPlate } from '@/components/scene/panel';
+import Link from 'next/link';
+
+import {
+  Ledger,
+  LedgerRow,
+  MetadataStrip,
+  MountedSheet,
+  PrintedRule,
+  SectionHeading,
+  WarningBlock,
+} from '@/components/scene/text-surface';
 import { TAP_TARGET } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { type ReviewDetail, type ReviewEvent } from '@/lib/slice/publication';
 
 /**
@@ -13,11 +24,11 @@ import { type ReviewDetail, type ReviewEvent } from '@/lib/slice/publication';
  * there is no third category, and anything that would be a third category is a
  * reason to leave it off.
  *
- * So it reads as the desk out the back: a paper panel, printed rules rather than
- * cards, and the actions as a stamp rather than as a button bar. `08 §22` lists
- * fourteen things the screen should show, and thirteen of them are facts about
- * one draft; grouping them into cards would make the screen look like a settings
- * page and would bury the one question being asked.
+ * So it reads as the desk out the back: sheets mounted on the wall, printed
+ * rules rather than cards, and the actions as a stamp rather than as a button
+ * bar. `08 §22` lists fourteen things the screen should show, and thirteen of
+ * them are facts about one draft; grouping them into cards would make the screen
+ * look like a settings page and would bury the one question being asked.
  *
  * ## The order is the reading order
  *
@@ -25,6 +36,25 @@ import { type ReviewDetail, type ReviewEvent } from '@/lib/slice/publication';
  * Then the paper. Then what the paper was built from. Then the decision. Then
  * the record. A commissioner who reads top to bottom has read the case before
  * they are asked to rule on it.
+ *
+ * ## What the refresh changed, and what it did not
+ *
+ * Not one fact, one route, one action or one guarantee. What changed is that the
+ * screen now answers its six questions by **geometry** rather than by paragraph:
+ *
+ *   1. *What state is this in* — a stamp at the top of the sheet, at stamp size.
+ *   2. *Can it be approved or printed* — a warning block with a drawn glyph,
+ *      which is a shape you read before you read a word.
+ *   3. *Why was it refused* — the validator's own sentence, at body size, not
+ *      two pixels under it.
+ *   4. *What must happen next* — the same block, under the same glyph.
+ *   5. *What exact values failed* — a **bordered ledger**: keys down the left,
+ *      the offending values right-aligned down the right, a rule between
+ *      findings. It was a bulleted list of run-together clauses in three mixed
+ *      sizes, where the value — the only reason to read it — was the least
+ *      distinguishable thing on the row.
+ *   6. *What it would look like printed* — under a dark plaque, so the label
+ *      cannot land on the room's own artwork the way a cream one did at 360.
  */
 
 const STATUS_WORD: Record<ReviewDetail['status'], string> = {
@@ -53,23 +83,45 @@ const ACTION_PHRASE: Record<ReviewEvent['action'], string> = {
 };
 
 /** Who acted, when a job did rather than a person. */
-const THE_PRESS = 'Tony\u2019s press';
+const THE_PRESS = 'Tony’s press';
 
-export function StatusPlate({ status }: { status: ReviewDetail['status'] }) {
-  const tone = status === 'published' ? 'blue' : status === 'rejected' ? 'red' : 'cream';
-  return <SignPlate tone={tone}>{STATUS_WORD[status]}</SignPlate>;
+/**
+ * The status stamp.
+ *
+ * A stamp pressed onto the sheet, not a pill floating above it: square, two
+ * pixels of border, the ink of the state it names. The three inks are the three
+ * things a state can mean — stopped, printed, in hand — and nothing else takes a
+ * colour, because a screen where every badge is coloured has no coloured badge.
+ */
+export function StatusStamp({ status }: { status: ReviewDetail['status'] }) {
+  const tones = {
+    rejected: 'border-red-mid bg-red-dark text-paper-white',
+    published: 'border-blue-mid bg-blue-deep text-blue-neon',
+    quiet: 'border-ink-900/50 bg-paper-white/70 text-ink-900',
+  } as const;
+  const tone =
+    status === 'published' ? tones.published : status === 'rejected' ? tones.rejected : tones.quiet;
+
+  return (
+    <span
+      data-review-stamp={status}
+      className={`pixel-edge inline-flex items-center border-2 px-3 py-1.5 ${TYPE.stamp} ${tone}`}
+    >
+      {STATUS_WORD[status]}
+    </span>
+  );
 }
 
 /** A printed rule. The layout of a sheet of paper, not a border. */
 export function Rule() {
-  return <div aria-hidden="true" className="h-[2px] w-full bg-ink-900/20" />;
+  return <PrintedRule />;
 }
 
 export function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
-    <h2 className="mt-2 font-display text-[12px] leading-[1.5] tracking-[0.08em] text-ink-500 uppercase">
-      {children}
-    </h2>
+    <div className="mt-3">
+      <SectionHeading ink="text-ink-500">{children}</SectionHeading>
+    </div>
   );
 }
 
@@ -84,47 +136,51 @@ export function SectionLabel({ children }: { children: React.ReactNode }) {
  * A passing verdict gets one line. A failing one gets every violation, because
  * the second violation is the one that would otherwise be found after the first
  * is fixed and the draft is regenerated.
+ *
+ * The violations are a ledger and not a list, and the reason is the shape of the
+ * data rather than a preference: every violation is a **kind and an exact
+ * value** — `unknown-number 154.42`, `banned-term odds` — and a kind beside its
+ * value in running text is the one arrangement in which neither is scannable.
  */
 export function VerdictPanel({ detail }: { detail: ReviewDetail }) {
   const violations = detail.verdict.violations;
 
   if (detail.publishable) {
     return (
-      <div className="border-l-[3px] border-ink-900/30 pl-3">
-        <p className="font-display text-[13px] leading-[1.5] text-ink-900 uppercase">
-          The check passed
-        </p>
-        <p className="mt-1 text-[17px] leading-[1.5] text-ink-700">
-          Every number and every name in this issue came out of the fact packet below. No banned
-          term, no invented quotation.
-        </p>
-      </div>
+      <WarningBlock tone="go" title="The check passed" data-review-verdict="passed">
+        Every number and every name in this issue came out of the fact packet below. No banned
+        term, no invented quotation.
+      </WarningBlock>
     );
   }
 
   return (
-    <div className="border-l-[3px] border-red-dark pl-3">
-      <p className="font-display text-[13px] leading-[1.5] text-red-dark uppercase">
-        The check refused this issue
-      </p>
-      <p className="mt-1 text-[17px] leading-[1.5] text-ink-700">
+    <div data-review-verdict="refused">
+      <WarningBlock tone="stop" title="Blocked by the check">
         It cannot be approved or printed. Fix what it found, then draft the week again — the
         refused copy stays on the record beside whatever replaces it.
-      </p>
+      </WarningBlock>
 
-      <ul className="mt-2.5 space-y-1.5">
-        {violations.map((violation, index) => (
-          <li key={`${violation.kind}-${String(index)}`} className="text-[17px] leading-[1.45] text-ink-900">
-            <span className="font-display text-[13px] text-red-dark uppercase">
-              {violation.kind.replace(/-/g, ' ')}
-            </span>{' '}
-            <span className="tabular-nums">{violation.value}</span>
-            {'why' in violation && (
-              <span className="block text-[16px] text-ink-500">{violation.why}</span>
-            )}
-          </li>
-        ))}
-      </ul>
+      <div className="mt-3">
+        <MetadataStrip ink="text-ink-500">
+          {violations.length === 1 ? '1 finding' : `${String(violations.length)} findings`}
+        </MetadataStrip>
+      </div>
+
+      <div className="mt-1.5">
+        <Ledger data-review-findings={String(violations.length)}>
+          {violations.map((violation, index) => (
+            <LedgerRow
+              key={`${violation.kind}-${String(index)}`}
+              data-review-finding={violation.kind}
+              label={violation.kind.replace(/-/g, ' ')}
+              value={violation.value}
+            >
+              {'why' in violation ? violation.why : undefined}
+            </LedgerRow>
+          ))}
+        </Ledger>
+      </div>
     </div>
   );
 }
@@ -146,57 +202,52 @@ export function PacketPanel({ detail }: { detail: ReviewDetail }) {
 
   return (
     <div>
-      <SectionLabel>What it was built from</SectionLabel>
+      <SectionHeading ink="text-ink-500">What it was built from</SectionHeading>
 
       {candidates.length === 0 ? (
-        <p className="mt-2 text-[17px] leading-[1.5] text-ink-700">
+        <p className={`mt-2 ${TYPE.body} text-ink-700`}>
           Nothing in this week cleared the floor. The paper says so rather than promoting an
           ordinary result — which is the behaviour to check, not a fault to fix.
         </p>
       ) : (
-        <ul className="mt-2 space-y-3">
-          {candidates.map((story) => (
-            <li key={story.id}>
-              <div className="flex items-baseline justify-between gap-3">
-                <span className="font-display text-[13px] text-ink-900 uppercase">
-                  {story.role} · {story.kind.replace(/_/g, ' ')}
-                </span>
-                <span className="shrink-0 font-display text-[13px] text-ink-500 tabular-nums">
-                  {story.significance}
-                </span>
-              </div>
-              <ul className="mt-1 space-y-0.5">
-                {story.evidence.map((line) => (
-                  <li key={line} className="text-[16px] leading-[1.45] text-ink-700">
-                    {line}
-                  </li>
-                ))}
-              </ul>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-2">
+          <Ledger>
+            {candidates.map((story) => (
+              <LedgerRow
+                key={story.id}
+                label={`${story.role} · ${story.kind.replace(/_/g, ' ')}`}
+                value={story.significance}
+              >
+                {story.evidence.join(' · ')}
+              </LedgerRow>
+            ))}
+          </Ledger>
+        </div>
       )}
 
       {packet.demoted.length > 0 && (
         <>
           <SectionLabel>Moved down the order</SectionLabel>
-          <ul className="mt-1.5 space-y-1">
-            {packet.demoted.map((entry) => (
-              <li key={entry.id} className="text-[16px] leading-[1.45] text-ink-700">
-                <span className="font-display text-[13px] text-ink-500 uppercase">
-                  {entry.kind.replace(/_/g, ' ')}
-                </span>{' '}
-                <span className="tabular-nums">&minus;{entry.penalty}</span> {entry.detail}
-              </li>
-            ))}
-          </ul>
+          <div className="mt-1.5">
+            <Ledger>
+              {packet.demoted.map((entry) => (
+                <LedgerRow
+                  key={entry.id}
+                  label={entry.kind.replace(/_/g, ' ')}
+                  value={<>&minus;{entry.penalty}</>}
+                >
+                  {entry.detail}
+                </LedgerRow>
+              ))}
+            </Ledger>
+          </div>
         </>
       )}
 
       {packet.suppressed.length > 0 && (
         <>
           <SectionLabel>Left out, and why</SectionLabel>
-          <ul className="mt-1.5 space-y-1">
+          <div className="mt-1.5">
             {/*
               * Named, because the reason alone repeats itself.
               *
@@ -207,29 +258,30 @@ export function PacketPanel({ detail }: { detail: ReviewDetail }) {
               * panel"*, and the fix is the missing half of the fact rather than a
               * layout change.
               */}
-            {packet.suppressed.map((entry) => (
-              <li key={entry.id} className="text-[16px] leading-[1.45] text-ink-700">
-                <span className="font-display text-[13px] text-ink-500 uppercase">
-                  {entry.kind.replace(/_/g, ' ')}
-                </span>{' '}
-                {entry.detail}
-              </li>
-            ))}
-          </ul>
+            <Ledger>
+              {packet.suppressed.map((entry) => (
+                <LedgerRow key={entry.id} label={entry.kind.replace(/_/g, ' ')}>
+                  {entry.detail}
+                </LedgerRow>
+              ))}
+            </Ledger>
+          </div>
         </>
       )}
 
       <SectionLabel>Facts this issue may use</SectionLabel>
-      <p className="mt-1.5 text-[16px] leading-[1.5] text-ink-700">
-        <span className="font-display text-[13px] text-ink-500 uppercase">Numbers</span>{' '}
-        <span className="tabular-nums">
-          {packet.allowedNumbers.length === 0 ? 'none' : packet.allowedNumbers.join(' · ')}
-        </span>
-      </p>
-      <p className="mt-1 text-[16px] leading-[1.5] text-ink-700">
-        <span className="font-display text-[13px] text-ink-500 uppercase">Names</span>{' '}
-        {packet.allowedNames.length === 0 ? 'none' : packet.allowedNames.join(' · ')}
-      </p>
+      <div className="mt-1.5">
+        <Ledger>
+          <LedgerRow label="Numbers">
+            <span className="tabular-nums">
+              {packet.allowedNumbers.length === 0 ? 'none' : packet.allowedNumbers.join(' · ')}
+            </span>
+          </LedgerRow>
+          <LedgerRow label="Names">
+            {packet.allowedNames.length === 0 ? 'none' : packet.allowedNames.join(' · ')}
+          </LedgerRow>
+        </Ledger>
+      </div>
     </div>
   );
 }
@@ -244,13 +296,10 @@ export function PacketPanel({ detail }: { detail: ReviewDetail }) {
 export function HistoryPanel({ history }: { history: readonly ReviewEvent[] }) {
   return (
     <div>
-      <SectionLabel>The record</SectionLabel>
-      <ul className="mt-1.5 space-y-1.5">
+      <SectionHeading ink="text-ink-500">The record</SectionHeading>
+      <ul className="mt-2 space-y-2">
         {history.map((event, index) => (
-          <li
-            key={`${event.action}-${String(index)}`}
-            className="text-[17px] leading-[1.45] text-ink-700"
-          >
+          <li key={`${event.action}-${String(index)}`} className={`${TYPE.bodyCompact} text-ink-700`}>
             {/*
               * A character, never an entity.
               *
@@ -261,7 +310,9 @@ export function HistoryPanel({ history }: { history: readonly ReviewEvent[] }) {
             <span className="text-ink-900">{event.actorName ?? THE_PRESS}</span>{' '}
             {ACTION_PHRASE[event.action]}
             {event.note !== null && (
-              <span className="block text-[16px] text-ink-500">&ldquo;{event.note}&rdquo;</span>
+              <span className={`mt-0.5 block ${TYPE.body} text-ink-500`}>
+                &ldquo;{event.note}&rdquo;
+              </span>
             )}
           </li>
         ))}
@@ -300,14 +351,17 @@ export function QueueRow({
         href={href}
         data-review-row={status}
         data-review-refused={publishable ? undefined : ''}
-        className={`pixel-edge flex ${TAP_TARGET} w-full flex-col justify-center border-2 border-ink-900/25 bg-paper-white/40 px-3 py-2.5 active:translate-y-px`}
+        className={`pixel-edge flex ${TAP_TARGET} w-full flex-col justify-center border-2 border-ink-900/25 bg-paper-white/45 px-3 py-2.5 active:translate-y-px`}
       >
-        <span className="text-[18px] leading-[1.35] text-ink-900">{headline}</span>
-        <span className="mt-0.5 font-display text-[12px] leading-[1.5] text-ink-500 uppercase tabular-nums">
+        <span className={`${TYPE.bodyCompact} text-ink-900`}>{headline}</span>
+        <MetadataStrip className="mt-1">
           Season {season} &middot; Week {week} &middot; Draft {version}
-          {!publishable && <span className="text-red-dark"> &middot; refused by the check</span>}
-          {status === 'draft' && <span> &middot; not yet up for review</span>}
-        </span>
+        </MetadataStrip>
+        {(!publishable || status === 'draft') && (
+          <span className={`mt-1 ${TYPE.eyebrow} ${publishable ? 'text-ink-500' : 'text-red-dark'}`}>
+            {publishable ? 'Not yet up for review' : 'Refused by the check'}
+          </span>
+        )}
       </a>
     </li>
   );
@@ -328,13 +382,15 @@ export function QueueSection({
   children: React.ReactNode;
 }) {
   return (
-    <section className="mt-5" data-review-section={slug} data-review-count={String(count)}>
-      <Rule />
-      <SectionLabel>{title}</SectionLabel>
+    <section className="mt-6" data-review-section={slug} data-review-count={String(count)}>
+      <PrintedRule />
+      <div className="mt-2">
+        <SectionHeading ink="text-ink-500">{title}</SectionHeading>
+      </div>
       {count === 0 ? (
-        <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">{empty}</p>
+        <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>{empty}</p>
       ) : (
-        <ul className="mt-2 space-y-2">{children}</ul>
+        <ul className="mt-2.5 space-y-2">{children}</ul>
       )}
     </section>
   );
@@ -366,24 +422,87 @@ export function StampButton({
     <button
       type="submit"
       disabled={disabled}
-      className={`pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 px-3 font-display text-[13px] leading-[1.5] uppercase active:translate-y-px disabled:opacity-40 ${tones[tone]}`}
+      className={`pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 px-3 ${TYPE.action} active:translate-y-px disabled:opacity-40 ${tones[tone]}`}
     >
       {children}
     </button>
   );
 }
 
-/** A boxed sheet on the desk. The screen's one container idiom. */
+/**
+ * A sheet on the desk.
+ *
+ * `MountedSheet` rather than a bare `PixelPanel`: the desk's sheets are the same
+ * object as the paper they are judging, and before this they were a cream
+ * rectangle sitting straight on the dimmed parlor while the newspaper beside
+ * them was another cream rectangle sitting straight on the dimmed parlor. Two
+ * different things that looked like one thing.
+ */
 export function DeskPanel({
   children,
   className = '',
+  ...rest
 }: {
   children: React.ReactNode;
   className?: string;
+} & React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <MountedSheet className={`px-4 pt-4 pb-5 ${className}`} {...rest}>
+      {children}
+    </MountedSheet>
+  );
+}
+
+/**
+ * A field on a form, with its label above it.
+ *
+ * The four note fields on this screen were four hand-assembled label/input
+ * pairs, and they had drifted: two at 12px, one at 17px, one at 18px, three
+ * different top margins. A commissioner typing a refusal reason should not be
+ * able to tell which form they are in from the size of the label.
+ */
+export function DeskField({
+  label,
+  name,
+  required = false,
+  maxLength = 160,
+  numeric = null,
+}: {
+  label: string;
+  name: string;
+  required?: boolean;
+  maxLength?: number;
+  /** A week number rather than a note: `{ min, max, value }`. */
+  numeric?: { readonly min: number; readonly max: number; readonly value: string } | null;
 }) {
   return (
-    <PixelPanel tone="paper" className={`px-4 pt-4 pb-5 ${className}`}>
+    <label className="block">
+      <span className={`${TYPE.eyebrow} text-ink-500`}>{label}</span>
+      <input
+        {...(numeric === null
+          ? { type: 'text', maxLength }
+          : { type: 'number', min: numeric.min, max: numeric.max, defaultValue: numeric.value })}
+        name={name}
+        required={required}
+        className={`mt-1.5 min-h-[44px] w-full border-2 border-ink-900/35 bg-paper-white/70 px-2.5 ${TYPE.body} text-ink-900 ${numeric === null ? '' : 'tabular-nums'}`}
+      />
+    </label>
+  );
+}
+
+/**
+ * The way back, at the foot of a desk screen.
+ *
+ * A dark plate rather than another sheet — it is a way out of the room, and
+ * `18 §3`'s grammar is that a way out looks like a door and not like paper.
+ */
+export function DeskExit({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className={`pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-[#1c1113] ${TYPE.action} text-paper-mid active:translate-y-px`}
+    >
       {children}
-    </PixelPanel>
+    </Link>
   );
 }

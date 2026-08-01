@@ -1,19 +1,25 @@
-import Link from 'next/link';
-
 import { draftIssueAction, holdPublicationAction } from '@/app/actions/slice';
-import { PanelHeading, ReturnPlate, SignPlate } from '@/components/scene/panel';
+import { PanelHeading, ReturnPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
+import {
+  MetadataStrip,
+  Plaque,
+  PrintedRule,
+  SectionHeading,
+  WarningBlock,
+} from '@/components/scene/text-surface';
 import { Page } from '@/components/shell';
 import {
+  DeskExit,
+  DeskField,
   DeskPanel,
   QueueRow,
   QueueSection,
-  Rule,
-  SectionLabel,
   StampButton,
 } from '@/components/slice/review';
 import { requireAdmin } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
+import { TYPE } from '@/lib/design/type';
 import { openSeason } from '@/lib/counter/tokens';
 import {
   approvedQueue,
@@ -121,12 +127,12 @@ export default async function SliceReviewQueuePage({
           data-review-hold={hold.held ? 'on' : 'off'}
         >
           <DeskPanel>
-            <SignPlate tone="red">Staff only</SignPlate>
-            <div className="mt-3">
+            <Plaque tone="stop">Staff only</Plaque>
+            <div className="mt-3.5">
               <PanelHeading>The press desk</PanelHeading>
             </div>
 
-            <p className="mt-2 text-[17px] leading-[1.5] text-ink-700">
+            <p className={`mt-2 ${TYPE.body} text-ink-700`}>
               Nothing reaches the rack until you stamp it.
             </p>
 
@@ -145,20 +151,22 @@ export default async function SliceReviewQueuePage({
               * so an empty desk shows nothing rather than three noughts.
               */}
             {docket.length > 0 && (
-              <p
-                className="mt-2 font-display text-[13px] leading-[1.5] tracking-[0.06em] text-ink-900 uppercase tabular-nums"
+              <MetadataStrip
+                className="mt-2.5"
+                ink="text-ink-900"
                 data-review-docket={docket.map((part) => part.key).join(',')}
               >
                 {docket.map((part) => part.label).join(' · ')}
-              </p>
+              </MetadataStrip>
             )}
 
             {drafted === 'refused' && (
-              <p className="mt-3 border-l-[3px] border-red-dark pl-3 text-[17px] leading-[1.5] text-ink-700">
-                There was nothing to draft. That week holds no result that may be printed yet —
-                the books are still open, or every game in it names somebody who is no longer in
-                the league.
-              </p>
+              <div className="mt-3.5">
+                <WarningBlock tone="stop" title="There was nothing to draft">
+                  That week holds no result that may be printed yet — the books are still open, or
+                  every game in it names somebody who is no longer in the league.
+                </WarningBlock>
+              </div>
             )}
 
             {/*
@@ -174,17 +182,14 @@ export default async function SliceReviewQueuePage({
               * not the primary action; the queue is.
               */}
             {hold.held && (
-              <div className="mt-4 border-l-[3px] border-red-dark pl-3">
-                <p className="font-display text-[13px] leading-[1.5] text-red-dark uppercase">
-                  The press is stopped
-                </p>
-                <p className="mt-1 text-[17px] leading-[1.5] text-ink-900">
+              <div className="mt-4">
+                <WarningBlock tone="stop" title="The press is stopped">
                   {hold.actorName === null
                     ? 'Nothing can be printed until it is released.'
                     : `${hold.actorName} stopped it.`}
                   {hold.reason === null ? '' : ` “${hold.reason}”`}
-                </p>
-                <form action={holdPublicationAction} className="mt-2.5">
+                </WarningBlock>
+                <form action={holdPublicationAction} className="mt-3">
                   <input type="hidden" name="held" value="0" />
                   <StampButton tone="go">Let the press run</StampButton>
                 </form>
@@ -268,35 +273,29 @@ export default async function SliceReviewQueuePage({
               </QueueSection>
             )}
 
-            <div className="mt-5">
-              <Rule />
-              <SectionLabel>Draft a week by hand</SectionLabel>
-              <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+            <div className="mt-6">
+              <PrintedRule />
+              <div className="mt-2">
+                <SectionHeading ink="text-ink-500">Draft a week by hand</SectionHeading>
+              </div>
+              <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>
                 The same thing the Tuesday job does. Running it twice on an unchanged week adds
                 nothing — the second draft is the first one, read back.
               </p>
 
               {live === null ? (
-                <p className="mt-2 text-[17px] leading-[1.5] text-ink-700">
+                <p className={`mt-2 ${TYPE.body} text-ink-700`}>
                   There is no open season, so there is no week to draft.
                 </p>
               ) : (
-                <form action={draftIssueAction} className="mt-2.5">
+                <form action={draftIssueAction} className="mt-3">
                   <input type="hidden" name="season" value={String(live.year)} />
-                  <label className="block">
-                    <span className="font-display text-[12px] text-ink-500 uppercase">
-                      Season {live.year}, week
-                    </span>
-                    <input
-                      type="number"
-                      name="week"
-                      min={1}
-                      max={18}
-                      defaultValue={String(week ?? 1)}
-                      className="mt-1 min-h-[44px] w-full border-2 border-ink-900/25 bg-paper-white/60 px-2.5 text-[18px] text-ink-900 tabular-nums"
-                    />
-                  </label>
-                  <div className="mt-2">
+                  <DeskField
+                    label={`Season ${String(live.year)}, week`}
+                    name="week"
+                    numeric={{ min: 1, max: 18, value: String(week ?? 1) }}
+                  />
+                  <div className="mt-2.5">
                     <StampButton tone="quiet">Print a draft</StampButton>
                   </div>
                 </form>
@@ -314,25 +313,19 @@ export default async function SliceReviewQueuePage({
               * want it under your thumb.
               */}
             {!hold.held && (
-              <div className="mt-5">
-                <Rule />
-                <SectionLabel>Stop the press</SectionLabel>
-                <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+              <div className="mt-6">
+                <PrintedRule />
+                <div className="mt-2">
+                  <SectionHeading ink="text-ink-500">Stop the press</SectionHeading>
+                </div>
+                <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>
                   Nothing can be printed while it is stopped, whoever asks and however it is
                   asked.
                 </p>
-                <form action={holdPublicationAction} className="mt-2.5">
+                <form action={holdPublicationAction} className="mt-3">
                   <input type="hidden" name="held" value="1" />
-                  <label className="block">
-                    <span className="font-display text-[12px] text-ink-500 uppercase">Why</span>
-                    <input
-                      type="text"
-                      name="reason"
-                      maxLength={120}
-                      className="mt-1 min-h-[44px] w-full border-2 border-ink-900/25 bg-paper-white/60 px-2.5 text-[17px] text-ink-900"
-                    />
-                  </label>
-                  <div className="mt-2">
+                  <DeskField label="Why" name="reason" maxLength={120} />
+                  <div className="mt-2.5">
                     <StampButton tone="stop">Stop the press</StampButton>
                   </div>
                 </form>
@@ -340,13 +333,8 @@ export default async function SliceReviewQueuePage({
             )}
           </DeskPanel>
 
-          <div className="mt-5">
-            <Link
-              href="/admin"
-              className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-[#1c1113] font-display text-[12px] leading-[1.5] text-paper-mid uppercase active:translate-y-px"
-            >
-              &larr;&nbsp;&nbsp;The office
-            </Link>
+          <div className="mt-6">
+            <DeskExit href="/admin">&larr;&nbsp;&nbsp;The office</DeskExit>
           </div>
 
           <div className="mt-3">

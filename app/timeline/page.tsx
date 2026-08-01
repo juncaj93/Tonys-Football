@@ -1,6 +1,7 @@
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { requireUser } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
 import { championBanners } from '@/lib/parlor/champions';
@@ -35,7 +36,7 @@ export default async function TimelinePage() {
 
           <div className="mt-6 space-y-4">
             {banners.length === 0 ? (
-              <p className="text-[17px] leading-[1.5] text-paper-mid/75">
+              <p className={`${TYPE.body} text-paper-mid/75`}>
                 No seasons on record yet.
               </p>
             ) : (
@@ -60,8 +61,8 @@ export default async function TimelinePage() {
                       */}
                     {banner.champion === null ? (
                       <>
-                        <p className="mt-1.5 font-display text-[17px] text-ink-500">TBD</p>
-                        <p className="mt-1.5 text-[16px] leading-[1.45] text-ink-700">
+                        <p className={`mt-1.5 ${TYPE.subhead} text-ink-500`}>TBD</p>
+                        <p className={`mt-1.5 ${TYPE.bodyCompact} text-ink-700`}>
                           {banner.current
                             ? 'Still being played. Nobody has won it yet.'
                             : 'Not finalized, so there is no champion on record.'}
@@ -69,10 +70,10 @@ export default async function TimelinePage() {
                       </>
                     ) : (
                       <>
-                        <p className="mt-1.5 font-display text-[22px] leading-[1.2] text-ink-900">
+                        <p className={`mt-1.5 ${TYPE.headline} text-ink-900`}>
                           {banner.champion}
                         </p>
-                        <p className="mt-1 font-display text-[11px] tracking-[0.08em] text-wood-mid uppercase">
+                        <p className={`mt-1 ${TYPE.eyebrow} text-wood-mid`}>
                           Champion
                         </p>
                       </>

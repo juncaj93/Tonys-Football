@@ -8,22 +8,30 @@ import {
   rejectIssueAction,
   submitIssueAction,
 } from '@/app/actions/slice';
-import { PanelHeading, SignPlate } from '@/components/scene/panel';
+import { PanelHeading } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
+import {
+  MetadataStrip,
+  Plaque,
+  PrintedRule,
+  SectionHeading,
+  WarningBlock,
+} from '@/components/scene/text-surface';
 import { Page } from '@/components/shell';
 import { Newspaper } from '@/components/slice/newspaper';
 import {
+  DeskExit,
+  DeskField,
   DeskPanel,
   HistoryPanel,
   PacketPanel,
-  Rule,
-  SectionLabel,
   StampButton,
-  StatusPlate,
+  StatusStamp,
   VerdictPanel,
 } from '@/components/slice/review';
 import { requireAdmin } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
+import { TYPE } from '@/lib/design/type';
 import { publicationHold, reviewDetail } from '@/lib/slice/publication';
 
 /**
@@ -82,27 +90,54 @@ export default async function SliceReviewPage({
           data-review-version={detail.status}
           data-review-publishable={detail.publishable ? 'yes' : 'no'}
         >
+          {/*
+            * The sheet the decision is made on.
+            *
+            * State, then identity, then the verdict — in that order, because the
+            * three questions a commissioner opens this page with are *what is
+            * this*, *what state is it in* and *can it be printed*, and the last
+            * of those is the one that can make everything below it moot.
+            */}
           <DeskPanel>
+            {/*
+              * The state first, the room's label second.
+              *
+              * `STAFF ONLY` in red led this row, so the loudest thing on a
+              * refused draft was a permanent fact about the door rather than the
+              * thing the screen exists to say. The stamp answers *what state is
+              * this in*, which is question one.
+              */}
             <div className="flex flex-wrap items-center gap-2">
-              <SignPlate tone="red">Staff only</SignPlate>
-              <StatusPlate status={detail.status} />
+              <StatusStamp status={detail.status} />
+              <Plaque tone="stop">Staff only</Plaque>
             </div>
 
-            <div className="mt-3">
+            <div className="mt-3.5">
               <PanelHeading>
                 Season {detail.season} &middot; Week {detail.week}
               </PanelHeading>
             </div>
 
-            <p className="mt-1 font-display text-[12px] leading-[1.5] text-ink-500 uppercase tabular-nums">
-              Draft {detail.version} &middot; set by the {detail.renderer} press &middot;{' '}
-              {detail.contentHash}
-            </p>
+            {/*
+              * The draft's identity, on two lines rather than one.
+              *
+              * It was one 12px run of `Draft 1 · set by the template press ·
+              * 8f3c2b…` — a version number, a renderer and a sixteen-character
+              * digest reading as one string, and at 360 it wrapped mid-hash. The
+              * digest is the thing an approval is *against*, so it gets its own
+              * line in the machine role, which breaks anywhere by design.
+              */}
+            <MetadataStrip className="mt-1.5">
+              Draft {detail.version} &middot; set by the {detail.renderer} press
+            </MetadataStrip>
+            <p className={`mt-1 ${TYPE.machine} text-ink-500`}>{detail.contentHash}</p>
 
             {published && (
-              <p className="mt-3 border-l-[3px] border-blue-mid pl-3 text-[17px] leading-[1.5] text-ink-900">
-                Printed. It is on the rack now, and this is the copy every manager reads.
-              </p>
+              <div className="mt-4">
+                <WarningBlock tone="go" title="Printed">
+                  It is on the rack now, and this is the copy every manager reads.
+                </WarningBlock>
+              </div>
             )}
 
             <div className="mt-4">
@@ -117,45 +152,49 @@ export default async function SliceReviewPage({
             * sheet of paper reads as a nested card, and the thing being judged
             * has to look like the thing that will print.
             */}
-          <div className="mt-5">
+          <div className="mt-6">
             {/*
-              * A plate, not a bare label.
+              * A dark plaque, not a cream plate.
               *
               * It was cream type straight onto the room, and at 360 the words
               * landed across the counter's red-and-white checker and stopped being
               * readable — `VISUAL_ACCEPTANCE §7`'s *"labels disappearing into
               * artwork"*, found by looking at the narrowest width rather than by a
-              * gate. `SignPlate` is the room's own answer to a surface naming
-              * itself, and it carries its own ground.
+              * gate. A cream plate fixed the contrast and created a second one:
+              * cream label directly above cream paper, so the label read as part
+              * of the sheet. Dark separates from both.
               */}
-            <div className="mb-2">
-              <SignPlate tone="cream">As it will print</SignPlate>
+            <div className="mb-2.5">
+              <Plaque>As it will print</Plaque>
             </div>
             <Newspaper issue={detail.edition} />
           </div>
 
-          <div className="mt-5">
+          <div className="mt-6">
             <DeskPanel>
               <PacketPanel detail={detail} />
             </DeskPanel>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-6">
             <DeskPanel>
-              <SectionLabel>The decision</SectionLabel>
+              <SectionHeading ink="text-ink-500">The decision</SectionHeading>
 
               {error === 'reason-required' && (
-                <p className="mt-1.5 border-l-[3px] border-red-dark pl-3 text-[17px] leading-[1.5] text-ink-900">
-                  A refusal needs a reason. The next draft is written against it.
-                </p>
+                <div className="mt-2.5">
+                  <WarningBlock tone="stop" title="A refusal needs a reason">
+                    The next draft is written against it, so an empty one leaves nothing for the
+                    press to work from.
+                  </WarningBlock>
+                </div>
               )}
 
               {detail.status === 'draft' && (
                 <>
-                  <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+                  <p className={`mt-2 ${TYPE.body} text-ink-700`}>
                     Drafted, and not yet up for review.
                   </p>
-                  <form action={submitIssueAction} className="mt-2.5">
+                  <form action={submitIssueAction} className="mt-3">
                     <input type="hidden" name="versionId" value={detail.versionId} />
                     <StampButton tone="quiet">Put it up for review</StampButton>
                   </form>
@@ -164,47 +203,48 @@ export default async function SliceReviewPage({
 
               {detail.status === 'needs_review' && (
                 <>
-                  <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
-                    {detail.publishable
-                      ? 'Approve it and it can be printed. Refuse it and it stays on the record with your reason beside it.'
-                      : 'The check refused this one, so it cannot be approved. Refuse it, fix what it found, and draft the week again.'}
-                  </p>
+                  {/*
+                    * What happens next, and it is a different sentence when the
+                    * check has already refused the copy.
+                    *
+                    * The refused case gets the warning treatment rather than a
+                    * paragraph, because on that screen it is answering the
+                    * question the whole page exists for — *can this be approved*
+                    * — and the answer is no. It sat as the fourth line of an
+                    * ordinary paragraph above a disabled button that gave no
+                    * reason for being disabled.
+                    */}
+                  {detail.publishable ? (
+                    <p className={`mt-2 ${TYPE.body} text-ink-700`}>
+                      Approve it and it can be printed. Refuse it and it stays on the record with
+                      your reason beside it.
+                    </p>
+                  ) : (
+                    <div className="mt-2.5">
+                      <WarningBlock tone="stop" title="Approving is not available">
+                        The check refused this copy, so the Approve stamp is locked. Refuse it, fix
+                        what the findings name, and draft the week again.
+                      </WarningBlock>
+                    </div>
+                  )}
 
-                  <form action={approveIssueAction} className="mt-3">
+                  <form action={approveIssueAction} className="mt-4">
                     <input type="hidden" name="versionId" value={detail.versionId} />
-                    <label className="block">
-                      <span className="font-display text-[12px] text-ink-500 uppercase">
-                        A note, if you want one on the record
-                      </span>
-                      <input
-                        type="text"
-                        name="note"
-                        maxLength={160}
-                        className="mt-1 min-h-[44px] w-full border-2 border-ink-900/25 bg-paper-white/60 px-2.5 text-[17px] text-ink-900"
-                      />
-                    </label>
-                    <div className="mt-2">
+                    <DeskField label="A note, if you want one on the record" name="note" />
+                    <div className="mt-2.5">
                       <StampButton tone="go" disabled={!detail.publishable}>
                         Approve
                       </StampButton>
                     </div>
                   </form>
 
-                  <form action={rejectIssueAction} className="mt-4 border-t-2 border-ink-900/20 pt-3">
+                  <div className="mt-5">
+                    <PrintedRule />
+                  </div>
+                  <form action={rejectIssueAction} className="mt-3">
                     <input type="hidden" name="versionId" value={detail.versionId} />
-                    <label className="block">
-                      <span className="font-display text-[12px] text-ink-500 uppercase">
-                        Why you are refusing it
-                      </span>
-                      <input
-                        type="text"
-                        name="note"
-                        required
-                        maxLength={160}
-                        className="mt-1 min-h-[44px] w-full border-2 border-ink-900/25 bg-paper-white/60 px-2.5 text-[17px] text-ink-900"
-                      />
-                    </label>
-                    <div className="mt-2">
+                    <DeskField label="Why you are refusing it" name="note" required />
+                    <div className="mt-2.5">
                       <StampButton tone="stop">Refuse it</StampButton>
                     </div>
                   </form>
@@ -213,33 +253,32 @@ export default async function SliceReviewPage({
 
               {detail.status === 'approved' && (
                 <>
-                  <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
-                    {hold.held
-                      ? 'Approved — but the press is stopped. Release the hold on the desk and it can be printed.'
-                      : 'Approved. Printing puts it on the rack, and every manager in the league reads this copy.'}
-                  </p>
-                  <form action={publishIssueAction} className="mt-2.5">
+                  {hold.held ? (
+                    <div className="mt-2.5">
+                      <WarningBlock tone="stop" title="Approved, but the press is stopped">
+                        Release the hold on the desk and it can be printed.
+                      </WarningBlock>
+                    </div>
+                  ) : (
+                    <p className={`mt-2 ${TYPE.body} text-ink-700`}>
+                      Approved. Printing puts it on the rack, and every manager in the league reads
+                      this copy.
+                    </p>
+                  )}
+                  <form action={publishIssueAction} className="mt-3">
                     <input type="hidden" name="versionId" value={detail.versionId} />
                     <StampButton tone="go" disabled={hold.held}>
                       Print it
                     </StampButton>
                   </form>
 
-                  <form action={rejectIssueAction} className="mt-4 border-t-2 border-ink-900/20 pt-3">
+                  <div className="mt-5">
+                    <PrintedRule />
+                  </div>
+                  <form action={rejectIssueAction} className="mt-3">
                     <input type="hidden" name="versionId" value={detail.versionId} />
-                    <label className="block">
-                      <span className="font-display text-[12px] text-ink-500 uppercase">
-                        Changed your mind? Say why
-                      </span>
-                      <input
-                        type="text"
-                        name="note"
-                        required
-                        maxLength={160}
-                        className="mt-1 min-h-[44px] w-full border-2 border-ink-900/25 bg-paper-white/60 px-2.5 text-[17px] text-ink-900"
-                      />
-                    </label>
-                    <div className="mt-2">
+                    <DeskField label="Changed your mind? Say why" name="note" required />
+                    <div className="mt-2.5">
                       <StampButton tone="stop">Pull it back</StampButton>
                     </div>
                   </form>
@@ -247,7 +286,7 @@ export default async function SliceReviewPage({
               )}
 
               {detail.status === 'published' && (
-                <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+                <p className={`mt-2 ${TYPE.body} text-ink-700`}>
                   On the rack. It cannot be edited — a correction is a new draft of the same week,
                   and printing it leaves this copy on the record marked as replaced.
                 </p>
@@ -255,11 +294,11 @@ export default async function SliceReviewPage({
 
               {detail.status === 'rejected' && (
                 <>
-                  <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+                  <p className={`mt-2 ${TYPE.body} text-ink-700`}>
                     Refused, and it stays refused. Drafting the week again writes a new copy beside
                     this one rather than overwriting it.
                   </p>
-                  <form action={draftIssueAction} className="mt-2.5">
+                  <form action={draftIssueAction} className="mt-3">
                     <input type="hidden" name="season" value={String(detail.season)} />
                     <input type="hidden" name="week" value={String(detail.week)} />
                     <StampButton tone="quiet">Draft this week again</StampButton>
@@ -268,7 +307,7 @@ export default async function SliceReviewPage({
               )}
 
               {detail.status === 'superseded' && (
-                <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+                <p className={`mt-2 ${TYPE.body} text-ink-700`}>
                   This copy was on the rack and a correction replaced it. It is kept because the
                   league read it.
                 </p>
@@ -276,24 +315,26 @@ export default async function SliceReviewPage({
             </DeskPanel>
           </div>
 
-          <div className="mt-5">
+          <div className="mt-6">
             <DeskPanel>
               <HistoryPanel history={detail.history} />
 
               {detail.siblings.length > 1 && (
                 <>
-                  <div className="mt-4">
-                    <Rule />
+                  <div className="mt-5">
+                    <PrintedRule />
                   </div>
-                  <SectionLabel>Other drafts of this week</SectionLabel>
-                  <ul className="mt-1.5 space-y-1">
+                  <div className="mt-2">
+                    <SectionHeading ink="text-ink-500">Other drafts of this week</SectionHeading>
+                  </div>
+                  <ul className="mt-2 space-y-1.5">
                     {detail.siblings
                       .filter((sibling) => sibling.versionId !== detail.versionId)
                       .map((sibling) => (
                         <li key={sibling.versionId}>
                           <Link
                             href={`/admin/slice/${sibling.versionId}`}
-                            className="text-[17px] leading-[1.45] text-ink-900 underline decoration-ink-900/40 underline-offset-4"
+                            className={`${TYPE.bodyCompact} text-ink-900 underline decoration-ink-900/40 underline-offset-4`}
                           >
                             Draft {sibling.version} &middot; {sibling.status.replace(/_/g, ' ')}
                           </Link>
@@ -305,13 +346,8 @@ export default async function SliceReviewPage({
             </DeskPanel>
           </div>
 
-          <div className="mt-5">
-            <Link
-              href="/admin/slice"
-              className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-[#1c1113] font-display text-[12px] leading-[1.5] text-paper-mid uppercase active:translate-y-px"
-            >
-              &larr;&nbsp;&nbsp;The press desk
-            </Link>
+          <div className="mt-6">
+            <DeskExit href="/admin/slice">&larr;&nbsp;&nbsp;The press desk</DeskExit>
           </div>
         </main>
       </Page>

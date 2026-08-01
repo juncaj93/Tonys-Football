@@ -21,12 +21,149 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Nothing. The review queue it was waiting on is built — see below |
 | **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`), now unblocked. Authoring, settlement, week finalization and the Slice draft all exist and are idempotent; what is missing is the schedule that calls them |
 | **Slice review chain** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
+| **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-01 (eighth session)
+
+### The text-surface refresh — a cause, not a screen
+
+**`main` is `c3dc077`** (PR #53 merged). Branch:
+`claude/text-surface-tuesday-slice-fouqq1`, which was already sitting on that
+commit with nothing on it.
+
+The direction named the commissioner's **review-refused screen** as a worked
+redesign — same route, same structure, same purpose, substantially better
+hierarchy — and asked for that quality level in the running product. Underneath
+the screen was a cause:
+
+| | Before | After |
+|---|---|---|
+| Distinct font sizes | **16** (8px → 26px) | **6** — `13 · 15 · 17 · 19 · 22 · 26` |
+| Typography call sites | ~200 arbitrary `text-[Npx]` | **0** outside the type case |
+| Call sites at 8–9px | **7** | 0 |
+| Arbitrary line heights | 11 distinct | 0 outside the type case |
+| A typography module | none | `lib/design/type.ts` |
+
+Restyling one screen would have been the **fourth** "raise the small type" pass
+in this repository, and each of the previous three left instances behind:
+`LEGENDARY` on cream was repaired and came back on a surface no screenshot could
+reach; the Back Hall's 9px reveal line was repaired in #48 while five more 9px
+sites survived it. Fixing instances is how a class of defect becomes permanent,
+because instances are found by looking and looking does not scale.
+
+### The sizes are measured, not chosen
+
+The two faces are not interchangeable at a given size, and the numbers decided
+the scale rather than taste:
+
+- **Silkscreen's capitals at 15px are exactly as tall as VT323's at 17px.** That
+  is why the display roles sit lower on the number line than the body roles and
+  still mean the same thing to a reader.
+- **Silkscreen is half again as wide per character** — 10.31px against 6.00px at
+  the same nominal size. A sentence in the display face runs out of a 360px phone
+  in about twenty-six characters, which is exactly how the press desk ended up
+  with a 12px metadata line: the size was chosen to make the *string* fit rather
+  than the words legible.
+- `TONY’S TUESDAY SLICE` is **361px at 26px and 306px at 22px**, against a 290px
+  column at 360. The nameplate has therefore *always* wrapped, wherever the
+  browser chose. It is two deliberate lines now.
+
+Nothing is fluid and nothing is fractional. Both faces are pixel faces, and a
+size landing between two device pixels resamples the glyph grid — the same defect
+`tony-talks` was found rendering at half a pixel.
+
+### Enforcement is two halves, and neither is sufficient
+
+- **Static** — `lib/design/typography.test.ts` fails `npm run check` on a size,
+  a fractional or fluid size, an arbitrary line height, or an inline
+  `fontSize`/`lineHeight` anywhere outside `lib/design/type.ts`. It skips lines
+  that are entirely prose, because this repository documents the sizes it moved
+  away from inside the comment explaining why.
+- **Runtime** — `checkTypeFloor` measures the **computed** size of every visible
+  text-bearing element on every state at every width. That is the half a static
+  scan cannot reach: a size inherited and re-set smaller by a stylesheet, a size
+  that exists only in one state, a size the browser supplied.
+
+**One declared exemption**, and the first run is what proved it had to be
+declared rather than inferred: every one of the 612 failures on that run was the
+same thing — the two-digit season year painted on a champion's pennant, 8.2px at
+360. It is capped by an 18 × 15 unit piece of fabric and cannot reach thirteen at
+any width. It now carries `data-environmental-type` in the markup, the driver
+**fails if a second kind ever appears**, and the year was raised from 7 to 9 room
+units (8.2px → 10.1px), which is as far as the pennant goes. Recorded as visual
+debt 14 rather than called fine.
+
+### What the screens actually gained
+
+`components/scene/text-surface.tsx` is the printed vocabulary — mounted sheet,
+masthead, printed rules, plaques, a drawn warning glyph, a bordered ledger. Two
+surfaces, deliberately not one card component: the Slice is a newspaper and the
+desk is a proof sheet on a clipboard, and what they share is typography and
+spacing rhythm rather than a container.
+
+The review screen answers its six questions by **geometry**: a stamp for the
+state, a warning block with a drawn glyph for *can this be printed*, and the
+validator's findings as a **ledger** — keys left, offending values right-aligned,
+a rule between findings. They were a bulleted list of run-together clauses in
+three mixed sizes, where the value was the least distinguishable thing on the row.
+
+Two more came from looking at the screenshots rather than from the brief: `STAFF
+ONLY` in red led the row on a refused draft, so the loudest thing on the screen
+was a permanent fact about the door; and a secondary story's headline and its own
+score line were both 17px display, which is not a hierarchy.
+
+### The one behavioural defect, and the boundary that holds the rest
+
+**A drawn game printed *"A over B"***. `leftWon` is false on a tie and the
+board's separator was the literal word `over`, so a result neither side won was
+stated as a win on the surface the league reads as true. `RenderedScore` has
+carried `tie` since it was written and nothing read it.
+
+Everything else is presentation, and `components/slice/presentation.test.tsx`
+holds it rather than asserting it in prose: the display components may not import
+`lib/stats`, `lib/slice/select`, `lib/slice/packet`, `lib/slice/validate`,
+`lib/slice/edition` or the database, and may not do arithmetic on a fact.
+**`Edition` is untouched**, so no content hash moved and no stored draft needs
+migrating — the masthead's championship flag reads `character`, which the
+renderer already derived.
+
+### Exact repository state
+
+| | |
+|---|---|
+| `main` | **`c3dc077`** — PR #53 merged |
+| Branch | `claude/text-surface-tuesday-slice-fouqq1` |
+| `npm run check` | green — **1145 tests across 70 files** (was 1120 / 68) |
+| `npm run visual:qa` | green — 85 states × 3 widths, production build, fresh database |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
+
+### The next executable task, in order
+
+1. **The Tuesday job** (`16 §4.3`'s second cron) — unchanged by this slice and
+   still first. `vercel.json` with the two allowed jobs, a secret-protected route,
+   and a decision about what the job does when a week refuses to draft.
+2. **Tony's clip at the glow-off transition** — visual debt 13, and the timing is
+   the finding rather than a detail. It is *not* debt 7, which is closed and has a
+   frame-sampling gate on it. `docs/TEXT_SURFACE_BOUNDARY.md §9` scopes it.
+3. **Visual debt 9** (the parlor ceiling) and **10** (`.affordance-on-request`).
+4. **Batch B**, whenever the PNGs arrive. One command.
+
+### What this session did not start, and why
+
+**The Tonight board's type in room units.** The board's hero and detail are still
+fixed px, sized from the vocabulary and verified to fit `TONIGHT_FIELD` at all
+three widths. They arguably belong in room units like the pennant's year — the
+field is painted and scales, the type does not — but that is a Tonight-board
+change on the homepage rather than a Slice change, and absorbing it here would be
+taking scope from a later slice instead of proposing it.
 
 ---
 

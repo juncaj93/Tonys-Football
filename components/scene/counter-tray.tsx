@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
 import { openBoxAction, type RevealPayload } from '@/app/actions/counter';
+import { TYPE } from '@/lib/design/type';
 import { RoomDoor, roomObjectAttributes } from '@/components/scene/room-object';
 import { AssetView } from '@/lib/assets/placeholder';
 import { type AssetResolution } from '@/lib/assets/types';
@@ -387,7 +388,7 @@ function Revealed({
           * `replayed` rides along here in signage type rather than earning its own
           * line — it is a footnote about the tap, not about the item.
           */}
-        <p className="rarity-word font-display text-[9px] leading-none tracking-[0.14em] uppercase">
+        <p className={`rarity-word ${TYPE.eyebrow}`}>
           {reveal.rarity}
           {reveal.replayed && <span className="text-ink-700/60"> · already yours</span>}
         </p>
@@ -398,7 +399,7 @@ function Revealed({
           * of being shrunk to fit. That is the rule: size the container to the
           * type, never the type to the container.
           */}
-        <p className="mt-1.5 text-[17px] leading-[1.3] text-ink-900">{reveal.name}</p>
+        <p className={`mt-2 ${TYPE.subhead} text-ink-900`}>{reveal.name}</p>
 
         {/*
           * What it *means*, which the plate did not say.
@@ -412,7 +413,7 @@ function Revealed({
           * Three cases, and the first one is the one that matters most: the very
           * first collectible anybody ever owns should be told it is the first.
           */}
-        <p className="mt-1 text-[15px] leading-[1.3] text-ink-700">
+        <p className={`mt-1.5 ${TYPE.bodyCompact} text-ink-700`}>
           {reveal.distinct === 1
             ? 'The first thing on your shelf. It stays there.'
             : reveal.distinct === reveal.total
@@ -459,10 +460,10 @@ function Revealed({
           */}
         {reveal.offer !== null && (
           <div className="mt-2.5 border-t-2 border-red-dark/25 pt-1.5">
-            <p className="font-display text-[9px] leading-none tracking-[0.12em] text-wood-mid uppercase">
+            <p className={`${TYPE.eyebrow} text-wood-mid`}>
               Tony
             </p>
-            <p className="mt-1 text-[15px] leading-[1.3] text-ink-900">{reveal.offer.line}</p>
+            <p className={`mt-1.5 ${TYPE.bodyCompact} text-ink-900`}>{reveal.offer.line}</p>
           </div>
         )}
 
@@ -487,7 +488,7 @@ function Revealed({
         <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-0.5">
           <Link
             href="/counter/collection"
-            className="flex min-h-[26px] items-center font-display text-[10px] tracking-wide text-ink-700/80 uppercase underline decoration-ink-700/30 underline-offset-2 active:translate-y-px"
+            className={`flex min-h-[26px] items-center ${TYPE.eyebrow} text-ink-700/80 underline decoration-ink-700/30 underline-offset-2 active:translate-y-px`}
           >
             Put it on the shelf
           </Link>
@@ -495,7 +496,7 @@ function Revealed({
           {reveal.offer !== null && (
             <Link
               href="/counter"
-              className="flex min-h-[26px] items-center font-display text-[10px] tracking-wide text-red-dark uppercase underline decoration-red-dark/40 underline-offset-2 active:translate-y-px"
+              className={`flex min-h-[26px] items-center ${TYPE.eyebrow} text-red-dark underline decoration-red-dark/40 underline-offset-2 active:translate-y-px`}
             >
               Take another
             </Link>
@@ -537,7 +538,7 @@ function Lost({ spec, onDone }: { spec: RoomObjectSpec; onDone: () => void }) {
         className="panel-rise pixel-edge absolute z-[26] border-2 border-wood-dark bg-paper-mid px-3 py-2.5 text-ink-900"
         style={placePlate()}
       >
-        <p className="text-[17px] leading-[1.35]">
+        <p className={TYPE.bodyCompact}>
           Tony looks at the tray. There&rsquo;s nothing on it.
         </p>
       </div>

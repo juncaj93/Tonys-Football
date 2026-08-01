@@ -7,6 +7,7 @@ import { RoomDisplay, RoomDoor } from '@/components/scene/room-object';
 import { TonyToy } from '@/components/scene/tony-toy';
 import { Page } from '@/components/shell';
 import { TonyAtTheCounter } from '@/components/tony';
+import { TYPE } from '@/lib/design/type';
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
@@ -253,7 +254,7 @@ export default async function ParlorPage({
         >
           <Link
             href="/profile"
-            className="pointer-events-auto flex h-11 min-w-[44px] items-center justify-end truncate px-3 font-display text-[13px] tracking-[0.08em] whitespace-nowrap text-paper-white/90 uppercase"
+            className={`pointer-events-auto flex h-11 min-w-[44px] items-center justify-end truncate px-3 ${TYPE.eyebrow} whitespace-nowrap text-paper-white/90`}
           >
             {user.displayName}
           </Link>
@@ -396,11 +397,11 @@ export default async function ParlorPage({
               className="pointer-events-none absolute flex flex-col items-center justify-center overflow-hidden text-center"
               style={place(TONIGHT_FIELD)}
             >
-              <p className="font-display text-[21px] leading-[1.1] tracking-[0.02em] text-red-dark uppercase">
+              <p className={`${TYPE.headlineQuiet} tracking-[0.02em] text-red-dark`}>
                 {face.hero}
               </p>
               {face.detail !== null && (
-                <p className="mt-1.5 text-[16px] leading-[1.25] text-wood-dark">{face.detail}</p>
+                <p className={`mt-1.5 ${TYPE.bodyCompact} text-wood-dark`}>{face.detail}</p>
               )}
             </div>
 
@@ -428,11 +429,11 @@ export default async function ParlorPage({
             {/* Displays. */}
             <RoomDisplay spec={roomObject('tonight')} title="Tonight at Tony's">
               {tonight.length === 0 ? (
-                <p className="pb-1 text-[17px] leading-[1.5] text-ink-700">Nothing on the board.</p>
+                <p className={`pb-1 ${TYPE.body} text-ink-700`}>Nothing on the board.</p>
               ) : (
                 <ul className="space-y-3 pb-1">
                   {tonight.map((entry) => (
-                    <li key={entry.key} className="flex gap-2.5 text-[17px] leading-[1.5]">
+                    <li key={entry.key} className={`flex gap-2.5 ${TYPE.body}`}>
                       <span aria-hidden="true" className="pt-0.5 text-red-dark">
                         —
                       </span>
@@ -459,9 +460,9 @@ export default async function ParlorPage({
               * got" is precisely what a receipt answers.
               */}
             <RoomDisplay spec={roomObject('receipt')} title="Your record">
-              <p className="text-[19px] leading-[1.45] text-ink-700">{user.displayName}</p>
+              <p className={`${TYPE.bodyLead} text-ink-700`}>{user.displayName}</p>
               {purse !== null && (
-                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
+                <p className={`mt-2 ${TYPE.bodyCompact} text-ink-700`}>
                   {String(purse.balance)} Tony Tokens on your tab this season.
                 </p>
               )}
@@ -478,7 +479,7 @@ export default async function ParlorPage({
                 * should say so rather than leaving them to wonder.
                 */}
               {purse === null && (
-                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
+                <p className={`mt-2 ${TYPE.bodyCompact} text-ink-700`}>
                   No tab this season. What you collected is still on your shelf.
                 </p>
               )}
@@ -491,12 +492,12 @@ export default async function ParlorPage({
                 * receipt is the manager's own record of themselves.
                 */}
               {shown !== null && (
-                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700">
+                <p className={`mt-2 ${TYPE.bodyCompact} text-ink-700`}>
                   {shown.name} is out in the showcase.
                 </p>
               )}
               {shown === null && (
-                <p className="mt-2 text-[17px] leading-[1.45] text-ink-700/85">
+                <p className={`mt-2 ${TYPE.bodyCompact} text-ink-700/85`}>
                   Nothing of yours is out in the showcase.
                 </p>
               )}

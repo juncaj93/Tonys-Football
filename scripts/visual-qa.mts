@@ -47,6 +47,17 @@ import path from 'node:path';
 
 import { chromium, type Browser, type Page } from 'playwright';
 
+import { TYPE_FLOOR_PX } from '../lib/design/type.ts';
+
+/**
+ * The only `data-environmental-type` this product declares.
+ *
+ * Text painted onto the artwork, sized in the artwork's own units. See
+ * `components/scene/banner-rail.tsx` for the whole reasoning and
+ * `lib/design/typography.test.ts` for the static half of the same rule.
+ */
+const ENVIRONMENTAL_TYPE = 'banner-year';
+
 const BASE = process.env['VISUAL_QA_BASE'] ?? 'http://localhost:3111';
 const OUT = process.env['VISUAL_QA_OUT'] ?? 'visual-qa';
 const PIN = '461902';
@@ -1754,6 +1765,99 @@ async function checkColourFidelity(page: Page, width: number): Promise<void> {
   for (const p of problems) fail('colour-fidelity', `@${String(width)} ${p}`);
 }
 
+/**
+ * Nothing a manager can read is set below the type floor.
+ *
+ * ## Why this is here and not only in the unit test
+ *
+ * `lib/design/typography.test.ts` is static: it reads the source and refuses a
+ * `text-[Npx]` outside the type case. That closes the door somebody would walk
+ * through on purpose. It cannot see the other three:
+ *
+ *   - a size **inherited** from an ancestor that names a role, then re-set
+ *     smaller by a stylesheet rule further down `globals.css`
+ *   - a size that only exists in **one state** — a disclosure, an error, a panel
+ *     that opens — which no static reading of a class string reveals as rendered
+ *   - a size that arrives from the **browser**: a form control that Safari
+ *     restyles, or a `1rem` floor that resolves differently than assumed
+ *
+ * This measures the computed size of every text-bearing element that is actually
+ * on screen, at every width, on every state. It is the half of the rule that is
+ * about what a person sees rather than about what the source says.
+ *
+ * ## What counts as text
+ *
+ * An element with a **non-empty text child of its own** — so a wrapper whose
+ * text lives three levels down is judged where the words are, and a hidden or
+ * zero-area element is not judged at all. `aria-hidden` decoration is included
+ * on purpose: a 6px chalk mark is not text, but it also has no text node, so it
+ * never reaches this check, while a 9px decorative caption does and should.
+ *
+ * ## The one declared exemption, and why it is declared rather than inferred
+ *
+ * Text that is **painted onto the artwork** is sized in the artwork's own units,
+ * because a fixed pixel size inside a scaled room drifts off whatever it is
+ * drawn on. Today that is exactly one thing: the season year on a champion's
+ * pennant, which is capped by an 18 × 15 unit piece of fabric and cannot reach
+ * thirteen pixels at any width.
+ *
+ * It carries `data-environmental-type`, so the exemption is a visible, greppable
+ * decision in the markup rather than a shape this gate infers. And the gate
+ * **counts the distinct kinds**: a second one is a failure, so the opt-out
+ * cannot become the way small type gets past the floor.
+ */
+async function checkTypeFloor(page: Page, width: number, state: string): Promise<void> {
+  const { small, exempt } = await page.evaluate((floor: number) => {
+    const out: string[] = [];
+    const kinds = new Set<string>();
+
+    for (const el of document.querySelectorAll<HTMLElement>('body *')) {
+      const own = [...el.childNodes]
+        .filter((n) => n.nodeType === Node.TEXT_NODE)
+        .map((n) => (n.textContent ?? '').trim())
+        .join('');
+      if (own === '') continue;
+
+      const box = el.getBoundingClientRect();
+      if (box.width < 1 || box.height < 1) continue;
+      const s = getComputedStyle(el);
+      if (s.visibility === 'hidden' || s.display === 'none' || Number(s.opacity) === 0) continue;
+
+      const size = Number.parseFloat(s.fontSize);
+      if (Number.isNaN(size) || size >= floor) continue;
+
+      const painted = el.closest<HTMLElement>('[data-environmental-type]');
+      if (painted !== null) {
+        kinds.add(painted.dataset['environmentalType'] ?? '');
+        continue;
+      }
+
+      out.push(`${el.tagName.toLowerCase()} at ${size.toFixed(1)}px — "${own.slice(0, 40)}"`);
+    }
+
+    // One report per distinct size-and-tag, not one per rendered node: a
+    // twenty-four-spot shelf would otherwise print the same defect twenty-four
+    // times and bury every other gate in the run.
+    return { small: [...new Set(out)], exempt: [...kinds] };
+  }, TYPE_FLOOR_PX);
+
+  for (const problem of small) {
+    fail('type-floor', `@${String(width)} ${state}: ${problem}`);
+  }
+
+  // The opt-out is one thing, by decision. A second kind means somebody used it
+  // to get small copy past the floor rather than to paint on the artwork.
+  for (const kind of exempt) {
+    if (kind !== ENVIRONMENTAL_TYPE) {
+      fail(
+        'type-floor',
+        `@${String(width)} ${state}: undeclared environmental type "${kind}" — ` +
+          `only "${ENVIRONMENTAL_TYPE}" is exempt from the ${String(TYPE_FLOOR_PX)}px floor`,
+      );
+    }
+  }
+}
+
 /** Legacy assets and routes that were withdrawn and must not come back. */
 async function checkNoLegacy(page: Page, width: number): Promise<void> {
   const html = await page.content();
@@ -2581,6 +2685,10 @@ async function run(): Promise<void> {
          */
         await checkColourFidelity(page, width);
         await checkNoLegacy(page, width);
+        // The type floor is an everywhere gate for the same reason: the two
+        // smallest things this product has ever rendered were on a door sign and
+        // a showcase picker, neither of which is the homepage.
+        await checkTypeFloor(page, width, state);
         // Everywhere, like the two above: a rarity word can appear on any
         // surface, and the defect this catches was on the one surface nobody
         // thought to check.

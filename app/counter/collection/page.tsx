@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
@@ -69,7 +70,7 @@ export default async function CollectionPage({
         <div className="mx-auto w-full max-w-[420px] px-4 pt-6 pb-10">
           <SignPlate>Your collection</SignPlate>
 
-          <p className="mt-4 text-[17px] leading-[1.5] text-paper-mid/80">
+          <p className={`mt-4 ${TYPE.body} text-paper-mid/80`}>
             {collection.distinct === 0
               ? 'Empty shelves. Whatever you pull is yours permanently, across every season.'
               : `${String(collection.distinct)} of ${String(collection.total)} on the shelves.` +
@@ -131,12 +132,12 @@ export default async function CollectionPage({
                   }`}
                 >
                   <span
-                    className={`rarity-word rarity-${rarity} font-display text-[10px] leading-none tracking-[0.1em] uppercase`}
+                    className={`rarity-word rarity-${rarity} ${TYPE.eyebrow}`}
                   >
                     {rarity}
                   </span>
                   <span
-                    className={`font-display text-[14px] leading-none ${
+                    className={`${TYPE.ledgerValue} ${
                       active
                         ? 'text-ink-900'
                         : complete
@@ -175,7 +176,7 @@ export default async function CollectionPage({
              */
             <Link
               href="/counter/collection"
-              className="mt-2 flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-paper-mid/85 uppercase underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px"
+              className={`mt-2 flex min-h-[44px] items-center ${TYPE.eyebrow} text-paper-mid/85 underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px`}
             >
               Show everything
             </Link>
@@ -242,7 +243,7 @@ export default async function CollectionPage({
           </div>
 
           {shown.length === 0 && (
-            <p className="mt-5 text-[17px] leading-[1.5] text-paper-mid/80">
+            <p className={`mt-5 ${TYPE.body} text-paper-mid/80`}>
               Nothing in that tier yet.
             </p>
           )}
@@ -258,7 +259,7 @@ export default async function CollectionPage({
           <div className="mt-8">
             <Link
               href="/counter/showcase"
-              className="pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-red-dark font-display text-[12px] text-paper-white uppercase active:translate-y-px"
+              className={`pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-red-dark ${TYPE.action} text-paper-white active:translate-y-px`}
             >
               Put one in the showcase
             </Link>
@@ -266,7 +267,7 @@ export default async function CollectionPage({
             <div className="mt-4 flex items-center justify-between gap-4">
               <Link
                 href="/counter"
-                className="flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-paper-mid/85 uppercase underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px"
+                className={`flex min-h-[44px] items-center ${TYPE.eyebrow} text-paper-mid/85 underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px`}
               >
                 The counter
               </Link>
@@ -340,7 +341,7 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
      */
     return (
       <li className="flex h-full flex-col justify-end px-0.5 pb-1.5 text-center">
-        <span className="shelf-label text-[15px] leading-[1.25] text-paper-mid/80">
+        <span className={`shelf-label ${TYPE.bodyCompact} text-paper-mid/80`}>
           {entry.name}
         </span>
       </li>
@@ -374,10 +375,10 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
         * is still a placeholder, and 11px is decorative type for a load-bearing
         * value — which `PRODUCT_DELIVERY_MANDATE.md §6` rules out directly.
         */}
-      <span className="text-center text-[14px] leading-[1.2] text-ink-900">{entry.name}</span>
+      <span className={`text-center ${TYPE.bodyCompact} text-ink-900`}>{entry.name}</span>
 
       <span
-        className={`rarity-word rarity-${entry.rarity} font-display text-[10px] tracking-[0.1em] uppercase`}
+        className={`rarity-word rarity-${entry.rarity} ${TYPE.eyebrow}`}
       >
         {entry.rarity}
       </span>
@@ -387,7 +388,7 @@ function ShelfSpot({ entry }: { entry: CollectionEntry }) {
         * Screen readers get the word; the mark is decoration.
         */}
       {entry.count > 1 && (
-        <span className="absolute top-1 right-1 bg-ink-900 px-1 font-display text-[10px] text-paper-mid">
+        <span className={`absolute top-1 right-1 bg-ink-900 px-1 ${TYPE.eyebrow} text-paper-mid`}>
           <span aria-hidden="true">&times;{entry.count}</span>
           <span className="sr-only">{entry.count} copies</span>
         </span>

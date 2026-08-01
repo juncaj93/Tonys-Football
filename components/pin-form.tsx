@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useActionState } from 'react';
 
 import { type AuthFormState } from '@/app/actions/auth';
+import { TYPE } from '@/lib/design/type';
 import { TAP_TARGET } from '@/components/shell';
 
 /**
@@ -58,7 +59,7 @@ export function PinForm({
 
       {requireClaimCode && (
         <label className="block">
-          <span className="font-mono text-[11px] tracking-[0.18em] text-ink-100 uppercase">
+          <span className={`${TYPE.eyebrow} text-ink-100`}>
             Tony&rsquo;s code
           </span>
           <input
@@ -74,7 +75,7 @@ export function PinForm({
       {state.error !== undefined && (
         <p
           role="alert"
-          className="border-l-4 border-red-mid bg-red-dark/20 px-3 py-2.5 text-[15px] leading-snug text-paper-white"
+          className={`border-l-4 border-red-mid bg-red-dark/20 px-3 py-2.5 ${TYPE.bodyCompact} text-paper-white`}
         >
           {state.error}
         </p>
@@ -83,14 +84,14 @@ export function PinForm({
       <button
         type="submit"
         disabled={pending}
-        className={`flex w-full ${TAP_TARGET} min-h-[3.25rem] items-center justify-center rounded-sm bg-amber-mid px-5 text-[17px] font-bold text-ink-900 transition-opacity active:opacity-80 disabled:opacity-60`}
+        className={`flex w-full ${TAP_TARGET} min-h-[3.25rem] items-center justify-center rounded-sm bg-amber-mid px-5 ${TYPE.action} text-ink-900 transition-opacity active:opacity-80 disabled:opacity-60`}
       >
         {pending ? 'One moment…' : submitLabel}
       </button>
 
       <Link
         href="/door"
-        className={`flex ${TAP_TARGET} items-center justify-center text-sm text-ink-100 underline underline-offset-4`}
+        className={`flex ${TAP_TARGET} items-center justify-center ${TYPE.body} text-ink-100 underline underline-offset-4`}
       >
         That&rsquo;s not me
       </Link>
@@ -111,7 +112,7 @@ function PinField({
 }) {
   return (
     <label className="block">
-      <span className="font-mono text-[11px] tracking-[0.18em] text-ink-100 uppercase">
+      <span className={`${TYPE.eyebrow} text-ink-100`}>
         {label}
       </span>
       <input
@@ -126,7 +127,7 @@ function PinField({
         // Single-purpose screen, reached by an explicit tap on a name: the
         // keypad should already be up when it paints.
         autoFocus={autoFocus}
-        className={`mt-1.5 w-full ${TAP_TARGET} rounded-sm border border-wood-dark bg-paper-white px-3 py-3 text-center font-mono text-2xl tracking-[0.4em] text-ink-900`}
+        className={`mt-1.5 w-full ${TAP_TARGET} rounded-sm border border-wood-dark bg-paper-white px-3 py-3 text-center ${TYPE.headline} tracking-[0.4em] text-ink-900`}
       />
     </label>
   );

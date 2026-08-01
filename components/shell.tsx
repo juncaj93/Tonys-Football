@@ -1,5 +1,7 @@
 import Link from 'next/link';
 
+import { TYPE } from '@/lib/design/type';
+
 /**
  * The page shell.
  *
@@ -102,7 +104,7 @@ export function BackToTheCounter({ children = 'Back out front' }: { children?: s
   return (
     <Link
       href="/"
-      className={`inline-flex ${TAP_TARGET} -ml-2 items-center gap-2 px-2 font-mono text-[11px] tracking-[0.14em] text-ink-100/75 uppercase transition-colors active:text-amber-mid`}
+      className={`inline-flex ${TAP_TARGET} -ml-2 items-center gap-2 px-2 ${TYPE.eyebrow} text-ink-100/75 transition-colors active:text-amber-mid`}
     >
       <span aria-hidden="true">&larr;</span>
       {children}

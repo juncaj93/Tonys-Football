@@ -1,5 +1,6 @@
-import { PixelPanel } from "@/components/scene/panel";
 import { BoardEntry, sharedWaiting } from "@/components/scene/chalkboard";
+import { MountedSheet, PrintedRule } from "@/components/scene/text-surface";
+import { TYPE } from "@/lib/design/type";
 import { type BoardItem, type Chalkboard } from "@/lib/stakes/chalkboard";
 
 /**
@@ -49,12 +50,14 @@ export function StakesBand({
 
   return (
     <div className="mt-7" data-stakes-band={marker}>
-      <PixelPanel tone="paper" className="px-4 pt-4 pb-4">
-        <div aria-hidden="true" className="h-[3px] bg-red-dark" />
-        <h2 className="mt-2 text-center font-display text-[15px] leading-[1.1] tracking-[0.06em] text-red-dark uppercase">
+      <MountedSheet className="px-4 pt-3.5 pb-4">
+        <PrintedRule weight="heavy" />
+        <h2 className={`mt-2.5 text-center ${TYPE.sectionHeading} text-red-dark`}>
           On the board this week
         </h2>
-        <div aria-hidden="true" className="mt-2 h-[3px] bg-red-dark" />
+        <div className="mt-2.5">
+          <PrintedRule weight="heavy" />
+        </div>
 
         <div className="mt-4 space-y-4">
           {items.map((item, index) => (
@@ -63,7 +66,7 @@ export function StakesBand({
               className={
                 index === 0
                   ? ""
-                  : "border-t-2 border-dotted border-ink-100 pt-3.5"
+                  : "border-t-2 border-dotted border-ink-900/25 pt-4"
               }
             >
               <BoardEntry item={item} showWaiting={shared === null} />
@@ -78,12 +81,12 @@ export function StakesBand({
             * itself. `sharedWaiting` hoists it only when every open item agrees.
             */}
           {shared !== null && (
-            <p className="border-t border-ink-100/60 pt-2.5 text-[15px] leading-[1.45] text-ink-500">
+            <p className={`border-t border-ink-900/20 pt-3 ${TYPE.bodyCompact} text-ink-500`}>
               {shared}
             </p>
           )}
         </div>
-      </PixelPanel>
+      </MountedSheet>
     </div>
   );
 }

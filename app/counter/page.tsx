@@ -4,6 +4,7 @@ import { BuyBox } from '@/components/counter/buy-box';
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { requireUser } from '@/lib/auth/current-user';
 import { counterState } from '@/lib/counter/boxes';
 import { economyFor, openSeason, wallet } from '@/lib/counter/tokens';
@@ -106,7 +107,7 @@ export default async function CounterPage() {
              * labels change without moving the object map.
              */
             data-unopened-boxes={String(unopenedBoxes)}
-            className="mt-4 text-[17px] leading-[1.5] text-paper-mid/85"
+            className={`mt-4 ${TYPE.body} text-paper-mid/85`}
           >
             {unopenedBoxes === 0
               ? 'Tony wipes the counter and waits. The tray is empty.'
@@ -129,7 +130,7 @@ export default async function CounterPage() {
           <div className="mt-6">
             <PixelPanel className="px-4 pt-4 pb-4">
               <PanelHeading>Standard pizza box</PanelHeading>
-              <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+              <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>
                 Mostly the ordinary stuff off the shelves. Now and then something that
                 shouldn&rsquo;t be in a pizza box at all.
               </p>
@@ -147,7 +148,7 @@ export default async function CounterPage() {
                  * because it is a seeding failure nobody but an operator can act
                  * on (and it is still loud in the log).
                  */
-                <p className="mt-3 text-[17px] leading-[1.5] text-ink-700">
+                <p className={`mt-3 ${TYPE.body} text-ink-700`}>
                   {seated
                     ? 'Tony hasn’t put a price on it yet. Nothing to buy with today.'
                     : 'No seat this season, so no tab to run one up on. The shelf behind you is still yours.'}
@@ -176,7 +177,7 @@ export default async function CounterPage() {
             * unverifiable.
             */}
           <div className="mt-7">
-            <p className="text-[17px] leading-[1.5] text-paper-mid/85">
+            <p className={`${TYPE.body} text-paper-mid/85`}>
               {collectiblesOwned > 0
                 ? `${plural(collectiblesOwned, 'collectible', 'collectibles')} on your shelf, kept permanently, across every season.`
                 : 'Nothing on your shelf yet. What you pull is yours permanently, across every season.'}
@@ -184,7 +185,7 @@ export default async function CounterPage() {
 
             <Link
               href="/counter/collection"
-              className="mt-1 flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-amber-glow uppercase underline decoration-amber-glow/40 underline-offset-4 active:translate-y-px"
+              className={`mt-1 flex min-h-[44px] items-center ${TYPE.eyebrow} text-amber-glow underline decoration-amber-glow/40 underline-offset-4 active:translate-y-px`}
             >
               Look at the shelves
             </Link>

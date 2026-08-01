@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useRef, useState } from 'react';
 
+import { TYPE } from '@/lib/design/type';
+
 /**
  * Walking in.
  *
@@ -184,7 +186,7 @@ export function ShowInteractables() {
     <button
       type="button"
       onClick={reveal}
-      className="flex h-11 min-w-[44px] shrink-0 items-center justify-center px-2 font-display text-[9px] whitespace-nowrap text-ink-100/45 transition-colors active:text-amber-mid"
+      className={`flex h-11 min-w-[44px] shrink-0 items-center justify-center px-2 ${TYPE.eyebrow} whitespace-nowrap text-ink-100/45 transition-colors active:text-amber-mid`}
     >
       look around
     </button>

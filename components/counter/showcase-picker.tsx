@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { setShowcaseAction } from '@/app/actions/counter';
+import { TYPE } from '@/lib/design/type';
 import { AssetView } from '@/lib/assets/placeholder';
 import { type AssetResolution } from '@/lib/assets/types';
 import { type Rarity } from '@/lib/counter/catalog';
@@ -67,7 +68,7 @@ export function ShowcasePicker({
 
   if (choices.length === 0) {
     return (
-      <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+      <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>
         Nothing to put out yet. Open a box and whatever you pull can go on the shelf.
       </p>
     );
@@ -102,7 +103,7 @@ export function ShowcasePicker({
                   </span>
                 </span>
 
-                <span className="text-center text-[12px] leading-[1.25] text-ink-900">
+                <span className={`text-center ${TYPE.bodyCompact} text-ink-900`}>
                   {choice.name}
                 </span>
 
@@ -112,7 +113,7 @@ export function ShowcasePicker({
                   * state some people cannot read.
                   */}
                 <span
-                  className={`font-display text-[8px] tracking-[0.12em] uppercase ${
+                  className={`${TYPE.eyebrow} ${
                     chosen ? 'text-red-dark' : 'text-ink-700/55'
                   }`}
                 >
@@ -125,7 +126,7 @@ export function ShowcasePicker({
       </ul>
 
       {refused !== null && (
-        <p aria-live="polite" className="mt-2 text-[17px] leading-[1.4] text-ink-700">
+        <p aria-live="polite" className={`mt-2 ${TYPE.bodyCompact} text-ink-700`}>
           {refused}
         </p>
       )}

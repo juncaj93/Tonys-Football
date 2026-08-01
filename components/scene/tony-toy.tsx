@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from 'react';
 import { anotherLineAction } from '@/app/actions/tony';
 import { RoomToy } from '@/components/scene/room-object';
 import { SpokenLine } from '@/components/scene/spoken-line';
+import { TYPE } from '@/lib/design/type';
 import type { RoomObjectSpec } from '@/lib/parlor/objects';
 
 /**
@@ -200,7 +201,7 @@ export function TonyToy({
                 * rule under it. This is what makes the words *his* rather than
                 * the interface's — `MANDATE §9` in miniature.
                 */}
-              <span className="mb-1.5 block border-b-2 border-red-dark/25 pb-1 font-display text-[11px] tracking-[0.12em] text-wood-mid uppercase">
+              <span className={`mb-1.5 block border-b-2 border-red-dark/25 pb-1 ${TYPE.eyebrow} text-wood-mid`}>
                 Tony
               </span>
 
@@ -219,7 +220,7 @@ export function TonyToy({
                 * new. Without it React reuses the element, the effect never
                 * re-runs, and a poked line would appear all at once.
                 */}
-              <span aria-live="polite" className="block text-[17px] leading-[1.5] text-ink-900">
+              <span aria-live="polite" className={`block ${TYPE.dialogue} text-ink-900`}>
                 <SpokenLine key={line} retypeOnChange={asked}>
                   {line}
                 </SpokenLine>
