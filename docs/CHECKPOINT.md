@@ -233,6 +233,35 @@ operation, so the whole chain is walkable today without one. Starting it here
 would have meant shipping a scheduler in the same change as the approval gate it
 publishes through — and the gate is the thing that needed reviewing.
 
+### Handoff
+
+**A fresh Tech Lead chat is required to continue**, and only because this one is
+near its context limit — nothing is in flight, nothing is half-finished, and no
+human-only blocker exists.
+
+State at handoff: `main` is **`c3dc077`**, both required gates green on real
+runners before the merge and the post-merge push run green after it. The branch
+`claude/resume-autonomous-product-direction-6og8ui` is **restarted from `main`**
+and carries checkpoint commits only — no unmerged work. There are **no open pull
+requests**.
+
+**The exact next executable task** is item 1 above: the Tuesday job. Concretely —
+
+1. `vercel.json` with exactly the two jobs `16 §4.3` allows, and no others
+2. a route handler behind a shared secret (`CRON_SECRET`), refusing without it
+3. the job body, in order: `finalizeWeek` → `authorStakesForWeek` →
+   `settleSeason` → `generateDraft(season, week, { submit: true })`, each already
+   idempotent and tested
+4. a decision, and a test, for **what the job does when a week refuses to draft**
+   — `generateDraft` returns `refused` and writes nothing, and `08 §27` says hold
+   publication and show admin status, so the desk needs to be able to say a week
+   was attempted and had nothing in it
+5. the same treatment the rest of this repository gets: database tests for the
+   retry, and a demo state if the desk gains a surface
+
+Read `docs/SLICE_REVIEW_BOUNDARY.md` first — `§10` states exactly what is
+unblocked and what still gates a schedule.
+
 ---
 
 ## Where the product is — 2026-08-01 (sixth session)
