@@ -29,11 +29,13 @@ import { DemoRefused } from '@/lib/demo/guard';
 import { retireDemoSeats } from '@/lib/demo/seat';
 import { BLOCKED_ON_M3, DEMO_STATES } from '@/lib/demo/states';
 import { SLICE_EDITIONS, SLICE_EDITION_CATALOG } from '@/lib/slice/editions';
+import { BOARD_DESCRIPTIONS, BOARD_STATES } from '@/lib/stakes/boards';
 
 const USAGE = `
 Usage:
   npm run demo -- list
   npm run demo -- editions
+  npm run demo -- boards
   npm run demo -- apply <state> [--json]
   npm run demo -- reset
 
@@ -78,6 +80,34 @@ async function main(): Promise<void> {
         '\n  fixture     a frozen week, for a state history does not contain' +
         '\n  rack        the shelf itself, with no issue on it' +
         '\n\n  Needs DEMO_FIXTURES=1 on the *server process*, not only in this shell.\n',
+    );
+    return;
+  }
+
+  /*
+   * The weekly-stakes board, which needs no seat either.
+   *
+   * Same shape as the editions and for the same reason: a board state is a
+   * **rendering** of real weeks through the production pipeline, thrown away —
+   * so there is nothing to apply and nothing to retire. The URL is the demo.
+   *
+   * Two surfaces, because the three families do not all live in one place:
+   * `18 §3.4` gives the sign the prediction and the market, and `16 §38` puts
+   * the bounty on the paper.
+   */
+  if (command === 'boards') {
+    const width = Math.max(...BOARD_STATES.map((key) => key.length));
+    console.log(`\n${String(BOARD_STATES.length)} board states\n`);
+    for (const key of BOARD_STATES) {
+      const onPaper = key.startsWith('bounty') || key === 'retired-excluded' || key === 'long-names';
+      const url = `${onPaper ? '/slice' : '/'}?board=${key}&open=tonysLine`;
+      console.log(`  ${url.padEnd(width + 30)}  ${BOARD_DESCRIPTIONS[key]}`);
+    }
+    console.log(
+      '\n  The sign carries the prediction and the market (18 §3.4);' +
+        '\n  the paper carries the bounty (16 §38).' +
+        '\n\n  `open=tonysLine` opens the market flag. Inert in production.' +
+        '\n  Needs DEMO_FIXTURES=1 on the *server process*, not only in this shell.\n',
     );
     return;
   }

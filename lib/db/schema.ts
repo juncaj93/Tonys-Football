@@ -743,6 +743,21 @@ export const tokenReason = pgEnum('token_reason', [
   'WEEKLY_HIGH_SCORE',
   'SEASON_AWARD',
   'COMMISSIONER_ADJUSTMENT',
+  /*
+   * The two ways a weekly stake moves money (`0010`).
+   *
+   * Their own reasons rather than a reused `COMMISSIONER_ADJUSTMENT`, because a
+   * manager's statement is a thing they read: a stake payout that said
+   * "adjustment" would be indistinguishable from the commissioner correcting
+   * something by hand, which is the one line on a statement that ought to be
+   * rare and conspicuous.
+   *
+   * Adding the values is the whole change. `apply_token_delta`, the balance
+   * trigger and the overdraft CHECK are untouched, and settlement gets no write
+   * path of its own.
+   */
+  'STAKE_PLACED',
+  'STAKE_PAYOUT',
 ]);
 
 /**
@@ -1353,4 +1368,316 @@ export const wearableEquips = pgTable(
     unique('wearable_equips_one_per_slot').on(table.userId, table.slot),
     unique('wearable_equips_one_place_each').on(table.collectibleId),
   ],
+);
+
+// ---------------------------------------------------------------------------
+// Weekly stakes
+// ---------------------------------------------------------------------------
+
+/**
+ * Week-level finality — what the Tuesday job (`16 §4.3`) writes.
+ *
+ * ## Why it has to exist for stakes to work at all
+ *
+ * Two rules were both in force and contradicted each other the moment a stake
+ * tried to pay anybody: **a stake settles only from finalized results**, and
+ * **`apply_token_delta` refuses a finalized season** (`03 §6` closes the books).
+ * With season-level finality as the only kind, a stake was settleable exactly
+ * when it was unpayable.
+ *
+ * A database test found it — every payout raised — and neither rule is relaxed.
+ * They are about different things: a *week* is final on Tuesday, a *season*
+ * closes in January.
+ *
+ * Written once per week, never rewritten. A settlement resting on a finality
+ * that could be withdrawn would be resting on nothing.
+ */
+export const weekFinalizations = pgTable(
+  'week_finalizations',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    week: integer('week').notNull(),
+
+    /** How many publishable games the week held when it was closed. */
+    games: integer('games').notNull(),
+
+    /** From the injected clock — a business date, not the database's. */
+    finalizedAt: timestamp('finalized_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique('week_finalizations_one_per_week').on(table.seasonId, table.week),
+    check('week_finalizations_week_positive', sql`${table.week} > 0`),
+    check('week_finalizations_games_positive', sql`${table.games} > 0`),
+  ],
+);
+
+/**
+ * The three approved families, and the discriminator that keeps them one system.
+ *
+ * `16 §9`, verbatim: *"Weekly stakes (one table, type discriminator)"*. Three
+ * tables would give three settlement paths, three idempotency stories, and three
+ * places for a duplicate payout to hide — which is the whole reason the plan says
+ * one.
+ *
+ * They really are the same object: **a claim made in advance from verified facts,
+ * checked later against finalized ones.** What differs is who makes the claim
+ * (Tony, or a manager), and what is riding on it.
+ */
+export const stakeKind = pgEnum('stake_kind', ['TONYS_LINE', 'BOUNTY', 'CHALKBOARD']);
+
+/**
+ * `open` is the only state a stake is authored into; the rest are terminal.
+ *
+ * `void` keeps the row rather than deleting it, because a stake that was shown to
+ * the league and then withdrawn is history. `weekly_stakes_void_has_reason`
+ * makes the reason mandatory in exactly that state and forbidden everywhere else.
+ */
+export const stakeStatus = pgEnum('stake_status', ['open', 'resolved', 'expired', 'void']);
+
+/**
+ * What a resolution decided, per kind — enforced by trigger, not by convention.
+ *
+ * `settled` exists because a market's stake-level outcome is not a verdict. The
+ * field splits and the verdict is per entry, so calling it `hit` would be a lie
+ * told by an enum.
+ */
+export const stakeOutcome = pgEnum('stake_outcome', [
+  'hit',
+  'missed',
+  'push',
+  'unclaimed',
+  'settled',
+]);
+
+/** Deterministic authoring, or the commissioner. Provenance is permanent. */
+export const stakeSource = pgEnum('stake_source', ['system_author', 'commissioner']);
+
+/**
+ * What a resolution read.
+ *
+ * One value today, meaning what `lib/stats/finality.ts` says it means: a week
+ * inside a season whose books are closed. The Tuesday job (`16 §4.3`) will
+ * finalize weeks individually and this enum already has room for that source — a
+ * stored resolution keeps saying which one it used.
+ */
+export const stakeResolutionSource = pgEnum('stake_resolution_source', [
+  'finalized_week',
+  'season_closed',
+]);
+
+export const stakeEntryOutcome = pgEnum('stake_entry_outcome', ['won', 'lost', 'push']);
+
+/**
+ * One stake. The offer, its terms, and the verified facts behind it.
+ *
+ * Immutable once published (`weekly_stakes_terms_immutable`) and never deleted
+ * (`weekly_stakes_undeletable`). *"Do not allow later Sleeper mutations to
+ * rewrite finalized outcomes"* is only true if the terms cannot move either — a
+ * line quietly re-derived after a stat correction would settle a different bet
+ * from the one managers took.
+ */
+export const weeklyStakes = pgTable(
+  'weekly_stakes',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    /** Settles against this week; for a bounty, opened in it. */
+    week: integer('week').notNull(),
+
+    kind: stakeKind('kind').notNull(),
+
+    /**
+     * `2025-w07-tonys-line`. Stable, derivable, and the reason re-authoring is a
+     * no-op rather than a second stake.
+     */
+    stakeKey: text('stake_key').notNull().unique(),
+
+    status: stakeStatus('status').notNull().default('open'),
+
+    /**
+     * The variant within the kind — `season-median`, `week-score`,
+     * `nobody-clears-record`.
+     *
+     * Stored rather than derived, because the authoring rules will change and a
+     * historical stake has to keep meaning what it meant.
+     */
+    variant: text('variant').notNull(),
+
+    /**
+     * Who was eligible, snapshotted at authoring.
+     *
+     * Eligibility is a fact about the moment the offer was made. Recomputing it
+     * later would quietly rewrite who was invited — and retired managers are
+     * excluded *here*, once, through the same boundary every other surface uses.
+     */
+    eligibleUserIds: uuid('eligible_user_ids').array().notNull(),
+
+    /** `{ basisWeeks, gameKeys, values }` — what it was built from. */
+    factRefs: jsonb('fact_refs').$type<Record<string, unknown>>().notNull(),
+
+    /** Exactly `FactPacket.allowedNumbers` / `allowedNames`, so one validator serves both. */
+    allowedNumbers: text('allowed_numbers').array().notNull(),
+    allowedNames: text('allowed_names').array().notNull(),
+
+    createdBy: stakeSource('created_by').notNull().default('system_author'),
+
+    /** Content hash of the authoring rules. A re-authoring under new rules is a new stake. */
+    authorVersion: text('author_version').notNull(),
+
+    /** Debited on a pick. Tony's Line only. */
+    stakeTokens: integer('stake_tokens'),
+    /** Credited to a winning pick, or to whoever claims a bounty. */
+    rewardTokens: integer('reward_tokens'),
+
+    /** The last week a bounty may still be claimed in. Null rolls to the season's end. */
+    expiresAfterWeek: integer('expires_after_week'),
+
+    /** The ledger key prefix every payout from this stake is namespaced under. */
+    settlementKey: text('settlement_key').notNull().unique(),
+
+    voidReason: text('void_reason'),
+    voidedAt: timestamp('voided_at', { withTimezone: true }),
+
+    /** Business dates, from the injected clock — not the database's. */
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    updatedAt: timestamp('updated_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    index('weekly_stakes_season_week_idx').on(table.seasonId, table.week),
+    index('weekly_stakes_open_idx').on(table.seasonId, table.status),
+    check('weekly_stakes_week_positive', sql`${table.week} > 0`),
+    check(
+      'weekly_stakes_expiry_after_open',
+      sql`${table.expiresAfterWeek} is null or ${table.expiresAfterWeek} >= ${table.week}`,
+    ),
+    check(
+      'weekly_stakes_only_bounties_roll',
+      sql`${table.expiresAfterWeek} is null or ${table.kind} = 'BOUNTY'`,
+    ),
+    /*
+     * `16 §9` fixes the payout at 2x. Enforcing the multiplier here means a
+     * rebalance cannot change it from a service, and the two kinds with no money
+     * cannot acquire any.
+     */
+    check(
+      'weekly_stakes_line_pays_double',
+      sql`(${table.kind} = 'TONYS_LINE' and ${table.stakeTokens} > 0 and ${table.rewardTokens} = ${table.stakeTokens} * 2)
+        or (${table.kind} = 'BOUNTY' and ${table.stakeTokens} is null and ${table.rewardTokens} > 0)
+        or (${table.kind} = 'CHALKBOARD' and ${table.stakeTokens} is null and ${table.rewardTokens} is null)`,
+    ),
+    check(
+      'weekly_stakes_void_has_reason',
+      sql`(${table.status} = 'void') = (${table.voidReason} is not null)`,
+    ),
+  ],
+);
+
+/**
+ * A manager's pick. Tony's Line is the only kind that has them today.
+ *
+ * The pick is immutable — a manager who could switch sides after kickoff is not
+ * making a prediction — and the three settlement columns are written exactly
+ * once, from null. That is what makes a replayed settlement a no-op at the row
+ * level as well as at the ledger's, which is two independent guarantees rather
+ * than one restated.
+ */
+export const stakeEntries = pgTable(
+  'stake_entries',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    stakeId: uuid('stake_id')
+      .notNull()
+      .references(() => weeklyStakes.id, { onDelete: 'restrict' }),
+
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+
+    /** `over` or `under`, checked in the database. The vocabulary is the variant's. */
+    side: text('side').notNull(),
+
+    /**
+     * What this manager actually paid, recorded on the entry rather than read
+     * back off the stake. They are the same today and must not be assumed to be.
+     */
+    stakedTokens: integer('staked_tokens').notNull(),
+
+    outcome: stakeEntryOutcome('outcome'),
+    payoutTokens: integer('payout_tokens'),
+    settledAt: timestamp('settled_at', { withTimezone: true }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique('stake_entries_one_per_manager').on(table.stakeId, table.userId),
+    index('stake_entries_stake_idx').on(table.stakeId),
+    check('stake_entries_side_known', sql`${table.side} in ('over','under')`),
+    check('stake_entries_stake_positive', sql`${table.stakedTokens} > 0`),
+    /* A half-written settlement is the shape a duplicate payout hides in. */
+    check(
+      'stake_entries_settlement_complete',
+      sql`(${table.outcome} is null and ${table.payoutTokens} is null and ${table.settledAt} is null)
+        or (${table.outcome} is not null and ${table.payoutTokens} is not null and ${table.settledAt} is not null)`,
+    ),
+    check(
+      'stake_entries_payout_non_negative',
+      sql`${table.payoutTokens} is null or ${table.payoutTokens} >= 0`,
+    ),
+  ],
+);
+
+/**
+ * The resolution. **One per stake, forever.**
+ *
+ * `stake_id` is UNIQUE and that single constraint is the idempotency mechanism —
+ * the same argument `box_openings.box_id` makes. A stake resolves once, so the
+ * operation has a natural key and needs no caller-supplied one; two concurrent
+ * settlements produce one resolution and one set of payouts.
+ *
+ * Append-only, so a stat correction landing in March cannot change what a manager
+ * was paid in October.
+ */
+export const stakeResolutions = pgTable(
+  'stake_resolutions',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    stakeId: uuid('stake_id')
+      .notNull()
+      .references(() => weeklyStakes.id, { onDelete: 'restrict' })
+      .unique(),
+
+    outcome: stakeOutcome('outcome').notNull(),
+
+    resolvedFrom: stakeResolutionSource('resolved_from').notNull().default('finalized_week'),
+
+    /** Not always the stake's own week: a bounty claimed in week nine says nine. */
+    resolvedWeek: integer('resolved_week').notNull(),
+
+    claimedByUserId: uuid('claimed_by_user_id').references(() => users.id, {
+      onDelete: 'restrict',
+    }),
+
+    /**
+     * Why it resolved the way it did, as recomputable data.
+     *
+     * `{ statement, gameKeys, values }` — deliberately not prose alone, because
+     * prose cannot be recomputed against. This is the audit history the product
+     * owes a manager who asks *"how did that settle"*.
+     */
+    evidence: jsonb('evidence').$type<Record<string, unknown>>().notNull(),
+
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [check('stake_resolutions_week_positive', sql`${table.resolvedWeek} > 0`)],
 );

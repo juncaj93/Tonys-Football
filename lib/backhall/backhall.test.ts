@@ -124,8 +124,29 @@ describe('feature flags', () => {
     expect(flags.underground).toBe(false);
   });
 
+  it('ships v1 with the market shut, because there is no season to run one on', () => {
+    /*
+     * `18 §3.4`: *"V1: Tony's weekly prediction only. Later, behind the approved
+     * feature flag — Tony's Line."* Shut is also the only honest state today —
+     * the line is a season median and the 2026 season has no games.
+     */
+    expect(featureFlags({}).tonysLine).toBe(false);
+    expect(featureFlags({ DEMO_FIXTURES: '1' }, 'tonysLine').tonysLine).toBe(true);
+  });
+
+  it('will not open the market in production either', () => {
+    expect(
+      featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'tonysLine').tonysLine,
+    ).toBe(false);
+  });
+
   it('declares exactly the keys this product has', () => {
-    expect([...FEATURE_KEYS].sort()).toEqual(['rooms', 'roulette', 'underground']);
+    expect([...FEATURE_KEYS].sort()).toEqual([
+      'rooms',
+      'roulette',
+      'tonysLine',
+      'underground',
+    ]);
   });
 
   it('never opens roulette, by any route', () => {
@@ -181,17 +202,20 @@ describe('feature flags', () => {
       rooms: true,
       underground: false,
       roulette: false,
+      tonysLine: false,
     });
     expect(featureFlags(demo, 'rooms,underground')).toEqual({
       rooms: true,
       underground: true,
       roulette: false,
+      tonysLine: false,
     });
     // Repeated parameters arrive as an array, and a stale one must not throw.
     expect(featureFlags(demo, ['rooms', 'basement'])).toEqual({
       rooms: true,
       underground: false,
       roulette: false,
+      tonysLine: false,
     });
   });
 
@@ -209,6 +233,11 @@ describe('feature flags', () => {
       OPEN_FEATURES: 'basement, ,vending',
     });
 
-    expect(flags).toEqual({ rooms: false, underground: false, roulette: false });
+    expect(flags).toEqual({
+      rooms: false,
+      underground: false,
+      roulette: false,
+      tonysLine: false,
+    });
   });
 });

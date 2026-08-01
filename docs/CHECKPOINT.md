@@ -18,12 +18,229 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Back Hall as a room** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. It is a room: three objects, flag-gated doors, two demo states, its own gates. Real art is a registry row |
 | **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
-| **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Tony's Line, bounties, the chalkboard prediction, and the commissioner review queue |
+| **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | The commissioner review queue for live publication |
+| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | The Tuesday job (`16 §4.3`). Authoring, settlement and week finalization all exist and are idempotent; what is missing is the schedule that calls them |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-01 (sixth session)
+
+**PR #50 is merged and its integration is verified**, not assumed:
+
+| | |
+|---|---|
+| `Typecheck · Lint · Test · Build` | ✅ success, completed **08:13:16Z** |
+| `Screenshots · gates` | ✅ success, completed **08:29:46Z** |
+| Merged | **08:33:59Z** — after both, by `juncaj93`, into `main` at **`fbc6ee9`** |
+| Post-merge `main` push run | ✅ success, **08:34:01Z** (run `30692013019`) |
+| Deployment | Vercel deploys on push to `main` and the push run is green. **The hosted result has not been loaded by anybody** — the sandbox proxy denies CONNECT to `*.vercel.app`. Stated plainly rather than implied |
+
+Everything the resume instruction asked to preserve is intact and now has a test
+behind it where it did not: the invariant `SpokenLine` skeleton
+(`spoken-line.test.tsx`), no retyping on return, seeded server-side content draws,
+`Math.random` as a lint error, the Back Hall as a room, `roulette` unopenable by
+any route, `openTo()` throwing rather than linking to a missing page, and the
+repository-wide NUL-byte check. The hydration investigation was not reopened.
+
+---
+
+### The weekly-stakes slice — one system, three families
+
+`16 §9`, verbatim: *"Weekly stakes (one table, type discriminator)"*. Built as one
+object rather than three features, because that is what they are: **a claim made
+in advance from verified facts, checked later against finalized ones.** What
+differs is who makes the claim and what is riding on it.
+
+```
+lib/stats → lib/stakes/facts.ts → author.ts → [the board] → resolve.ts → service.ts → apply_token_delta
+                (the boundary)                                (pure)      (one txn)
+```
+
+| | |
+|---|---|
+| `model.ts` | The shapes. Knows no football at all |
+| `facts.ts` | **The Stats boundary.** Every fact a stake knows comes through here, and it computes nothing of its own |
+| `author.ts` | Deterministic authoring. Nothing draws, samples or picks |
+| `resolve.ts` | Pure resolution. The return value **is** the audit trail |
+| `service.ts` | Reads, picks, and one-transaction settlement |
+| `copy.ts` · `render.ts` | Curated prose through **the Slice's own validator** |
+| `boards.ts` | Seventeen named states, `?board=<key>`, writing nothing |
+| `chalkboard.ts` | What the sign and the paper read |
+
+**Tony's Line** is the market `16 §9` describes: the line is the **lower median
+team-week score to date**, the manager takes over or under on their own team,
+the stake is fixed and the payout is fixed at 2× — enforced by
+`weekly_stakes_line_pays_double` in the database, so no service can change the
+multiplier. It needs no projection of any kind, which is what killed the
+prop-bet system it replaces.
+
+**Bounties** are one stored number chosen at authoring and frozen there: *beat the
+best single week anybody has posted this season*. Machine-checkable by a
+comparison, rolling four weeks, auto-settling to whoever cleared it first.
+
+**The chalkboard** is three prediction shapes tried in a fixed priority order —
+the record standing, the leader holding, the bottom club losing — with a
+no-repeat rule that **reorders and never silences**. The Slice made the opposite
+mistake once and printed *"a quiet week"* above a fifty-one-point win.
+
+### The contradiction the tests found, and what it cost to fix properly
+
+Two standing rules were both in force and could not both be satisfied:
+
+1. **A stake settles only from finalized results.** Anything else moves tokens on
+   a number that can still change — and `16 §12` records four rosters whose 2024
+   standings and weekly points disagree because stat corrections kept landing
+   after the season closed.
+2. **`apply_token_delta` refuses a finalized season.** `03 §6` closes the books.
+
+With season-level finality as the only kind, **a stake was settleable exactly when
+it was unpayable.** Every payout raised. Nothing about it was visible from
+reading either rule; it took a database test asking for the whole loop.
+
+Neither rule was relaxed. They are about different things — a **week** is final on
+Tuesday, a **season** closes in January — and `16 §4.3` already allows exactly the
+job that draws that line. So `week_finalizations` exists, `weekFinality()` is the
+one predicate both the Slice and stakes will ask, and a stored resolution records
+**which source it trusted**. The Tuesday job itself is still unbuilt; the record
+it writes is not.
+
+A second correction came from the same test run: `buildBasis` was refusing open
+seasons, which made a season-median market unbuildable in the only season it will
+ever run in. **Authoring reads what is known now and freezes it; settlement waits
+for the books.** The freeze is `weekly_stakes_terms_immutable`, not a refusal to
+author.
+
+### What is in the database rather than in a service
+
+Every one of these is asserted by asking the database for the wrong thing:
+
+- **A stake resolves once, ever** — `stake_resolutions.stake_id UNIQUE`, inserted
+  **before** any token moves. `0004`'s natural-key argument, not `0005`'s
+  caller-supplied key. Ten parallel settlements produce one payout
+- **A pick is immutable and settles once** — from null, by trigger. A manager who
+  could switch sides after kickoff is not making a prediction
+- **A published offer's terms cannot move** — so a stat correction in March cannot
+  settle a different bet from the one taken in October
+- **Only the outcomes a kind can have** — a prediction cannot resolve `unclaimed`,
+  a market cannot resolve `hit`. A trigger, because the discriminator is on
+  another row
+- **A market pays exactly double**, a prediction carries no money, and only a
+  bounty rolls — three CHECKs
+- **Nothing has its own balance-writing path.** Two new `token_reason` values and
+  derived idempotency keys; `apply_token_delta` is untouched
+
+### Three defects found by looking, not by testing
+
+1. **`undefined off your tab either way`** — on the market's own price line, the
+   number a manager is being asked to commit. `economyFor` cast stored jsonb to
+   `EconomyValues` with no evidence, and the first value ever *added* to the
+   economy left every environment seeded before that change serving a row without
+   it. Nothing threw. It now refuses a partial config as loudly as a missing one
+2. **The waiting sentence printed twice** in one small panel, four lines apart —
+   a component repeating itself rather than a shop saying one thing. It is a
+   question about *the week*, so it is said once, at the foot
+3. **The prediction and the bounty shared an eyebrow** — both read `ON THE BOARD ·
+   WEEK 4`, a label that identifies the panel rather than the item in it.
+   Unmissable on the Slice's band with all three up, and invisible on the sign
+   where only two ever appear
+
+### Seventeen states, reachable by name, writing nothing
+
+`lib/slice/editions.ts`'s design, deliberately: a board is a **rendering**, and a
+rendering demo has no state to isolate. `?board=<key>` resolves on the server
+behind the demo system's own two guards, runs `buildBasis → authorX →
+resolveStake → renderStake` — the same four functions production runs — and
+**writes no row of any kind**, asserted by reading the module for a write.
+
+Twelve come from real weeks of the finalized seasons, chosen by reading what the
+pipeline actually produces rather than by guessing. Two are frozen fixtures for
+states history does not contain. Two are deliberately empty. One is the quiet
+slate, which is what a real manager meets today.
+
+**Writing the catalog test found two lying states:** `chalkboard-missed` pointed
+at a week where the record *stood*, and `line-won` / `line-lost` were swapped
+because the first team in stored order came in under a line the state assumed it
+had cleared.
+
+**Idempotency, duplicate settlement and overdraft are not in the catalog**, and
+that is deliberate: a screenshot cannot show a database guarantee. They are
+thirty tests against a real Postgres. Pretending a picture of a settled board
+proved one would be the false green this repository has shipped three times.
+
+### The sign is a chalkboard now
+
+`18 §3.4` gives it two things — the weekly prediction, and Tony's Line once its
+flag is open — and the slate is 37 room units, which `objects.ts` measured and
+ruled trigger-only. So the slate carries the board's **state**, drawn as marks
+rather than text:
+
+| | |
+|---|---|
+| **quiet** | two faint erased strokes. Residue |
+| **written** | four chalk lines of uneven length under a heavier rule |
+| **settled** | the same writing, struck through |
+
+Uneven lengths on purpose: four equal bars read as a loading skeleton, which is
+the exact thing `VISUAL_ACCEPTANCE §4` rules out. It **brightens; it never
+glows** — `18 §3`, only Doors glow. A manager cannot read the prediction from
+across the room and was never meant to; what they can tell is whether there is
+anything to read.
+
+**The bounty is not on the sign.** `16 §38` puts all three on the paper, and a
+third item on a 37-unit sign would absorb another surface's scope into a homepage
+`18 §3` fixes at eight objects. So the Slice gained a band under the sheet —
+outside the `Edition` pipeline, because a stake is a claim about something that
+has not happened and `Edition`'s whole guarantee is that everything in it is
+finalized.
+
+### Tony's Line ships shut, and that is the honest state
+
+`tonysLine` is a fourth feature flag, `false` on this deploy. `18 §3.4` puts it
+behind one verbatim; `16 §9` puts it in v1 scope. Both hold — a deploy-time flag
+opens for everyone at once, which is how `18 §6` says a shut destination opens.
+
+It is also the only honest state today: the line is a season median and the 2026
+season has no games. Authoring one now would be the *"weekly reward that fires on
+nothing"* the checkpoint already warns against, with tokens attached. **The live
+board today is the quiet slate**, which is why that state got the design
+attention.
+
+### Exact repository state
+
+| | |
+|---|---|
+| `main` | **`fbc6ee9`** — PR #50 merged, both gates green before the merge |
+| Branch | `claude/weekly-stakes-slice-7l8d1i` |
+| `npm run check` | green — **1058 tests across 64 files** (was 950 / 61) |
+| `npm run visual:qa` | green — **76 states × 3 widths** (was 59), production build, fresh database |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
+
+### The next executable task, in order
+
+1. **The Tuesday job** — `16 §4.3`'s second cron. It writes `week_finalizations`
+   and calls `authorStakesForWeek` and `settleSeason`, both of which exist and are
+   idempotent. This is what turns the slice from built into running, and it is
+   now a small piece of work rather than a large one
+2. **The commissioner review queue** for live Slice publication. `16 §9` makes
+   approval mandatory in season one and the manual hold switch permanent
+3. **The casino foundation** — one game, server-authoritative. It brings
+   `/underground`, which makes `back-hall-both-open` photographable and turns
+   `openTo('curtain')` from a throw into one line
+4. **Batch B**, whenever the PNGs arrive. One command
+
+### What this session did not start, and why
+
+**The Tuesday job.** The slice deliberately stops at the boundary: every operation
+the job needs exists, is idempotent and is tested, but a cron with a schedule is
+an operational commitment — it runs on a timer against production data — and it
+belongs with the commissioner review queue it will publish through. Starting it
+here would have meant shipping a scheduler nobody had reviewed alongside a
+settlement layer nobody had walked.
 
 ---
 

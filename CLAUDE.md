@@ -97,7 +97,21 @@ Shipped: the Next.js foundation, the injected clock, the asset registry, the ide
 
 **GitHub Actions conservation (commissioner, 2026-07-31).** The account is near its monthly included Actions minutes. `visual-qa.yml` runs on pull requests and `ci.yml` on pull requests and pushes to `main`, so **work goes to a durable branch with no open PR, where neither fires.** No new PRs, no pushes to a branch that has one, no pushes to `main`, no merges, no manual dispatch, no re-runs. **The gates are not weakened, only deferred** — `npm run check` and `npm run visual:qa` still run in full, locally, on a production build against a fresh database. The reset is confirmed by an explicit commissioner statement or by billing evidence, never by the calendar. See `AUTONOMY.md §4`.
 
-**Next assignment:** **the Back Hall as a room** (visual debt 5) — one compact pixel-art scene with two environmental choices, not the three stacked panels `18 §5` forbids. Placeholder architecture is approved and M3 has shown what it looks like: a drawn stand-in at the right size, as geometry data, rather than a sign. `docs/BACK_HALL_BOUNDARY.md` carries the route contracts, the flag-based state boundary, the five asset slots and the five demo states. Stats Intelligence (#26) and M3 (#24) are both shipped. See `docs/CHECKPOINT.md` for the durable state.
+**Weekly stakes — the complete slice** — built this session. One table with a type discriminator (`16 §9`), covering all three approved families:
+
+- **Tony's Line** — the line is the season's **lower median team-week score**, the manager takes over or under on their own team, the stake is fixed and the payout is fixed at 2×, enforced by a database CHECK. No projection of any kind, which is what killed the prop-bet system it replaces. **Flag-gated and shut in v1** (`18 §3.4`), because a season median needs a season.
+- **Bounties** — one number chosen at authoring and frozen: *beat the best single week anybody has posted*. Rolling, auto-settling, on the paper rather than the sign (`16 §38`).
+- **The chalkboard** — three prediction shapes in a fixed priority order, with a no-repeat rule that reorders and never silences.
+
+Everything a stake knows about football comes through **one Stats boundary** that computes nothing of its own, and every sentence goes through **the Slice's own validator** — so the banned-term scan already refuses odds and win-probability language without anybody having to remember to.
+
+**Week-level finality had to exist for any of it to pay.** Two standing rules contradicted each other: a stake settles only from finalized results, and `apply_token_delta` refuses a finalized season — so a stake was settleable exactly when it was unpayable. Neither was relaxed. A **week** is final on Tuesday (`week_finalizations`, what `16 §4.3`'s Tuesday job writes); a **season** closes in January. A stored resolution records which source it trusted.
+
+**Seventeen board states are reachable by name** (`?board=<key>`), rendered through the production pipeline and **writing nothing** — `lib/slice/editions.ts`'s design, for the same reason. The database guarantees are thirty tests against a real Postgres, because a screenshot cannot show idempotency.
+
+**Next assignment:** **the Tuesday job** (`16 §4.3`'s second cron). It writes `week_finalizations` and calls `authorStakesForWeek` and `settleSeason` — all three exist, are idempotent and are tested. See `docs/CHECKPOINT.md` for the durable state.
+
+**Previously:** the Back Hall as a room (visual debt 5) — one compact pixel-art scene with two environmental choices, not the three stacked panels `18 §5` forbids. Placeholder architecture is approved and M3 has shown what it looks like: a drawn stand-in at the right size, as geometry data, rather than a sign. `docs/BACK_HALL_BOUNDARY.md` carries the route contracts, the flag-based state boundary, the five asset slots and the five demo states. Stats Intelligence (#26) and M3 (#24) are both shipped.
 
 **No paid API use** (commissioner decision, 2026-07-30). The orchestrator workflow is retired to manual dispatch only and `ANTHROPIC_API_KEY` is unset — nothing in this repository spends money. This affects no product scope: generative AI is limited to Tony's Tuesday Slice, and `16 §9` already requires the Slice to publish correctly with the key unset. Delivery runs on the label lifecycle in `AUTONOMY.md §2` plus the two unpaid gates, `npm run check` and `npm run visual:qa`. Do not reintroduce a paid dependency without a new decision.
 

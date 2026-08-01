@@ -155,7 +155,31 @@ type StateName =
   | 'reveal-legendary'
   | 'reveal-first-offer'
   | 'reveal-complete-offer'
-  | 'reveal-no-offer';
+  | 'reveal-no-offer'
+  /*
+   * The weekly-stakes board, one state per named fixture.
+   *
+   * `board-quiet` is the state a real manager meets today — nothing authored,
+   * because the 2026 season has no games — and it is the one that most needed
+   * designing, so it is photographed first.
+   */
+  | 'board-quiet'
+  | 'board-chalkboard-open'
+  | 'board-chalkboard-hit'
+  | 'board-chalkboard-missed'
+  | 'board-chalkboard-leader'
+  | 'board-line-pending'
+  | 'board-line-incomplete'
+  | 'board-line-won'
+  | 'board-line-lost'
+  | 'board-line-push'
+  | 'board-bounty-open'
+  | 'board-bounty-missed'
+  | 'board-bounty-claimed'
+  | 'board-bounty-expired'
+  | 'board-thin-basis'
+  | 'board-retired-excluded'
+  | 'board-long-names';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -775,6 +799,77 @@ async function reach(page: Page, state: StateName): Promise<void> {
     }
 
     /*
+     * The weekly-stakes board, opened at the prediction sign.
+     *
+     * `?board=<key>` is resolved on the **server** behind the demo guard, and the
+     * sign is a Display — trigger-only, because 37 room units cannot carry a
+     * sentence (`lib/parlor/objects.ts`). So the state is *the panel open*, which
+     * is where the words are.
+     *
+     * Tony's pad is dismissed first, deliberately: two transient surfaces must
+     * never compete (`MANDATE §6`), and the review question here is whether the
+     * board reads on its own.
+     *
+     * The market is behind a flag (`18 §3.4`), so `?open=tonysLine` travels with
+     * every board state. It is inert without `DEMO_FIXTURES` and in production,
+     * exactly as the Back Hall's is.
+     */
+    case 'board-quiet':
+    case 'board-chalkboard-open':
+    case 'board-chalkboard-hit':
+    case 'board-chalkboard-missed':
+    case 'board-chalkboard-leader':
+    case 'board-line-pending':
+    case 'board-line-incomplete':
+    case 'board-line-won':
+    case 'board-line-lost':
+    case 'board-line-push':
+    case 'board-bounty-open':
+    case 'board-bounty-missed':
+    case 'board-bounty-claimed':
+    case 'board-bounty-expired':
+    case 'board-thin-basis':
+    case 'board-retired-excluded':
+    case 'board-long-names': {
+      const key = state.slice('board-'.length);
+      /*
+       * The bounty has no home on the sign — `16 §38` puts it on the paper — so
+       * a bounty state is photographed on the Slice's band and the rest on the
+       * sign. Two surfaces, one fixture, and each state goes where the thing it
+       * shows actually lives.
+       */
+      const onPaper = key.startsWith('bounty') || key === 'retired-excluded' || key === 'long-names';
+
+      if (onPaper) {
+        await page.goto(`${BASE}/slice?board=${key}&open=tonysLine`, {
+          waitUntil: 'networkidle',
+        });
+        /*
+         * Scrolled to the band, because the screenshot is viewport-only.
+         *
+         * The first run of this state photographed the newspaper and nothing
+         * else: the band sits under a full sheet of paper, so at 390 it is
+         * entirely below the fold. The gate passed — `checkBoard` reads the DOM
+         * — and the artifact showed a page with no bounty on it, filed under
+         * `390-board-bounty-claimed.png`.
+         *
+         * That is the same shape as the nine reveal states: a green tick over
+         * evidence of the wrong thing. A screenshot has to show the state it is
+         * named for, and here that means scrolling to it.
+         */
+        await page.locator('[data-stakes-band]').scrollIntoViewIfNeeded();
+        await page.waitForTimeout(900);
+        return;
+      }
+
+      await page.goto(`${BASE}/?board=${key}&open=tonysLine`, { waitUntil: 'networkidle' });
+      await dismissTony(page);
+      await page.getByRole('button', { name: /prediction/i }).click({ force: true });
+      await page.waitForTimeout(500);
+      return;
+    }
+
+    /*
      * A state with no case is a state that photographs whatever was already on
      * screen — and passes.
      *
@@ -891,6 +986,30 @@ const ALL_STATES: readonly StateName[] = [
   'reveal-first-offer',
   'reveal-complete-offer',
   'reveal-no-offer',
+  /*
+   * The board. Resolved from `?board=` on the **server**, so a run without
+   * `DEMO_FIXTURES` on the server process answers every one of these with the
+   * quiet slate — which is why `checkBoard` reads what is on the page rather
+   * than trusting the URL. Nine reveal states cost a milestone of false green to
+   * that exact mistake.
+   */
+  'board-quiet',
+  'board-chalkboard-open',
+  'board-chalkboard-hit',
+  'board-chalkboard-missed',
+  'board-chalkboard-leader',
+  'board-line-pending',
+  'board-line-incomplete',
+  'board-line-won',
+  'board-line-lost',
+  'board-line-push',
+  'board-bounty-open',
+  'board-bounty-missed',
+  'board-bounty-claimed',
+  'board-bounty-expired',
+  'board-thin-basis',
+  'board-retired-excluded',
+  'board-long-names',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
@@ -1119,6 +1238,114 @@ const BACK_HALL_STATES: Readonly<Record<string, { rooms: boolean; underground: b
   'back-hall': { rooms: false, underground: false },
   'back-hall-rooms-open': { rooms: true, underground: false },
 };
+
+/**
+ * The board is what the state's name says, read from the page.
+ *
+ * ## Why a gate, and not just a screenshot
+ *
+ * `?board=` is resolved by the **server**, which needs `DEMO_FIXTURES=1`. A
+ * server without it answers every one of these with the ordinary quiet slate —
+ * and a driver that only navigated would file that under `390-board-line-won.png`
+ * and pass. That has happened once already, to nine reveal states, and cost a
+ * milestone's worth of false green.
+ *
+ * So each state declares what must be on the page, and the driver reads it out of
+ * the DOM: `data-stake-state` for the presentation, and `data-chalk-state` for
+ * what the sign itself is showing. A quiet slate under a name claiming a settled
+ * market is a failure rather than a picture.
+ *
+ * ## What each field means
+ *
+ * - `stakes` — how many items the board shows. Zero is a real expectation for the
+ *   two states that are meant to be empty.
+ * - `states` — the presentations that must be present, by name.
+ * - `chalk` — what the slate is drawn as, for the states photographed in the room.
+ *   Wiped, written, or struck through. Only Doors glow, so this is the only
+ *   signal the sign has and it is worth asserting.
+ */
+const BOARD_EXPECTATIONS: Readonly<
+  Record<string, { stakes: number; states?: string[]; chalk?: string }>
+> = {
+  'board-quiet': { stakes: 0, chalk: 'quiet' },
+  'board-thin-basis': { stakes: 0, chalk: 'quiet' },
+  'board-chalkboard-open': { stakes: 1, states: ['awaiting-week'], chalk: 'written' },
+  'board-chalkboard-hit': { stakes: 1, states: ['resolved'], chalk: 'settled' },
+  'board-chalkboard-missed': { stakes: 1, states: ['resolved'], chalk: 'settled' },
+  'board-chalkboard-leader': { stakes: 1, states: ['resolved'], chalk: 'settled' },
+  'board-line-pending': { stakes: 2, states: ['awaiting-week'], chalk: 'written' },
+  'board-line-incomplete': { stakes: 2, states: ['awaiting-final'], chalk: 'written' },
+  'board-line-won': { stakes: 2, states: ['resolved'], chalk: 'settled' },
+  'board-line-lost': { stakes: 2, states: ['resolved'], chalk: 'settled' },
+  'board-line-push': { stakes: 1, states: ['resolved'], chalk: 'settled' },
+  // The three photographed on the paper: no slate to read, so no `chalk`.
+  'board-bounty-open': { stakes: 1, states: ['awaiting-week'] },
+  'board-bounty-missed': { stakes: 1, states: ['rolling'] },
+  'board-bounty-claimed': { stakes: 1, states: ['resolved'] },
+  'board-bounty-expired': { stakes: 1, states: ['expired'] },
+  'board-retired-excluded': { stakes: 2, states: ['awaiting-week'] },
+  'board-long-names': { stakes: 3, states: ['awaiting-week'] },
+};
+
+async function checkBoard(page: Page, width: number, state: string): Promise<void> {
+  const expected = BOARD_EXPECTATIONS[state];
+  if (expected === undefined) return;
+
+  const at = `@${String(width)} ${state}`;
+
+  const found = await page.evaluate(() => ({
+    stakes: [...document.querySelectorAll('[data-stake]')].map((el) => ({
+      key: el.getAttribute('data-stake') ?? '',
+      state: el.getAttribute('data-stake-state') ?? '',
+    })),
+    chalk: document.querySelector('[data-chalk-state]')?.getAttribute('data-chalk-state') ?? null,
+  }));
+
+  if (found.stakes.length !== expected.stakes) {
+    fail(
+      'board',
+      `${at} shows ${String(found.stakes.length)} stake(s), expected ${String(expected.stakes)}` +
+        (expected.stakes > 0 && found.stakes.length === 0
+          ? ' — if this is a demo state, DEMO_FIXTURES=1 is missing from the SERVER process'
+          : ''),
+    );
+    return;
+  }
+
+  for (const want of expected.states ?? []) {
+    if (!found.stakes.some((stake) => stake.state === want)) {
+      fail(
+        'board',
+        `${at} has no stake presenting as "${want}"; found ` +
+          `${found.stakes.map((stake) => `${stake.key}:${stake.state}`).join(', ') || 'nothing'}`,
+      );
+    }
+  }
+
+  if (expected.chalk !== undefined && found.chalk !== expected.chalk) {
+    fail(
+      'board',
+      `${at} the slate is drawn as "${found.chalk ?? 'missing'}", expected "${expected.chalk}"`,
+    );
+  }
+
+  /*
+   * The words on the board, checked for the two things a picture cannot show.
+   *
+   * A brace means a template was filled from a fact that did not carry the value
+   * — the *"Tony has the week at {line}"* failure, which is worse than a blank
+   * board. `undefined` means a number reached the page from an unset field, which
+   * is exactly how the market's own price line shipped reading "undefined off
+   * your tab either way" until it was caught by looking.
+   */
+  const text = (await page.locator('body').innerText()) ?? '';
+  if (/[{}]/.test(text)) {
+    fail('board', `${at} a template brace reached the page`);
+  }
+  if (/\bundefined\b|\bNaN\b|\bnull\b/.test(text)) {
+    fail('board', `${at} an unset value reached the page`);
+  }
+}
 
 async function checkBackHall(page: Page, width: number, state: string): Promise<void> {
   const expected = BACK_HALL_STATES[state];
@@ -1633,6 +1860,11 @@ async function run(): Promise<void> {
           // Every named Slice edition must actually be that edition.
           if (state.startsWith('slice-')) {
             await checkEditionPresent(page, width, state);
+          }
+
+          // Every named board state must actually be that board.
+          if (state.startsWith('board-')) {
+            await checkBoard(page, width, state);
           }
         }
 

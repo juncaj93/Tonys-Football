@@ -47,12 +47,41 @@ export const PROVISIONAL_ECONOMY = {
   seasonStartTokens: 250,
   /** `03 §11`: the standard box is the "lower price" tier. */
   standardBoxPriceTokens: 50,
+  /**
+   * The fixed stake on Tony's Line (`16 §9`).
+   *
+   * `03` names no wager baseline, so this one is set **relative to the price it
+   * competes with** rather than invented on its own: a fifth of a box, so a full
+   * regular season of lines is roughly three boxes' worth of swing in either
+   * direction. Big enough that taking a side is a decision, small enough that a
+   * bad run does not empty a tab and end somebody's collecting for the year —
+   * which is `16 A.1`'s ruling that punishment is visibility, not deprivation.
+   *
+   * The payout is fixed at 2x by `16 §9` and enforced by
+   * `weekly_stakes_line_pays_double`, so it is not a second number here.
+   */
+  weeklyLineStakeTokens: 10,
+  /**
+   * What a bounty pays whoever claims it.
+   *
+   * Two boxes. A bounty is one manager beating the best week anybody has posted
+   * all season — it happens a handful of times a year at most, so it can be
+   * worth noticeably more than a market a manager plays every week.
+   */
+  bountyRewardTokens: 100,
 } as const;
 
 export type EconomyValues = typeof PROVISIONAL_ECONOMY;
 
 /** Reasons application code may actually use today. See the enum's comment. */
-export type LiveTokenReason = 'SEASON_START' | 'BOX_PURCHASE' | 'COMMISSIONER_ADJUSTMENT';
+export type LiveTokenReason =
+  | 'SEASON_START'
+  | 'BOX_PURCHASE'
+  | 'COMMISSIONER_ADJUSTMENT'
+  /** A pick on Tony's Line, debited when it is placed (`lib/stakes/`). */
+  | 'STAKE_PLACED'
+  /** A winning pick, or a claimed bounty. Credited by settlement, once. */
+  | 'STAKE_PAYOUT';
 
 export interface TokenDelta {
   readonly userId: string;
@@ -215,7 +244,33 @@ export async function economyFor(
     );
   }
 
-  return { version: row.version, values: row.values as EconomyValues };
+  /*
+   * A stored config missing a key is a seeding failure, and it must be as loud
+   * as a missing config.
+   *
+   * This used to be a bare `as EconomyValues` over jsonb, which is a cast with
+   * no evidence behind it — and the first time a value was **added** to the
+   * economy, every environment seeded before that change kept serving a row
+   * without it. Nothing threw. The parlor rendered *"undefined off your tab
+   * either way"* on the market's own price line, which is where it was caught:
+   * by looking, on the screen, at the number a manager is being asked to commit.
+   *
+   * The row is append-only and versioned precisely so old numbers stay
+   * interpretable; that guarantee says nothing about a row being *complete* for
+   * today's code, and this is the check that does.
+   */
+  const values = row.values as Partial<EconomyValues>;
+  const missing = Object.keys(PROVISIONAL_ECONOMY).filter(
+    (key) => typeof values[key as keyof EconomyValues] !== 'number',
+  );
+  if (missing.length > 0) {
+    throw new Error(
+      `season ${seasonId} has economy config ${row.version}, which is missing ` +
+        `${missing.join(', ')}. Run npm run db:seed to store the current version.`,
+    );
+  }
+
+  return { version: row.version, values: values as EconomyValues };
 }
 
 /**
