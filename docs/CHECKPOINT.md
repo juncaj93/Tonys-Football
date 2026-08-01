@@ -217,7 +217,7 @@ attention.
 | `main` | **`fbc6ee9`** — PR #50 merged, both gates green before the merge |
 | Branch | `claude/weekly-stakes-slice-7l8d1i` |
 | `npm run check` | green — **1060 tests across 64 files** (was 950 / 61) |
-| `npm run visual:qa` | **77 states × 3 widths** (was 59), production build, fresh database |
+| `npm run visual:qa` | green — **77 states × 3 widths** (was 59), production build, fresh database |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
 
 ### Commissioner direction, 2026-08-01 — homepage visual cleanliness
@@ -263,6 +263,22 @@ mechanism was chosen for each surface is part of the deliverable.**
 Recorded as visual debt **7** and **8**. Debt 7 is not minor — it is on the first
 screen every manager sees — and it is on that list only because the direction that
 recorded it was non-interrupting.
+
+### One harness correction, worth carrying forward
+
+The first full sweep aborted at **180 of 231 captures** on a demo-seat sign-in.
+Nothing was wrong with the door: thirty-four sign-ins had succeeded, there were
+**zero failed auth attempts** in the table (and the limiter counts failures over
+twenty-four hours, so it was not the lockout), PIN verification measures **under a
+millisecond** (so it was not argon2 under load), and the same seat signed in
+correctly by hand against the same running server.
+
+`enterPin` slept a fixed 2500ms and then asserted the URL had changed. The
+assertion is *"the door opened"*; the evidence was *"time passed"*. It now waits
+for the navigation with a fifteen-second budget, so a loaded machine costs time
+instead of a false failure and a genuinely broken door still fails. It was the
+last place in the driver asserting a clock rather than the thing it cared about —
+the same correction the reveal states and the back-hall doors already carry.
 
 ### The next executable task, in order
 
