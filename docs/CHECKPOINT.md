@@ -141,7 +141,7 @@ renderer already derived.
 |---|---|
 | `main` | **`c3dc077`** — PR #53 merged |
 | Branch | `claude/text-surface-tuesday-slice-fouqq1` |
-| `npm run check` | green — **1145 tests across 70 files** (was 1120 / 68) |
+| `npm run check` | green — **1146 tests across 70 files** (was 1120 / 68) |
 | `npm run visual:qa` | green — 85 states × 3 widths, production build, fresh database |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
 

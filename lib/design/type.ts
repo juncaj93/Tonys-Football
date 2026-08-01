@@ -10,8 +10,8 @@
  *
  * A scale (`sm`, `base`, `lg`) is a set of sizes with no opinion about what they
  * are for, so every new surface re-decides. That is how this product ended up
- * with **sixteen distinct font sizes across roughly two hundred call sites**,
- * seven of them at 8 or 9 pixels, on a phone, in a product whose standing rule
+ * with **sixteen distinct font sizes across two hundred and sixteen call
+ * sites**, seven of them at 8 or 9 pixels, on a phone, in a product whose rule
  * is that readability wins (`VISUAL_ACCEPTANCE §7`). Nobody chose that; it
  * accumulated, one plausible local decision at a time.
  *

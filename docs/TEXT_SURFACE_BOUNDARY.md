@@ -25,13 +25,13 @@ Underneath the screen was a cause rather than a defect. An audit found:
 | | Before | After |
 |---|---|---|
 | Distinct font sizes | **16** (8px → 26px) | **6** (13 · 15 · 17 · 19 · 22 · 26) |
-| Typography call sites | ~200 arbitrary `text-[Npx]` | **0** outside the type case |
+| Typography call sites | **216** arbitrary `text-[Npx]` | **0** outside the type case |
 | Call sites at 8–9px | **7** | 0 |
-| Files with text under 16px | 30 | the roles that use 13px, and only those |
+| Files with text under 16px | **31** | the roles that use 13px, and only those |
 | Arbitrary line heights | 11 distinct | 0 outside the type case |
 | A typography module | none | `lib/design/type.ts` |
 
-None of those sizes was chosen. Each was a reasonable local decision — this
+Counted on `c3dc077`, not estimated. None of those sizes was chosen. Each was a reasonable local decision — this
 label is a bit long, that panel is a bit tight, shave a pixel — and two hundred
 of them accumulated into a product where the same kind of thing was set at four
 different sizes on four screens.

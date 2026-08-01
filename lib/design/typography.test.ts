@@ -13,9 +13,9 @@ import { TYPE, TYPE_FLOOR_PX, TYPE_SIZES } from './type';
  *
  * Not a bug — a drift. Every arbitrary `text-[Npx]` in this product was a
  * reasonable local decision: this label is a bit long, that panel is a bit
- * tight, so shave a pixel. Two hundred of those produced **sixteen distinct font
- * sizes**, seven call sites at 8 and 9 pixels, and thirty files with text under
- * 16px — in a product whose standing commissioner ruling is that *readability
+ * tight, so shave a pixel. Two hundred and sixteen of those produced **sixteen
+ * distinct font sizes**, seven call sites at 8 and 9 pixels, and thirty-one files
+ * with text under 16px — in a product whose standing commissioner ruling is that *readability
  * wins* and that type is judged at real iPhone size (`VISUAL_ACCEPTANCE §7`).
  *
  * Each one of those was fixed at least once. `LEGENDARY` on cream was fixed and
