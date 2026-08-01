@@ -45,9 +45,25 @@ function isSide(value: string): value is Side {
   return (SIDES as readonly string[]).includes(value);
 }
 
+/**
+ * A stake id is a UUID or it is not a stake.
+ *
+ * Checked **before** the database sees it, and this is a real refusal rather than
+ * tidiness: `eq(weeklyStakes.id, 'preview:2025-w09-season-median')` raises
+ * *invalid input syntax for type uuid* inside Postgres, which reaches the browser
+ * as a 500 and a full-page `Application error`. Anything a client can send has to
+ * come back as an answer, not as a crash.
+ *
+ * Found by building the demo state for the market's error affordance: a previewed
+ * board carries a `preview:` id, tapping OVER on it took the whole page down, and
+ * the screenshot of *"how does a refusal look"* was a server exception.
+ */
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 export async function pickSideAction(stakeId: string, side: string): Promise<PickResult> {
   const { user } = await requireUser();
   if (!isSide(side)) return { ok: false, reason: 'closed' };
+  if (!UUID.test(stakeId)) return { ok: false, reason: 'closed' };
 
   const result = await placeEntry(getDb(), { stakeId, userId: user.id, side });
 

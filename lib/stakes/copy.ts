@@ -1,4 +1,9 @@
-import { VARIANTS, type EntryOutcome, type Presentation, type Variant } from './model';
+import {
+  VARIANTS,
+  type EntryOutcome,
+  type Presentation,
+  type Variant,
+} from "./model";
 
 /**
  * Every curated string the weekly-stakes surfaces can print.
@@ -34,12 +39,15 @@ import { VARIANTS, type EntryOutcome, type Presentation, type Variant } from './
  * `favourite to` and `on pace for`, and these strings go through it.
  */
 export const CLAIMS: Readonly<Record<Variant, string>> = {
-  [VARIANTS.seasonMedian]: 'Tony has the week at {line}. Over or under — your call.',
+  [VARIANTS.seasonMedian]:
+    "Tony has the week at {line}. Over or under — your call.",
   [VARIANTS.weekScore]:
-    'Beat {target} in a single week and the board is yours. {holder} set it.',
-  [VARIANTS.nobodyClearsRecord]: 'Tony says nobody touches {record} this week.',
-  [VARIANTS.leaderHolds]: 'Tony says {subject} wins again. He has been saying it a while.',
-  [VARIANTS.bottomClubLoses]: 'Tony says {subject} loses this one too. He is not being cruel.',
+    "Beat {target} in a single week and the board is yours. {holder} set it.",
+  [VARIANTS.nobodyClearsRecord]: "Tony says nobody touches {record} this week.",
+  [VARIANTS.leaderHolds]:
+    "Tony says {subject} wins again. He has been saying it a while.",
+  [VARIANTS.bottomClubLoses]:
+    "Tony says {subject} loses this one too. He is not being cruel.",
 };
 
 /**
@@ -51,19 +59,32 @@ export const CLAIMS: Readonly<Record<Variant, string>> = {
  * be a silently blank board on the one screen where the answer is the point.
  */
 export const VERDICTS: Readonly<Record<string, string>> = {
-  'CHALKBOARD:hit': 'He called it.',
-  'CHALKBOARD:missed': 'He ate that one.',
-  'BOUNTY:hit': 'Somebody took it off the board.',
-  'BOUNTY:unclaimed': 'Nobody got near it. Board wiped.',
-  'TONYS_LINE:settled': 'The line is settled.',
-  'TONYS_LINE:push': 'Everybody landed on the number. Tabs squared.',
+  "CHALKBOARD:hit": "He called it.",
+  "CHALKBOARD:missed": "He ate that one.",
+  "BOUNTY:hit": "Somebody took it off the board.",
+  "BOUNTY:unclaimed": "Nobody got near it. Board wiped.",
+  "TONYS_LINE:settled": "The line is settled.",
+  "TONYS_LINE:push": "Everybody landed on the number. Tabs squared.",
 };
+
+/**
+ * Which side a manager took.
+ *
+ * *"You went over."* was ambiguous and a screenshot showed why: beside *"Right on
+ * the number"* it reads as *you exceeded it* rather than as *you took the over*,
+ * which are opposite claims about the same settled pick. `called it` can only
+ * mean the second.
+ *
+ * Here rather than inline in the component for the reason the rest of this file
+ * exists: curated prose the validator cannot see is curated prose that drifts.
+ */
+export const ENTRY_SIDE = "You called it {side}.";
 
 /** What a manager's own pick did, once the market settled. */
 export const ENTRY_VERDICTS: Readonly<Record<EntryOutcome, string>> = {
-  won: 'You had it. Paid.',
-  lost: 'You did not have it.',
-  push: 'Right on the number. Your stake came back.',
+  won: "You had it. Paid.",
+  lost: "You did not have it.",
+  push: "Right on the number. Your stake came back.",
 };
 
 /**
@@ -75,12 +96,13 @@ export const ENTRY_VERDICTS: Readonly<Record<EntryOutcome, string>> = {
  * it.
  */
 export const EVIDENCE: Readonly<Record<string, string>> = {
-  'line-settled': 'The line was {line}. {over} cleared it, {under} did not.',
-  'bounty-claimed': '{claimant} put up {scored} in week {week}, past {target}.',
-  'bounty-unclaimed': 'Nobody cleared {target} before the board came down.',
-  'record-stood': 'Best of the week was {best}. The {record} stands.',
-  'record-broken': '{subject} went past it with {best}.',
-  'subject-result': 'Tony had {subject} down to {expected}. They {result}, on {points}.',
+  "line-settled": "The line was {line}. {over} cleared it, {under} did not.",
+  "bounty-claimed": "{claimant} put up {scored} in week {week}, past {target}.",
+  "bounty-unclaimed": "Nobody cleared {target} before the board came down.",
+  "record-stood": "Best of the week was {best}. The {record} stands.",
+  "record-broken": "{subject} went past it with {best}.",
+  "subject-result":
+    "Tony had {subject} down to {expected}. They {result}, on {points}.",
 };
 
 /**
@@ -91,9 +113,9 @@ export const EVIDENCE: Readonly<Record<string, string>> = {
  * settled. The terminal states are null — a resolved stake has a verdict.
  */
 export const WAITING: Readonly<Record<Presentation, string | null>> = {
-  'awaiting-week': 'Nothing settled yet. Tuesday tells.',
-  'awaiting-final': 'Still being counted.',
-  rolling: 'Nobody has got there yet. It stays up.',
+  "awaiting-week": "Nothing settled yet. Tuesday tells.",
+  "awaiting-final": "Still being counted.",
+  rolling: "Nobody has got there yet. It stays up.",
   resolved: null,
   expired: null,
   void: null,
@@ -106,16 +128,16 @@ export const WAITING: Readonly<Record<Presentation, string | null>> = {
  * chosen in a resolver is a curated string that escaped the file the validator
  * reads.
  */
-export const EXPECTED_VERB: Readonly<Record<'wins' | 'loses', string>> = {
-  wins: 'win',
-  loses: 'lose',
+export const EXPECTED_VERB: Readonly<Record<"wins" | "loses", string>> = {
+  wins: "win",
+  loses: "lose",
 };
 
 /** How a subject's week actually went. Prose, for the same reason. */
-export const RESULT_WORD: Readonly<Record<'won' | 'lost' | 'tied', string>> = {
-  won: 'won',
-  lost: 'lost',
-  tied: 'tied',
+export const RESULT_WORD: Readonly<Record<"won" | "lost" | "tied", string>> = {
+  won: "won",
+  lost: "lost",
+  tied: "tied",
 };
 
 /**
@@ -134,7 +156,7 @@ export function fill(
     const value = values[key];
     if (value === undefined) {
       missing = true;
-      return '';
+      return "";
     }
     return value;
   });
@@ -151,6 +173,7 @@ export function fill(
  */
 export function houseTemplates(): readonly string[] {
   return [
+    ENTRY_SIDE,
     ...Object.values(CLAIMS),
     ...Object.values(VERDICTS),
     ...Object.values(ENTRY_VERDICTS),

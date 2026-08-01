@@ -1,3 +1,4 @@
+import { ENTRY_SIDE, fill } from "@/lib/stakes/copy";
 import { type BoardItem, type Chalkboard } from "@/lib/stakes/chalkboard";
 
 import { PickSide } from "@/components/counter/pick-side";
@@ -120,10 +121,10 @@ export function ChalkSlate({ board }: { board: Chalkboard }) {
  * Tony's own call and the league's open challenge are different offers made by
  * different people, and the eyebrow is the only place that says so.
  */
-const KIND_LABELS: Readonly<Record<BoardItem['kind'], string>> = {
+const KIND_LABELS: Readonly<Record<BoardItem["kind"], string>> = {
   CHALKBOARD: "Tony's call",
   TONYS_LINE: "Tony's Line",
-  BOUNTY: 'The bounty',
+  BOUNTY: "The bounty",
 };
 
 export function BoardEntry({
@@ -191,7 +192,7 @@ export function BoardEntry({
            * A market that forgets which side you took the moment it resolves has
            * taken away the only part of it that was yours.
            */}
-          You went {item.entry.side}.
+          {fill(ENTRY_SIDE, { side: item.entry.side })}
           {item.entry.verdict === null ? "" : ` ${item.entry.verdict}`}
         </p>
       )}

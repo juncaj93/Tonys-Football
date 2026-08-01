@@ -179,7 +179,15 @@ type StateName =
   | 'board-bounty-expired'
   | 'board-thin-basis'
   | 'board-retired-excluded'
-  | 'board-long-names';
+  | 'board-long-names'
+  /*
+   * The market's error affordance, driven from the browser.
+   *
+   * Deliberately **not** a `board-*` state: it is not a fixture, it is an
+   * interaction, and `boards.test.ts` asserts the `board-*` set equals the
+   * fixture catalog exactly.
+   */
+  | 'pick-refused';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -870,6 +878,32 @@ async function reach(page: Page, state: StateName): Promise<void> {
     }
 
     /*
+     * The market refusing a pick, in the shop's voice.
+     *
+     * `MANDATE §8` asks for error states to be shown rather than asserted, and
+     * this is the one the market has: a tap the server declines. It is reachable
+     * from a preview board without any arrangement — a previewed stake carries a
+     * `preview:` id that `placeEntry` will not find, so the action returns
+     * `closed` and the client renders its refusal.
+     *
+     * **The sentence shown is the preview's own reason**, not a defect: a
+     * previewed offer genuinely is not a live one. What is under review is the
+     * affordance — that the refusal appears, is announced (`aria-live`), reads as
+     * Tony rather than as a stack trace, and leaves the controls usable.
+     */
+    case 'pick-refused': {
+      await page.goto(`${BASE}/?board=line-pending&open=tonysLine`, {
+        waitUntil: 'networkidle',
+      });
+      await dismissTony(page);
+      await page.getByRole('button', { name: /prediction/i }).click({ force: true });
+      await page.waitForTimeout(400);
+      await page.getByRole('button', { name: /Take the over/i }).click();
+      await page.waitForTimeout(1200);
+      return;
+    }
+
+    /*
      * A state with no case is a state that photographs whatever was already on
      * screen — and passes.
      *
@@ -1010,6 +1044,7 @@ const ALL_STATES: readonly StateName[] = [
   'board-thin-basis',
   'board-retired-excluded',
   'board-long-names',
+  'pick-refused',
 ];
 
 /* ------------------------------------------------------------------- gates -- */

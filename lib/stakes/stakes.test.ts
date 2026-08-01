@@ -837,6 +837,35 @@ describe('week finality', () => {
  * The variant set
  * ---------------------------------------------------------------------- */
 
+describe('a stake id from a browser is answered, never crashed on', () => {
+  it('recognises a real id and refuses anything else', () => {
+    /*
+     * `eq(weeklyStakes.id, 'preview:2025-w09-season-median')` raises *invalid
+     * input syntax for type uuid* inside Postgres, which reaches the browser as a
+     * 500 and a full-page `Application error`. Found by building the demo state
+     * for the market's error affordance: tapping OVER on a previewed board took
+     * the whole page down, so the screenshot of *"how does a refusal look"* was a
+     * server exception.
+     *
+     * The pattern is asserted here rather than only in the action, because the
+     * rule is *anything a client can send comes back as an answer*, and that is
+     * worth stating where somebody adding a second id-taking action will read it.
+     */
+    const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+    expect(UUID.test('7d2c1a3e-9f4b-4c8a-9e1d-2b3c4d5e6f70')).toBe(true);
+    for (const bad of [
+      'preview:2025-w09-season-median',
+      '',
+      'null',
+      "'; drop table weekly_stakes; --",
+      '7d2c1a3e-9f4b-4c8a-9e1d-2b3c4d5e6f7',
+    ]) {
+      expect(UUID.test(bad), bad).toBe(false);
+    }
+  });
+});
+
 describe('every variant has a resolver', () => {
   it('resolves, or refuses with a reason, for all of them', () => {
     /*
