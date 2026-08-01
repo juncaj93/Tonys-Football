@@ -171,7 +171,8 @@ guards. `requireAdmin()` answers `notFound()`, so a seat without them renders a
 | `Screenshots · gates` | ✅ success on a real runner, **19:00:38Z**, before the merge |
 | `npm run check` | green — **1120 tests across 68 files** (was 1060 / 64) |
 | `npm run visual:qa` | green — **85 states × 3 widths** (was 77), production build, fresh database |
-| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Vercel deploys on push to `main`; that is GitHub-side evidence and nothing more |
+| Post-merge `main` push run | ✅ success, **19:05:47Z** |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Vercel deploys on push to `main` and the push run is green — that is GitHub-side evidence and nothing more. Said plainly rather than implied |
 
 ### One red gate, and what was actually done about it
 
