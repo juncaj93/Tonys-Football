@@ -16,6 +16,14 @@
  * **A line whose variables cannot all be resolved is skipped, never rendered
  * with a gap** (`05 §2.3`). "Morning, {name}." is worse than silence.
  *
+ * ## The draw is the caller's, and it is never `Math.random`
+ *
+ * Selection runs inside a server render, so an unseeded draw is a sentence that
+ * can differ between the HTML the server sent and what the browser builds from
+ * the same payload. `lib/content/draw.ts` explains what replaced it; the shape
+ * of the rule here is that `random` is **required**, so a new surface has to say
+ * what its draw is derived from rather than inheriting a hazard by omission.
+ *
  * ## Distinctiveness before weight
  *
  * The plan orders eligibility, then weight. This adds one step between them:
@@ -80,8 +88,20 @@ export interface SelectionInput<T extends SelectableEntry> {
    */
   readonly audienceSize?: (entry: T) => number;
   readonly now: Date;
-  /** Injected so a test can pin the draw. Defaults to `Math.random`. */
-  readonly random?: () => number;
+  /**
+   * The draw. **Required, and never `Math.random`.**
+   *
+   * This used to default to `Math.random`, which put an unrecorded source of
+   * randomness inside a server render: two renders of the same request could
+   * choose two different sentences, and React reads a sentence that changed
+   * between the server's HTML and the client's as a hydration mismatch.
+   *
+   * There is no default now, deliberately. A surface that draws content has to
+   * name what its draw is derived from — `seededDraw(userId, surface, day)` for
+   * anything rendered with the page, `rollBelow` for anything that is an event —
+   * and a new caller cannot inherit the old hazard by leaving the field out.
+   */
+  readonly random: () => number;
 }
 
 export interface Selection<T extends SelectableEntry> {
@@ -113,7 +133,7 @@ export function renderTemplate(
 export function selectContent<T extends SelectableEntry>(
   input: SelectionInput<T>,
 ): Selection<T> | null {
-  const random = input.random ?? Math.random;
+  const random = input.random;
   const allowRestricted = input.allowRestricted ?? false;
 
   const lastUsedByEntry = new Map<string, number>();

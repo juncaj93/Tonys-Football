@@ -116,6 +116,7 @@ type StateName =
   | 'receipt'
   | 'counter'
   | 'back-hall'
+  | 'back-hall-rooms-open'
   | 'keyboard-focus'
   | 'six-banners'
   | 'tray-owned-box'
@@ -445,6 +446,26 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.getByRole('link', { name: /back/i }).click({ force: true });
       await page.waitForTimeout(1500);
       return;
+    /*
+     * The hall with something open beyond it.
+     *
+     * `?open=` is resolved by the **server** (`lib/flags.ts`), behind the demo
+     * system's own two guards — so this needs `DEMO_FIXTURES=1` on the server
+     * process as well as on this driver. That is the same wiring the nine
+     * `reveal-*` states need, and the same wiring whose absence let them
+     * photograph a calm parlor and pass. It is checked rather than trusted:
+     * `checkBackHall` below fails a state whose doors are not in the state its
+     * name claims.
+     *
+     * Both of these are states no real manager will see for a year. They are
+     * photographed now precisely because that is true — a room nobody looks at
+     * until the day it ships is a room that ships unreviewed.
+     */
+    case 'back-hall-rooms-open':
+      await page.goto(`${BASE}/back-hall?open=rooms`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
     case 'keyboard-focus':
       await home(page);
       await dismissTony(page);
@@ -809,6 +830,7 @@ const ALL_STATES: readonly StateName[] = [
   'receipt',
   'counter',
   'back-hall',
+  'back-hall-rooms-open',
   'keyboard-focus',
   'six-banners',
   'tray-owned-box',
@@ -1068,6 +1090,111 @@ const EXPECTED_OBJECTS: Readonly<Record<string, 'door' | 'display' | 'toy'>> = {
  * target where nobody can see it.
  */
 const PARTITIONED = new Set(['banners']);
+
+/**
+ * The back hall is three doors, and the right ones are open.
+ *
+ * ## Why the hall needs its own map gate
+ *
+ * `checkObjectMap` asserts the *homepage's* eight and would reject anything else,
+ * so it is scoped to parlor states. That left the second room in the product with
+ * no map assertion at all — and the back hall is exactly where one is worth
+ * having, because a shut door and an open one are different elements carrying the
+ * same identity. The whole design claim is that shipping the basement changes one
+ * element rather than the room; this is what checks it.
+ *
+ * ## And why it checks which doors are open
+ *
+ * `back-hall-rooms-open` and `back-hall-both-open` are resolved by the server
+ * from `?open=`, which means a server without `DEMO_FIXTURES=1` answers both of
+ * them with the ordinary shut hall — and the driver would file a calm room under
+ * a name claiming otherwise and pass. That has happened once already, to nine
+ * reveal states, and cost a milestone's worth of false green.
+ *
+ * An open door is an anchor; a shut one is a button that answers in-world
+ * (`18 §6.3`). So the tag name is the evidence, and it is read from the DOM
+ * rather than assumed from the URL.
+ */
+const BACK_HALL_STATES: Readonly<Record<string, { rooms: boolean; underground: boolean }>> = {
+  'back-hall': { rooms: false, underground: false },
+  'back-hall-rooms-open': { rooms: true, underground: false },
+};
+
+async function checkBackHall(page: Page, width: number, state: string): Promise<void> {
+  const expected = BACK_HALL_STATES[state];
+  if (expected === undefined) return;
+
+  const found = await page.evaluate(() =>
+    [...document.querySelectorAll('[data-room-object]')]
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => ({
+        id: el.getAttribute('data-room-object') ?? '',
+        kind: el.getAttribute('data-room-kind') ?? '',
+        tag: el.tagName.toLowerCase(),
+      })),
+  );
+
+  const at = `@${String(width)} ${state}`;
+  const ids = found.map((object) => object.id).sort();
+
+  if (ids.join(',') !== 'curtain,return,stairs') {
+    fail('object-map', `${at} the back hall is ${ids.join(', ') || 'empty'}, expected curtain, return, stairs`);
+    return;
+  }
+
+  if (found.some((object) => object.kind !== 'door')) {
+    fail('object-map', `${at} everything in the back hall is a Door; found ${found.map((o) => `${o.id}:${o.kind}`).join(', ')}`);
+  }
+
+  const isOpen = (id: string): boolean => found.find((object) => object.id === id)?.tag === 'a';
+
+  if (isOpen('stairs') !== expected.rooms) {
+    fail(
+      'back-hall',
+      `${at} the stairs are ${isOpen('stairs') ? 'open' : 'shut'}, expected ${expected.rooms ? 'open' : 'shut'} — ` +
+        'if this is a demo state, DEMO_FIXTURES=1 is missing from the SERVER process',
+    );
+  }
+
+  if (isOpen('curtain') !== expected.underground) {
+    fail(
+      'back-hall',
+      `${at} the curtain is ${isOpen('curtain') ? 'open' : 'shut'}, expected ${expected.underground ? 'open' : 'shut'}`,
+    );
+  }
+
+  // The way out is never shut, in any state.
+  if (!isOpen('return')) {
+    fail('back-hall', `${at} the way back to the parlor is not a link`);
+  }
+
+  /*
+   * The chain is a state of the door, not part of the room.
+   *
+   * It was part of the room for one round, and the open state photographed a
+   * chained stairwell a manager could walk down. Nothing failed and the picture
+   * simply contradicted the page — the shape of defect only a screenshot finds,
+   * on the one state nobody will look at until the day it ships.
+   */
+  const chained = await page.evaluate(() => document.querySelectorAll('.bg-ink-100\\/70').length > 0);
+  if (chained !== !expected.rooms) {
+    fail(
+      'back-hall',
+      `${at} the stairs are ${expected.rooms ? 'open' : 'shut'} but the chain is ${chained ? 'drawn' : 'gone'}`,
+    );
+  }
+
+  /*
+   * **Never labelled CASINO on first discovery** (`18 §5`), asserted against the
+   * rendered page rather than against the source strings. The unit test pins the
+   * copy; this catches the word arriving from anywhere else — an accessible
+   * label, a title attribute, a stray heading.
+   */
+  const text = await page.evaluate(() => document.body.innerText + ' ' + document.body.innerHTML);
+  if (/casino|blackjack|roulette/i.test(text)) {
+    fail('back-hall', `${at} names what is behind the curtain`);
+  }
+}
 
 async function checkObjectMap(page: Page, width: number): Promise<void> {
   const found = await page.evaluate(() =>
@@ -1489,6 +1616,12 @@ async function run(): Promise<void> {
             await checkTargets(page, width);
             await checkObjectMap(page, width);
             await checkOnlyTheTrayGlows(page, width);
+          }
+
+          // The back hall's own map, and whether the doors match the state's name.
+          if (state.startsWith('back-hall')) {
+            await checkTargets(page, width);
+            await checkBackHall(page, width, state);
           }
 
           // Every reveal state must actually contain a reveal. See the note on

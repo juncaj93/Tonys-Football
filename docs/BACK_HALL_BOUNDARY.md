@@ -1,6 +1,6 @@
 # The Back Hall — the implementation boundary, prepared
 
-**Status:** preparation only, 2026-07-31. **No implementation, and this must not delay Slice polish or Batch B integration.**
+**Status:** **implemented, 2026-07-31.** The hall is a room. What follows is the boundary as prepared, with `§0`, `§5` and `§7` corrected to what was actually built and what was found while building it.
 
 The commissioner's instruction: *"You may inspect and clarify the Back Hall, Rooms and Underground specifications. Prepare route contracts, state boundaries, navigation flow, locked/open states, demo requirements, and visual asset slots. Do not create generic dashboard pages."*
 
@@ -12,7 +12,7 @@ The authority is `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md §5`–`§6` and `§9
 
 | | State |
 |---|---|
-| `/back-hall` | **Built** — `app/back-hall/page.tsx`, 102 lines. Reached by the homepage's one rear doorway |
+| `/back-hall` | **Built as a room** — one portrait scene, three hit regions in room units, nothing scrolling. `lib/backhall/objects.ts` is the map, `components/scene/back-hall.tsx` draws the placeholder scene |
 | `/rooms` | **Built as a closed room** — `app/rooms/page.tsx`, 41 lines, a `ClosedRoom` panel |
 | `/underground` | **Deliberately not a route, and correctly so.** It is an inert plate on `/back-hall` that answers in world. A `<Link href="/underground">` to a route that did not exist shipped once, was prefetched on hover, logged a 404 on every visit, and was caught by the console gate rather than by CI (`VISUAL_ACCEPTANCE §0`) |
 | Art | Every slot in `18 §9.2` is a placeholder. `zone_back_hall_shell`, `object_stairs_rooms`, `object_door_underground_locked` / `_open`, `object_door_return` |
@@ -147,3 +147,63 @@ This is not a styling complaint. The room's whole grammar is objects you can gue
 The second is the one that matters. It is the **best line on the page**, it is the entire reveal of the Underground, and at nine pixels in `amber-mid/70` on a cream panel it is close to unreadable at real size. `VISUAL_ACCEPTANCE §7`: **readability wins over styling, always** — and this is a case where the styling is not even winning anything, because a line nobody can read is not atmospheric, it is absent.
 
 **Fixable now, in isolation, without art**: raise both to the floor and take the amber to a colour that clears 4.5:1 on `paper-mid`. Small enough to fold into any slice that touches this route.
+
+
+---
+
+## 8. What was built, and the three things it corrects in this document
+
+**2026-07-31.** The hall stopped being three stacked panels and became a room, on the parlor's
+grammar: one portrait scene, transparent rectangles over it, `Page oneScreen`, no scroll.
+
+### 8.1 The scene is drawn, not signed
+
+`§7.1` said the card grid was *"blocked on art"* and that building against placeholders means
+building it twice. **The commissioner's ruling of 2026-07-31 ends that**, and M3 had already shown
+what replaces it: flat rectangles in palette colours at the right size, the precedent the pizza box
+and the collectible set. `components/scene/back-hall.tsx` is that, and it draws **from the same
+rectangles the hit regions use**, so what a manager sees and what a tap lands on cannot drift.
+
+When `zone_back_hall_shell` lands, that file is deleted and the overlays become `AssetView`s.
+Nothing else moves — the coordinates, the flags, the lines and the gates are all outside it.
+
+### 8.2 `back-hall-both-open` is a demo this document asked for and the product cannot honestly produce
+
+`§5` lists five demo states. Two of them (`rooms-locked`, `underground-locked`) turned out to be the
+same screen as `back-hall-calm`, and one of them **cannot exist**.
+
+`/underground` is *deliberately not a route* — `§0` of this document says so, and `18 §5` explains
+why: the reveal is that you find out what is behind the curtain by being let in. So "the Underground
+is open" is not a state this product can be in. Rendering it means a `<Link>` to a page that does not
+exist, which is the exact defect the console gate caught here once before: prefetched on hover, a 404
+on every visit, nothing rendered wrong, no test failed.
+
+It was tried, and the driver hung on `networkidle` against a 404 — which is the most useful possible
+outcome, because it made the contradiction impossible to ship. `openTo()` now **throws** if a flag
+opens a door with no route behind it, rather than rendering a door onto nothing. The state becomes
+photographable in the same change that gives the casino its route, in P10.
+
+**Two states, not five:** `back-hall` (both shut — what every real manager sees) and
+`back-hall-rooms-open` (the first real transition). Both are flag combinations needing no database
+writes, exactly as `§5` intended.
+
+### 8.3 The chain is a state of the door, and was part of the room for one round
+
+Found by looking at `back-hall-rooms-open` — a state nobody will see for a year, which is precisely
+why it is photographed. The stairwell was drawn with a chain across the rail, and the chain was part
+of the scene rather than part of the door's state, so **the open stairs were photographed chained**.
+Nothing failed. The picture simply contradicted the page.
+
+Fixed, and gated: `checkBackHall` now fails a state whose chain and whose door disagree.
+
+### 8.4 What the gates check now
+
+| Gate | What it catches |
+|---|---|
+| `backhall.test.ts` | three objects, all Doors · no two overlapping · 44 CSS px on the narrowest phone · the Underground's line verbatim · **no digit and no "soon" on a shut door** (`18 §6`: no countdowns) · nothing naming the casino · `roulette` unopenable by any route including the preview override |
+| `driver-coverage.test.ts` | every declared state has a `case`, an expectation, and a gate — and the reason `back-hall-both-open` is absent lives in the assertion that says so |
+| `checkBackHall` (visual QA) | the hall's own object map · **which doors are actually open**, read from the DOM rather than assumed from the URL · the chain agreeing with the door · the word for what is behind the curtain never reaching the page |
+
+The `open` check exists for the reason the nine `reveal-*` states did: `?open=` is resolved by the
+**server**, so a server without `DEMO_FIXTURES=1` answers every state with the ordinary shut hall —
+and a driver that only navigated would file that under a name claiming otherwise and pass.

@@ -1,9 +1,10 @@
 import { and, eq, gte } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
-import { easternDaysBetween } from '@/lib/parlor/season';
+import { easternDayKey, easternDaysBetween } from '@/lib/parlor/season';
 import { type Database } from '@/lib/db';
 import { contentEntries, contentUsageLog } from '@/lib/db/schema';
+import { seededDraw } from '@/lib/content/draw';
 import { renderTemplate, selectContent, type SelectableEntry } from '@/lib/content/select';
 import { type Expression } from '@/lib/content/parse';
 import { margin as writeMargin, points as writePoints, type FactPacket } from '@/lib/slice/packet';
@@ -319,7 +320,17 @@ export async function statsAsideFor(
     // audience to narrow. A constant keeps the selector's smallest-audience rule
     // inert here instead of expressing it as a fact about nobody.
     audienceSize: () => 1,
-    ...(request.random !== undefined ? { random: request.random } : {}),
+    /*
+     * Seeded on the manager and the day, for the reason the greeting is: this
+     * runs inside the parlor's render, and a sentence that differs between the
+     * server's HTML and the browser's rebuild of it is a hydration mismatch.
+     *
+     * This surface has already been the visible instance of that once — the
+     * aside drew a fresh line on every render and the mismatch surfaced two
+     * routes away, on a page with nothing to do with the counter. The day-cache
+     * above fixed the repetition; the seed fixes the disagreement.
+     */
+    random: request.random ?? seededDraw(request.userId, ASIDE_SURFACE, easternDayKey(at)),
   });
 
   if (chosen === null) return null;

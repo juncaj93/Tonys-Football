@@ -37,6 +37,29 @@ export function TonyToy({
   greeting: string;
 }) {
   const [line, setLine] = useState(greeting);
+  /*
+   * Whether the line on screen is one he was **asked** for.
+   *
+   * This decides whether the line types, and it used to be hardcoded true.
+   * `SpokenLine` types on arrival, or when `retypeOnChange` says the line is new
+   * — and the Toy passed `retypeOnChange` unconditionally, so on every visit
+   * after the first the greeting satisfied "new line, and the arrival is over"
+   * and typed itself out again from zero delay.
+   *
+   * Two things were wrong with that, and the second is why it is fixed here
+   * rather than tolerated:
+   *
+   *   - it contradicts the rule `spoken-line.tsx` states in its own header —
+   *     *"coming back from the display case to watch a sentence reassemble
+   *     itself would be an animation between you and information you have
+   *     already read"* — and the parlor is the screen you come back to
+   *   - it put the one state change in the room that alters the element tree at
+   *     **zero delay** after hydration, on every load but the first. That is the
+   *     window visual debt 6 was landing in.
+   *
+   * The greeting is not new. A poked line is.
+   */
+  const [asked, setAsked] = useState(false);
   // Closing the box hides it; poking him reopens it. Kept here rather than in
   // the panel so a new line can clear it in the same update that sets the text.
   const [dismissed, setDismissed] = useState(false);
@@ -57,7 +80,11 @@ export function TonyToy({
       const { text } = await anotherLineAction();
       // Null means he has nothing else true to say, which is a valid outcome
       // (`16 §10`) — he keeps the line he already had rather than going blank.
-      if (text !== null) setLine(text);
+      // He also keeps it silently: nothing new arrived, so nothing retypes.
+      if (text !== null) {
+        setAsked(true);
+        setLine(text);
+      }
     });
   };
 
@@ -193,7 +220,7 @@ export function TonyToy({
                 * re-runs, and a poked line would appear all at once.
                 */}
               <span aria-live="polite" className="block text-[17px] leading-[1.5] text-ink-900">
-                <SpokenLine key={line} retypeOnChange>
+                <SpokenLine key={line} retypeOnChange={asked}>
                   {line}
                 </SpokenLine>
               </span>

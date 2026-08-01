@@ -1,0 +1,89 @@
+/**
+ * The draw a content surface makes, and why it is never `Math.random`.
+ *
+ * ## The rule this restores
+ *
+ * The project has one standing constraint about randomness: *"the injected
+ * clock and the injected RNG — `new Date()` / `Date.now()` are lint errors
+ * outside `lib/clock.ts`; randomness only via `lib/counter/rng.ts`."*
+ * `selectContent` defaulted to `Math.random`, which is a second, unrecorded
+ * source of randomness sitting **inside a server render**. Every parlor load
+ * that drew a fresh greeting reached it.
+ *
+ * ## Why a seed rather than the injected RNG here
+ *
+ * `lib/counter/rng.ts` is the right source for an *event*: a reward roll happens
+ * once, is persisted, and must not be guessable. A content draw is not an event.
+ * It is a **property of a request** — this manager, this surface, this day — and
+ * the product already says so: `greetingFor` hands back the same line for the
+ * rest of the day, and `statsAsideFor` does the same.
+ *
+ * Until now that sameness lived only in `content_usage_log`. Two renders that
+ * both preceded the first write could disagree, and a render is not a safe place
+ * to disagree with another render: React compares the server's HTML against what
+ * the client produces, and a sentence that changed between them is a hydration
+ * mismatch on the first screen a manager sees.
+ *
+ * So the draw is derived from the facts the request already carries. Same
+ * manager, same surface, same day → same roll, before anything is written down,
+ * with no round trip and nothing to cache. The usage log goes back to being what
+ * it is for — cooldowns and history — rather than the only thing keeping Tony
+ * from changing his mind mid-page.
+ *
+ * ## What this is not
+ *
+ * Not a security boundary. A manager who can guess tomorrow's greeting has
+ * guessed a sentence about themselves. Anything with an outcome worth
+ * predicting — a rarity roll, a reward — goes through `rollBelow` and is
+ * recorded, and nothing here touches that path.
+ */
+
+/**
+ * FNV-1a, 32-bit. Small, well distributed for short strings, and — the reason it
+ * is written out rather than imported — identical on every machine and every
+ * version of Node, which is what makes a seeded draw reproducible in a test, in
+ * a replay, and on the server that rendered the page.
+ */
+function hash(seed: string): number {
+  let value = 0x811c9dc5;
+
+  for (let index = 0; index < seed.length; index += 1) {
+    value ^= seed.charCodeAt(index);
+    value = Math.imul(value, 0x01000193);
+  }
+
+  return value >>> 0;
+}
+
+/**
+ * What joins the seed's parts.
+ *
+ * A separator is not cosmetic: without one, `seededDraw('a', 'bc')` and
+ * `seededDraw('ab', 'c')` hash identically, and two managers on two surfaces
+ * could quietly share a draw. It is a pipe because no seed part can contain one
+ * — ids are uuids, surfaces are snake_case, and the day is `YYYY-MM-DD`.
+ *
+ * It was a NUL byte for one commit. It worked, every gate passed, and it made
+ * the file **binary to git**: the diff read `Bin 0 -> 3225 bytes` and nobody
+ * could review it. Caught by reading the diff before opening the pull request,
+ * which is the only thing that would have caught it.
+ */
+const SEPARATOR = '|';
+
+/**
+ * A deterministic source of `[0, 1)` values, seeded by the parts given.
+ *
+ * mulberry32: one 32-bit state word, uniform enough for choosing between a
+ * handful of weighted sentences, and stateful so a caller that draws twice gets
+ * two different values rather than the same one twice.
+ */
+export function seededDraw(...parts: readonly string[]): () => number {
+  let state = hash(parts.join(SEPARATOR));
+
+  return () => {
+    state = (state + 0x6d2b79f5) | 0;
+    let value = Math.imul(state ^ (state >>> 15), 1 | state);
+    value = (value + Math.imul(value ^ (value >>> 7), 61 | value)) ^ value;
+    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
+  };
+}
