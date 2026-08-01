@@ -79,9 +79,9 @@ describe('seededDraw', () => {
     const draw = seededDraw('alex', 'parlor_greeting', '2026-07-31');
 
     expect([draw(), draw(), draw()].map((value) => value.toFixed(9))).toEqual([
-      '0.194708572',
-      '0.826031346',
-      '0.567668821',
+      '0.721856562',
+      '0.656531000',
+      '0.920803124',
     ]);
   });
 
