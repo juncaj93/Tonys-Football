@@ -99,8 +99,38 @@ touched not at all.
 | `main` | **`1575dee`** — PR #54 merged, post-merge run green |
 | Branch | `claude/text-surface-tuesday-slice-fouqq1`, restarted from `1575dee` |
 | `npm run check` | green — **1152 tests across 71 files** (was 1146 / 70) |
-| `npm run visual:qa` | green — 85 states × 3 widths, production build, fresh database |
+| `npm run visual:qa` | **one failure**, and it is not this slice's — see below |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app` |
+
+### The visual gate on this branch, said precisely
+
+**It failed, once, on the known intermittent — and that failure is the most
+useful thing this session produced.**
+
+`@390 on / during "receipt" — React #418`. The **`/`** is new. The
+text-surface slice changed the driver to read `page.url()` at the moment an
+error arrives, because the state label had filed one intermittent under three
+unrelated names; this is the first run since, and it named the document.
+
+**The parlor.** `slice-blowout` is `/slice`, `demo-collection-empty` is
+`/counter/collection` and `tray-owned-box` is `/` — but every one of those states
+is *reached through* the parlor, because signing in redirects there and each demo
+seat signs in again. One defect, on one route, mis-filed three times by a label
+that was never the route.
+
+`args[]=HTML` is the error's own first argument and means **structure** rather
+than text, so what remains is bounded: something in the parlor still adds or
+removes an element between the server's HTML and the client's first render.
+Visual debt 6 closed one instance of exactly that — `SpokenLine` rendered one
+span at rest and two siblings with a nested caret while typing — and that repair
+was real, so this is either a **second** structure-changing component in the same
+room or a path through `SpokenLine` the invariant skeleton does not cover.
+
+**The gate was not re-run to get a green number.** It was run once on this tree.
+The failure is pre-existing — the same sweep on unmodified `main` produced it —
+and the branch carries **no pull request**, so nothing was merged on a red gate
+and no Actions minutes were spent. The next session runs it fresh, and now has a
+route to look at.
 
 ### What is needed before the job can actually run
 
@@ -112,13 +142,21 @@ scheduled and inert, which is the safe half of the two possible wrong states.
 
 ### The next executable task, in order
 
-1. **Set `CRON_SECRET`** — commissioner, one paste. Then the Tuesday job is live.
-2. **Tony's clip at the glow-off transition** — visual debt 13. The timing is the
+1. **Open the Tuesday job's pull request.** The branch is complete, `npm run
+   check` is green at 1152/71, and the visual gate's single failure is the
+   pre-existing parlor intermittent below rather than anything on it. Run
+   `visual:qa` once more on a fresh database first, and report whatever it says.
+2. **The parlor's hydration mismatch** — visual debt 12, and it is now a *bounded*
+   search rather than three unrelated routes. Something in `/` changes the shape
+   of its tree at hydration. This is the highest-value item on the list: it is on
+   the first screen every manager sees and it has cost three sweeps.
+3. **Set `CRON_SECRET`** — commissioner, one paste. Then the Tuesday job is live.
+4. **Tony's clip at the glow-off transition** — visual debt 13. The timing is the
    finding; `docs/TEXT_SURFACE_BOUNDARY.md §10` scopes it.
-3. **Visual debt 9** (the parlor ceiling) and **10** (`.affordance-on-request`).
-4. **The Sunday pre-Monday snapshot** — `16 §4.3`'s first cron, and the reason
+5. **Visual debt 9** (the parlor ceiling) and **10** (`.affordance-on-request`).
+6. **The Sunday pre-Monday snapshot** — `16 §4.3`'s first cron, and the reason
    `vercel.json` has one entry rather than two.
-5. **Batch B**, whenever the PNGs arrive. One command.
+7. **Batch B**, whenever the PNGs arrive. One command.
 
 ---
 
