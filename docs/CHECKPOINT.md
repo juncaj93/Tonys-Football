@@ -21,7 +21,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Nothing. The review queue it was waiting on is built — see below |
 | **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`), now unblocked. Authoring, settlement, week finalization and the Slice draft all exist and are idempotent; what is missing is the schedule that calls them |
 | **Slice review chain** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
-| **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
+| **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #54 | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
 
@@ -35,9 +35,16 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ### The text-surface refresh — a cause, not a screen
 
-**`main` is `c3dc077`** (PR #53 merged). Branch:
-`claude/text-surface-tuesday-slice-fouqq1`, which was already sitting on that
-commit with nothing on it.
+**PR #54 is merged and `main` is `1575dee`.** Both required checks were green on
+real runners before the merge — `Typecheck · Lint · Test · Build` at
+**00:13:49Z** and `Screenshots · gates` at **00:24:25Z**, both on the PR head
+`c43cc36` — and the post-merge push run on `main` (**#150**, `1575dee`) is green
+at **00:36:00Z**, which is the run that deploys. **The hosted result has not been
+loaded by anybody**: the sandbox proxy denies CONNECT to `*.vercel.app`. Stated
+plainly rather than implied, as every checkpoint before this one has.
+
+The branch was cut from `c3dc077`, which it was already sitting on with nothing
+on it, and has been restarted from `1575dee` since the merge.
 
 The direction named the commissioner's **review-refused screen** as a worked
 redesign — same route, same structure, same purpose, substantially better
@@ -153,8 +160,8 @@ is the other thing a before capture is for.
 
 | | |
 |---|---|
-| `main` | **`c3dc077`** — PR #53 merged |
-| Branch | `claude/text-surface-tuesday-slice-fouqq1` |
+| `main` | **`1575dee`** — PR #54 merged, post-merge run green |
+| Branch | `claude/text-surface-tuesday-slice-fouqq1`, restarted from `1575dee` |
 | `npm run check` | green — **1146 tests across 70 files** (was 1120 / 68) |
 | `npm run visual:qa` | green — **85 states × 3 widths**, production build, fresh database. See below |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
