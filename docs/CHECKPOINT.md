@@ -156,8 +156,27 @@ is the other thing a before capture is for.
 | `main` | **`c3dc077`** — PR #53 merged |
 | Branch | `claude/text-surface-tuesday-slice-fouqq1` |
 | `npm run check` | green — **1146 tests across 70 files** (was 1120 / 68) |
-| `npm run visual:qa` | green — 85 states × 3 widths, production build, fresh database |
+| `npm run visual:qa` | green — **85 states × 3 widths**, production build, fresh database. See below |
 | Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app`. Known and accepted |
+
+### The visual gate, said precisely
+
+The final sweep was run **twice**, and both results are on the record because
+reporting only the second one would be the false green this repository has
+shipped three times.
+
+| | |
+|---|---|
+| Run 1 | **one failure** — the React #418 structure mismatch, at 360, filed under `tray-owned-box` |
+| Harness change | console errors now carry `page.url()` read **at the moment the error arrives** |
+| Run 2 | **green** — 85 states × 3 widths, 0 failures, same production build |
+
+The re-run was not "until green". Run 1's single failure is the intermittent in
+visual debt 12, the same sweep on **unmodified `main`** produced the identical
+error at a different width and a different state name, and the change between
+the runs was to the **driver's attribution** rather than to anything it measures.
+What is still true after run 2 is that a known intermittent exists and this
+branch did not introduce it.
 
 ### The next executable task, in order
 
