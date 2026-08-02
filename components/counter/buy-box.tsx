@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 
+import { TYPE } from '@/lib/design/type';
 import { buyBoxAction } from '@/app/actions/counter';
 
 /**
@@ -65,7 +66,7 @@ export function BuyBox({ price, balance }: { price: number; balance: number }) {
         type="button"
         onClick={buy}
         aria-label={`Buy a standard pizza box for ${String(price)} tokens`}
-        className="pixel-edge mt-3 flex min-h-[48px] w-full items-center justify-between border-2 border-wood-dark bg-red-dark px-4 font-display text-[12px] text-paper-white uppercase active:translate-y-px disabled:opacity-60"
+        className={`pixel-edge mt-3 flex min-h-[48px] w-full items-center justify-between border-2 border-wood-dark bg-red-dark px-4 ${TYPE.action} text-paper-white active:translate-y-px disabled:opacity-60`}
         disabled={pending}
       >
         <span>{pending ? 'Tony reaches under the counter…' : 'Buy a box'}</span>
@@ -80,7 +81,7 @@ export function BuyBox({ price, balance }: { price: number; balance: number }) {
         * tap did nothing and why.
         */}
       {refused !== null && (
-        <p aria-live="polite" className="mt-2 text-[17px] leading-[1.4] text-ink-700">
+        <p aria-live="polite" className={`mt-2 ${TYPE.bodyCompact} text-ink-700`}>
           {refused}
         </p>
       )}
@@ -91,7 +92,7 @@ export function BuyBox({ price, balance }: { price: number; balance: number }) {
         * was hard to read at arm’s length — the same mistake as sizing type to a
         * container.
         */}
-      <p className="mt-2 font-display text-[11px] leading-[1.4] tracking-wide text-ink-700/85 uppercase">
+      <p className={`mt-2 ${TYPE.eyebrow} text-ink-700/85`}>
         {String(balance)} tokens on your tab
       </p>
     </>

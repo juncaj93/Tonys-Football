@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
+import { TYPE } from '@/lib/design/type';
 import { pickSideAction } from '@/app/actions/stakes';
 
 /**
@@ -81,7 +82,7 @@ export function PickSide({
             }}
             disabled={pending}
             aria-label={`Take the ${side} for ${String(stakeTokens)} tokens`}
-            className="pixel-edge flex min-h-[48px] flex-1 items-center justify-center border-2 border-wood-dark bg-red-dark font-display text-[13px] text-paper-white uppercase active:translate-y-px disabled:opacity-60"
+            className={`pixel-edge flex min-h-[48px] flex-1 items-center justify-center border-2 border-wood-dark bg-red-dark ${TYPE.action} text-paper-white active:translate-y-px disabled:opacity-60`}
           >
             {side}
           </button>
@@ -95,12 +96,12 @@ export function PickSide({
         * button reads as a store. Tony's shop states what a thing costs in a
         * sentence and lets the control be a control.
         */}
-      <p className="mt-2 font-display text-[11px] leading-[1.4] tracking-wide text-ink-700/85 uppercase">
+      <p className={`mt-2 ${TYPE.eyebrow} text-ink-700/85`}>
         {pending ? 'Tony writes it down…' : `${String(stakeTokens)} tokens, either way`}
       </p>
 
       {refused !== null && (
-        <p aria-live="polite" className="mt-2 text-[17px] leading-[1.4] text-ink-700">
+        <p aria-live="polite" className={`mt-2 ${TYPE.bodyCompact} text-ink-700`}>
           {refused}
         </p>
       )}

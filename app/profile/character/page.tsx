@@ -5,6 +5,7 @@ import { Customiser, type OwnedItem } from '@/components/character/customiser';
 import { PanelHeading, PixelPanel, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { requireUser } from '@/lib/auth/current-user';
 import { customiserOptions } from '@/lib/character/composite';
 import { previewCharacter } from '@/lib/character/previews';
@@ -65,7 +66,7 @@ export default async function CharacterPage({
 
             <PixelPanel tone="paper" className="mt-3 px-4 pt-4 pb-4">
               <PanelHeading>What this is</PanelHeading>
-              <p className="mt-2 text-[17px] leading-[1.5] text-ink-700">{preview.description}</p>
+              <p className={`mt-2 ${TYPE.body} text-ink-700`}>{preview.description}</p>
 
               {/*
                 * The layer list, named. A silhouette that looks right for the
@@ -76,12 +77,12 @@ export default async function CharacterPage({
                 {preview.composite.layers.map((layer) => (
                   <li
                     key={layer.layer}
-                    className="flex items-baseline justify-between gap-3 py-0.5 text-[16px] text-ink-700"
+                    className={`flex items-baseline justify-between gap-3 py-0.5 ${TYPE.bodyCompact} text-ink-700`}
                   >
-                    <span className="font-display text-[12px] text-ink-900 uppercase">
+                    <span className={`${TYPE.eyebrow} text-ink-900`}>
                       {layer.layer.replace('-', ' ')}
                     </span>
-                    <span className="text-right font-mono text-[13px] break-all text-ink-500">
+                    <span className={`text-right ${TYPE.machine} text-ink-500`}>
                       {layer.slug}
                     </span>
                   </li>
@@ -149,7 +150,7 @@ function BackToProfile() {
   return (
     <Link
       href="/profile"
-      className="pixel-edge mt-5 flex min-h-[52px] items-center justify-center border-2 border-ink-500 bg-paper-mid px-4 font-display text-[13px] text-ink-900 uppercase active:translate-y-px"
+      className={`pixel-edge mt-5 flex min-h-[52px] items-center justify-center border-2 border-ink-500 bg-paper-mid px-4 ${TYPE.action} text-ink-900 active:translate-y-px`}
     >
       Back to your keys
     </Link>

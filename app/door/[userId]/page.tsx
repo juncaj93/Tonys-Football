@@ -6,6 +6,7 @@ import { SignPlate } from '@/components/scene/panel';
 import { ParlorAir } from '@/components/scene/backdrop';
 import { Page } from '@/components/shell';
 import { claimAction, signInAction } from '@/app/actions/auth';
+import { TYPE } from '@/lib/design/type';
 import { viewer } from '@/lib/auth/current-user';
 import { doorManager } from '@/lib/auth/service';
 import { getDb } from '@/lib/db';
@@ -56,10 +57,10 @@ export default async function DoorManagerPage({
           <SignPlate tone={claiming ? 'red' : 'blue'}>
             {claiming ? 'New key' : 'Welcome back'}
           </SignPlate>
-          <h1 className="mt-4 font-display text-[20px] leading-[1.35] text-paper-white uppercase">
+          <h1 className={`mt-4 ${TYPE.headlineQuiet} text-paper-white`}>
             {manager.displayName}
           </h1>
-          <p className="mt-2 text-[19px] leading-[1.45] text-ink-100">
+          <p className={`mt-2 ${TYPE.bodyLead} text-ink-100`}>
             {claiming
               ? 'Pick six digits you will remember. Tony never sees them — not even the commissioner can look them up.'
               : 'Six digits and the door opens.'}
@@ -74,7 +75,7 @@ export default async function DoorManagerPage({
           />
 
           {claiming && (
-            <p className="mt-6 pb-6 text-[17px] leading-[1.5] text-ink-300">
+            <p className={`mt-6 pb-6 ${TYPE.body} text-ink-300`}>
               Six digits, not four. Ten names on a door and four digits is ten thousand guesses —
               Tony would rather not find out who tries.
             </p>

@@ -1,4 +1,15 @@
-import { PixelPanel } from '@/components/scene/panel';
+import {
+  Ledger,
+  LedgerRow,
+  MetadataStrip,
+  MountedSheet,
+  PressMasthead,
+  PrintedRule,
+  ScoreDeck,
+  SectionHeading,
+  SLICE_MASTHEAD,
+} from '@/components/scene/text-surface';
+import { TYPE } from '@/lib/design/type';
 import { type Edition } from '@/lib/slice/render';
 
 /**
@@ -13,17 +24,28 @@ import { type Edition } from '@/lib/slice/render';
  * strongest signal that you are holding one is that nothing is boxed off from
  * anything else.
  *
- * So: one paper panel, and every section separated by a **printed rule** rather
+ * So: one paper sheet, and every section separated by a **printed rule** rather
  * than by a border or a card. The rules are the layout.
  *
- * ## Hierarchy, in three sizes and no more
+ * ## The sheet is mounted now, and that is the visual change
  *
- * Masthead · headline · everything else. A fourth size would be a decision to
- * make every week and the paper would drift. The secondary stories are the body
- * size with a display-face headline; the board is the body size with tabular
- * numbers; Tony's column is the body size in italic. Nothing on the page is under
- * 16px (`MANDATE §6`), including the furniture, because the furniture is what a
- * reader uses to find the thing they want.
+ * It used to be a bare cream panel floating on the dimmed parlor — at 360 the
+ * paper's own edge sat directly against the counter's red-and-white checker with
+ * nothing between them, so the sheet read as a light rectangle the page happened
+ * to have rather than as a thing on the wall. `MountedSheet` puts a dark frame
+ * and four corner brackets around it.
+ *
+ * All of the material lives in that frame. **The reading field is flat cream and
+ * stays flat cream** — no texture, no vignette, no dither under a paragraph or a
+ * score. That is the same ruling the homepage slice applied to the Tonight
+ * board, for the same reason, and it matters more here because this surface is
+ * read rather than glanced at.
+ *
+ * ## Hierarchy, from roles rather than from sizes
+ *
+ * Every line on this page names a role in `lib/design/type.ts`. There is no
+ * font size in this file, which is what stops the paper drifting a pixel at a
+ * time — it did, from ten distinct sizes on one sheet.
  *
  * ## Every number on this page came out of the packet
  *
@@ -31,83 +53,105 @@ import { type Edition } from '@/lib/slice/render';
  * as strings already validated against the fact packet. `MANDATE §9`: the
  * interface never derives a fantasy fact for itself, and *rounding a score* is
  * deriving one. That is why `RenderedScore` carries `leftPoints: string`.
+ *
+ * The two maps below are the only thing this file decides, and neither is a
+ * fact: they are **presentation maps over an enum the renderer already
+ * computed**, in the same shape as `STATUS_WORD` on the press desk.
  */
 
 /**
  * How loud the front page is allowed to be.
  *
  * **Strong news versus weak news, as type rather than as intention.** A quiet
- * edition used to set *"Not a lot to report"* at the same 26px a championship
- * gets, so the two most different issues the paper can print looked identical
- * from across the room — and the whole point of `EditionCharacter` is that the
- * *data* decides, not somebody's judgement on the week.
+ * edition used to be set at the same size a championship gets, so the two most
+ * different issues the paper can print looked identical from across the room —
+ * and the whole point of `EditionCharacter` is that the *data* decides, not
+ * somebody's judgement on the week.
  *
  * Three steps, not six. A separate size per character would be a decision to make
  * every week and the paper would drift.
  */
-const HEADLINE_SIZE: Record<Edition['character'], string> = {
-  title: 'text-[26px] leading-[1.12]',
-  record: 'text-[26px] leading-[1.12]',
-  loud: 'text-[26px] leading-[1.12]',
-  ordinary: 'text-[22px] leading-[1.18]',
-  quiet: 'text-[19px] leading-[1.25]',
-  empty: 'text-[19px] leading-[1.25]',
+const HEADLINE_ROLE: Record<Edition['character'], string> = {
+  title: TYPE.headlineLoud,
+  record: TYPE.headlineLoud,
+  loud: TYPE.headlineLoud,
+  ordinary: TYPE.headline,
+  quiet: TYPE.headlineQuiet,
+  empty: TYPE.headlineQuiet,
+};
+
+/**
+ * The masthead flag: what kind of week this is, when it is not an ordinary one.
+ *
+ * `18` and `16 §38` both want a championship issue to be recognisable as one
+ * before a word of it is read, and it was not: the title week and a Tuesday in
+ * October printed the same nameplate, and the only difference was the size of
+ * the headline underneath.
+ *
+ * It reads `character`, which the **renderer** derived from the packet — this
+ * component does not decide what kind of week it was, it prints the answer.
+ * Playoff weeks are already carried by the dateline the renderer built
+ * (`datelineOf`), so nothing here parses a fact string to find out.
+ */
+const MASTHEAD_FLAG: Record<Edition['character'], string | null> = {
+  title: 'The championship',
+  record: 'For the record',
+  loud: null,
+  ordinary: null,
+  quiet: null,
+  empty: null,
 };
 
 export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: string | null }) {
   return (
-    <PixelPanel tone="paper" className="px-4 pt-3.5 pb-4">
-      <Masthead dateline={issue.dateline} stamp={stamp} />
+    <MountedSheet className="px-4 pt-3.5 pb-4" data-slice-paper="">
+      <PressMasthead
+        title={SLICE_MASTHEAD}
+        dateline={issue.dateline}
+        stamp={stamp}
+        flag={MASTHEAD_FLAG[issue.character]}
+      />
 
       {issue.nothingToPrint === null ? (
         <>
           <article className="mt-4">
-            <h1
-              className={`font-display ${HEADLINE_SIZE[issue.character]} text-ink-900 uppercase`}
-            >
-              {issue.headline}
-            </h1>
+            <h1 className={`${HEADLINE_ROLE[issue.character]} text-ink-900`}>{issue.headline}</h1>
 
-            {issue.deck !== null && (
-              /*
-               * The score, under the headline, in the mono face with tabular
-               * figures. It is the one line a reader scans for, so it gets its
-               * own weight and its own rule rather than sitting inside the prose.
-               */
-              <p className="mt-2 border-y-2 border-ink-900/20 py-1.5 font-display text-[16px] leading-[1.4] text-ink-900 tabular-nums">
-                {issue.deck}
-              </p>
-            )}
+            {/*
+              * The score, under the headline, with its own rules above and below.
+              * It is the one line a reader scans for, so prose either side of it
+              * would swallow it.
+              */}
+            {issue.deck !== null && <ScoreDeck>{issue.deck}</ScoreDeck>}
 
-            <p className="mt-2.5 text-[18px] leading-[1.5] text-ink-700">{issue.body}</p>
+            <p className={`mt-3 ${TYPE.bodyLead} text-ink-700`}>{issue.body}</p>
           </article>
 
           {issue.secondary.length > 0 && (
-            <section className="mt-5">
-              <Rule />
-              <SectionLabel>Also this week</SectionLabel>
-              <div className="mt-2 space-y-3.5">
+            <Section label="Also this week">
+              <div className="mt-2.5 space-y-4">
                 {issue.secondary.map((story) => (
                   <article key={story.headline}>
-                    <h2 className="font-display text-[17px] leading-[1.25] text-ink-900 uppercase">
-                      {story.headline}
-                    </h2>
+                    <h2 className={`${TYPE.headlineQuiet} text-ink-900`}>{story.headline}</h2>
+                    {/*
+                      * The deck sits under its headline and below it in weight.
+                      * Both were 17px display at first, so a secondary story had
+                      * a score line as loud as the words above it and no
+                      * hierarchy at all — visible only once three of them
+                      * stacked on a championship issue.
+                      */}
                     {story.deck !== null && (
-                      <p className="mt-0.5 font-display text-[15px] leading-[1.4] text-ink-500 tabular-nums">
-                        {story.deck}
-                      </p>
+                      <p className={`mt-1.5 ${TYPE.metadata} text-ink-500`}>{story.deck}</p>
                     )}
-                    <p className="mt-1 text-[17px] leading-[1.5] text-ink-700">{story.body}</p>
+                    <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>{story.body}</p>
                   </article>
                 ))}
               </div>
-            </section>
+            </Section>
           )}
 
           {issue.scoreboard.length > 0 && (
-            <section className="mt-5" data-slice-board="">
-              <Rule />
-              <SectionLabel>The board</SectionLabel>
+            <Section label="The board" data-slice-board="">
               {/*
                 * Every game of the week, whether or not it was a story.
                 *
@@ -115,130 +159,125 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
                 * the old Slice reported the two games the fact layer had an
                 * opinion about and silently dropped the other three, so three of
                 * ten managers never appeared in their own week.
+                *
+                * A `Ledger`, because that is what a results board is — a key on
+                * the left, a number on the right, one rule between rows. It used
+                * to be a bare list whose scores were set two pixels smaller than
+                * the names beside them, so the column a reader is actually
+                * scanning was the quietest thing in it.
                 */}
-              <ul className="mt-2 space-y-1.5">
-                {issue.scoreboard.map((row) => (
-                  <li
-                    key={row.key}
-                    data-slice-score=""
-                    className="grid grid-cols-[minmax(0,1fr)_auto] items-baseline gap-x-2 border-b border-dotted border-ink-900/25 pb-1.5 last:border-b-0"
-                  >
-                    <span className="min-w-0 truncate text-[17px] leading-[1.45] text-ink-900">
-                      <span className={row.leftWon ? 'font-semibold' : ''}>{row.leftName}</span>
-                      <span className="text-ink-500"> over </span>
-                      <span>{row.rightName}</span>
-                    </span>
-                    <span className="font-display text-[15px] leading-[1.45] whitespace-nowrap text-ink-700 tabular-nums">
-                      {row.leftPoints}
-                      <span className="text-ink-500">–</span>
-                      {row.rightPoints}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </section>
+              <div className="mt-2.5">
+                <Ledger>
+                  {issue.scoreboard.map((row) => (
+                    <LedgerRow
+                      key={row.key}
+                      kind="name"
+                      data-slice-score=""
+                      label={
+                        <>
+                          <span className={row.leftWon ? 'text-ink-900' : 'text-ink-700'}>
+                            {row.leftName}
+                          </span>
+                          {/*
+                            * `over` is a claim about who won, so a drawn game
+                            * cannot use it. It did: `leftWon` is false on a tie
+                            * and the board printed *"A over B"* for a game
+                            * neither side won. `RenderedScore` has carried
+                            * `tie` since it was written.
+                            */}
+                          <span className="text-ink-500">{row.tie ? ' ties ' : ' over '}</span>
+                          <span className="text-ink-700">{row.rightName}</span>
+                        </>
+                      }
+                      value={
+                        <>
+                          {/*
+                            * The winner's score is the display face's **real**
+                            * 700, not a synthetic one. VT323 ships at 400 only,
+                            * so bolding a name would have the browser smear the
+                            * glyphs — which on a pixel face is the blurry type
+                            * the whole art direction is written against. Which
+                            * side won is carried by the word between the names;
+                            * this is reinforcement.
+                            */}
+                          <span className={row.leftWon ? 'font-display font-bold' : ''}>{row.leftPoints}</span>
+                          <span className="text-ink-500">&ndash;</span>
+                          <span className={!row.leftWon && !row.tie ? 'font-display font-bold' : ''}>
+                            {row.rightPoints}
+                          </span>
+                        </>
+                      }
+                    />
+                  ))}
+                </Ledger>
+              </div>
+            </Section>
           )}
         </>
       ) : (
-        <p className="mt-4 text-[18px] leading-[1.5] text-ink-700">{issue.nothingToPrint}</p>
+        <p className={`mt-4 ${TYPE.bodyLead} text-ink-700`}>{issue.nothingToPrint}</p>
       )}
 
-      <section className="mt-5">
-        <Rule />
-        <SectionLabel>From behind the counter</SectionLabel>
-        <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700 italic">{issue.column}</p>
-      </section>
+      <Section label="From behind the counter">
+        {/*
+          * Tony's column takes the **dialogue** role, not body.
+          *
+          * It is the one paragraph on the sheet that is somebody talking rather
+          * than the paper reporting, and it was set at body size in italics —
+          * which on a page of body-size prose makes it a footnote. `16 §9` is
+          * specific that the column is Tony *in his own voice*, and a voice on
+          * this page should be the second-largest thing a reader meets.
+          */}
+        <p className={`mt-2 ${TYPE.dialogue} text-ink-700 italic`}>{issue.column}</p>
+      </Section>
 
       {/*
         * How the paper was made, printed on the paper.
         *
         * `MANDATE §9`–`§10` require a fantasy fact to carry its provenance. One
-        * line in the smallest type the page has, at the bottom where a colophon
-        * goes, because it is a fact about the paper and not an apology for it.
-        */}
-      {/*
-        * The colophon: one line.
-        *
-        * It was three lines of small caps plus a fourth for the price — four rows
-        * of furniture under a paper whose lead story is two sentences long. The
-        * provenance still has to be printed (`MANDATE §9`–`§10`), and it does not
-        * have to be a paragraph.
+        * line at the bottom where a colophon goes, because it is a fact about the
+        * paper and not an apology for it — and it was three lines of small caps
+        * plus a fourth for the price, four rows of furniture under a sheet whose
+        * lead story is two sentences long.
         *
         * The provenance clause drops on an empty rack, where *"every number
-        * checked"* sits under a page with no numbers on it — true and incoherent.
+        * checked"* would sit under a page with no numbers on it — true and
+        * incoherent.
         */}
-      <p className="mt-4 border-t-2 border-ink-900/20 pt-2 font-display text-[13px] leading-[1.45] text-ink-500 uppercase">
+      <div className="mt-5">
+        <PrintedRule weight="heavy" />
+      </div>
+      <MetadataStrip className="mt-2">
         {issue.nothingToPrint === null
-          ? 'Set from the league\u2019s own records · free with any slice'
+          ? 'Set from the league’s own records · free with any slice'
           : 'Free with any slice'}
-      </p>
-    </PixelPanel>
+      </MetadataStrip>
+    </MountedSheet>
   );
 }
 
 /**
- * The masthead.
+ * A section of the sheet: a rule, a label under it, then the section.
  *
- * Two rules and a name, which is what a masthead is. The heavy rule above and the
- * hairline below give the name somewhere to sit; without them a display-face
- * string at the top of a panel is a page title.
+ * The three of them travel together on every section of the paper, and they were
+ * being assembled by hand each time — which is how one of them ended up with
+ * `mt-5` and the next with `mt-4` for no reason anybody could state.
  */
-function Masthead({ dateline, stamp }: { dateline: string; stamp: string | null }) {
+function Section({
+  label,
+  children,
+  ...rest
+}: {
+  label: string;
+  children: React.ReactNode;
+} & React.HTMLAttributes<HTMLElement>) {
   return (
-    <header>
-      <div aria-hidden="true" className="h-[3px] bg-red-dark" />
-      <h1 className="mt-2 text-center font-display text-[22px] leading-[1.05] text-red-dark uppercase">
-        Tony&rsquo;s Tuesday Slice
-      </h1>
-      <div aria-hidden="true" className="mt-2 h-px bg-ink-900/35" />
-      {/*
-        * The dateline alone, and the price is not here.
-        *
-        * They shared this row and the row wrapped: at 390 the dateline broke
-        * across two lines and `FREE WITH ANY SLICE` landed underneath it, reading
-        * as a third clause of the date rather than as the price. A masthead has
-        * one job — which paper, which week — so the price moved to the colophon,
-        * which is where a newspaper's imprint goes anyway.
-        */}
-      <p className="mt-1.5 text-center font-display text-[14px] leading-[1.5] tracking-[0.04em] text-ink-500 uppercase">
-        {dateline}
-      </p>
-      <div aria-hidden="true" className="mt-1.5 h-[3px] bg-red-dark" />
-
-      {/*
-        * The rack's stamp, printed **on** the paper.
-        *
-        * It used to sit above the masthead, on the room, in dim grey — a caveat
-        * in front of the nameplate, which is a newspaper apologising for itself
-        * before you have read a word. Inside the sheet it reads as what it is: a
-        * stamp somebody put on an old copy.
-        */}
-      {stamp !== null && (
-        <p className="mt-2 text-center font-display text-[13px] leading-[1.5] tracking-[0.12em] text-wood-mid uppercase">
-          {stamp}
-        </p>
-      )}
-    </header>
-  );
-}
-
-/** A printed rule. The only separator on the page. */
-function Rule() {
-  return <div aria-hidden="true" className="h-px bg-ink-900/30" />;
-}
-
-/**
- * A section label.
- *
- * Small caps in the display face, sitting directly under its rule — the
- * newspaper convention. Sized at 14px rather than the 10px the old page used:
- * furniture is what a reader navigates by, and unreadable furniture is worse than
- * none (`VISUAL_ACCEPTANCE §7` — readability wins over styling, always).
- */
-function SectionLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <h2 className="mt-1.5 font-display text-[14px] leading-[1.45] tracking-[0.1em] text-red-dark uppercase">
+    <section className="mt-6" {...rest}>
+      <PrintedRule />
+      <div className="mt-2">
+        <SectionHeading>{label}</SectionHeading>
+      </div>
       {children}
-    </h2>
+    </section>
   );
 }

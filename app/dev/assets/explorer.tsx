@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from 'react';
 
+import { TYPE } from '@/lib/design/type';
 import { PlaceholderSign } from '@/lib/assets/placeholder';
 import { ASSET_FAMILIES, type AssetFamily, type AssetRecord } from '@/lib/assets/types';
 
@@ -54,15 +55,15 @@ export function AssetExplorer({ records }: { records: readonly AssetRecord[] }) 
         className="px-4 pb-4"
         style={{ paddingTop: 'max(1.5rem, env(safe-area-inset-top))' }}
       >
-        <p className="font-mono text-xs tracking-[0.2em] text-amber-mid uppercase">
+        <p className={`${TYPE.eyebrow} text-amber-mid`}>
           Dev · Asset inventory
         </p>
-        <h1 className="mt-2 text-2xl font-bold text-paper-white">
+        <h1 className={`mt-2 ${TYPE.headline} text-paper-white`}>
           {records.length} slugs
         </h1>
-        <p className="mt-1 text-sm text-ink-100">
+        <p className={`mt-1 ${TYPE.body} text-ink-100`}>
           Every one resolving through the registry. Grows into{' '}
-          <span className="font-mono text-xs">/admin/assets</span>.
+          <span className={TYPE.machine}>/admin/assets</span>.
         </p>
 
         <label className="mt-4 block">
@@ -95,7 +96,7 @@ export function AssetExplorer({ records }: { records: readonly AssetRecord[] }) 
               />
 
               <div className="min-w-0 flex-1">
-                <p className="font-mono text-xs break-all text-paper-white">
+                <p className={`${TYPE.machine} text-paper-white`}>
                   {record.slug}
                 </p>
 
@@ -106,7 +107,7 @@ export function AssetExplorer({ records }: { records: readonly AssetRecord[] }) 
                   {record.rarity !== undefined && <Tag>{record.rarity}</Tag>}
                   {record.slot !== undefined && <Tag>slot: {record.slot}</Tag>}
                   <span
-                    className={`rounded-sm px-1.5 py-0.5 font-mono text-[10px] ${
+                    className={`rounded-sm px-1.5 py-0.5 ${TYPE.eyebrow} ${
                       STATUS_STYLES[record.artStatus] ?? 'bg-ink-500 text-ink-100'
                     }`}
                   >
@@ -114,14 +115,14 @@ export function AssetExplorer({ records }: { records: readonly AssetRecord[] }) 
                   </span>
                 </div>
 
-                <p className="mt-2 text-xs leading-relaxed text-ink-100">{record.alt}</p>
+                <p className={`mt-2 ${TYPE.bodyCompact} text-ink-100`}>{record.alt}</p>
               </div>
             </div>
           </li>
         ))}
 
         {visible.length === 0 && (
-          <li className="rounded-sm border border-dashed border-ink-500 p-8 text-center text-sm text-ink-100">
+          <li className={`rounded-sm border border-dashed border-ink-500 p-8 text-center ${TYPE.body} text-ink-100`}>
             No slugs match that filter.
           </li>
         )}
@@ -137,7 +138,7 @@ export function AssetExplorer({ records }: { records: readonly AssetRecord[] }) 
         aria-label="Filter by family"
       >
         <div className="mx-auto max-w-3xl">
-          <p className="px-4 pt-3 pb-2 text-xs text-ink-300">
+          <p className={`px-4 pt-3 pb-2 ${TYPE.bodyCompact} text-ink-300`}>
             Showing {visible.length} of {records.length}
           </p>
           <div className="flex gap-2 overflow-x-auto px-4 pb-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:none]">
@@ -149,7 +150,7 @@ export function AssetExplorer({ records }: { records: readonly AssetRecord[] }) 
                   type="button"
                   onClick={() => setFamily(f)}
                   aria-pressed={active}
-                  className={`min-h-11 shrink-0 rounded-full px-4 text-sm font-medium whitespace-nowrap transition-colors ${
+                  className={`min-h-11 shrink-0 rounded-full px-4 ${TYPE.action} whitespace-nowrap transition-colors ${
                     active
                       ? 'bg-amber-mid text-ink-900'
                       : 'bg-ink-700 text-ink-100 active:bg-ink-500'
@@ -171,7 +172,7 @@ export function AssetExplorer({ records }: { records: readonly AssetRecord[] }) 
 
 function Tag({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-sm bg-ink-900/60 px-1.5 py-0.5 font-mono text-[10px] text-ink-100">
+    <span className={`rounded-sm bg-ink-900/60 px-1.5 py-0.5 ${TYPE.eyebrow} text-ink-100`}>
       {children}
     </span>
   );

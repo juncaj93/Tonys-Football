@@ -5,6 +5,7 @@ import { HangingSign, ShopWindow } from '@/components/scene/fixtures';
 import { SignPlate } from '@/components/scene/panel';
 import { ParlorAir } from '@/components/scene/backdrop';
 import { Page, TAP_TARGET } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { viewer } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { getDb } from '@/lib/db';
@@ -52,16 +53,16 @@ export default async function DoorPage() {
 
         <main className="mx-auto w-full max-w-md flex-1 px-5 pt-7">
           <SignPlate tone="red">Keys</SignPlate>
-          <h1 className="mt-4 font-display text-[20px] leading-[1.35] text-paper-white uppercase">
+          <h1 className={`mt-4 ${TYPE.headlineQuiet} text-paper-white`}>
             Who&rsquo;s asking?
           </h1>
-          <p className="mt-2 text-[19px] leading-[1.45] text-ink-100">
+          <p className={`mt-2 ${TYPE.bodyLead} text-ink-100`}>
             Ten hooks behind the counter. Take yours down, set six digits, and the door stays
             open for you.
           </p>
 
           {managers.length === 0 ? (
-            <p className="mt-8 border border-wood-dark bg-ink-700 px-4 py-5 text-sm text-ink-100">
+            <p className={`mt-8 border border-wood-dark bg-ink-700 px-4 py-5 ${TYPE.body} text-ink-100`}>
               No keys on the board yet. The league still needs to be imported.
             </p>
           ) : (
@@ -84,11 +85,11 @@ export default async function DoorPage() {
                           aria-hidden="true"
                           className="h-2.5 w-2.5 shrink-0 rounded-full border border-ink-500/60 bg-ink-100/40"
                         />
-                        <span className="truncate text-[21px]">
+                        <span className={`truncate ${TYPE.bodyLead}`}>
                           {manager.displayName}
                         </span>
                       </span>
-                      <span className="shrink-0 font-display text-[11px] text-ink-500 uppercase">
+                      <span className={`shrink-0 ${TYPE.eyebrow} text-ink-500`}>
                         {manager.claimed ? 'taken' : 'on the hook'}
                       </span>
                     </Link>
@@ -98,7 +99,7 @@ export default async function DoorPage() {
             </div>
           )}
 
-          <p className="mt-8 pb-6 text-[17px] leading-[1.5] text-ink-300">
+          <p className={`mt-8 pb-6 ${TYPE.body} text-ink-300`}>
             Lost your PIN? The commissioner can put your key back on the hook, and you set a new
             one from this same screen.
           </p>

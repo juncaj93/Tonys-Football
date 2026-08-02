@@ -1,4 +1,5 @@
 import { AssetView } from '@/lib/assets/placeholder';
+import { TYPE } from '@/lib/design/type';
 import { resolveAsset } from '@/lib/assets/registry';
 
 /**
@@ -79,13 +80,13 @@ export function ShopWindow() {
       {/* Gold leaf, applied on the inside of the glass, so it reads reversed. */}
       <div className="absolute inset-0 flex flex-col items-center justify-center">
         <span
-          className="font-mono text-[13px] tracking-[0.42em] text-amber-mid/70"
+          className={`${TYPE.stamp} tracking-[0.42em] text-amber-mid/70`}
           style={{ transform: 'scaleX(-1)' }}
         >
           TONY&rsquo;S
         </span>
         <span
-          className="mt-1 font-mono text-[9px] tracking-[0.3em] text-paper-mid/45"
+          className={`mt-1 ${TYPE.eyebrow} tracking-[0.3em] text-paper-mid/45`}
           style={{ transform: 'scaleX(-1)' }}
         >
           PIZZA
@@ -104,10 +105,10 @@ export function HangingSign({ top, bottom }: { top: string; bottom: string }) {
     <div className="anim-sway absolute top-0 right-4 z-10 origin-top">
       <div aria-hidden="true" className="mx-auto h-4 w-px bg-ink-300" />
       <div className="pixel-edge border-2 border-red-dark bg-paper-white px-2.5 py-1 text-center">
-        <span className="block font-display text-[11px] leading-[1.4] text-red-dark">
+        <span className={`block ${TYPE.stamp} text-red-dark`}>
           {top}
         </span>
-        <span className="mt-0.5 block font-display text-[8px] leading-[1.5] text-ink-500">
+        <span className={`mt-1 block ${TYPE.eyebrow} text-ink-500`}>
           {bottom}
         </span>
       </div>

@@ -5,6 +5,7 @@ import { CharacterView } from '@/components/character/character-view';
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { requireUser } from '@/lib/auth/current-user';
 import { listDevices } from '@/lib/auth/service';
 import { characterFor } from '@/lib/character/service';
@@ -26,7 +27,7 @@ export const dynamic = 'force-dynamic';
 
 /** Every control on this page is the same slab of painted board. */
 const ACTION =
-  'pixel-edge flex w-full min-h-[52px] items-center justify-center border-2 px-4 text-center font-display text-[12px] uppercase active:translate-y-px';
+  `pixel-edge flex w-full min-h-[52px] items-center justify-center border-2 px-4 text-center ${TYPE.action} active:translate-y-px`;
 
 export default async function ProfilePage() {
   const { user, session } = await requireUser();
@@ -65,7 +66,7 @@ export default async function ProfilePage() {
               <CharacterView composite={character.composite} scale="row" label={user.displayName} />
               <span className="min-w-0 flex-1">
                 <PanelHeading>{user.displayName}</PanelHeading>
-                <span className="mt-1 block text-[16px] leading-[1.4] text-ink-700">
+                <span className={`mt-1 block ${TYPE.bodyCompact} text-ink-700`}>
                   Change how you look
                 </span>
               </span>
@@ -80,10 +81,10 @@ export default async function ProfilePage() {
               */}
             <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
               <div className="flex items-baseline justify-between gap-3">
-                <span className="font-display text-[12px] text-ink-900 uppercase">
+                <span className={`${TYPE.eyebrow} text-ink-900`}>
                   Cut for
                 </span>
-                <span className="font-display text-[11px] text-ink-500">
+                <span className={`${TYPE.metadata} text-ink-500`}>
                   {devices.length} device{devices.length === 1 ? '' : 's'}
                 </span>
               </div>
@@ -92,17 +93,17 @@ export default async function ProfilePage() {
                 {devices.map((device) => (
                   <li
                     key={device.id}
-                    className="flex items-baseline justify-between gap-3 text-[19px]"
+                    className={`flex items-baseline justify-between gap-3 ${TYPE.bodyLead}`}
                   >
                     <span className="text-ink-900">{device.label}</span>
-                    <span className="shrink-0 text-[17px] text-ink-500">
+                    <span className={`shrink-0 ${TYPE.body} text-ink-500`}>
                       {device.current ? 'this one' : formatLastSeen(device.lastSeenAt)}
                     </span>
                   </li>
                 ))}
               </ul>
 
-              <p className="mt-4 border-t-2 border-dashed border-ink-300 pt-3 text-[17px] leading-[1.5] text-ink-500">
+              <p className={`mt-4 border-t-2 border-dashed border-ink-300 pt-3 ${TYPE.body} text-ink-500`}>
                 Tony leaves the door unlocked for 90 days from your last visit. Come by weekly and
                 he will never ask again.
               </p>

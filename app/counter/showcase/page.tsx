@@ -4,6 +4,7 @@ import { ShowcasePicker, type PickerChoice } from '@/components/counter/showcase
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
@@ -69,7 +70,7 @@ export default async function ShowcasePage() {
         <div className="mx-auto w-full max-w-[420px] px-4 pt-6 pb-10">
           <SignPlate>The showcase</SignPlate>
 
-          <p className="mt-4 text-[17px] leading-[1.5] text-paper-mid/80">
+          <p className={`mt-4 ${TYPE.body} text-paper-mid/80`}>
             One thing each, out where everyone can see it.
           </p>
 
@@ -82,9 +83,9 @@ export default async function ShowcasePage() {
                   <AssetView resolution={resolveAsset(mine.slug)} compact placeholder="collectible" />
                 </span>
                 <span>
-                  <span className="block text-[17px] leading-[1.3] text-ink-900">{mine.name}</span>
+                  <span className={`block ${TYPE.bodyCompact} text-ink-900`}>{mine.name}</span>
                   <span
-                    className={`rarity-word rarity-${mine.rarity} block font-display text-[9px] tracking-[0.12em] uppercase`}
+                    className={`rarity-word rarity-${mine.rarity} block ${TYPE.eyebrow}`}
                   >
                     {mine.rarity}
                   </span>
@@ -101,7 +102,7 @@ export default async function ShowcasePage() {
               * than as a summary above a control.
               */}
             {pickerChoices.length > 0 && (
-              <p className="mt-4 font-display text-[10px] tracking-[0.12em] text-ink-700/75 uppercase">
+              <p className={`mt-4 ${TYPE.bodyCompact} text-ink-700`}>
                 {mine === null ? 'Pick one' : 'Change it, or tap to take it back'}
               </p>
             )}
@@ -111,7 +112,7 @@ export default async function ShowcasePage() {
 
           <PixelPanel className="mt-4 px-4 py-4">
             <PanelHeading>The league</PanelHeading>
-            <p className="mt-1.5 text-[17px] leading-[1.5] text-ink-700">
+            <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>
               {showing === 0
                 ? 'Nobody else has put anything out yet.'
                 : `${String(showing)} of ${String(others.length)} have something out.`}
@@ -161,16 +162,16 @@ export default async function ShowcasePage() {
                   </span>
 
                   <span className="min-w-0">
-                    <span className="block font-display text-[11px] tracking-wide text-ink-900 uppercase">
+                    <span className={`block ${TYPE.eyebrow} text-ink-900`}>
                       {entry.displayName}
                     </span>
                     {entry.item === null ? (
-                      <span className="block text-[15px] leading-[1.3] text-ink-700/60">
+                      <span className={`block ${TYPE.bodyCompact} text-ink-700/60`}>
                         Nothing out
                       </span>
                     ) : (
                       <>
-                        <span className="block text-[15px] leading-[1.3] text-ink-900">
+                        <span className={`block ${TYPE.bodyCompact} text-ink-900`}>
                           {entry.item.name}
                         </span>
                         {/*
@@ -179,7 +180,7 @@ export default async function ShowcasePage() {
                           * value that matters in decorative type.
                           */}
                         <span
-                          className={`rarity-word rarity-${entry.item.rarity} block font-display text-[10px] tracking-[0.12em] uppercase`}
+                          className={`rarity-word rarity-${entry.item.rarity} block ${TYPE.eyebrow}`}
                         >
                           {entry.item.rarity}
                         </span>
@@ -194,7 +195,7 @@ export default async function ShowcasePage() {
           <div className="mt-8 flex items-center justify-between gap-4">
             <Link
               href="/counter/collection"
-              className="flex min-h-[44px] items-center font-display text-[11px] tracking-wide text-paper-mid/85 uppercase underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px"
+              className={`flex min-h-[44px] items-center ${TYPE.eyebrow} text-paper-mid/85 underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px`}
             >
               Your shelves
             </Link>

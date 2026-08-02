@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useId, useRef, useState } from 'react';
 
+import { TYPE } from '@/lib/design/type';
 import { place, type RoomObjectSpec } from '@/lib/parlor/objects';
 
 /**
@@ -230,7 +231,7 @@ function Sheet({
         <div className="flex items-start justify-between gap-3 px-3.5 pt-3.5 pb-2.5">
           <h2
             id={headingId}
-            className="font-display text-[13px] leading-[1.4] tracking-wide text-ink-700 uppercase"
+            className={`${TYPE.eyebrow} text-ink-700`}
           >
             {title}
           </h2>

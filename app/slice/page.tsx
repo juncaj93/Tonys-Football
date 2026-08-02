@@ -1,6 +1,8 @@
-import { PanelHeading, PixelPanel, ReturnPlate } from '@/components/scene/panel';
+import { PanelHeading, ReturnPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
+import { MountedSheet, PressMasthead, SLICE_MASTHEAD } from '@/components/scene/text-surface';
 import { Page } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { Newspaper } from '@/components/slice/newspaper';
 import { requireUser } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
@@ -207,27 +209,29 @@ function EmptyRack({
   daysUntilKickoff: number | null;
 }) {
   return (
-    <PixelPanel tone="paper" className="px-4 pt-4 pb-4">
-      <div aria-hidden="true" className="h-[3px] bg-red-dark" />
-      <h1 className="mt-2 text-center font-display text-[22px] leading-[1.05] text-red-dark uppercase">
-        Tony&rsquo;s Tuesday Slice
-      </h1>
-      <div aria-hidden="true" className="mt-2 h-[3px] bg-red-dark" />
+    <MountedSheet className="px-4 pt-3.5 pb-4" data-slice-paper="">
+      {/*
+        * The same masthead the printed issue wears, with the shelf's own
+        * dateline instead of a week's. An empty rack that dropped the nameplate
+        * would read as a different surface from the one that carries the paper,
+        * and the shop is the same shop either way.
+        */}
+      <PressMasthead title={SLICE_MASTHEAD} dateline="No issue on the shelf" />
 
       <div className="mt-4">
         <PanelHeading>Nothing on the rack</PanelHeading>
       </div>
 
-      <p className="mt-2 text-[18px] leading-[1.5] text-ink-700">
+      <p className={`mt-2 ${TYPE.bodyLead} text-ink-700`}>
         Three shelves, all of them empty, and a price card nobody has updated since the shop
         opened.
       </p>
 
-      <p className="mt-3 border-t-2 border-ink-900/20 pt-2.5 text-[17px] leading-[1.5] text-ink-700">
+      <p className={`mt-3.5 border-t-2 border-ink-900/25 pt-3 ${TYPE.body} text-ink-700`}>
         {preseason || daysUntilKickoff === null
           ? 'The first issue prints the Tuesday after week one.'
           : `The first issue goes on the rack the Tuesday after week one — ${String(daysUntilKickoff)} days out.`}
       </p>
-    </PixelPanel>
+    </MountedSheet>
   );
 }

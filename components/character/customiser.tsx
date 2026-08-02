@@ -6,6 +6,7 @@ import { useMemo, useState, useTransition } from "react";
 import { saveCharacterAction } from "@/app/actions/character";
 import { PanelHeading, PixelPanel } from "@/components/scene/panel";
 import { PALETTES } from "@/lib/character/catalog";
+import { TYPE } from "@/lib/design/type";
 import {
   composeCharacter,
   type CharacterConfiguration,
@@ -88,7 +89,7 @@ function readableList(parts: readonly string[]): string {
  * reads as buttons and one that reads as a paragraph of links.
  */
 const CHOICE =
-  "pixel-edge flex min-h-[48px] flex-1 basis-[calc(50%-0.375rem)] items-center justify-center border-2 px-3 text-center text-[16px] leading-tight active:translate-y-px";
+  `pixel-edge flex min-h-[48px] flex-1 basis-[calc(50%-0.375rem)] items-center justify-center border-2 px-3 text-center ${TYPE.bodyCompact} active:translate-y-px`;
 const CHOSEN = "border-ink-900 bg-amber-mid text-ink-900";
 const UNCHOSEN = "border-ink-500 bg-paper-mid text-ink-700";
 
@@ -222,7 +223,7 @@ export function Customiser({
         </div>
 
         <p
-          className="mt-3 min-h-[24px] text-center text-[17px] leading-[1.4] text-ink-700"
+          className={`mt-3 min-h-[24px] text-center ${TYPE.bodyCompact} text-ink-700`}
           aria-live="polite"
         >
           {status}
@@ -334,7 +335,7 @@ export function Customiser({
 
         {empty.length > 0 && (
           <Section title={owned.length === 0 ? "What you wear" : "Still empty"}>
-            <p className="text-[17px] leading-[1.45] text-ink-500">
+            <p className={`${TYPE.bodyCompact} text-ink-500`}>
               {owned.length === 0
                 ? "Nothing to put on yet. There are four places for it: "
                 : "Nothing yet for "}
@@ -360,7 +361,7 @@ export function Customiser({
             type="button"
             onClick={save}
             disabled={!dirty || pending}
-            className={`pixel-edge min-h-[52px] flex-1 border-2 px-3 font-display text-[12px] uppercase active:translate-y-px ${
+            className={`pixel-edge min-h-[52px] flex-1 border-2 px-3 ${TYPE.action} active:translate-y-px ${
               dirty && !pending
                 ? "border-ink-900 bg-red-mid text-paper-white"
                 : "border-ink-300 bg-paper-dark text-ink-500"
@@ -372,7 +373,7 @@ export function Customiser({
             type="button"
             onClick={cancel}
             disabled={!dirty || pending}
-            className={`pixel-edge min-h-[52px] flex-1 border-2 px-3 font-display text-[12px] uppercase active:translate-y-px ${
+            className={`pixel-edge min-h-[52px] flex-1 border-2 px-3 ${TYPE.action} active:translate-y-px ${
               dirty && !pending
                 ? "border-ink-900 bg-paper-mid text-ink-900"
                 : "border-ink-300 bg-paper-dark text-ink-500"

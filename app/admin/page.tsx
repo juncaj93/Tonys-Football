@@ -4,6 +4,7 @@ import { resetPinAction } from '@/app/actions/auth';
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page, TAP_TARGET } from '@/components/shell';
+import { TYPE } from '@/lib/design/type';
 import { requireAdmin } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { getDb } from '@/lib/db';
@@ -57,10 +58,10 @@ export default async function AdminPage() {
                 href="/admin/slice"
                 className={`pixel-edge flex ${TAP_TARGET} w-full flex-col justify-center border-2 border-wood-dark bg-[#1c1113] px-3 py-2.5 active:translate-y-px`}
               >
-                <span className="font-display text-[13px] leading-[1.5] text-paper-mid uppercase">
+                <span className={`${TYPE.stamp} text-paper-mid`}>
                   The press desk
                 </span>
-                <span className="mt-0.5 text-[17px] leading-[1.4] text-paper-mid/70">
+                <span className={`mt-1 ${TYPE.bodyCompact} text-paper-mid/70`}>
                   Read the week&rsquo;s paper before it prints
                 </span>
               </Link>
@@ -68,10 +69,10 @@ export default async function AdminPage() {
 
             <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
               <div className="mb-2 flex items-baseline justify-between gap-3">
-                <span className="font-display text-[12px] text-ink-900 uppercase">
+                <span className={`${TYPE.eyebrow} text-ink-900`}>
                   Key board
                 </span>
-                <span className="font-display text-[11px] text-ink-500">
+                <span className={`${TYPE.metadata} text-ink-500`}>
                   {managers.length} managers
                 </span>
               </div>
@@ -79,10 +80,10 @@ export default async function AdminPage() {
                   {managers.map((manager) => (
                     <li key={manager.id} className="flex items-center justify-between gap-3 py-2.5">
                       <div className="min-w-0">
-                        <p className="truncate text-[19px] text-ink-900">
+                        <p className={`truncate ${TYPE.bodyLead} text-ink-900`}>
                           {manager.displayName}
                         </p>
-                        <p className="text-[17px] text-ink-500">
+                        <p className={`${TYPE.body} text-ink-500`}>
                           {manager.claimed ? 'key taken' : 'still on the hook'}
                         </p>
                       </div>
@@ -92,7 +93,7 @@ export default async function AdminPage() {
                           <input type="hidden" name="userId" value={manager.id} />
                           <button
                             type="submit"
-                            className={`pixel-edge ${TAP_TARGET} border-2 border-red-dark bg-red-dark/15 px-3 font-display text-[11px] text-red-dark uppercase active:translate-y-px`}
+                            className={`pixel-edge ${TAP_TARGET} border-2 border-red-dark bg-red-dark/15 px-3 ${TYPE.action} text-red-dark active:translate-y-px`}
                           >
                             Clear PIN
                           </button>
@@ -102,7 +103,7 @@ export default async function AdminPage() {
                   ))}
                 </ul>
 
-              <p className="mt-4 border-t-2 border-dashed border-ink-300 pt-3 text-[17px] leading-[1.5] text-ink-500">
+              <p className={`mt-4 border-t-2 border-dashed border-ink-300 pt-3 ${TYPE.body} text-ink-500`}>
                   Clearing a PIN signs that manager out everywhere and puts their key back on the
                   hook, ready for a new one. You cannot see anyone&rsquo;s PIN, including your
                   own — and you cannot clear your own from here, because it would sign you out
