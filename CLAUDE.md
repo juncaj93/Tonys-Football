@@ -130,7 +130,14 @@ Everything a stake knows about football comes through **one Stats boundary** tha
 
 `docs/TEXT_SURFACE_BOUNDARY.md` is the canonical account.
 
-**Next assignment:** **the Tuesday job** (`16 §4.3`'s second cron), now unblocked. It writes `week_finalizations`, calls `authorStakesForWeek` and `settleSeason`, and ends at `generateDraft(..., { submit: true })` — all four exist, are idempotent and are tested. What remains is operational: `vercel.json`, a secret-protected route, and what the job does when a week refuses to draft. See `docs/CHECKPOINT.md` for the durable state.
+**The Tuesday job** — built this session. `16 §4.3`'s second cron, as `lib/slice/tuesday.ts` plus one secret-protected route and one entry in `vercel.json`. Every operation it calls already existed, idempotent and tested; what did not exist was the **sequence**, which has failure modes its parts do not.
+
+- **It never publishes.** The last thing it does is `submit: true`, so the draft lands on the press desk and stops. `16 §9` and `docs/SLICE_REVIEW_BOUNDARY.md` make that permanent, and there is no parameter on the route that can change it.
+- **The door is a shared secret and unset means shut.** It answers **404** rather than 401, like `requireAdmin()`. `CRON_SECRET` must be set in Vercel production before the job can run at all — that is the one remaining human-only step, and until it is set the job is scheduled and inert.
+- **One cron, not two.** The Sunday pre-Monday snapshot is specified and unimplemented; a cron pointed at a route that does not exist is a scheduled 404 every week.
+- **A step that throws no longer costs the paper.** `authorStakesForWeek` throws on a season with no stored economy config — deliberately — and drafting comes after authoring, so the first version would have produced an empty desk with no explanation on it. Each step is attempted, a throw is recorded against the step that threw, the chain finishes, and the route answers 500 so the platform retries. Safe, because retrying is a read: four separate database mechanisms, none of them added here.
+
+**Next assignment:** see `docs/CHECKPOINT.md` for the durable state and the ordered queue.
 
 **Previously:** the Back Hall as a room (visual debt 5) — one compact pixel-art scene with two environmental choices, not the three stacked panels `18 §5` forbids. Placeholder architecture is approved and M3 has shown what it looks like: a drawn stand-in at the right size, as geometry data, rather than a sign. `docs/BACK_HALL_BOUNDARY.md` carries the route contracts, the flag-based state boundary, the five asset slots and the five demo states. Stats Intelligence (#26) and M3 (#24) are both shipped.
 

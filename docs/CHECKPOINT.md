@@ -19,7 +19,8 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Nothing. The review queue it was waiting on is built — see below |
-| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`), now unblocked. Authoring, settlement, week finalization and the Slice draft all exist and are idempotent; what is missing is the schedule that calls them |
+| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | Nothing. The Tuesday job that calls it is built — see below |
+| **The Tuesday job** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. One cron, a secret-protected route, six database tests, and it stops at the press desk by construction |
 | **Slice review chain** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
 | **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #54 | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
@@ -28,6 +29,96 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-02 (ninth session)
+
+### The Tuesday job — the sequence, which is the part that did not exist
+
+`main` is **`1575dee`** (PR #54, the text-surface refresh, merged and deployed).
+Branch: `claude/text-surface-tuesday-slice-fouqq1`, restarted from it.
+
+`16 §4.3` gives Tuesday a chain — **close the week → settle → author next week →
+draft the Slice → notify the commissioner** — and every one of those operations
+already existed, idempotent and separately tested. What did not exist was the
+**sequence**, and a sequence has failure modes its parts do not. So it is
+`lib/slice/tuesday.ts`, a module, rather than logic inside a route handler where
+it could not be tested without HTTP.
+
+- **It never publishes.** The last thing it does is `submit: true`. `16 §9` makes
+  approval mandatory in season one and `SLICE_REVIEW_BOUNDARY` makes it
+  permanent, so the draft lands on the desk and stops. There is no parameter on
+  the route that can change that, which is why there is no parameter on the route.
+- **The door is a shared secret and unset means shut** — not "unprotected in
+  development". A job that quietly works without its secret is a job whose
+  missing secret nobody notices. It answers **404** rather than 401, like
+  `requireAdmin()`, so it does not confirm it exists; the comparison is
+  length-checked then constant-time.
+- **One cron, not two.** The Sunday pre-Monday snapshot is specified in `16 §4.3`
+  and unimplemented, and a cron pointed at a route that does not exist is a
+  scheduled 404 every week. Its slot is reserved by the paragraph, not by an entry.
+- **`0 9 * * 2`** — 5am Eastern on EDT, 4am after November. Vercel schedules in
+  UTC and Hobby allows two crons; a second entry to hold the hour across daylight
+  saving would spend the Sunday job's slot on a clock correction.
+
+### The defect the tests found, and it was the design rather than a bug
+
+`authorStakesForWeek` **throws** on a season with no stored economy config —
+deliberately, because silently falling back to hardcoded prices is worse. The
+first version of the job simply awaited each step in order, so that throw also
+cost the league **its paper**: drafting comes after authoring, and a mis-seeded
+deploy would have produced an empty press desk on a Tuesday with nothing on it to
+explain why.
+
+The four steps write to four different tables and nothing about one failing makes
+the next one wrong. So each is attempted, a throw is recorded against the step
+that threw, the chain finishes, and the route still answers **500** so the
+platform retries — which is safe for exactly the reason the job is safe to run
+twice at all.
+
+### Retrying is a read, and that is four mechanisms rather than one
+
+| Step | What makes a second run a no-op |
+|---|---|
+| `finalizeWeek` | `UNIQUE(season_id, week)` plus an append-only trigger |
+| `settleSeason` | `stake_resolutions.stake_id UNIQUE`, inserted **before** any token moves |
+| `authorStakesForWeek` | reads what exists for the week and writes only what is missing |
+| `generateDraft` | `UNIQUE(issue_id, content_hash)` — a retried Tuesday reads the first draft back |
+
+The job adds no fifth mechanism. It holds no state. Six tests against a real
+Postgres assert the sequence: the desk gets a draft at `needs_review` and never
+past it, a second run writes nothing, a declining step does not stop the chain, a
+throwing step does not cost the paper, and a season that does not exist is
+touched not at all.
+
+### Exact repository state
+
+| | |
+|---|---|
+| `main` | **`1575dee`** — PR #54 merged, post-merge run green |
+| Branch | `claude/text-surface-tuesday-slice-fouqq1`, restarted from `1575dee` |
+| `npm run check` | green — **1152 tests across 71 files** (was 1146 / 70) |
+| `npm run visual:qa` | green — 85 states × 3 widths, production build, fresh database |
+| Hosted | **not loaded by anybody.** The proxy denies CONNECT to `*.vercel.app` |
+
+### What is needed before the job can actually run
+
+**`CRON_SECRET` must be set in Vercel production.** It is the one thing here that
+a session cannot do, it is in `AUTONOMY.md §6`'s list of four, and without it the
+route refuses Vercel's own scheduler — by design. `docs/DEPLOYMENT.md` carries
+the generation command and where to paste it. Until it is set the job is
+scheduled and inert, which is the safe half of the two possible wrong states.
+
+### The next executable task, in order
+
+1. **Set `CRON_SECRET`** — commissioner, one paste. Then the Tuesday job is live.
+2. **Tony's clip at the glow-off transition** — visual debt 13. The timing is the
+   finding; `docs/TEXT_SURFACE_BOUNDARY.md §10` scopes it.
+3. **Visual debt 9** (the parlor ceiling) and **10** (`.affordance-on-request`).
+4. **The Sunday pre-Monday snapshot** — `16 §4.3`'s first cron, and the reason
+   `vercel.json` has one entry rather than two.
+5. **Batch B**, whenever the PNGs arrive. One command.
 
 ---
 
