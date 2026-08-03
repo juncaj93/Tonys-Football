@@ -106,11 +106,20 @@ slugs): no partial alpha, no off-palette pixel, no pure black or white, resting 
 bottom row, horizontally centred to the pixel. Composited into the real shell at
 `TRAY_BOX` it sits inside the tray recess rather than floating.
 
-**It occupies 44 × 15 of its 30-unit slot**, because a pizza box really is thin and the
-art's natural aspect is 2.88:1. That is recorded rather than corrected: the box rests on
-the bottom row so it is not floating, the glow is alpha-derived so the empty rows never
-light, and the tap target is the tray Door's own rect rather than `TRAY_BOX`. Changing
-the geometry to match would be a room change, not an art swap.
+**It fills 44 × 29 of its 30-unit slot**, and getting there took a third candidate. The
+second was drawn at a 2.88:1 aspect — a genuinely thin pizza box — which letterboxed to
+44 × 15 and sat entirely *inside* the tray recess. That was acceptable but not what the
+geometry describes: `objects.ts` says the 30-unit height *"puts its lid at y 276, above
+the tray's back edge — which is what a box on a tray looks like from this angle."* The
+squarer candidate at 1.52:1 does exactly that, and is markedly more legible at real size
+— which matters, because this is the object a manager taps at the most exciting moment
+in the product. Composited into the real shell it rises above the rim as specified and
+rests on its bottom row.
+
+The flat candidate is **kept, not deleted** (`AUTONOMY.md §5`), renamed to
+`_source_object_box_owned_flat_rejected.png` — the `_` prefix is how `process-art.ts`
+skips a file, so the surviving candidate is unambiguous rather than winning on
+alphabetical order.
 
 **The style failure is worth carrying forward.** The box's first attempt came back as
 smooth vector art because the reference attached to the prompt was an upscaled, soft
