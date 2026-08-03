@@ -64,7 +64,7 @@ rarity framing is composited separately at runtime.
 
 | Slug | Subject |
 |---|---|
-| `collectible_bapple_tree` | **Revised 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 4 — supersedes the fruit concept below.** A small potted tree bearing 4–6 Busch Light Apple-style cans hanging like fruit — red cans, a recognizable white label region, a blue mountain/crest treatment. Presented completely straight, as if it were an ordinary houseplant. Terracotta pot. ~~A small potted tree bearing fruit that is unmistakably half apple and half banana. Absurd, sincere, presented completely straight, as if it were an ordinary houseplant. Terracotta pot.~~ |
+| `collectible_bapple_tree` | **Revised 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 4 — supersedes the fruit concept below.** A small potted tree bearing **six** (the intentional target, not a ceiling — do not proactively trim toward four) Busch Light Apple-style cans hanging like fruit — red cans, a recognizable white label region, a blue mountain/crest treatment. Presented completely straight, as if it were an ordinary houseplant. Terracotta pot. ~~A small potted tree bearing fruit that is unmistakably half apple and half banana. Absurd, sincere, presented completely straight, as if it were an ordinary houseplant. Terracotta pot.~~ |
 | `collectible_signed_jersey_legend` | A football jersey in a wooden display frame behind glass, blue and silver, **no numbers, no logos, no wordmarks**. A looping silver signature scrawled across the chest that is decorative and completely illegible — not any real person's signature. |
 
 ### Epic

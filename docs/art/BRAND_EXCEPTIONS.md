@@ -53,14 +53,28 @@ be simplified or dropped for 23px readability, but the can should not be redesig
 into a generic plain metal can. Still enforced: transparent background, square source
 framing, bottom anchor, tall/slim silhouette, no cast shadow, clean quantization.
 
-### 4. `collectible_bapple_tree` — Busch Light Apple-style cans approved
+### 4. `collectible_bapple_tree` — Busch Light Apple-style cans approved, six is the target
 
 Superseded: the half-apple/half-banana fruit concept. Now: **a potted tree bearing
 Busch Light Apple-style cans** hanging like fruit — red cans, recognizable white label
-region, blue mountain/crest treatment, several cans (4–6 preferred over a crowded
-canopy) hanging naturally, terracotta pot, leafy tree. Labels may be simplified and
-can count reduced for legibility. The joke must still read immediately at 46×46 and
-survive at 23px without the cans merging into noise.
+region, blue mountain/crest treatment, terracotta pot, leafy tree.
+
+**Clarified 2026-08-03 — six cans is the preferred, intentional target, not a ceiling
+to trim from.** The abundance of cans is part of the joke; do not proactively reduce
+the count as a general simplification step. If a candidate needs work to read cleanly
+at small size, work through this order first, and reduce the can count only as a last
+resort proven necessary by an actual processed 23px test — never pre-emptively:
+
+1. preserve all six cans;
+2. simplify the individual can labels;
+3. strengthen separation between adjacent cans;
+4. reduce fine leaf and bark detail;
+5. adjust can spacing or scale;
+6. reduce the can count only if a real processed 23px test proves six cannot remain readable.
+
+The bar is not that every tiny word on a label stays legible — it is that the hanging
+objects clearly read as **multiple red Busch Light Apple-style cans**, not generic red
+fruit or a single fused red mass.
 
 ### 5. `object_box_owned` (the pizza-box family) — Tony's branding approved; orientation is the open item
 
