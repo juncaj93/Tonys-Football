@@ -77,7 +77,8 @@ describe('the collectible art slot', () => {
 
   it('says honestly how much of the catalog is real', () => {
     /*
-     * **Nine of the twenty-four have art**, as of 2026-08-03.
+     * **Twelve of the twenty-four have art**, as of 2026-08-03 — the number
+     * `ASSET_PIPELINE.md §5` commits to at launch.
      *
      * This assertion is deliberately a hard-coded pair rather than a derived
      * count. Deriving it would make it tautological — it would pass whatever the
@@ -85,17 +86,17 @@ describe('the collectible art slot', () => {
      * it is a decision somebody makes on purpose when a batch lands, and the
      * numbers below are the record of the last time that happened.
      *
-     * Landed: the arcade token, the framed jersey, the Bapple Tree, the
-     * whipped-cream can, the arcade cabinet, the burn barrel, the barrel sauna,
-     * the diner mug and the singing fish. The remaining fifteen draw
-     * `placeholder_pizza_box` — an item still in its box, which is thematically
-     * right rather than obviously unfinished.
+     * Landed: the arcade token, framed jersey, Bapple Tree, whipped-cream can,
+     * arcade cabinet, burn barrel, barrel sauna, diner mug, singing fish, neon
+     * sign, checkered tablecloth and McDonald's cookie bag. The remaining twelve
+     * draw `placeholder_pizza_box` — an item still in its box, which is
+     * thematically right rather than obviously unfinished.
      */
     const byStatus = (status: string): number =>
       items.filter((item) => assetRegistry.get(item.slug)?.artStatus === status).length;
 
-    expect(byStatus('placeholder')).toBe(15);
-    expect(byStatus('generated')).toBe(9);
+    expect(byStatus('placeholder')).toBe(12);
+    expect(byStatus('generated')).toBe(12);
     expect(byStatus('placeholder') + byStatus('generated')).toBe(CATALOG_SIZE);
   });
 

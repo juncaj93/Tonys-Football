@@ -601,12 +601,13 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "epic",
         "priority": true,
         "alt": "Neon Tony's Pizza sign",
         "anchor": "bottom-center",
-        "$comment": "Tony's wordmark and lettering approved 2026-08-03, no ® symbol. docs/art/BRAND_EXCEPTIONS.md item 2."
+        "$comment": "Tony's wordmark and lettering approved 2026-08-03, no ® symbol. docs/art/BRAND_EXCEPTIONS.md item 2.",
+        "path": "/assets/collectible/collectible_neon_tony_sign.png"
       },
       "collectible_arcade_cabinet": {
         "family": "collectible",
@@ -623,12 +624,13 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "priority": true,
         "alt": "McDonald’s cookie bag",
         "anchor": "bottom-center",
-        "$comment": "Concept revised 2026-08-03: a McDonald’s paper cookie bag, not a canvas tote. docs/art/BRAND_EXCEPTIONS.md item 7. The SLUG IS DELIBERATELY UNCHANGED — it is the identity in collectibles.slug, box_openings.collectible_slug and the seeded reward table, so renaming it would orphan recorded openings for a cosmetic gain. The display name carries the change."
+        "$comment": "Concept revised 2026-08-03: a McDonald’s paper cookie bag, not a canvas tote. docs/art/BRAND_EXCEPTIONS.md item 7. The SLUG IS DELIBERATELY UNCHANGED — it is the identity in collectibles.slug, box_openings.collectible_slug and the seeded reward table, so renaming it would orphan recorded openings for a cosmetic gain. The display name carries the change.",
+        "path": "/assets/collectible/collectible_cookie_tote.png"
       },
       "collectible_reddiwip": {
         "family": "collectible",
@@ -789,11 +791,12 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Checkered tablecloth",
         "anchor": "bottom-center",
-        "$comment": "Still UNSTARTED as of 2026-08-03. The round checkered cookie container generated that day is rejected: it satisfies neither this brief nor collectible_cookie_tote. The brief is a folded, stacked tablecloth — no container, no cookies, no basket."
+        "$comment": "Still UNSTARTED as of 2026-08-03. The round checkered cookie container generated that day is rejected: it satisfies neither this brief nor collectible_cookie_tote. The brief is a folded, stacked tablecloth — no container, no cookies, no basket.",
+        "path": "/assets/collectible/collectible_checkered_cloth.png"
       }
     },
     "_surfaces_B4": {
