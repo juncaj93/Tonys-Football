@@ -92,11 +92,31 @@ from the registry) settled what the pizza-box art family actually needs:
 
 `art/prompts/zone_tile.md §6` is corrected to match all four findings.
 
-### Nine collectibles are shipped, and the framing problem is fixed at the pipeline
+### Twelve collectibles and the tray box are shipped; the framing problem is fixed at the pipeline
 
-**`9 of 24` collectibles now have real art** and pass `npm run art:validate` with zero
-findings: the arcade token, framed jersey, Bapple Tree, whipped-cream can, arcade
-cabinet, burn barrel, barrel sauna, diner mug and singing fish.
+**`12 of 24` collectibles now have real art** — the number `ASSET_PIPELINE.md §5`
+commits to at launch — and all twelve pass `npm run art:validate` with zero findings:
+the arcade token, framed jersey, Bapple Tree, whipped-cream can, arcade cabinet, burn
+barrel, barrel sauna, diner mug, singing fish, neon sign, checkered tablecloth and
+McDonald's cookie bag.
+
+**`object_box_owned` is shipped too**, at the corrected 44 × 30 canvas, verified
+directly rather than by the collectible validator (which only covers the 24 catalog
+slugs): no partial alpha, no off-palette pixel, no pure black or white, resting on its
+bottom row, horizontally centred to the pixel. Composited into the real shell at
+`TRAY_BOX` it sits inside the tray recess rather than floating.
+
+**It occupies 44 × 15 of its 30-unit slot**, because a pizza box really is thin and the
+art's natural aspect is 2.88:1. That is recorded rather than corrected: the box rests on
+the bottom row so it is not floating, the glow is alpha-derived so the empty rows never
+light, and the tap target is the tray Door's own rect rather than `TRAY_BOX`. Changing
+the geometry to match would be a room change, not an art swap.
+
+**The style failure is worth carrying forward.** The box's first attempt came back as
+smooth vector art because the reference attached to the prompt was an upscaled, soft
+crop — the word "pixel art" in the prompt did not survive it. Replacing that reference
+with *shipped* assets at 10× nearest-neighbour, plus the room's own tray with the slot
+outlined, fixed it in one pass. **Reference images beat adjectives.**
 
 **The recurring defect was framing, and it is now mechanical.** Across three rounds of
 candidates, **not one** arrived usable: every one was either non-square against a

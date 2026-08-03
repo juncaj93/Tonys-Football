@@ -115,12 +115,21 @@ rarity treatment is applied at runtime (which remains 100% CSS/frame-geometry, n
 baked into the art — rarity is never coupled to box art; see `PRODUCT_DELIVERY_MANDATE`
 and `ASSET_PIPELINE.md §7`). No ® or ™ symbol.
 
-**This one still needs a revision, but not for its branding.** The concept and
-logo treatment are approved as-is from the generated candidate. What is wrong is the
-**camera angle**: the runtime needs the room's own near-flat tray perspective, and
-every candidate so far is an elevated three-quarter product shot. The canvas was also
-wrong in the registry (96×96) and is corrected to the actual `TRAY_BOX` footprint,
-**44 × 30, not square**.
+**Delivered 2026-08-03**, at the corrected `TRAY_BOX` canvas of **44 × 30** (the
+registry previously said 96×96, which was wrong). It took two attempts, and the failure
+mode is worth recording because it will recur:
+
+**The first attempt came back as smooth vector art** — anti-aliased script lettering and
+a finely drawn mascot face, with no pixel structure at 1:1. The cause was the reference
+attached to the prompt: it was an upscaled crop of an earlier candidate, soft enough
+that the generator read it as a vector brief. Asking for "pixel art" in words did not
+survive a smooth reference image. The second attempt swapped that reference for two
+better ones — three *already-shipped* assets at 10× nearest-neighbour to prove the
+required pixel density, and the room's own tray with the exact 44 × 30 slot outlined —
+and came back correct.
+
+**The rule that follows: reference images beat adjectives.** When the style matters,
+attach shipped art at native density rather than describing it.
 
 #### Two views, and only one of them has anywhere to go (clarified 2026-08-03)
 

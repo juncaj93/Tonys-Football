@@ -284,11 +284,12 @@
         "family": "zone",
         "canvas": "44x30",
         "batch": "B1",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "role": "door",
         "route": "opens in place at the tray",
         "alt": "Your unopened pizza box",
-        "$comment": "Canvas corrected 2026-08-03 from a wrong 96x96 to the actual TRAY_BOX footprint (lib/parlor/objects.ts) — non-square, 44 wide x 30 tall. Branded Tony's pizza box approved, docs/art/BRAND_EXCEPTIONS.md item 5; the perspective must match the room's own tray recess, not a product-shot angle."
+        "$comment": "Canvas corrected 2026-08-03 from a wrong 96x96 to the actual TRAY_BOX footprint (lib/parlor/objects.ts) — non-square, 44 wide x 30 tall. Branded Tony's pizza box approved, docs/art/BRAND_EXCEPTIONS.md item 5; the perspective must match the room's own tray recess, not a product-shot angle.",
+        "path": "/assets/zone/object_box_owned.png"
       },
       "object_champion_banner": {
         "family": "zone",
