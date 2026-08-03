@@ -31,6 +31,59 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Where the product is — 2026-08-03 (twelfth session)
+
+### The local gates were runnable all along, and `db:up` was hiding it
+
+**Every checkpoint in this repository has recorded the same limitation** — *"no
+`DATABASE_URL` in this environment"*, 412 tests skipped, `visual:qa` not run — and it
+was **not true**. `scripts/dev-db.sh` has had a native-binaries fallback since it was
+written, for exactly the machine that has PostgreSQL installed and no Docker daemon.
+
+What hid it: **`npm run db:up` called `docker compose` directly**, bypassing the script
+entirely. A session checks for a database, runs the obvious command, gets
+`failed to connect to the docker API`, and reasonably concludes there is no database —
+while `npm run db:fresh` two lines below would have worked. `db:up` now routes through
+`scripts/dev-db.sh up` like `reset`, `fresh` and `status` already did.
+
+`db:down` is deliberately left on `docker compose down -v`: `dev-db.sh` has no `down`
+command, and inventing one means deciding whether the binaries path should delete the
+data directory to match `-v`. That is a separate decision, and mis-wiring it to the
+script's help text would be worse than leaving it honest.
+
+**What the working database then proved, in one session:**
+
+| | |
+|---|---|
+| `npm run test` | **1153 passed, 0 skipped** across 71 files — the first fully green run on record, including the six `tuesday.test.ts` tests |
+| The Tuesday route's inertness | **empirically verified**, not read off the source: with `CRON_SECRET` unset it answers **404** to an unauthenticated request *and* to a guessed bearer |
+
+### Visual debt 12 did not reproduce, and the attempt narrowed it
+
+The parlor's intermittent React `#418`. A probe drove a **dev build** — where React
+prints the full hydration diff and names the element, rather than the production
+bundle's bare `#418` — through **24 passes** at all three widths, each in a fresh
+context (no cookies, no `sessionStorage`) so both the sign-in redirect and the arrival
+sequence ran as they do for a real manager, each under **8× CPU throttling** to widen
+the race, and each followed by a same-session reload to hit the branch where
+`sessionStorage` says the entrance already played. **All 24 clean.** The two CI sweeps
+on PRs #55 and #56 were also clean.
+
+Static analysis alongside it ruled out the obvious causes: **no render-time
+nondeterminism** anywhere in the parlor's client components — every `window`,
+`matchMedia`, `sessionStorage` and `performance` access is inside an effect or a
+handler, and both `useId` call sites are React's hydration-safe ID; **no invalid
+nesting**; and `SpokenLine`'s shape is invariant and pinned by `spoken-line.test.tsx`,
+so debt 6's repair holds.
+
+**No fix is shipped, deliberately.** Without a reproduction the exact structural
+mismatch is unidentified, and a speculative repair to the room's most-seen screen is
+the false confidence this repository has shipped three times. What the attempt buys is
+a **reusable probe and a much narrower search**: the next sighting should be chased on
+a dev build, because that is the only configuration that will name the element.
+
+---
+
 ## Where the product is — 2026-08-03 (eleventh session)
 
 ### Batch B launch art is closed. Nothing further is required on it.
