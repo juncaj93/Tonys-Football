@@ -64,16 +64,16 @@ rarity framing is composited separately at runtime.
 
 | Slug | Subject |
 |---|---|
-| `collectible_bapple_tree` | A small potted tree bearing fruit that is unmistakably half apple and half banana. Absurd, sincere, presented completely straight, as if it were an ordinary houseplant. Terracotta pot. |
+| `collectible_bapple_tree` | **Revised 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 4 — supersedes the fruit concept below.** A small potted tree bearing **six** (the intentional target, not a ceiling — do not proactively trim toward four) Busch Light Apple-style cans hanging like fruit — red cans, a recognizable white label region, a blue mountain/crest treatment. Presented completely straight, as if it were an ordinary houseplant. Terracotta pot. ~~A small potted tree bearing fruit that is unmistakably half apple and half banana. Absurd, sincere, presented completely straight, as if it were an ordinary houseplant. Terracotta pot.~~ |
 | `collectible_signed_jersey_legend` | A football jersey in a wooden display frame behind glass, blue and silver, **no numbers, no logos, no wordmarks**. A looping silver signature scrawled across the chest that is decorative and completely illegible — not any real person's signature. |
 
 ### Epic
 
 | Slug | Subject |
 |---|---|
-| `collectible_portable_sauna` | A one-person portable fabric sauna tent, zipped, with a head-sized opening at the top and a small control box on a cord. Slightly ridiculous. |
+| `collectible_portable_sauna` | **Revised 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 6.** A compact cylindrical wooden barrel sauna — rounded wooden facade, open door showing a dark interior, short chimney, warm cedar wood. Isolated object, no outdoor setting. ~~A one-person portable fabric sauna tent, zipped, with a head-sized opening at the top and a small control box on a cord. Slightly ridiculous.~~ |
 | `collectible_burn_barrel` | A rusted steel drum with flames rising from the open top and scorch marks up the sides. Charred paper visible at the rim. |
-| `collectible_neon_tony_sign` | A neon sign in the shape of a pizza slice with an abstract glowing outline, mounted on a small dark backing plate. No lettering. Emissive, unaffected by scene light. |
+| `collectible_neon_tony_sign` | **Revised 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 2.** A neon sign reading "Tony's" and "Pizza" in glowing tube lettering, with a pizza-slice motif and a simplified chef accent, mounted on a small dark backing plate. Red and warm-yellow neon. Emissive, unaffected by scene light. Lettering must stay simple enough to survive 23px. ~~No lettering.~~ |
 | `collectible_arcade_cabinet` | An upright arcade cabinet with a dark CRT screen showing abstract colored shapes, a joystick and two buttons, and side art of abstract geometric patterns. No text, no recognizable game. |
 
 ### Rare
@@ -81,7 +81,7 @@ rarity framing is composited separately at runtime.
 | Slug | Subject |
 |---|---|
 | `collectible_cookie_tote` | A small cardboard fast-food carry tote, unbranded, with cookies visible in the top. |
-| `collectible_reddiwip` | An aerosol whipped-cream can, unbranded, with a red cap and nozzle. |
+| `collectible_reddiwip` | **Revised 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 3.** A Reddi-wip-inspired aerosol whipped-cream can — red-and-white packaging, recognizable whipped-cream imagery, aerosol top with angled nozzle. Illegible microtext may be simplified away. ~~unbranded, with a red cap and nozzle~~ |
 | `collectible_lava_lamp` | A lava lamp with a conical brass base and cap, glowing orange blobs suspended in amber liquid. |
 | `collectible_singing_fish` | A novelty plastic fish mounted on a wooden plaque, mouth open mid-song. |
 | `collectible_crt_tv` | A small boxy CRT television with a rounded screen, chunky dials on the right, and a rabbit-ear antenna. Screen showing abstract static. |
@@ -91,7 +91,7 @@ rarity framing is composited separately at runtime.
 
 ### Common — keep these very simple
 
-`collectible_pizza_cutter` (rolling cutter, wooden handle) · `collectible_parmesan_shaker` (glass shaker, perforated metal top) · `collectible_napkin_dispenser` (chrome countertop dispenser with napkins showing) · `collectible_ketchup_bottle` (red plastic squeeze bottle, unbranded) · `collectible_paper_menu` (single folded paper menu, illegible text shapes) · `collectible_booth_cushion` (red vinyl booth cushion, buttoned, slightly split seam) · `collectible_arcade_token` (brass token with an abstract embossed design, no lettering) · `collectible_receipt_spike` (metal spike on a weighted base, blank receipts impaled) · `collectible_coffee_mug` (thick white diner mug with a colored stripe) · `collectible_checkered_cloth` (folded red-and-white checkered tablecloth)
+`collectible_pizza_cutter` (rolling cutter, wooden handle) · `collectible_parmesan_shaker` (glass shaker, perforated metal top) · `collectible_napkin_dispenser` (chrome countertop dispenser with napkins showing) · `collectible_ketchup_bottle` (red plastic squeeze bottle, unbranded) · `collectible_paper_menu` (single folded paper menu, illegible text shapes) · `collectible_booth_cushion` (red vinyl booth cushion, buttoned, slightly split seam) · `collectible_arcade_token` (**revised 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 1:** brass token with a simplified Tony's wordmark and chef-mascot accent, embossed or stamped, no ® symbol — ~~abstract embossed design, no lettering~~) · `collectible_receipt_spike` (metal spike on a weighted base, blank receipts impaled) · `collectible_coffee_mug` (thick white diner mug with a colored stripe) · `collectible_checkered_cloth` (folded red-and-white checkered tablecloth)
 
 ### System item — **not one of the 24 collectibles**
 

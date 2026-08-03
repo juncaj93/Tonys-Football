@@ -84,13 +84,15 @@ Plus, and these are the ones this batch is most likely to trip:
 | **Contact point** | The base of the tent and the front of the folding stool both rest on row 45 |
 | **One sprite?** | Yes |
 
-**Subject line**
+**Subject line — revised, commissioner ruling 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md`**
 
-> A one-person portable steam sauna: a zipped fabric tent on a low folding frame, with a head-sized opening at the top and a small towel folded over the front rail. Wider than it is tall. Nobody inside.
+> A compact cylindrical wooden barrel sauna: a rounded wooden facade, an open door showing a dark interior, a short chimney, warm cedar-toned wood. Isolated single object — no outdoor setting, no trees, lawn, gravel, or fence around it.
 
-**Why this one.** It is the **only wide object in the twelve**, and width inside a square canvas is where the centring rule bites hardest: an object 42 px across has two pixels of margin on each side, so the occupied box's centre and the object's *visual* centre have to be the same thing. A towel hanging on one rail will pull the bounding box off-centre while the sauna itself still looks centred — **centre the tent, not the box**, exactly as the coffee mug's handle required in Batch B.
+> ~~a zipped fabric tent on a low folding frame... Nobody inside.~~ **Superseded, not supplemented.** The barrel-sauna structure replaces the fabric-tent concept entirely — see `docs/art/BRAND_EXCEPTIONS.md` item 6. Do not draw a tent.
 
-**Trap.** Do not draw steam. Steam is partial alpha by nature and `art:validate` refuses partial alpha outright; a two-value hard-edged wisp is the only acceptable form, and the safer answer is none at all. The object reads as a sauna from the shape.
+**Why this one.** It is still the **widest silhouette in the twelve**, though the specific shape is now a rounded wooden barrel rather than a tented frame — width inside a square canvas is where the centring rule bites hardest: a wide occupied box leaves narrow margins on each side, so the box's centre and the object's *visual* centre have to be the same thing. Centre the barrel body, not an asymmetric detail like the door or chimney.
+
+**Traps, revised.** Do not draw steam or smoke — still partial alpha by nature, still refused outright by `art:validate`. New trap from the substitution: **no outdoor environment.** A barrel sauna reads as an object more easily than a fabric tent does, which tempts a generator toward showing it sitting on grass or gravel with a fence behind it — that is a scene, not a collectible, and violates "one object, isolated, transparent background" same as every other item in the catalog. If the interior is shown through the open door, keep it a flat dark value, not a lit scene of its own.
 
 ---
 
@@ -122,12 +124,12 @@ Plus, and these are the ones this batch is most likely to trip:
 
 ---
 
-### 3.3 Cookie tote
+### 3.3 McDonald's cookie bag
 
 | | |
 |---|---|
-| **Display name** | Cookie tote |
-| **Slug** | `collectible_cookie_tote` |
+| **Display name** | McDonald's cookie bag |
+| **Slug** | `collectible_cookie_tote` — **unchanged, deliberately** |
 | **Production filename** | `public/assets/collectible/collectible_cookie_tote.png` |
 | **Generation filename** | `art/incoming/collectible_cookie_tote_01.png` |
 | **Tier** | rare |
@@ -136,15 +138,19 @@ Plus, and these are the ones this batch is most likely to trip:
 | **Contact point** | The flat bottom of the bag sits on row 45 |
 | **One sprite?** | Yes |
 
-**Subject line**
+**Subject line — revised, commissioner ruling 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 7**
 
-> A canvas tote bag standing upright with its handles up, sagging slightly under the weight of the cookies inside, two or three of which show above the rim. Plain fabric with a single printed band.
+> An upright brown McDonald's paper takeout bag, recognizable red-and-yellow identity with simplified golden arches, top slightly open or folded, two or three cookies visible at the opening. Slightly crumpled paper-bag character.
 
-**Why this one.** The **handle loop is a hole in the alpha with no rigid edge to hang it from.** The coffee mug proved the pipeline can carry a hole; a mug handle is a rigid ceramic ring and it is easy to keep clean. A fabric handle wants to be drawn with a soft taper, and a soft taper becomes either partial alpha — refused — or a one-pixel thread that vanishes at 23 px.
+> ~~A canvas tote bag standing upright with its handles up...~~ **Superseded in full.** The canvas tote is replaced, not supplemented. Do not draw a tote, a generic bakery bag, a reusable bag, a round cookie tin, or a checkered basket.
 
-**Draw the handle loop at a minimum of two pixels thick throughout, and keep the enclosed gap at least three pixels across.** Under that, the Showcase draw closes the hole and the bag reads as a solid block with a lump on top.
+**The slug stays `collectible_cookie_tote` and that is a decision, not an oversight.** The slug is this collectible's identity in `collectibles.slug`, `box_openings.collectible_slug`, the seeded reward table and every manager's ownership history. Renaming it to match the new picture would orphan recorded openings and force a migration that buys nothing but a tidier string. The **display name is the registry's `alt` text** — `lib/counter/catalog.ts` derives the catalog from the registry and surfaces `alt` as the item's `name`, so there is no second list to keep in step. `alt` now reads *"McDonald's cookie bag"*; the slug beneath it never moves.
 
-**Second trap.** The sag is the only thing that says *soft*, and it is easy to overdo: a bag that slumps loses its vertical silhouette and reads as a cushion. One value step of shading down each side and a slightly bowed base line is enough.
+**The handle-loop trap is retired with the tote.** A paper takeout bag has a folded or slightly open top rather than a fabric handle loop, so the alpha-hole problem this item was chosen to prove no longer applies to it. That coverage now rests on the coffee mug alone, which has shipped and passed.
+
+**The new trap is the arches.** They are the one mark that says *McDonald's* rather than *a brown bag*, and they sit on a bag that is 30 units wide. Draw them **bold and simplified** — two thick strokes, not a faithful logotype — and check them at 23 px before anything else. Tiny package text is unnecessary and should be omitted rather than suggested.
+
+**Prohibited in the frame:** fries, a drink, a tray, a burger, any surrounding meal, hands, or a restaurant scene. One isolated bag.
 
 ---
 

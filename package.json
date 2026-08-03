@@ -30,6 +30,7 @@
     "sleeper:import": "tsx scripts/import-league.ts",
     "art:process": "tsx scripts/process-art.ts",
     "art:prepare": "tsx scripts/prepare-b0.ts",
+    "art:prepare-incoming": "tsx scripts/prepare-incoming.ts",
     "art:validate": "tsx scripts/validate-collectible.ts",
     "visual:qa": "tsx scripts/visual-qa.mts",
     "art:batch": "tsx scripts/art-batch.ts"

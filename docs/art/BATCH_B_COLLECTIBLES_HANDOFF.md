@@ -197,13 +197,17 @@ Chosen to exercise every treatment rather than to fill the shelf. Two per tier, 
 | **Contact point** | The bottom of the disc rests on row 45 |
 | **One sprite?** | Yes |
 
-**Subject line**
+**Subject line — revised, commissioner ruling 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md`**
 
-> A brass arcade token with an abstract embossed design, no lettering. Standing on its edge, seen face-on, so the full circular face is visible.
+> A brass arcade token with a simplified Tony's wordmark and a small chef-mascot accent, embossed or stamped into the face. Standing on its edge, seen face-on, so the full circular face is visible. No registered-trademark symbol.
+
+> ~~A brass arcade token with an abstract embossed design, no lettering.~~ **Superseded.** This is now intentionally a **Tony's token**, not an abstract one — see `docs/art/BRAND_EXCEPTIONS.md` item 1.
 
 **Why this one.** It is the item most likely to expose a scale or anchor problem, and it will do so silently. A token drawn to fill 46 × 46 would render on the tray at the size of the pizza box that produced it, and nothing would error. **Small is correct here.** Twenty-eight rows of transparency above it is the right answer, not a mistake.
 
 Standing on edge rather than lying flat, because collectibles are drawn flat and front-facing — a token lying flat would have to be foreshortened, which §1.3 forbids.
+
+**The logo trap.** The wordmark and mascot must survive quantization and 23px legibility, which the first candidate's full-detail engraving does not — simplify the mascot to a silhouette-level accent and keep the wordmark to its boldest strokes. A strong circular silhouette still governs over logo fidelity.
 
 ---
 
@@ -268,15 +272,17 @@ The visual centre is offset by the handle. Centre the **body**, not the bounding
 | **Contact point** | The can's base sits flat on row 45 |
 | **One sprite?** | Yes |
 
-**Subject line**
+**Subject line — revised, commissioner ruling 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md`**
 
-> An unbranded aerosol whipped-cream can, cylindrical, with a red cap and an angled nozzle at the top. Plain metal body with a simple band.
+> A Reddi-wip-inspired aerosol whipped-cream can, cylindrical, predominantly red-and-white packaging, recognizable whipped-cream imagery on the label, aerosol top with an angled nozzle. Illegible or tiny microtext may be simplified away, but the can should read as an intentional homage to the classic can, not a generic unbranded one.
+
+> ~~An unbranded aerosol whipped-cream can... Plain metal body with a simple band.~~ **Superseded.** See `docs/art/BRAND_EXCEPTIONS.md` item 3.
 
 **Why this one.** The commissioner named it, and the backlog records that its perspective, crop and anchor are **the reference the other seven are measured against** — the Technical Lead owed that measurement before Batch B was generated, and §2.1 is it.
 
 Tall and slim: 40 of the 46 rows, 18 of the 46 columns. It is the item that proves vertical objects grow **upward** from the contact row rather than being centred and left hovering.
 
-**Unbranded.** The slug is a nod; the object is a generic can. No wordmark, no logo, no trade dress.
+**Reddi-wip-inspired, deliberately.** The slug names the reference and the ruling now means it literally: red-and-white trade dress and the whipped-cream illustration are wanted. What still gets simplified is anything that stops reading cleanly at 23px — fine label microtext, not the overall look.
 
 ---
 
@@ -320,15 +326,17 @@ At 23 px in the Showcase row, a cabinet reduces to a dark upright box with a lig
 | **One sprite?** | Yes — no flicker frames |
 | **Lighting** | **Emissive.** Full palette value plus a **one-pixel bloom of its own hue**. Does **not** receive the upper-left key light. |
 
-**Subject line**
+**Subject line — revised, commissioner ruling 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md`**
 
-> A neon sign in the shape of a pizza slice with an abstract glowing tube outline, mounted on a small dark backing plate. No lettering. Emissive, unaffected by scene light.
+> A neon sign reading "Tony's" and "Pizza" in glowing tube lettering, with a simplified chef accent and a pizza-slice motif, mounted on a small dark backing plate. Red and warm-yellow neon tubing. Emissive, unaffected by scene light.
 
-**Why this one, and the two traps in it.**
+> ~~No lettering.~~ **Superseded.** This is now intentionally a **Tony's Pizza neon sign** with the wordmark legible — see `docs/art/BRAND_EXCEPTIONS.md` item 2. The reasoning below about *why* lettering was excluded (readability at 46px/23px) still applies as a simplification requirement, just not as a ban.
 
-**The glow trap.** This is the only object in the batch that legitimately glows, and it is one word away from a prohibited baked rarity glow. The distinction is exact: **a one-pixel bloom of the tube's own hue is the material.** A soft halo, a radial gradient, rays, or any glow that extends past one pixel is the rarity system's job and must not be in the PNG.
+**Why this one, and the traps in it.**
 
-**The text trap.** The canonical subject line says **no lettering**, and that is deliberate. `ART_SPEC §10` does licence Tony's Pizza's own wordmark on first-party assets — but at 46 px, and at 23 px in the Showcase, a legible wordmark is not achievable, and an illegible one is just noise wearing the shape of text. **The sign's subject is a pizza slice, not a name.** Do not add letters, and do not add "abstract letter-like shapes" either.
+**The glow trap, unchanged.** This is the only object in the batch that legitimately glows, and it is one word away from a prohibited baked rarity glow. The distinction is exact: **a one-pixel bloom of the tube's own hue is the material.** A soft halo, a radial gradient, rays, or any glow that extends past one pixel is the rarity system's job and must not be in the PNG.
+
+**The legibility trap, revised.** The wordmark no longer has to be removed, but it still has to survive the same 46px/23px readability floor every asset in this batch is held to. If "Tony's Pizza" in neon tubing turns to mush at 23px, simplify the letterforms (bolder strokes, fewer flourishes) rather than shrinking the sign or adding more detail to compensate. Drop any extra unbriefed elements (a mascot silhouette, sparkle particles) before you add more lettering detail — the detail budget is still ten shapes, and lettering now competes for it.
 
 ---
 
@@ -376,13 +384,17 @@ So: the frame must read as **wood, with thickness and a warm value step**, and i
 | **Contact point** | The base of the terracotta pot rests on row 45 |
 | **One sprite?** | Yes |
 
-**Subject line**
+**Subject line — revised, commissioner ruling 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md`**
 
-> A small potted tree bearing fruit that is unmistakably half apple and half banana. Absurd, sincere, presented completely straight, as if it were an ordinary houseplant. Terracotta pot.
+> A small potted tree bearing **six** Busch Light Apple-style cans hanging like fruit — red cans, a recognizable white label region, a blue mountain/crest treatment. Presented completely straight, as if it were an ordinary houseplant. Terracotta pot.
 
-**Why this one.** It is the only **organic** silhouette among seven hard-edged manufactured objects — the test of whether the 1-pixel outline and the ten-shape budget survive a shape with no straight lines. Foliage is where a detail budget goes to die: draw the canopy as **two or three flat value masses**, not as leaves.
+> ~~A small potted tree bearing fruit that is unmistakably half apple and half banana.~~ **Superseded in full.** The half-apple/half-banana fruit concept is replaced, not supplemented — see `docs/art/BRAND_EXCEPTIONS.md` item 4. Do not draw both; the cans are the fruit now.
 
-**Canon** (`PROJECT_SPEC/14 §7`): Bapple is deliberately underexplained and slightly absurd, and Nick is obsessed with it. **Do not overexplain it visually** — no explanatory cross-section, no botanical detail, no sign, no label. It is a houseplant that happens to be impossible, presented as though nobody has remarked on it.
+**Why this one.** It is still the only **organic-adjacent** silhouette test in the batch, though the specific shapes hanging in the canopy are now cylindrical cans rather than fruit — the ten-shape budget and the 1-pixel outline still have to survive a canopy that isn't made of straight architectural lines. Draw the foliage as **two or three flat value masses**, not as individual leaves, same as before; the cans hang **within and below** that canopy, clearly separated from each other so they don't merge into noise at 23px.
+
+**Six is the target, not a ceiling — clarified 2026-08-03.** The abundance of cans is part of the joke. Do not proactively trim toward four as a general simplification move. If legibility is a problem, work the order in `docs/art/BRAND_EXCEPTIONS.md` item 4 first — simplify labels, strengthen the gaps between adjacent cans, reduce leaf/bark detail, adjust spacing or scale — and only reduce the count if an actual processed 23px test proves six genuinely cannot be told apart. The target is not that every label word stays legible; it's that the tree clearly reads as **several** cans, not a fused red mass.
+
+**Canon** (`PROJECT_SPEC/14 §7`): Bapple is deliberately underexplained and slightly absurd. **Do not overexplain it visually** — no explanatory label beyond what the can's own trade dress carries, no sign. It is a houseplant that happens to be impossible, presented as though nobody has remarked on it. At 46×46 and especially 23px, the joke has to read as "beer-can tree" at a glance — if the cans are too small or too numerous to identify as cans, the joke has failed even if the composition is otherwise clean.
 
 ---
 

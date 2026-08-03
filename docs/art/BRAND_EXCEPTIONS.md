@@ -1,0 +1,197 @@
+# Brand and logo exceptions — commissioner ruling, 2026-08-03
+
+**Status: active, standing ruling.** This document is the canonical record. Where any
+other art document — a batch handoff, `art/prompts/*.md`, `art/ART_SPEC.md §10`, or
+`art/assets.inventory.json` — still shows the superseded text for one of the six items
+below, **this document wins**, per `AUTONOMY.md §1`'s source-of-truth precedence
+(latest explicit commissioner ruling is level 1). Correct the loser rather than
+re-litigating.
+
+## What this is
+
+Tony's Pizza Fantasy is a private, non-commercial fantasy-football companion built for
+a small friend group, not a public product. The commissioner has reviewed the first
+two batches of generated collectible art and made six **narrow, itemized** exceptions
+to the standing no-third-party-brand rule (`ART_SPEC.md §10`), because for this
+specific private project the humor and nostalgia of a recognizable real-world
+reference outweighs the (very low, for a closed non-commercial friend-group app) risk
+that rule exists to manage.
+
+**This is not a general loosening.** `ART_SPEC.md §10`'s prohibition — no third-party
+trademarks, no team logos, no real player likenesses, no real signatures, no copied
+restaurant branding, no unapproved brand marks, no existing game characters — **remains
+in force for every asset not named below.** A future session finding brand-adjacent
+content on any other asset should still reject it and point here to confirm it isn't
+covered.
+
+## The six exceptions
+
+### 1. `collectible_arcade_token` — Tony's-branded token
+
+Superseded: "abstract embossed design, no lettering." Now: an intentional **Tony's
+token** — simplified Tony's wordmark, a simplified chef-mascot accent where legible at
+size, embossed/stamped into the brass. No ® or ™ symbol. Simplify logo detail
+aggressively enough to survive quantization and 23px legibility; a strong circular
+silhouette still governs.
+
+### 2. `collectible_neon_tony_sign` — Tony's wordmark and lettering approved
+
+Superseded: "No lettering... unreadable at this size." Now: an intentional **Tony's
+Pizza neon sign** — the Tony's wordmark, "PIZZA," a simplified chef accent, a
+pizza-slice motif, red and warm-yellow tubing, dark backing plate, all may be legible.
+Still enforced: readable silhouette at small size, simplified detail, no excessive
+sparkle/particle effects, controlled material bloom (this is still the one item whose
+own glow is exempt from the rarity-neutral rule — see `ART_SPEC.md §2.5`/collectible
+family notes), transparent background, bottom anchor.
+
+### 3. `collectible_reddiwip` — Reddi-wip-inspired treatment approved
+
+Superseded: "unbranded... plain metal body." Now: an intentional **Reddi-wip-inspired**
+treatment — predominantly red-and-white packaging, recognizable whipped-cream imagery,
+similar package structure, aerosol top with an angled nozzle. Illegible microtext may
+be simplified or dropped for 23px readability, but the can should not be redesigned
+into a generic plain metal can. Still enforced: transparent background, square source
+framing, bottom anchor, tall/slim silhouette, no cast shadow, clean quantization.
+
+### 4. `collectible_bapple_tree` — Busch Light Apple-style cans approved, six is the target
+
+Superseded: the half-apple/half-banana fruit concept. Now: **a potted tree bearing
+Busch Light Apple-style cans** hanging like fruit — red cans, recognizable white label
+region, blue mountain/crest treatment, terracotta pot, leafy tree.
+
+**Clarified 2026-08-03 — six cans is the preferred, intentional target, not a ceiling
+to trim from.** The abundance of cans is part of the joke; do not proactively reduce
+the count as a general simplification step. If a candidate needs work to read cleanly
+at small size, work through this order first, and reduce the can count only as a last
+resort proven necessary by an actual processed 23px test — never pre-emptively:
+
+1. preserve all six cans;
+2. simplify the individual can labels;
+3. strengthen separation between adjacent cans;
+4. reduce fine leaf and bark detail;
+5. adjust can spacing or scale;
+6. reduce the can count only if a real processed 23px test proves six cannot remain readable.
+
+The bar is not that every tiny word on a label stays legible — it is that the hanging
+objects clearly read as **multiple red Busch Light Apple-style cans**, not generic red
+fruit or a single fused red mass.
+
+### 7. `collectible_cookie_tote` — McDonald's cookie bag approved (2026-08-03)
+
+Superseded: the canvas tote bag. Now: **an upright brown McDonald's paper takeout
+bag** — recognizable red-and-yellow identity, simplified golden arches, top slightly
+open or folded, two or three cookies visible at the opening, slightly crumpled paper
+character. A deliberate private-project inside joke, in the same class as item 4.
+
+**The slug does not change.** It stays `collectible_cookie_tote`, and that is a
+deliberate data decision rather than an oversight: the slug is the collectible's
+identity in `collectibles.slug`, `box_openings.collectible_slug`, the seeded reward
+table and every manager's ownership history. Renaming it would orphan any recorded
+opening and force a migration to buy nothing but a tidier string.
+
+**The display name is the registry's `alt` text** — `lib/counter/catalog.ts` derives the
+catalog from the registry and surfaces `alt` as the item's `name`, deliberately, so
+there is no second list of twenty-four strings to drift. So changing `alt` from
+*"Cookie tote"* to *"McDonald's cookie bag"* is the whole rename, and the slug beneath
+it never moves (`AUTONOMY.md §5`: *"Never delete an approved slug, record or asset to
+satisfy an older count."*). Done, 2026-08-03.
+
+Still enforced: isolated single object, no fries, no drink, no tray, no burger, no
+surrounding meal, no hands, no restaurant scene, transparent background, bottom anchor,
+23px readability. The arches and the cookies must survive reduction; tiny package text
+need not.
+
+**The round checkered cookie container generated on 2026-08-03 is rejected** — it is
+neither the tote it replaced nor the bag that replaces it, and it also does not satisfy
+`collectible_checkered_cloth`, which remains **unstarted**: no valid checkered-tablecloth
+candidate has been generated yet.
+
+### 5. `object_box_owned` (the pizza-box family) — Tony's branding approved; orientation is the open item
+
+Superseded: "Blank — no printing, no lettering" (`art/prompts/zone_tile.md §6`). Now:
+the box the player opens is an intentional **Tony's-branded pizza box** — warm
+cardboard, red Tony's wordmark, simplified chef mascot, consistent across whatever
+rarity treatment is applied at runtime (which remains 100% CSS/frame-geometry, never
+baked into the art — rarity is never coupled to box art; see `PRODUCT_DELIVERY_MANDATE`
+and `ASSET_PIPELINE.md §7`). No ® or ™ symbol.
+
+**Delivered 2026-08-03**, at the corrected `TRAY_BOX` canvas of **44 × 30** (the
+registry previously said 96×96, which was wrong). It took two attempts, and the failure
+mode is worth recording because it will recur:
+
+**The first attempt came back as smooth vector art** — anti-aliased script lettering and
+a finely drawn mascot face, with no pixel structure at 1:1. The cause was the reference
+attached to the prompt: it was an upscaled crop of an earlier candidate, soft enough
+that the generator read it as a vector brief. Asking for "pixel art" in words did not
+survive a smooth reference image. The second attempt swapped that reference for two
+better ones — three *already-shipped* assets at 10× nearest-neighbour to prove the
+required pixel density, and the room's own tray with the exact 44 × 30 slot outlined —
+and came back correct.
+
+**The rule that follows: reference images beat adjectives.** When the style matters,
+attach shipped art at native density rather than describing it.
+
+#### Two views, and only one of them has anywhere to go (clarified 2026-08-03)
+
+The commissioner's direction preserves two box presentations:
+
+1. an **angled** branded box for a purchase/menu presentation, and
+2. a **closed, tray-oriented** box for the homepage and the reveal interaction.
+
+Only the second exists in the product. Read directly rather than inferred:
+`app/page.tsx` resolves `object_box_owned` and nothing else, and **`/counter` renders
+no box artwork at all** — it is a text panel headed *"Standard pizza box"* above a
+`BuyBox` control, with no image slot anywhere on the route.
+
+So the angled box has **no registry slug and no runtime consumer**. Giving it one is a
+new slot *plus* a code change to `app/counter/page.tsx`, which is a product slice
+rather than an art swap, and it is not started here. The angled candidate is
+**retained, not discarded** — it is the approved branding and material reference for
+the tray-view revision, and it is the source art if that slice is ever opened.
+
+### 6. `collectible_portable_sauna` — barrel sauna approved
+
+Superseded: "a zipped fabric tent on a low folding frame." Now: **a compact cylindrical
+wooden barrel sauna** — rounded wooden facade, open door, visible dark interior, short
+chimney, warm cedar appearance. Still enforced: single isolated object, transparent
+background, no outdoor environment (no trees/lawn/gravel/fence), no smoke or steam,
+strong silhouette, bottom anchor, 23px readability, simplified wood detail.
+
+## Why these six and not a general rule
+
+Each is a deliberate, itemized call, not a category. Tony's own branding (items 1, 2,
+5) was already partially cleared by `ART_SPEC.md §10`'s 2026-07-29 ruling for
+first-party marks — this ruling extends that same already-approved house branding to
+three more assets it hadn't yet reached. Items 3, 4, and 6 are the genuinely new kind
+of exception: real third-party consumer-product resemblance (Reddi-wip, Busch Light
+Apple) and a content substitution unrelated to branding (the sauna). All three are
+scoped to this private, non-commercial, closed-friend-group context specifically —
+this ruling does not extend to a hypothetical future public or commercial version of
+the product, and should be re-reviewed if the product's audience or distribution model
+ever changes.
+
+## What does not change
+
+- Every other collectible, wearable, character, and environment asset remains subject
+  to the full `ART_SPEC.md §10` rights rule, unchanged.
+- Rarity, ownership, box probability, settlement, rewards, navigation, and collectible
+  identity remain entirely decoupled from art composition (`lib/counter/`,
+  `lib/parlor/objects.ts` — none of this changed). A future redesign of any of these
+  six assets is a registry-row swap, exactly like every other asset in the pipeline.
+- Where an automated validator cannot distinguish "approved branding" from
+  "accidental/unapproved branding" (e.g., a stray numeral, an unrelated logo bleeding
+  in from a generation), human visual review is still required — this ruling narrows
+  what gets rejected on sight, it does not remove the review step.
+
+## Where this is also recorded
+
+- `art/ART_SPEC.md §10` — points here.
+- `art/assets.inventory.json` — narrow per-item notes on the six affected registry
+  groups.
+- `docs/art/BATCH_B_COLLECTIBLES_HANDOFF.md` — updated subject briefs for
+  `collectible_arcade_token`, `collectible_neon_tony_sign`, `collectible_reddiwip`,
+  `collectible_bapple_tree`.
+- `docs/art/BATCH_B2_COLLECTIBLES_HANDOFF.md` — updated subject brief for
+  `collectible_portable_sauna`.
+- `art/prompts/collectible.md` and `art/prompts/zone_tile.md` — updated SUBJECT lines.
+- `docs/CHECKPOINT.md` — dated entry pointing here.

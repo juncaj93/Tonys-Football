@@ -124,10 +124,12 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B0",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "legendary",
         "alt": "The Bapple Tree",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Concept revised 2026-08-03: Busch Light Apple-style cans hanging as fruit, not the half-apple/half-banana concept. docs/art/BRAND_EXCEPTIONS.md item 4.",
+        "path": "/assets/collectible/collectible_bapple_tree.png"
       },
       "surface_poster_blank": {
         "family": "surface",
@@ -237,7 +239,7 @@
       }
     },
     "_parlorObjects_B1": {
-      "$comment": "Transparent overlays dropped into the shell's prepared places. Glow is filter: drop-shadow() on each overlay's own alpha — no authored masks. The four box variants are mutually exclusive states of the one countertop tray; tapping an owned box opens it AT THE TRAY, in place, never after a navigation.",
+      "$comment": "Transparent overlays dropped into the shell's prepared places. Glow is filter: drop-shadow() on each overlay's own alpha — no authored masks. Tapping an owned box opens it AT THE TRAY, in place, never after a navigation. CORRECTED 2026-08-03: object_box_standard/rare/legendary are NOT wired into any component today — components/scene/counter-tray.tsx and app/page.tsx resolve only object_box_owned. Every box the product actually grants is kind:'standard' (lib/counter/boxes.ts); the box itself carries no rarity, only its revealed contents do. These three rows are placeholders for a box-rarity feature that does not exist yet — do not generate art for them until that feature is built. Tony's branding is approved on object_box_owned only, per docs/art/BRAND_EXCEPTIONS.md item 5.",
       "object_newspaper_rack": {
         "family": "zone",
         "canvas": "38x38",
@@ -280,12 +282,14 @@
       },
       "object_box_owned": {
         "family": "zone",
-        "canvas": "96x96",
+        "canvas": "44x30",
         "batch": "B1",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "role": "door",
         "route": "opens in place at the tray",
-        "alt": "Your unopened pizza box"
+        "alt": "Your unopened pizza box",
+        "$comment": "Canvas corrected 2026-08-03 from a wrong 96x96 to the actual TRAY_BOX footprint (lib/parlor/objects.ts) — non-square, 44 wide x 30 tall. Branded Tony's pizza box approved, docs/art/BRAND_EXCEPTIONS.md item 5; the perspective must match the room's own tray recess, not a product-shot angle.",
+        "path": "/assets/zone/object_box_owned.png"
       },
       "object_champion_banner": {
         "family": "zone",
@@ -564,70 +568,81 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "legendary",
         "priority": true,
         "alt": "Framed signed jersey",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_signed_jersey_legend.png"
       },
       "collectible_portable_sauna": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "epic",
         "priority": true,
         "alt": "Portable sauna",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Concept revised 2026-08-03: barrel sauna, not a fabric tent. docs/art/BRAND_EXCEPTIONS.md item 6.",
+        "path": "/assets/collectible/collectible_portable_sauna.png"
       },
       "collectible_burn_barrel": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "epic",
         "priority": true,
         "alt": "Burn barrel",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_burn_barrel.png"
       },
       "collectible_neon_tony_sign": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "epic",
         "priority": true,
         "alt": "Neon Tony's Pizza sign",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Tony's wordmark and lettering approved 2026-08-03, no ® symbol. docs/art/BRAND_EXCEPTIONS.md item 2.",
+        "path": "/assets/collectible/collectible_neon_tony_sign.png"
       },
       "collectible_arcade_cabinet": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "epic",
         "priority": true,
         "alt": "Arcade cabinet",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_arcade_cabinet.png"
       },
       "collectible_cookie_tote": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "priority": true,
-        "alt": "Cookie tote",
-        "anchor": "bottom-center"
+        "alt": "McDonald’s cookie bag",
+        "anchor": "bottom-center",
+        "$comment": "Concept revised 2026-08-03: a McDonald’s paper cookie bag, not a canvas tote. docs/art/BRAND_EXCEPTIONS.md item 7. The SLUG IS DELIBERATELY UNCHANGED — it is the identity in collectibles.slug, box_openings.collectible_slug and the seeded reward table, so renaming it would orphan recorded openings for a cosmetic gain. The display name carries the change.",
+        "path": "/assets/collectible/collectible_cookie_tote.png"
       },
       "collectible_reddiwip": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "alt": "Can of whipped cream",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Reddi-wip-inspired trade dress approved 2026-08-03, no longer required to be a generic unbranded can. docs/art/BRAND_EXCEPTIONS.md item 3.",
+        "path": "/assets/collectible/collectible_reddiwip.png"
       },
       "collectible_lava_lamp": {
         "family": "collectible",
@@ -643,11 +658,12 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "interactive": true,
         "alt": "Novelty singing fish",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_singing_fish.png"
       },
       "collectible_crt_tv": {
         "family": "collectible",
@@ -746,10 +762,12 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Arcade token",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Tony's wordmark and chef-mascot accent approved 2026-08-03, no ® symbol. docs/art/BRAND_EXCEPTIONS.md item 1.",
+        "path": "/assets/collectible/collectible_arcade_token.png"
       },
       "collectible_receipt_spike": {
         "family": "collectible",
@@ -764,19 +782,22 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Diner coffee mug",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_coffee_mug.png"
       },
       "collectible_checkered_cloth": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Checkered tablecloth",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Still UNSTARTED as of 2026-08-03. The round checkered cookie container generated that day is rejected: it satisfies neither this brief nor collectible_cookie_tote. The brief is a folded, stacked tablecloth — no container, no cookies, no basket.",
+        "path": "/assets/collectible/collectible_checkered_cloth.png"
       }
     },
     "_surfaces_B4": {
