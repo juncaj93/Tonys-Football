@@ -92,11 +92,48 @@ from the registry) settled what the pizza-box art family actually needs:
 
 `art/prompts/zone_tile.md §6` is corrected to match all four findings.
 
+### Nine collectibles are shipped, and the framing problem is fixed at the pipeline
+
+**`9 of 24` collectibles now have real art** and pass `npm run art:validate` with zero
+findings: the arcade token, framed jersey, Bapple Tree, whipped-cream can, arcade
+cabinet, burn barrel, barrel sauna, diner mug and singing fish.
+
+**The recurring defect was framing, and it is now mechanical.** Across three rounds of
+candidates, **not one** arrived usable: every one was either non-square against a
+square target (which `process-art.ts`'s `fit: 'fill'` visibly squashes) or left the
+object floating 3–30% above the bottom edge, failing the anchor rule. Asking a
+generator for a pixel-exact bottom-anchored square frame is asking it for the one thing
+it is worst at, so `scripts/prepare-incoming.ts` now does it — crop, background key,
+debris removal, aspect, centring, bottom anchor — as a committed step *before*
+`art:process` rather than a hidden stage inside it. Commissioner, 2026-08-03: *"Framing
+defects should generally be handled mechanically."*
+
+Two of its steps are worth knowing about:
+
+- **`keepLargestComponent`** drops detached debris — it removed 112px of floating
+  sparks from the burn barrel, which at 46px would have dragged the alpha-derived
+  affordance glow out past the silhouette.
+- **`dropCoolBase`** removes a cool ground slab from under a warm object, and the
+  separator is **measured, not guessed**: every slab pixel sampled is cool
+  (blue − red between **+9 and +30**) while every object pixel including the pot's own
+  near-black outline is warm or neutral (**+1** or negative). The palette makes that
+  durable rather than lucky — `palette.json` has no cool ink and its shadow rule is
+  *"one step darker within the same ramp"*, so a correctly-drawn warm object cannot
+  produce a cool pixel. It cleared 5,309px from the Bapple Tree and 4,195px from the
+  sauna.
+
+`lib/assets/art-slots.test.ts` no longer asserts "all 24 are placeholder"; it asserts
+**15 placeholder / 9 generated**, hard-coded rather than derived, because a derived
+count would pass whatever the registry happened to say — which is the drift it exists
+to catch.
+
 ### Next executable task, in order
 
 1. **The revised box candidate** — same approved Tony's branding, corrected camera
    angle and 44×30 canvas. The revision package handed to the art-generation session
-   has the exact crop references.
+   has the exact crop references. **The angled box has no runtime consumer**: `/counter`
+   renders no box artwork at all (a text panel above a `BuyBox` control), so a
+   purchase/menu view is a new registry slot *plus* a code change, not an art swap.
 2. **The remaining genuine regenerations**: framed jersey (remove accidental
    numerals), arcade cabinet (remove all text, fix missing alpha channel).
 3. **Mechanical-only fixes** on the candidates that only need cropping: mug, singing

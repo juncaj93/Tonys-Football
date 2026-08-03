@@ -124,12 +124,12 @@ Plus, and these are the ones this batch is most likely to trip:
 
 ---
 
-### 3.3 Cookie tote
+### 3.3 McDonald's cookie bag
 
 | | |
 |---|---|
-| **Display name** | Cookie tote |
-| **Slug** | `collectible_cookie_tote` |
+| **Display name** | McDonald's cookie bag |
+| **Slug** | `collectible_cookie_tote` — **unchanged, deliberately** |
 | **Production filename** | `public/assets/collectible/collectible_cookie_tote.png` |
 | **Generation filename** | `art/incoming/collectible_cookie_tote_01.png` |
 | **Tier** | rare |
@@ -138,15 +138,19 @@ Plus, and these are the ones this batch is most likely to trip:
 | **Contact point** | The flat bottom of the bag sits on row 45 |
 | **One sprite?** | Yes |
 
-**Subject line**
+**Subject line — revised, commissioner ruling 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md` item 7**
 
-> A canvas tote bag standing upright with its handles up, sagging slightly under the weight of the cookies inside, two or three of which show above the rim. Plain fabric with a single printed band.
+> An upright brown McDonald's paper takeout bag, recognizable red-and-yellow identity with simplified golden arches, top slightly open or folded, two or three cookies visible at the opening. Slightly crumpled paper-bag character.
 
-**Why this one.** The **handle loop is a hole in the alpha with no rigid edge to hang it from.** The coffee mug proved the pipeline can carry a hole; a mug handle is a rigid ceramic ring and it is easy to keep clean. A fabric handle wants to be drawn with a soft taper, and a soft taper becomes either partial alpha — refused — or a one-pixel thread that vanishes at 23 px.
+> ~~A canvas tote bag standing upright with its handles up...~~ **Superseded in full.** The canvas tote is replaced, not supplemented. Do not draw a tote, a generic bakery bag, a reusable bag, a round cookie tin, or a checkered basket.
 
-**Draw the handle loop at a minimum of two pixels thick throughout, and keep the enclosed gap at least three pixels across.** Under that, the Showcase draw closes the hole and the bag reads as a solid block with a lump on top.
+**The slug stays `collectible_cookie_tote` and that is a decision, not an oversight.** The slug is this collectible's identity in `collectibles.slug`, `box_openings.collectible_slug`, the seeded reward table and every manager's ownership history. Renaming it to match the new picture would orphan recorded openings and force a migration that buys nothing but a tidier string. The **display name is the registry's `alt` text** — `lib/counter/catalog.ts` derives the catalog from the registry and surfaces `alt` as the item's `name`, so there is no second list to keep in step. `alt` now reads *"McDonald's cookie bag"*; the slug beneath it never moves.
 
-**Second trap.** The sag is the only thing that says *soft*, and it is easy to overdo: a bag that slumps loses its vertical silhouette and reads as a cushion. One value step of shading down each side and a slightly bowed base line is enough.
+**The handle-loop trap is retired with the tote.** A paper takeout bag has a folded or slightly open top rather than a fabric handle loop, so the alpha-hole problem this item was chosen to prove no longer applies to it. That coverage now rests on the coffee mug alone, which has shipped and passed.
+
+**The new trap is the arches.** They are the one mark that says *McDonald's* rather than *a brown bag*, and they sit on a bag that is 30 units wide. Draw them **bold and simplified** — two thick strokes, not a faithful logotype — and check them at 23 px before anything else. Tiny package text is unnecessary and should be omitted rather than suggested.
+
+**Prohibited in the frame:** fries, a drink, a tray, a burger, any surrounding meal, hands, or a restaurant scene. One isolated bag.
 
 ---
 

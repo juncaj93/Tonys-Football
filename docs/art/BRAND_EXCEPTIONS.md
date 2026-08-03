@@ -76,6 +76,36 @@ The bar is not that every tiny word on a label stays legible — it is that the 
 objects clearly read as **multiple red Busch Light Apple-style cans**, not generic red
 fruit or a single fused red mass.
 
+### 7. `collectible_cookie_tote` — McDonald's cookie bag approved (2026-08-03)
+
+Superseded: the canvas tote bag. Now: **an upright brown McDonald's paper takeout
+bag** — recognizable red-and-yellow identity, simplified golden arches, top slightly
+open or folded, two or three cookies visible at the opening, slightly crumpled paper
+character. A deliberate private-project inside joke, in the same class as item 4.
+
+**The slug does not change.** It stays `collectible_cookie_tote`, and that is a
+deliberate data decision rather than an oversight: the slug is the collectible's
+identity in `collectibles.slug`, `box_openings.collectible_slug`, the seeded reward
+table and every manager's ownership history. Renaming it would orphan any recorded
+opening and force a migration to buy nothing but a tidier string.
+
+**The display name is the registry's `alt` text** — `lib/counter/catalog.ts` derives the
+catalog from the registry and surfaces `alt` as the item's `name`, deliberately, so
+there is no second list of twenty-four strings to drift. So changing `alt` from
+*"Cookie tote"* to *"McDonald's cookie bag"* is the whole rename, and the slug beneath
+it never moves (`AUTONOMY.md §5`: *"Never delete an approved slug, record or asset to
+satisfy an older count."*). Done, 2026-08-03.
+
+Still enforced: isolated single object, no fries, no drink, no tray, no burger, no
+surrounding meal, no hands, no restaurant scene, transparent background, bottom anchor,
+23px readability. The arches and the cookies must survive reduction; tiny package text
+need not.
+
+**The round checkered cookie container generated on 2026-08-03 is rejected** — it is
+neither the tote it replaced nor the bag that replaces it, and it also does not satisfy
+`collectible_checkered_cloth`, which remains **unstarted**: no valid checkered-tablecloth
+candidate has been generated yet.
+
 ### 5. `object_box_owned` (the pizza-box family) — Tony's branding approved; orientation is the open item
 
 Superseded: "Blank — no printing, no lettering" (`art/prompts/zone_tile.md §6`). Now:
@@ -86,11 +116,29 @@ baked into the art — rarity is never coupled to box art; see `PRODUCT_DELIVERY
 and `ASSET_PIPELINE.md §7`). No ® or ™ symbol.
 
 **This one still needs a revision, but not for its branding.** The concept and
-logo treatment are approved as-is from the first candidate. What's wrong is the
-**camera angle** — see the box-family investigation in the accompanying revision
-package (`docs/art/BOX_REVISION_PACKAGE.md`) for the exact corrected canvas (44×30,
-not 96×96 as the registry currently and wrongly states) and the exact perspective the
-runtime actually needs.
+logo treatment are approved as-is from the generated candidate. What is wrong is the
+**camera angle**: the runtime needs the room's own near-flat tray perspective, and
+every candidate so far is an elevated three-quarter product shot. The canvas was also
+wrong in the registry (96×96) and is corrected to the actual `TRAY_BOX` footprint,
+**44 × 30, not square**.
+
+#### Two views, and only one of them has anywhere to go (clarified 2026-08-03)
+
+The commissioner's direction preserves two box presentations:
+
+1. an **angled** branded box for a purchase/menu presentation, and
+2. a **closed, tray-oriented** box for the homepage and the reveal interaction.
+
+Only the second exists in the product. Read directly rather than inferred:
+`app/page.tsx` resolves `object_box_owned` and nothing else, and **`/counter` renders
+no box artwork at all** — it is a text panel headed *"Standard pizza box"* above a
+`BuyBox` control, with no image slot anywhere on the route.
+
+So the angled box has **no registry slug and no runtime consumer**. Giving it one is a
+new slot *plus* a code change to `app/counter/page.tsx`, which is a product slice
+rather than an art swap, and it is not started here. The angled candidate is
+**retained, not discarded** — it is the approved branding and material reference for
+the tray-view revision, and it is the source art if that slice is ever opened.
 
 ### 6. `collectible_portable_sauna` — barrel sauna approved
 

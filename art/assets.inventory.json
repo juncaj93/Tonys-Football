@@ -124,11 +124,12 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B0",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "legendary",
         "alt": "The Bapple Tree",
         "anchor": "bottom-center",
-        "$comment": "Concept revised 2026-08-03: Busch Light Apple-style cans hanging as fruit, not the half-apple/half-banana concept. docs/art/BRAND_EXCEPTIONS.md item 4."
+        "$comment": "Concept revised 2026-08-03: Busch Light Apple-style cans hanging as fruit, not the half-apple/half-banana concept. docs/art/BRAND_EXCEPTIONS.md item 4.",
+        "path": "/assets/collectible/collectible_bapple_tree.png"
       },
       "surface_poster_blank": {
         "family": "surface",
@@ -566,32 +567,35 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "legendary",
         "priority": true,
         "alt": "Framed signed jersey",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_signed_jersey_legend.png"
       },
       "collectible_portable_sauna": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "epic",
         "priority": true,
         "alt": "Portable sauna",
         "anchor": "bottom-center",
-        "$comment": "Concept revised 2026-08-03: barrel sauna, not a fabric tent. docs/art/BRAND_EXCEPTIONS.md item 6."
+        "$comment": "Concept revised 2026-08-03: barrel sauna, not a fabric tent. docs/art/BRAND_EXCEPTIONS.md item 6.",
+        "path": "/assets/collectible/collectible_portable_sauna.png"
       },
       "collectible_burn_barrel": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "epic",
         "priority": true,
         "alt": "Burn barrel",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_burn_barrel.png"
       },
       "collectible_neon_tony_sign": {
         "family": "collectible",
@@ -608,11 +612,12 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "epic",
         "priority": true,
         "alt": "Arcade cabinet",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_arcade_cabinet.png"
       },
       "collectible_cookie_tote": {
         "family": "collectible",
@@ -621,18 +626,20 @@
         "art_status": "placeholder",
         "rarity": "rare",
         "priority": true,
-        "alt": "Cookie tote",
-        "anchor": "bottom-center"
+        "alt": "McDonald’s cookie bag",
+        "anchor": "bottom-center",
+        "$comment": "Concept revised 2026-08-03: a McDonald’s paper cookie bag, not a canvas tote. docs/art/BRAND_EXCEPTIONS.md item 7. The SLUG IS DELIBERATELY UNCHANGED — it is the identity in collectibles.slug, box_openings.collectible_slug and the seeded reward table, so renaming it would orphan recorded openings for a cosmetic gain. The display name carries the change."
       },
       "collectible_reddiwip": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "alt": "Can of whipped cream",
         "anchor": "bottom-center",
-        "$comment": "Reddi-wip-inspired trade dress approved 2026-08-03, no longer required to be a generic unbranded can. docs/art/BRAND_EXCEPTIONS.md item 3."
+        "$comment": "Reddi-wip-inspired trade dress approved 2026-08-03, no longer required to be a generic unbranded can. docs/art/BRAND_EXCEPTIONS.md item 3.",
+        "path": "/assets/collectible/collectible_reddiwip.png"
       },
       "collectible_lava_lamp": {
         "family": "collectible",
@@ -648,11 +655,12 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "interactive": true,
         "alt": "Novelty singing fish",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_singing_fish.png"
       },
       "collectible_crt_tv": {
         "family": "collectible",
@@ -751,11 +759,12 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Arcade token",
         "anchor": "bottom-center",
-        "$comment": "Tony's wordmark and chef-mascot accent approved 2026-08-03, no ® symbol. docs/art/BRAND_EXCEPTIONS.md item 1."
+        "$comment": "Tony's wordmark and chef-mascot accent approved 2026-08-03, no ® symbol. docs/art/BRAND_EXCEPTIONS.md item 1.",
+        "path": "/assets/collectible/collectible_arcade_token.png"
       },
       "collectible_receipt_spike": {
         "family": "collectible",
@@ -770,10 +779,11 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Diner coffee mug",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_coffee_mug.png"
       },
       "collectible_checkered_cloth": {
         "family": "collectible",
@@ -782,7 +792,8 @@
         "art_status": "placeholder",
         "rarity": "common",
         "alt": "Checkered tablecloth",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Still UNSTARTED as of 2026-08-03. The round checkered cookie container generated that day is rejected: it satisfies neither this brief nor collectible_cookie_tote. The brief is a folded, stacked tablecloth — no container, no cookies, no basket."
       }
     },
     "_surfaces_B4": {
