@@ -16,18 +16,80 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 |---|---|---|---|---|
 | **M3 — character identity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #48 | Nothing. The vertical slice is complete: data, compositor, service, surface, previews, demo states, gates. Wearable *sources* are a later milestone and none is approved |
 | **Back Hall as a room** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. It is a room: three objects, flag-gated doors, two demo states, its own gates. Real art is a registry row |
-| **M2 — loot loop** | `QUEUED_NOT_ACTIVE` | `main` | #40 | Batch B PNGs, whenever they arrive. One command. Nothing else is open |
+| **M2 — loot loop** | `QUEUED_NOT_ACTIVE` — **shipped, art included** | `main` | #55 | Nothing. The loop and its launch art are both complete |
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Nothing. The review queue it was waiting on is built — see below |
-| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | The Tuesday job (`16 §4.3`), now unblocked. Authoring, settlement, week finalization and the Slice draft all exist and are idempotent; what is missing is the schedule that calls them |
+| **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | Nothing. The Tuesday job that calls it is built — see below |
 | **Slice review chain** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
 | **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
-| **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **commissioner reviewing generated candidates** | — | this session | Six narrow brand/logo exceptions ruled 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md`. Awaiting revised candidates for the items still needing correction — see that doc and the revision package it points to |
+| **Batch B launch art** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #55 | Nothing. 12 of 24 collectibles plus `object_box_owned` have production art, which is the launch commitment. The remaining twelve draw `placeholder_pizza_box` by design |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-03 (eleventh session)
+
+### Batch B launch art is closed. Nothing further is required on it.
+
+**PR #55 merged as `aaff231`.** The art milestone is complete and should not be
+reopened for polish:
+
+| | |
+|---|---|
+| Collectibles with production art | **12 of 24** — the number `ASSET_PIPELINE.md §5` commits to at launch |
+| `object_box_owned` | **complete**, the approved **44 × 29 occupied** variant on a 44 × 30 canvas |
+| McDonald's cookie bag | slug **`collectible_cookie_tote`** preserved — it is the identity in `box_openings.collectible_slug` and the seeded reward table; only `alt` changed |
+| Bapple Tree | **six cans**, counted on the source — four in the canopy, two flanking the trunk |
+| The remaining twelve | draw `placeholder_pizza_box` **by design**, not by omission |
+
+**The pizza box's height is settled.** Two candidates existed: a flat one occupying
+44 × 15 and a squarer one occupying 44 × 29. The commissioner approved **the 44 × 29
+variant as final**, superseding an earlier acceptance of the flat one — it reads
+clearly at actual iPhone size, sits naturally on the tray, does not float, and fills
+the interaction area better. The flat candidate is retained as
+`art/incoming/_source_object_box_owned_flat_rejected.png`; the `_` prefix is how
+`process-art.ts` skips a file, so the surviving candidate is unambiguous rather than
+winning on alphabetical order. **Do not reopen this.**
+
+**The angled Tony's pizza box is retained as a future purchase-menu reference only.**
+It has **no runtime consumer**: `/counter` renders no box artwork at all — a text panel
+headed *"Standard pizza box"* above a `BuyBox` control, with no image slot on the route.
+Giving it one is a new registry slot *plus* a code change, which is a product slice
+rather than an art swap, and it is not started.
+
+**Two non-blocking polish notes**, recorded rather than actioned: the **singing fish**
+has a weaker silhouette at 23px, and the **barrel sauna** can read slightly
+pumpkin-like at 23px (its chimney also quantised 14px cool against warm wood). Neither
+blocks launch. Both are future visual-polish items.
+
+### The Tuesday job, rebuilt on the art merge
+
+`16 §4.3`'s second cron. The work was completed in an earlier session and stranded on a
+branch under the Actions-conservation rule; it was separated out of the art PR and
+rebuilt here on `aaff231`, **byte-identical** across the move (`lib/slice/tuesday.ts`,
+its test, the route, `vercel.json`, `docs/DEPLOYMENT.md` all hash-verified). The
+original is preserved untouched at `claude/tuesday-job-fouqq1`.
+
+Everything it calls already existed, idempotent and tested. What did not exist was the
+**sequence**, which has failure modes its parts do not — so it is a module rather than
+logic inside a route handler where it could not be tested without HTTP.
+
+- **It never publishes.** The last thing it does is `submit: true`. There is no
+  parameter on the route that can change that, which is the point of there being no
+  parameter on the route at all.
+- **The door is a shared secret and unset means shut** — 404 rather than 401, like
+  `requireAdmin()`, so it does not confirm it exists.
+- **A step that throws no longer costs the paper.** Each step is attempted, a throw is
+  recorded against the step that threw, the chain finishes, and the route answers 500 so
+  the platform retries — safe because every operation underneath is idempotent.
+
+**`CRON_SECRET` must be set in Vercel production** before the job can run. It is the one
+thing here a session cannot do (`AUTONOMY.md §6`), and until it is set the job is
+scheduled and inert — the safe half of the two possible wrong states.
 
 ---
 
