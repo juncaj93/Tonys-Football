@@ -23,11 +23,87 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Slice review chain** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
 | **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
-| **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **deferred commissioner content** | — | — | Not to be requested again. The slot is enforced and the repository does not idle on it |
+| **Art batches A–C** | `QUEUED_NOT_ACTIVE` — **commissioner reviewing generated candidates** | — | this session | Six narrow brand/logo exceptions ruled 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md`. Awaiting revised candidates for the items still needing correction — see that doc and the revision package it points to |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-03 (tenth session)
+
+### Commissioner art review — six narrow brand/logo exceptions ruled
+
+Two batches of generated collectible art were reviewed against `art/ART_SPEC.md` and
+the batch handoff briefs. The mechanical findings held up across both batches and are
+recorded for future generation rounds rather than re-discovered each time:
+
+- **No generation arrived pre-cropped.** `scripts/process-art.ts` does not auto-trim
+  or auto-anchor — it resizes the whole source frame directly onto the declared
+  canvas (`fit: 'fill'`). Every candidate in both batches had the object floating
+  clear of the bottom row (3–30% gap) and several were non-square canvases forced
+  into a square target, which `fit: 'fill'` would visibly distort. This is a
+  generation-prompt problem, not a pipeline defect — corrected mechanically per
+  candidate, not by changing `process-art.ts`.
+- Content defects held up too: accidental jersey-sleeve numerals, an arcade cabinet
+  with six separate baked-in text instances and no alpha channel at all, disconnected
+  spark pixels and a faint cast shadow on the burn barrel.
+
+**The commissioner then reviewed the rejections and overruled six of them**, narrowly
+and explicitly — this is a private, non-commercial, small-friend-group project, and
+real-brand resemblance on six specific assets is a deliberate creative choice, not an
+oversight. `docs/art/BRAND_EXCEPTIONS.md` is the canonical record:
+
+1. `collectible_arcade_token` — Tony's wordmark + chef-mascot accent approved
+2. `collectible_neon_tony_sign` — Tony's wordmark and lettering approved
+3. `collectible_reddiwip` — Reddi-wip-inspired trade dress approved
+4. `collectible_bapple_tree` — the fruit concept is replaced by Busch Light Apple-style
+   cans hanging as fruit
+5. `object_box_owned` — Tony's branding on the pizza box approved; the open item is
+   the camera angle, not the branding (below)
+6. `collectible_portable_sauna` — a barrel sauna replaces the fabric-tent concept
+
+**Every other asset stays under the unmodified rule.** `ART_SPEC.md §10` points to the
+new doc; nothing else about the rights section changed.
+
+### The box-family investigation — one asset, not four, and the canvas was wrong
+
+Reading `components/scene/counter-tray.tsx` and `app/page.tsx` directly (not assuming
+from the registry) settled what the pizza-box art family actually needs:
+
+- **Only `object_box_owned` is ever resolved or rendered.** `object_box_standard`,
+  `object_box_rare`, and `object_box_legendary` are unused registry rows for a
+  box-rarity feature that was never built — every box the product grants is
+  `kind: 'standard'` (`lib/counter/boxes.ts`); rarity belongs to the *contents*,
+  revealed only after opening, never to the box.
+- **"Opening" is a CSS animation on the one static sprite**, not a second art asset.
+  There is no "lid lifted" art state — the box sprite is replaced by CSS burst/rise
+  effects and the collectible's own separate 46×46 art.
+- **The registry canvas was wrong.** `object_box_owned` said 96×96; the box actually
+  renders at `TRAY_BOX` (`lib/parlor/objects.ts`) — 44×30, not square. Corrected in
+  `art/assets.inventory.json`.
+- **The camera angle is the room's own tray recess**, not a product-photography
+  three-quarter angle. A fresh crop of the approved `zone_parlor_shell.png` around
+  the tray shows it seen almost straight-on, at standing eye level — the first
+  generated candidate's steep hero-shot angle overshoots what "matching the room's
+  perspective" (`zone_tile.md §3`'s FAMILY block) actually means for an environmental
+  object.
+
+`art/prompts/zone_tile.md §6` is corrected to match all four findings.
+
+### Next executable task, in order
+
+1. **The revised box candidate** — same approved Tony's branding, corrected camera
+   angle and 44×30 canvas. The revision package handed to the art-generation session
+   has the exact crop references.
+2. **The remaining genuine regenerations**: framed jersey (remove accidental
+   numerals), arcade cabinet (remove all text, fix missing alpha channel).
+3. **Mechanical-only fixes** on the candidates that only need cropping: mug, singing
+   fish, burn barrel (plus removing its floating sparks and faint cast shadow), and
+   all six brand-approved items once their content is otherwise acceptable.
+4. Once 12 collectibles clear `npm run art:validate`, register them and update
+   `lib/assets/art-slots.test.ts`'s placeholder-count assertion deliberately.
 
 ---
 

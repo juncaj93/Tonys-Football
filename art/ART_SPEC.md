@@ -268,6 +268,12 @@ Fourteen effects require **zero generated assets**. They are CSS, SVG, or a few 
 ## 10. Rights
 
 - **No third-party trademarks, no team logos, no real player likenesses, no real signatures, no copied restaurant branding, no unapproved brand marks, no existing game characters.**
+  - **Six narrow, itemized exceptions exist.** Commissioner ruling, 2026-08-03,
+    `docs/art/BRAND_EXCEPTIONS.md` — the canonical record. Covers
+    `collectible_arcade_token`, `collectible_neon_tony_sign`, `collectible_reddiwip`,
+    `collectible_bapple_tree`, `object_box_owned`, and `collectible_portable_sauna`
+    only. This is a private, non-commercial friend-group project; the exceptions do
+    not extend to any other asset and are not a general loosening of this rule.
 - **Tony's Pizza's own marks are permitted on first-party Tony's Pizza assets.** The house wordmark and logo treatment are the project's own property, and a pizza parlor with no name on anything reads as a stock asset rather than as somewhere. Ruled 2026-07-29. Specifically approved: the simplified `Tony's` wordmark on the apron in `character_tony_neutral.png`. **No TM symbol**, and the exception covers Tony's Pizza branding only — it does not open the door to any other mark.
   - **`zone_parlor_shell.png` is excluded.** No logo is baked into the shell: the shop's signage is a separate overlay so it can change without regenerating the room. The shell keeps the absolute no-brand-marks rule.
 - Tony evokes classic platform-game energy without copying Mario's design, proportions, clothing, face, or iconography (`06 §5`).

@@ -254,25 +254,50 @@ Slots fill from the left; the current season reveals `TBD`; empty slots render n
 **A Display, not a Door, and it never glows.** The banners are their own affordance. Full
 geometry in `art/B2_CHAMPION_BANNER.md`.
 
-### `object_box_standard` · `object_box_rare` · `object_box_legendary` · `object_box_owned`
+### `object_box_owned` — the only one actually wired into the runtime
 
-Four mutually exclusive states of **the one countertop tray**.
+> **Corrected 2026-08-03**, after reading `components/scene/counter-tray.tsx` and
+> `app/page.tsx` directly rather than assuming from the registry. **Only
+> `object_box_owned` is ever resolved or rendered.** `object_box_standard`,
+> `object_box_rare`, and `object_box_legendary` are registered placeholder rows for a
+> rarity-tiered-*box* concept that was never built into the product — the box itself
+> carries no rarity today; only its *contents*, revealed after opening, do
+> (`lib/counter/boxes.ts`: every box is `kind: 'standard'`, full stop). Do not
+> generate art for the other three until a rarity-tiered box purchase feature
+> actually exists to use it. This is a **one-asset family**, not four.
+>
+> **The registry canvas is also wrong.** It currently says 96×96. The box is placed
+> at `TRAY_BOX` (`lib/parlor/objects.ts`) — `44 × 30`, **not square**. Generate and
+> register at 44×30.
+>
+> **"Opening" and "open" are not separate art either.** The anticipation shudder is a
+> CSS animation (`box-opening` class) applied to this same static sprite; there is no
+> lid-lifted art state. When the beat ends, this sprite is replaced by CSS burst/rise
+> effects and the *collectible's own* separate 46×46 art (`TRAY_REVEAL`) — never a
+> second box image.
 
 ```
-SUBJECT (standard): A closed square pizza box sitting flat, plain corrugated cardboard,
-slightly grease-marked, lid down. Blank — no printing, no label, no lettering.
-
-SUBJECT (rare): The same closed pizza box in a deeper, richer board colour with a single
-band of contrasting trim around the lid edge. Blank — no printing, no lettering.
-
-SUBJECT (legendary): The same closed pizza box, gold-foil-edged with an embossed border and
-a heavier, more formal lid. Blank — no printing, no lettering.
-
-SUBJECT (owned): The same closed pizza box with one corner of the lid lifted a fraction and
-a receipt tucked under the string, as though it has been set aside for someone.
+SUBJECT: A closed pizza box sitting on a countertop tray, with a simplified Tony's
+wordmark and chef-mascot accent printed on the lid, red-on-cream, warm believable
+cardboard. Consistent branding regardless of what will turn out to be inside it —
+rarity is never in this asset; it is applied at runtime around it.
 ```
 
-**Rarity must be distinguishable in greyscale** — the four differ in geometry as well as colour, per `ART_SPEC.md`. **No glow or rays in the art;** rarity treatment is runtime CSS.
+**Branding approved 2026-08-03**, `docs/art/BRAND_EXCEPTIONS.md` item 5 — supersedes
+the "blank, no printing, no lettering" instruction this section previously carried.
+No ® or ™ symbol. Rarity treatment (frame geometry, lighting, trim, surrounding
+effects) stays 100% runtime CSS, same as before — only the *box itself* may now carry
+its own printed identity.
+
+**The perspective is the room's, not a product shot.** This is an environmental
+object per §3's FAMILY block above — "drawn alone, at the same scale, perspective,
+and light direction as the room it will sit in" — not a collectible held to the
+flat/front-facing subject rule. But "the room's perspective" is a specific, narrow
+thing: `zone_parlor_shell`'s own tray recess (`docs/art/reference/` or a fresh crop
+of `public/assets/zone/zone_parlor_shell.png` around `TRAY_SURFACE`) is seen almost
+straight-on, at standing eye level, with only the barest suggestion of a top edge —
+not a dramatic three-quarter hero-product-shot angle. Match that crop's camera
+angle exactly, not a generic "isometric-ish" product render.
 
 Tapping an owned box **opens it at the tray, in place** — never after a navigation. The art must therefore read as openable where it sits.
 

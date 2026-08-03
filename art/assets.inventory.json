@@ -127,7 +127,8 @@
         "art_status": "placeholder",
         "rarity": "legendary",
         "alt": "The Bapple Tree",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Concept revised 2026-08-03: Busch Light Apple-style cans hanging as fruit, not the half-apple/half-banana concept. docs/art/BRAND_EXCEPTIONS.md item 4."
       },
       "surface_poster_blank": {
         "family": "surface",
@@ -237,7 +238,7 @@
       }
     },
     "_parlorObjects_B1": {
-      "$comment": "Transparent overlays dropped into the shell's prepared places. Glow is filter: drop-shadow() on each overlay's own alpha — no authored masks. The four box variants are mutually exclusive states of the one countertop tray; tapping an owned box opens it AT THE TRAY, in place, never after a navigation.",
+      "$comment": "Transparent overlays dropped into the shell's prepared places. Glow is filter: drop-shadow() on each overlay's own alpha — no authored masks. Tapping an owned box opens it AT THE TRAY, in place, never after a navigation. CORRECTED 2026-08-03: object_box_standard/rare/legendary are NOT wired into any component today — components/scene/counter-tray.tsx and app/page.tsx resolve only object_box_owned. Every box the product actually grants is kind:'standard' (lib/counter/boxes.ts); the box itself carries no rarity, only its revealed contents do. These three rows are placeholders for a box-rarity feature that does not exist yet — do not generate art for them until that feature is built. Tony's branding is approved on object_box_owned only, per docs/art/BRAND_EXCEPTIONS.md item 5.",
       "object_newspaper_rack": {
         "family": "zone",
         "canvas": "38x38",
@@ -280,12 +281,13 @@
       },
       "object_box_owned": {
         "family": "zone",
-        "canvas": "96x96",
+        "canvas": "44x30",
         "batch": "B1",
         "art_status": "placeholder",
         "role": "door",
         "route": "opens in place at the tray",
-        "alt": "Your unopened pizza box"
+        "alt": "Your unopened pizza box",
+        "$comment": "Canvas corrected 2026-08-03 from a wrong 96x96 to the actual TRAY_BOX footprint (lib/parlor/objects.ts) — non-square, 44 wide x 30 tall. Branded Tony's pizza box approved, docs/art/BRAND_EXCEPTIONS.md item 5; the perspective must match the room's own tray recess, not a product-shot angle."
       },
       "object_champion_banner": {
         "family": "zone",
@@ -578,7 +580,8 @@
         "rarity": "epic",
         "priority": true,
         "alt": "Portable sauna",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Concept revised 2026-08-03: barrel sauna, not a fabric tent. docs/art/BRAND_EXCEPTIONS.md item 6."
       },
       "collectible_burn_barrel": {
         "family": "collectible",
@@ -598,7 +601,8 @@
         "rarity": "epic",
         "priority": true,
         "alt": "Neon Tony's Pizza sign",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Tony's wordmark and lettering approved 2026-08-03, no ® symbol. docs/art/BRAND_EXCEPTIONS.md item 2."
       },
       "collectible_arcade_cabinet": {
         "family": "collectible",
@@ -627,7 +631,8 @@
         "art_status": "placeholder",
         "rarity": "rare",
         "alt": "Can of whipped cream",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Reddi-wip-inspired trade dress approved 2026-08-03, no longer required to be a generic unbranded can. docs/art/BRAND_EXCEPTIONS.md item 3."
       },
       "collectible_lava_lamp": {
         "family": "collectible",
@@ -749,7 +754,8 @@
         "art_status": "placeholder",
         "rarity": "common",
         "alt": "Arcade token",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "$comment": "Tony's wordmark and chef-mascot accent approved 2026-08-03, no ® symbol. docs/art/BRAND_EXCEPTIONS.md item 1."
       },
       "collectible_receipt_spike": {
         "family": "collectible",

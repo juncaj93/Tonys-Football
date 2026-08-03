@@ -84,13 +84,15 @@ Plus, and these are the ones this batch is most likely to trip:
 | **Contact point** | The base of the tent and the front of the folding stool both rest on row 45 |
 | **One sprite?** | Yes |
 
-**Subject line**
+**Subject line — revised, commissioner ruling 2026-08-03, `docs/art/BRAND_EXCEPTIONS.md`**
 
-> A one-person portable steam sauna: a zipped fabric tent on a low folding frame, with a head-sized opening at the top and a small towel folded over the front rail. Wider than it is tall. Nobody inside.
+> A compact cylindrical wooden barrel sauna: a rounded wooden facade, an open door showing a dark interior, a short chimney, warm cedar-toned wood. Isolated single object — no outdoor setting, no trees, lawn, gravel, or fence around it.
 
-**Why this one.** It is the **only wide object in the twelve**, and width inside a square canvas is where the centring rule bites hardest: an object 42 px across has two pixels of margin on each side, so the occupied box's centre and the object's *visual* centre have to be the same thing. A towel hanging on one rail will pull the bounding box off-centre while the sauna itself still looks centred — **centre the tent, not the box**, exactly as the coffee mug's handle required in Batch B.
+> ~~a zipped fabric tent on a low folding frame... Nobody inside.~~ **Superseded, not supplemented.** The barrel-sauna structure replaces the fabric-tent concept entirely — see `docs/art/BRAND_EXCEPTIONS.md` item 6. Do not draw a tent.
 
-**Trap.** Do not draw steam. Steam is partial alpha by nature and `art:validate` refuses partial alpha outright; a two-value hard-edged wisp is the only acceptable form, and the safer answer is none at all. The object reads as a sauna from the shape.
+**Why this one.** It is still the **widest silhouette in the twelve**, though the specific shape is now a rounded wooden barrel rather than a tented frame — width inside a square canvas is where the centring rule bites hardest: a wide occupied box leaves narrow margins on each side, so the box's centre and the object's *visual* centre have to be the same thing. Centre the barrel body, not an asymmetric detail like the door or chimney.
+
+**Traps, revised.** Do not draw steam or smoke — still partial alpha by nature, still refused outright by `art:validate`. New trap from the substitution: **no outdoor environment.** A barrel sauna reads as an object more easily than a fabric tent does, which tempts a generator toward showing it sitting on grass or gravel with a fence behind it — that is a scene, not a collectible, and violates "one object, isolated, transparent background" same as every other item in the catalog. If the interior is shown through the open door, keep it a flat dark value, not a lit scene of its own.
 
 ---
 
