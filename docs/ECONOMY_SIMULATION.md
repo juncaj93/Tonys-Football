@@ -1,10 +1,12 @@
 # The economy simulation — `16 §8`'s release gate
 
-**Status:** built. **Nothing is approved.** Every economy value stays `provisional` until a person reads these numbers and signs off the ranges — that is what the gate is.
+**Status:** built, and **the gate passes** on the commissioner's approved configuration (ruling, 2026-08-04). The values remain `provisional` in the database — that flag is about the schema's honesty, not about whether the numbers have been reviewed.
 
 ```bash
 npx tsx scripts/simulate-economy.ts
-npx tsx scripts/simulate-economy.ts --seasons=10 --seed=7 --weeks=17
+npx tsx scripts/simulate-economy.ts --seasons=50            # the gate
+npx tsx scripts/simulate-economy.ts --sweep                 # 175 / 200 / 225
+npx tsx scripts/simulate-economy.ts --price=175 --seed=7
 ```
 
 ---
@@ -31,44 +33,81 @@ The median row is not a guess: in a ten-manager league every week has five winne
 
 **The spending policy is "buy whenever the tab allows"** — the upper bound rather than a guess at restraint. A manager who saves is strictly below one who spends, so the ceiling answers *can the range be reached* without modelling behaviour nothing in the product observes.
 
-## 3. What it found — 5 seasons, 10 managers, 14 weeks, seed 20260804
+## 3. The commissioner's ruling, and what it changed
 
-| Range | Target | As-built | Specified |
-|---|---|---|---|
-| Boxes per manager per season | 6–12 | ✗ **31.5** | ✗ **34.0** |
-| Reward-bearing weeks, median | 35–55% | ✗ 57.1% | ✗ 57.1% |
-| Non-weekly reward rate | ~0% | ✓ 0 | ✓ 0 |
-| Legendary rate per opening | 2–4% | ✓ 2.43% | ✓ 2.24% |
-| Legendaries league-wide/season | 2–3 | ✗ **8.0** | ✗ 7.8 |
-| Direct grants per manager/season | 2–3 | ✗ **0.20** | ✗ 0.20 |
+The first run did not pass. Four of six ranges were missed, and they were one
+finding seen four ways: a median manager earned up to **550 tokens a week**
+against a **50-token box**, so boxes came out at **31.5 a season** against 6–12
+and dragged legendaries to **8 league-wide** against 2–3.
 
-### The headline: boxes are roughly three times the intended rate
+**The legendary rate per opening was inside its range the whole time** (~2.4%).
+The rate was right and the number of openings was wrong — so the ruling moved the
+price and left the rarity table alone.
 
-A median manager earns up to **550 tokens in a week** (150 for a win, 400 for the high score) against a box price of **50**. Buying is close to frictionless, so the collection fills in three seasons and legendaries arrive at **8 a season league-wide** against a target of 2–3.
-
-The legendary *rate per opening* is inside its range at ~2.4%. **The rate is fine; the number of openings is not.** That is worth separating, because it means the reward table is not the thing to change.
-
-Three levers exist and this document deliberately does not choose between them — that is the commissioner's call and `03 §4` names the amounts:
-
-1. raise the box price relative to weekly income;
-2. lower the weekly amounts;
-3. cap boxes per week.
-
-### Direct grants: the range describes something that does not exist
-
-`16 §8` wants 2–3 direct item grants per manager per season. The **welcome box is the only direct grant in the product**, and it is granted once ever — so five seasons produce 0.2 per manager per season. This is a finding about scope, not a tuning failure: either grants need a source (a season-opening item, a championship ring) or the range needs revising.
-
-### Duplicate protection changes completion, not scarcity
-
-Running both policies is how the open question — *salvage is unbuilt and P3-gated* — becomes answerable:
-
-| | as-built | specified |
+| Change | From | To |
 |---|---|---|
-| Managers completing 24 items in 5 seasons | 8 / 10 | **10 / 10** |
-| Earliest completion | season 3 | season 1 |
-| Duplicates | 1,411 / 1,648 openings | 1,502 (all salvaged) |
+| Standard box price | 50 | **200** |
+| Seasonal free-box grants | none | **exactly 2** (season-opening, midseason) |
+| Reward-bearing week range | 35–55% | **35–60%** |
+| Duplicate salvage | unbuilt | **approved**, per-rarity |
 
-The specified rule completes every collection and does so far sooner. **At the current box rate both policies produce enormous duplicate volume** — roughly 86% of openings — which is the same finding as the headline seen from a different angle. Fixing the box rate shrinks the duplicate problem; it does not remove the argument for salvage, because a manager who has filled a tier still needs the roll to mean something.
+### The price sweep — 175, 200, 225
+
+Bounded tuning authority was 175–225 in steps of 25, closest to 200 wins.
+
+At the default five seasons, 175 and 200 passed and 225 failed on legendary
+volume. But **225 showed *more* legendaries than 200 despite buying fewer boxes**,
+which is not a thing a price can cause — so the five-season sample was measuring
+luck, not the economy. At 50 seasons:
+
+| price | boxes / manager / season | legendary rate | legendaries league-wide |
+|---|---|---|---|
+| 175 | 11.0 | 2.10% | 2.8 |
+| **200** | **10.0** | **2.26%** | **2.8** |
+| 225 | 8.5 | 2.08% | 2.3 |
+
+All three pass the long-run gate. **200 is selected** — the commissioner's stated
+value, and the closest to 200 by definition.
+
+### The five-season sample is too small for the legendary ranges
+
+At 10 managers × 5 seasons a league opens ~580 boxes, so a 2% rate gives ~2.3
+legendaries a season with a Poisson spread **wider than the 2–3 range itself**.
+Measured across six seeds at 200, the full gate passed on three — and every
+failure was one of the two legendary metrics.
+
+This is a property of the range, not of the price. **The gate therefore runs at
+50 seasons**, which `16 §8`'s *"≥5 fictional seasons"* permits and which measures
+the economy rather than the season. A release gate that flips on a seed is not a
+gate.
+
+### Where 200 lands
+
+| Range | Target | Measured |
+|---|---|---|
+| Boxes per manager per season | 6–12 | **10.0** ✓ |
+| Reward-bearing weeks, median | 35–60% | 57.1% ✓ |
+| Non-weekly reward rate | ~0% | 0 ✓ |
+| Legendary rate per opening | 2–4% | 2.26% ✓ |
+| Legendaries league-wide/season | 2–3 | 2.8 ✓ |
+| Direct grants per manager/season | exactly 2 | 2.00 ✓ |
+
+**The price alone is safe.** With the grants not yet built, 200 still measures
+9.0 boxes and 2.1 legendaries — both in range. The grants are additive rather
+than load-bearing, which is what makes shipping the price ahead of them coherent.
+
+### Salvage
+
+`03 §12` asks for *"a configurable salvage value based on item rarity"* in tokens
+and rules out a flat half-price refund. Approved values are 10 / 20 / 35 / 60
+percent of the box price — **20 / 40 / 70 / 120**.
+
+They can climb that steeply because `16 §8` salvages only an **exhausted** tier:
+a manager sees common salvage after owning all ten commons. Salvage's share of
+openings rises with the collection — about **60% over five seasons and 96% over
+fifty**, because once a set is complete every further box is salvage by
+definition. That is the shape to keep in mind when retuning: this is not a rare
+consolation, it is what a finished collection converts boxes into.
 
 ## 4. What it deliberately does not do
 
@@ -95,4 +134,7 @@ In order of how much it moves the answer:
 - it reads the prices it is given — doubling the box price roughly halves the boxes, which is what stops the simulation drifting into hard-coded numbers;
 - the welcome box is granted once ever, not once a season;
 - under the specified policy no owned item is ever handed over twice, and salvage happens only once a tier is exhausted;
-- the gate **does not pass** on the provisional numbers, so a future green is a real change rather than a weakened check.
+- salvage is modelled as **money, not a counter** — the tokens go back on the tab and buy more boxes, and leaving that out would understate openings on exactly the managers closest to finishing a set;
+- **exactly two grants a season, every season**, for every manager;
+- it **passes on the approved configuration**, reading the canonical `PROVISIONAL_ECONOMY` rather than a copy — so a drift in the real config fails here;
+- and it **fails when a value drifts**: halving the box price back to 50 puts the gate red again, which is what stops a green from meaning nothing.

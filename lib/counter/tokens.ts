@@ -45,13 +45,33 @@ import { economyConfigs, seasonMemberships, seasons, tokenTransactions } from '@
 export const PROVISIONAL_ECONOMY = {
   /** `03 §4`: "first-season login/start balance: 250". */
   seasonStartTokens: 250,
-  /** `03 §11`: the standard box is the "lower price" tier. */
-  standardBoxPriceTokens: 50,
+  /**
+   * `03 §11`: the standard box is the "lower price" tier.
+   *
+   * **200, by commissioner ruling after the P3 simulation.** It was 50, and the
+   * gate measured what that cost: a median manager earning up to 550 tokens a
+   * week bought **31.5 boxes a season** against a 6–12 range, which dragged
+   * legendaries to 8 a season league-wide against a target of 2–3.
+   *
+   * The rarity table was *not* touched, and that is the point of the finding:
+   * the legendary rate per opening was inside its range at ~2.4% the whole time.
+   * The rate was right and the number of openings was wrong, so the price moved
+   * and the odds did not. At 200 the long-run measurement is 10.0 boxes and 2.8
+   * legendaries a season, both mid-range (`docs/ECONOMY_SIMULATION.md`).
+   */
+  standardBoxPriceTokens: 200,
   /**
    * The fixed stake on Tony's Line (`16 §9`).
    *
-   * `03` names no wager baseline, so this one is set **relative to the price it
-   * competes with** rather than invented on its own: a fifth of a box, so a full
+   * **The rationale below is stale and the value is deliberately unchanged.** It
+   * was set as a fifth of a 50-token box; the box is 200 now, so a fifth would be
+   * 40. The commissioner's ruling moved the box price and nothing else, and
+   * Tony's Line is flag-gated shut in v1 (`18 §3.4`) — so re-deriving the stake
+   * would be inventing an economy decision nobody asked for, on a market no
+   * manager can reach. It needs its own ruling before the flag opens.
+   *
+   * `03` names no wager baseline, so this one was set **relative to the price it
+   * competed with** rather than invented on its own: a fifth of a box, so a full
    * regular season of lines is roughly three boxes' worth of swing in either
    * direction. Big enough that taking a side is a decision, small enough that a
    * bad run does not empty a tab and end somebody's collecting for the year —
@@ -87,6 +107,31 @@ export const PROVISIONAL_ECONOMY = {
    * score is a thing exactly one manager does.
    */
   weeklyHighScoreTokens: 400,
+  /**
+   * What a duplicate is worth, by rarity.
+   *
+   * `03 §12` is the ruling: *"duplicate items convert to a **configurable
+   * salvage value based on item rarity**"*, tokens in MVP, and explicitly not
+   * *"automatically refund 50% of the entire box price for every duplicate;
+   * that can destabilize the economy."* These are 10 / 20 / 35 / 60 percent of
+   * the box price.
+   *
+   * They can rise that steeply because salvage is **rare by construction**:
+   * `16 §8` hands over an unowned item in the rolled tier and only salvages when
+   * that tier holds none left. A manager sees common salvage after owning all
+   * ten commons, and legendary salvage after owning both legendaries.
+   *
+   * Simulated at this price before being written down. Salvage's share of
+   * openings climbs with the collection: **about 60% over five seasons**, and
+   * 96% over fifty — because once a manager owns all twenty-four items every
+   * further box is salvage by definition. That is the shape to keep in mind when
+   * these are retuned: they are not a rare consolation late in a set, they are
+   * what a completed collection converts boxes into.
+   */
+  salvageCommonTokens: 20,
+  salvageRareTokens: 40,
+  salvageEpicTokens: 70,
+  salvageLegendaryTokens: 120,
 } as const;
 
 export type EconomyValues = typeof PROVISIONAL_ECONOMY;

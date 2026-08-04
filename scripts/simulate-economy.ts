@@ -3,24 +3,20 @@ import { standardRewardTable } from '@/lib/counter/rewards';
 import { PROVISIONAL_ECONOMY } from '@/lib/counter/tokens';
 import {
   type DuplicatePolicy,
+  type SalvageValues,
   checkRanges,
+  salvageFor,
   simulate,
 } from '@/lib/economy/simulate';
 
 /**
- * The economy simulation, as a report.
+ * The economy simulation, as a report — `16 §8`'s release gate.
  *
  *   npx tsx scripts/simulate-economy.ts
- *   npx tsx scripts/simulate-economy.ts --seasons=10 --seed=7
+ *   npx tsx scripts/simulate-economy.ts --price=175 --seasons=10 --seed=7
+ *   npx tsx scripts/simulate-economy.ts --sweep
  *
- * `16 §8` makes this a **release gate**: every economy value in the product is
- * flagged provisional until somebody reads these numbers and approves the
- * ranges. The script prints; it changes nothing and writes nothing.
- *
- * It runs **both** duplicate policies, because whether the specified one is
- * worth building is one of the questions the gate answers — salvage is recorded
- * as unbuilt and P3-gated, and the difference between the two columns is the
- * argument for or against it.
+ * The script prints. It changes nothing, writes nothing, and approves nothing.
  */
 
 const arg = (name: string, fallback: number): number => {
@@ -32,13 +28,15 @@ const arg = (name: string, fallback: number): number => {
 
 const SEASONS = arg('seasons', 5);
 const SEED = arg('seed', 20260804);
-/** Ten seats, and the scored-week count the imported seasons actually carry. */
 const MANAGERS = arg('managers', 10);
 const WEEKS = arg('weeks', 14);
+const GRANTS = arg('grants', 2);
 
-function run(policy: DuplicatePolicy): void {
+function run(price: number, policy: DuplicatePolicy, salvage: SalvageValues): boolean {
   const result = simulate({
-    economy: PROVISIONAL_ECONOMY,
+    economy: { ...PROVISIONAL_ECONOMY, standardBoxPriceTokens: price },
+    salvage,
+    grantsPerSeason: GRANTS,
     table: standardRewardTable(),
     seasons: SEASONS,
     managers: MANAGERS,
@@ -48,44 +46,60 @@ function run(policy: DuplicatePolicy): void {
     catalogSize: CATALOG_SIZE,
   });
 
-  console.log(`\n  ── duplicate policy: ${policy} ${'─'.repeat(46 - policy.length)}`);
-  for (const check of checkRanges(result)) {
+  const checks = checkRanges(result);
+  const gating = checks.filter((c) => c.range !== 'informational');
+  const passed = gating.every((c) => c.withinRange);
+
+  console.log(`\n  ── box ${String(price)} · ${policy} ${'─'.repeat(Math.max(0, 40 - policy.length))}`);
+  for (const check of checks) {
     const mark = check.range === 'informational' ? ' ' : check.withinRange ? '✓' : '✗';
-    console.log(
-      `  ${mark} ${check.name.padEnd(44)} ${check.range.padEnd(14)} ${check.measured}`,
-    );
+    console.log(`  ${mark} ${check.name.padEnd(44)} ${check.range.padEnd(14)} ${check.measured}`);
   }
 
   const owned = result.managers.map((m) => m.owned);
   const dupes = result.managers.reduce((n, m) => n + m.duplicates, 0);
-  const salvaged = result.managers.reduce((n, m) => n + m.salvaged, 0);
+  const salv = result.managers.reduce((n, m) => n + m.salvaged, 0);
   const openings = result.managers.reduce((n, m) => n + m.openings, 0);
   console.log(
-    `    collection after ${String(SEASONS)} seasons: ` +
-      `${String(Math.min(...owned))}–${String(Math.max(...owned))} of ${String(CATALOG_SIZE)} items · ` +
+    `    collection: ${String(Math.min(...owned))}–${String(Math.max(...owned))} of ${String(CATALOG_SIZE)} · ` +
       `${String(dupes)} duplicates in ${String(openings)} openings` +
-      (salvaged > 0 ? ` · ${String(salvaged)} salvaged` : ''),
+      (salv > 0 ? ` · ${String(salv)} salvaged` : ''),
   );
-
-  const earned = result.managers.map((m) => m.tokensEarned);
-  console.log(
-    `    tokens earned: ${String(Math.min(...earned))} (worst) … ${String(Math.max(...earned))} (best)`,
-  );
+  return passed;
 }
 
 console.log(
   `\n  Economy simulation — ${String(SEASONS)} seasons · ${String(MANAGERS)} managers · ` +
-    `${String(WEEKS)} weeks · seed ${String(SEED)}`,
-);
-console.log(
-  `  Prices: box ${String(PROVISIONAL_ECONOMY.standardBoxPriceTokens)} · ` +
-    `win ${String(PROVISIONAL_ECONOMY.matchupWinTokens)} · ` +
-    `high ${String(PROVISIONAL_ECONOMY.weeklyHighScoreTokens)} · ` +
-    `opening ${String(PROVISIONAL_ECONOMY.seasonStartTokens)}`,
+    `${String(WEEKS)} weeks · ${String(GRANTS)} grants/season · seed ${String(SEED)}`,
 );
 
-run('as-built');
-run('specified');
+if (process.argv.includes('--sweep')) {
+  /*
+   * The commissioner's bounded tuning authority: 175–225 in steps of 25, and
+   * the value closest to 200 that passes the whole gate wins.
+   */
+  const results: { price: number; passed: boolean }[] = [];
+  for (const price of [175, 200, 225]) {
+    const salvage = salvageFor(price);
+    console.log(
+      `\n  salvage at ${String(price)}: common ${String(salvage.common)} · rare ${String(salvage.rare)} · ` +
+        `epic ${String(salvage.epic)} · legendary ${String(salvage.legendary)}`,
+    );
+    results.push({ price, passed: run(price, 'specified', salvage) });
+  }
+  const passing = results.filter((r) => r.passed).map((r) => r.price);
+  console.log(
+    `\n  Passing prices: ${passing.length === 0 ? 'none' : passing.join(', ')}` +
+      (passing.length === 0
+        ? ' — report the table rather than widening the change.'
+        : ` → closest to 200 is ${String(passing.sort((a, b) => Math.abs(a - 200) - Math.abs(b - 200))[0])}`),
+  );
+} else {
+  const price = arg('price', PROVISIONAL_ECONOMY.standardBoxPriceTokens);
+  const salvage = salvageFor(price);
+  run(price, 'as-built', salvage);
+  run(price, 'specified', salvage);
+}
 
 console.log(
   '\n  Nothing is approved by this script. `16 §8` requires the ranges to be\n' +

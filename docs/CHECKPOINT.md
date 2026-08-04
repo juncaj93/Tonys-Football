@@ -435,42 +435,48 @@ options mutate nothing, **and** the default does — so it fails on the pre-fix
 behaviour rather than restating the code.
 
 
-### The economy simulation — `16 §8`'s release gate is built, and it does not pass
+### The economy gate passes — commissioner ruling, 2026-08-04
 
-Every economy value in this product carries `provisional: true` and a comment
-saying not to tune it, because *this* was the thing that decides. It exists now
-(`docs/ECONOMY_SIMULATION.md`), it is deterministic and seeded, and it reads the
-real prices, the real reward table and the real catalog rather than a copy.
+`16 §8`'s release gate exists (`docs/ECONOMY_SIMULATION.md`), it did not pass, and
+the commissioner's ruling closed it.
 
-**Four of six ranges are missed, and they are one finding seen four ways.** A
-median manager earns up to 550 tokens a week against a box price of 50, so:
+**The finding was one thing seen four ways.** A median manager earned up to 550
+tokens a week against a 50-token box, so boxes came out at **31.5 a season**
+against a 6–12 range and legendaries at **8 league-wide** against 2–3. The
+**legendary rate per opening was inside its range the whole time** — the rate was
+right and the number of openings was wrong, so the ruling moved the price and
+**left the rarity table alone**.
 
-| Range | Target | Measured |
+| | from | to |
 |---|---|---|
-| Boxes per manager per season | 6–12 | **31.5** |
-| Legendaries league-wide per season | 2–3 | **8.0** |
-| Reward-bearing weeks, median | 35–55% | 57.1% |
-| Direct grants per manager/season | 2–3 | **0.20** |
+| Standard box price | 50 | **200** |
+| Seasonal free-box grants | none | **exactly 2** |
+| Reward-bearing week range | 35–55% | **35–60%** |
+| Duplicate salvage | unbuilt | **approved** — 20 / 40 / 70 / 120 by rarity |
 
-The **legendary rate per opening is inside its range** at 2.4%. The rate is fine;
-the number of openings is not — which means the reward table is not the thing to
-change. Three levers exist (box price, weekly amounts, a per-week cap) and the
-simulation deliberately chooses none of them: `03 §4` names the amounts and
-`16 §8` says the values are simulation-*reviewed*, not simulation-chosen.
+**The sweep found a defect in the gate, not just a price.** At five seasons, 225
+showed *more* legendaries than 200 despite buying fewer boxes — impossible from a
+price, so the sample was measuring luck. At 10 managers × 5 seasons a league opens
+~580 boxes, and a 2% rate gives ~2.3 legendaries a season with a Poisson spread
+**wider than the 2–3 range itself**; across six seeds at 200 the gate passed on
+three, every failure a legendary metric. **The gate now runs at 50 seasons**,
+which `16 §8`'s "≥5" permits. A release gate that flips on a seed is not a gate.
 
-**Direct grants describe something that does not exist.** The welcome box is the
-only direct grant and it is granted once ever. Either grants need a source or the
-range needs revising — a scope finding rather than a tuning one.
+At 50 seasons all of 175, 200 and 225 pass. **200 selected** — the commissioner's
+value and closest to 200 by definition. Measured: 10.0 boxes, 2.26% legendary
+rate, 2.8 legendaries league-wide, 2.00 grants.
 
-**Duplicate protection is now answerable.** Both policies are simulated, which is
-how the open *"salvage is unbuilt and P3-gated"* question gets a number: the
-specified rule completes 10/10 collections against 8/10, and far sooner. At the
-current box rate both produce ~86% duplicate openings, which is the headline
-again from another angle.
+**Shipped in this slice:** the price, the salvage values, the revised ranges, and
+the gate that now passes and **fails on drift** (halving the price back to 50 puts
+it red). Three places still said "50" and all three now derive it — the demo
+tests, the preview fixtures, and `weeklyLineStakeTokens`' rationale, which was
+"a fifth of a box" and is now stale; **the value is deliberately unchanged**
+because the ruling moved one price and Tony's Line is flag-gated shut.
 
-**Nothing is approved.** The gate is built; signing off the ranges is a
-commissioner act and the values stay provisional until it happens.
-
+**Still to build:** the two seasonal grants and duplicate salvage as *runtime*
+systems — schema, service, idempotency, ledger reasons, surfaces. The price is
+safe ahead of them: at 200 with no grants the gate still measures 9.0 boxes and
+2.1 legendaries, both in range, so they are additive rather than load-bearing.
 
 ### Next executable task, in order
 

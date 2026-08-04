@@ -9,6 +9,7 @@ import {
   type SimulationInput,
   PROFILES,
   checkRanges,
+  salvageFor,
   generator,
   rarityMass,
   simulate,
@@ -35,6 +36,8 @@ function input(over: Partial<SimulationInput> = {}): SimulationInput {
     seasons: 5,
     managers: 10,
     weeks: 14,
+    salvage: salvageFor(PROVISIONAL_ECONOMY.standardBoxPriceTokens),
+    grantsPerSeason: 2,
     policy: 'as-built',
     seed: 20260804,
     catalogSize: CATALOG_SIZE,
@@ -103,11 +106,11 @@ describe('the simulation', () => {
      * simulation could drift into hard-coded numbers and still look plausible —
      * and its whole value is that it measures *these* prices.
      */
-    const cheap = simulate(input());
+    const cheap = simulate(
+      input({ economy: { ...PROVISIONAL_ECONOMY, standardBoxPriceTokens: 100 } }),
+    );
     const dear = simulate(
-      input({
-        economy: { ...PROVISIONAL_ECONOMY, standardBoxPriceTokens: 100 },
-      }),
+      input({ economy: { ...PROVISIONAL_ECONOMY, standardBoxPriceTokens: 200 } }),
     );
     const boxes = (r: ReturnType<typeof simulate>): number =>
       r.managers.reduce((n, m) => n + m.boxesPerSeason.reduce((a, b) => a + b, 0), 0);
@@ -136,12 +139,38 @@ describe('the simulation', () => {
   });
 
   it('grants the welcome box once, ever — not once a season', () => {
-    // `03 §5`: one per manager, granted once. It is the only direct grant that
-    // exists, which is why the direct-grant range cannot currently be met.
-    const one = simulate(input({ seasons: 1, weeks: 0 }));
-    const five = simulate(input({ seasons: 5, weeks: 0 }));
+    // `03 §5`: one per manager, granted once. Isolated from the seasonal grants
+    // so the two sources cannot be confused for each other.
+    const one = simulate(input({ seasons: 1, weeks: 0, grantsPerSeason: 0 }));
+    const five = simulate(input({ seasons: 5, weeks: 0, grantsPerSeason: 0 }));
     for (const manager of one.managers) expect(manager.openings).toBe(1);
     for (const manager of five.managers) expect(manager.openings).toBe(1);
+  });
+
+  it('grants exactly two free boxes a season, every season', () => {
+    /*
+     * The commissioner's ruling: two universally available milestones, season
+     * opening and midseason. Not earned, not conditional — so every manager has
+     * the same two in every season, and the count is seasons x 2.
+     */
+    const result = simulate(input({ seasons: 4, weeks: 14, grantsPerSeason: 2 }));
+    for (const manager of result.managers) expect(manager.grants).toBe(8);
+  });
+
+  it('pays salvage only into the balance it came from', () => {
+    // Salvage is a feedback loop: tokens returned buy more boxes. Modelling it
+    // as a counter rather than as money would understate openings on exactly
+    // the managers closest to finishing a set.
+    const withSalvage = simulate(input({ policy: 'specified' }));
+    const without = simulate(
+      input({
+        policy: 'specified',
+        salvage: { common: 0, rare: 0, epic: 0, legendary: 0 },
+      }),
+    );
+    const openings = (r: ReturnType<typeof simulate>): number =>
+      r.managers.reduce((n, m) => n + m.openings, 0);
+    expect(openings(withSalvage)).toBeGreaterThan(openings(without));
   });
 });
 
@@ -198,8 +227,38 @@ describe('the range checks', () => {
     expect(names).toContain('Legendary rate per opening');
     expect(names).toContain('Non-weekly reward rate');
     expect(names).toContain('Direct item grants per manager per season');
-    // The gate is not a formality: on the provisional numbers it does not pass.
-    expect(checks.some((c) => !c.withinRange)).toBe(true);
+  });
+
+  it('passes on the approved configuration', () => {
+    /*
+     * The gate's whole purpose. It did **not** pass before the commissioner's
+     * ruling — 31.5 boxes against a 6–12 range — and the price moving from 50 to
+     * 200 is what closed it. This reads the canonical config rather than a copy,
+     * so a drift in `PROVISIONAL_ECONOMY` fails here.
+     *
+     * Fifty seasons rather than five, deliberately: the legendary metrics are
+     * Poisson-thin at five (about 2.3 a season against a range of 2–3, which is
+     * narrower than the noise), so a five-season gate flips on the seed. A
+     * release gate that depends on luck is not a gate.
+     */
+    const checks = checkRanges(simulate(input({ seasons: 50, policy: 'specified' })));
+    const failures = checks.filter((c) => c.range !== 'informational' && !c.withinRange);
+    expect(failures.map((f) => `${f.name}: ${f.measured}`)).toEqual([]);
+  });
+
+  it('fails when a value drifts outside the approved range', () => {
+    // The gate has to be able to say no, or a green means nothing. Halving the
+    // box price is the exact drift the ruling corrected.
+    const drifted = checkRanges(
+      simulate(
+        input({
+          seasons: 50,
+          policy: 'specified',
+          economy: { ...PROVISIONAL_ECONOMY, standardBoxPriceTokens: 50 },
+        }),
+      ),
+    );
+    expect(drifted.some((c) => c.range !== 'informational' && !c.withinRange)).toBe(true);
   });
 
   it('holds the one range that is true by construction', () => {

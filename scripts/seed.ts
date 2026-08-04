@@ -228,7 +228,15 @@ async function main(): Promise<void> {
           `bounty ${String(economy.values.bountyRewardTokens)} · ` +
           `win ${String(economy.values.matchupWinTokens)} · ` +
           `high ${String(economy.values.weeklyHighScoreTokens)} · ` +
-          `PROVISIONAL until the P3 simulation`,
+          `salvage ${String(economy.values.salvageCommonTokens)}/` +
+          `${String(economy.values.salvageRareTokens)}/` +
+          `${String(economy.values.salvageEpicTokens)}/` +
+          `${String(economy.values.salvageLegendaryTokens)} · ` +
+          // The P3 simulation has run and the commissioner has ruled
+          // (`docs/ECONOMY_SIMULATION.md`). The row stays flagged `provisional`
+          // because that column means "these may still be re-versioned", which
+          // is true of every economy config and always will be.
+          `reviewed at P3 · provisional row`,
       );
     }
 

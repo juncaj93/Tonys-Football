@@ -99,8 +99,62 @@ export type DuplicatePolicy = 'as-built' | 'specified';
  */
 export type EconomyKnobs = { readonly [K in keyof EconomyValues]: number };
 
+/**
+ * What a duplicate is worth, by rarity, in tokens.
+ *
+ * `03 §12` is the ruling: *"duplicate items convert to a **configurable salvage
+ * value based on item rarity**"*, tokens in MVP, and explicitly **not** a flat
+ * refund of half the box price — *"that can destabilize the economy"*.
+ *
+ * It is reached rarely by construction. `16 §8` salvages only when the rolled
+ * tier holds **no unowned item left**, so a manager sees salvage on commons only
+ * after owning all ten of them. That is what makes rarity-scaled values safe:
+ * the expensive ones are the tiers you exhaust last.
+ */
+export type SalvageValues = Readonly<Record<Rarity, number>>;
+
+/**
+ * Salvage as a share of the box price, by rarity.
+ *
+ * `03 §12` asks for *"a configurable salvage value **based on item rarity**"* and
+ * rules out *"automatically refund 50% of the entire box price for every
+ * duplicate"*. These are well under that, and the reason they can rise with
+ * rarity at all is that `16 §8` only salvages a tier that is **exhausted** — you
+ * see legendary salvage only after owning both legendaries.
+ *
+ * Fractions here, integers in the config. The simulation needs to re-derive them
+ * for each candidate price; the product stores the answer for the chosen one, so
+ * no float ever reaches the ledger.
+ */
+const SALVAGE_SHARE: Readonly<Record<Rarity, number>> = {
+  common: 0.1,
+  rare: 0.2,
+  epic: 0.35,
+  legendary: 0.6,
+};
+
+/** Salvage values for a box price, rounded to whole tokens. */
+export function salvageFor(boxPrice: number): SalvageValues {
+  return {
+    common: Math.round(boxPrice * SALVAGE_SHARE.common),
+    rare: Math.round(boxPrice * SALVAGE_SHARE.rare),
+    epic: Math.round(boxPrice * SALVAGE_SHARE.epic),
+    legendary: Math.round(boxPrice * SALVAGE_SHARE.legendary),
+  };
+}
+
 export interface SimulationInput {
   readonly economy: EconomyKnobs;
+  /** Per-rarity duplicate value. Zero everywhere models "salvage not built". */
+  readonly salvage: SalvageValues;
+  /**
+   * Free standard boxes granted to every active manager each season.
+   *
+   * The commissioner's ruling: **exactly two**, on deterministic, universally
+   * available milestones — season-opening and midseason. Not earned, not
+   * conditional on winning, and explicitly not an achievement.
+   */
+  readonly grantsPerSeason: number;
   readonly table: RewardTableConfig;
   readonly seasons: number;
   /** `16 §4.3`'s league: ten seats. */
@@ -126,6 +180,10 @@ export interface ManagerResult {
   readonly duplicates: number;
   readonly salvaged: number;
   readonly owned: number;
+  /** Free boxes received across all seasons. */
+  readonly grants: number;
+  /** Tokens returned by salvaging duplicates, across all seasons. */
+  readonly salvageTokens: number;
   /** 1-based season in which the catalog completed, or null if it never did. */
   readonly completedInSeason: number | null;
 }
@@ -201,6 +259,8 @@ export function simulate(input: SimulationInput): SimulationResult {
     let legendaries = 0;
     let duplicates = 0;
     let salvaged = 0;
+    let salvageTokens = 0;
+    let grants = 0;
     let completedInSeason: number | null = null;
 
     /** Open one box under the configured policy. */
@@ -220,9 +280,20 @@ export function simulate(input: SimulationInput): SimulationResult {
         (entry) => entry.rarity === rarity && !owned.has(entry.slug),
       );
       if (unowned.length === 0) {
-        // The tier is exhausted. `16 §8`: salvage tokens, no pity timer.
+        /*
+         * The tier is exhausted. `16 §8`: salvage tokens, no pity timer.
+         *
+         * The tokens go back on the tab, which is a **feedback loop** and has to
+         * be modelled rather than counted: salvage buys boxes, boxes produce
+         * salvage. Leaving it out would understate openings on exactly the
+         * managers who are closest to completing a collection.
+         */
         salvaged += 1;
         duplicates += 1;
+        const worth = input.salvage[rarity];
+        salvageTokens += worth;
+        balance += worth;
+        tokensEarned += worth;
         return;
       }
       const pick = unowned[Math.floor(next() * unowned.length)];
@@ -240,7 +311,21 @@ export function simulate(input: SimulationInput): SimulationResult {
       let boxes = 0;
       let rewardWeeks = 0;
 
+      /*
+       * The season-opening grant. Every active manager, every season, no
+       * condition — so it lands before a ball is thrown.
+       */
+      if (input.grantsPerSeason >= 1) {
+        grants += 1;
+        open();
+      }
+
       for (let week = 0; week < input.weeks; week += 1) {
+        // The midseason grant, at the halfway point of the scored weeks.
+        if (input.grantsPerSeason >= 2 && week === Math.floor(input.weeks / 2)) {
+          grants += 1;
+          open();
+        }
         let week_tokens = 0;
         if (next() < odds.winRate) week_tokens += input.economy.matchupWinTokens;
         if (next() < odds.highScoreRate) week_tokens += input.economy.weeklyHighScoreTokens;
@@ -279,6 +364,8 @@ export function simulate(input: SimulationInput): SimulationResult {
       duplicates,
       salvaged,
       owned: owned.size,
+      grants,
+      salvageTokens,
       completedInSeason,
     });
   }
@@ -336,6 +423,10 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
   const legendaries = result.managers.reduce((n, m) => n + m.legendaries, 0);
   const legendaryRate = openings === 0 ? 0 : legendaries / openings;
 
+  const grantsPerSeason =
+    result.managers.reduce((n, m) => n + m.grants, 0) /
+    (result.managers.length * result.input.seasons);
+
   const completed = result.managers
     .map((m) => m.completedInSeason)
     .filter((s): s is number => s !== null);
@@ -349,9 +440,15 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
     },
     {
       name: 'Reward-bearing weeks, median manager',
-      range: '35–55%',
+      /*
+       * Raised from 35–55% by commissioner ruling. The measured 57.1% is what an
+       * ordinary matchup win *is* — half the league wins every week — so the old
+       * ceiling described a league where winning paid less often than winning
+       * happens. Corrected the range rather than the reward.
+       */
+      range: '35–60%',
       measured: `${(rewardShare * 100).toFixed(1)}%`,
-      withinRange: rewardShare >= 0.35 && rewardShare <= 0.55,
+      withinRange: rewardShare >= 0.35 && rewardShare <= 0.6,
     },
     {
       name: 'Non-weekly reward rate',
@@ -374,13 +471,17 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
         result.legendariesPerSeasonLeagueWide <= 3,
     },
     {
+      /*
+       * **Exactly two**, by commissioner ruling, and measured rather than
+       * assumed. The old 2–3 range described nothing that existed: the welcome
+       * box is granted once ever, so five seasons gave 0.2. Two universally
+       * available milestones — season-opening and midseason — are the source
+       * that range was missing.
+       */
       name: 'Direct item grants per manager per season',
-      range: '2–3',
-      measured: (1 / result.input.seasons).toFixed(2),
-      // The welcome box is the only direct grant that exists. It is granted
-      // once ever, so across five seasons this is 0.2 — far under the range,
-      // and that is a finding rather than a failure of the simulation.
-      withinRange: false,
+      range: 'exactly 2',
+      measured: grantsPerSeason.toFixed(2),
+      withinRange: Math.abs(grantsPerSeason - 2) < 0.001,
     },
     {
       name: 'Managers completing the catalog',

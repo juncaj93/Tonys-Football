@@ -100,14 +100,29 @@ export type PreviewStage = (typeof PREVIEW_STAGES)[number];
  * provisional price, so an edit to an approved line fails the build rather than
  * quietly leaving the preview showing an old one.
  */
+/*
+ * The price, interpolated rather than typed.
+ *
+ * `content/box-offer.md` says why, and said it before it mattered: *"`{price}`
+ * is a variable rather than a word because the price is provisional until the
+ * P3 simulation. A line that says 'fifty' would be silently wrong the day the
+ * simulation moves it, and nothing would fail."*
+ *
+ * The simulation moved it, from 50 to 200 — and something **did** fail, because
+ * `preview.test.ts` compares these against the rendered entry. These three
+ * literals were the last place in the repository still saying fifty. Building
+ * the price in means they cannot be again.
+ */
+const PRICE = String(PROVISIONAL_ECONOMY.standardBoxPriceTokens);
+
 const STAGES: Record<PreviewStage, { distinct: number; entryKey: string | null; line: string | null }> =
   {
-    first: { distinct: 1, entryKey: 'O1', line: "First one was free. Next one's 50." },
-    mid: { distinct: 7, entryKey: 'O3', line: '50 tokens gets you another.' },
+    first: { distinct: 1, entryKey: 'O1', line: `First one was free. Next one's ${PRICE}.` },
+    mid: { distinct: 7, entryKey: 'O3', line: `${PRICE} tokens gets you another.` },
     complete: {
       distinct: CATALOG_SIZE,
       entryKey: 'O7',
-      line: "Shelf's full. Another's 50, and it'd be a spare.",
+      line: `Shelf's full. Another's ${PRICE}, and it'd be a spare.`,
     },
     broke: { distinct: 7, entryKey: null, line: null },
   };
