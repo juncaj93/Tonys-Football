@@ -367,6 +367,34 @@ interior as a blotch. Nothing structural on this ceiling is a solid brown slab.
 Full-room regeneration was never attempted and would have been the riskier path —
 it discards the board-face repaint and the alcove shading the same file carries.
 
+### A dev sweep is possible, and it found a real defect
+
+`docs/VISUAL_DEBT.md` 12 has said for two milestones that the next `#418` sighting
+must be caught on a **dev** build, because that is the only configuration where
+React names the element — and that the driver *"cannot currently sweep a dev
+build at all"*, because `next dev` serves different chunk URLs.
+
+**Both halves of that were measured this session and are wrong.** `next dev`
+serves scripts under exactly `/_next/static/chunks/`, the same path
+`checkTonySteady` intercepts, and a dev sweep reaches **190 captures**. What
+stopped the earlier attempt was a **drained wallet**: `tray-reveal` buys a box,
+and this file already warned that capturing it consumes one. Reset the database
+and it runs.
+
+**No `#418` in 190 dev captures** — consistent with the ~1-per-209 rate, so that
+is a coin flip rather than evidence of absence. But the sweep found something
+else, deterministically: **"Maximum update depth exceeded" on the homepage, at
+all three widths, for the whole time a box is open.** `afterPresent` returned a
+fresh `Up` even when the surface asked for was already up, and `CounterTray`'s
+effect depends on the context value memoised from it. Fixed and tested; visual
+debt 15.
+
+**A speculative `--dev` timeout multiplier was written and reverted.** It was
+justified by a diagnosis — dev compile time — that turned out to be wrong once
+the database was reset. Shipping code whose comment tells a false story is worse
+than not shipping it.
+
+
 ### Next executable task, in order
 
 The art queue that used to sit here is closed (`#55`) and this replaces it.

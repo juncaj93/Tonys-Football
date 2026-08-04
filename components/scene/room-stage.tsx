@@ -115,6 +115,27 @@ export function afterPresent(current: Up, surface: StageSurface, blocking: boole
   // A blocking surface holds the room until it lets go. Presenting *itself*
   // again is allowed, so a component whose effect re-fires does not deadlock.
   if (current.blocking && current.surface !== surface) return current;
+  /*
+   * **Presenting what is already up returns the same object.**
+   *
+   * The line above anticipated an effect re-firing; returning a fresh object
+   * guaranteed it re-fires *forever*. `RoomStage`'s context value is memoised on
+   * `up`, so a new `Up` is a new `stage`, and `CounterTray`'s effect lists
+   * `stage` in its dependencies and calls `present` in its body. New object →
+   * new context → effect runs → new object: **"Maximum update depth exceeded"**,
+   * on the homepage, for the whole time a box is open.
+   *
+   * It was invisible for two reasons. The production build does not print that
+   * message, and `next dev` — which does, and which also double-invokes effects
+   * under Strict Mode — was believed to be un-sweepable by the visual driver.
+   * It is not; the driver reproduces this deterministically at all three widths
+   * on `tray-reveal`.
+   *
+   * Identity is the contract here, not merely an optimisation. Any state derived
+   * from `Up` and consumed through a dependency array has to be able to say
+   * "nothing changed", and the only way to say that is to return `current`.
+   */
+  if (current.surface === surface && current.blocking === blocking) return current;
   return { surface, blocking };
 }
 

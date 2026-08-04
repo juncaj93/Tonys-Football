@@ -138,3 +138,41 @@ describe('the room-wide focus attribute', () => {
     expect(writers).toEqual(['room-stage.tsx']);
   });
 });
+
+/**
+ * Identity, which is a contract here rather than an optimisation.
+ *
+ * `RoomStage` memoises its context value on `up`, so a new `Up` is a new
+ * `stage`. `CounterTray` lists `stage` in a dependency array and calls
+ * `present` in the effect's body — so a `present` that returns a fresh object
+ * for an unchanged state is an infinite render loop, and it was one:
+ * **"Maximum update depth exceeded"** on the homepage for the whole time a box
+ * is open.
+ *
+ * It survived because the production build does not print that message and the
+ * dev build was believed un-sweepable. `npm run visual:qa -- --state=tray-reveal`
+ * against `next dev` reproduces it at all three widths.
+ */
+describe('afterPresent identity', () => {
+  it('returns the same object when what is asked for is already up', () => {
+    const up = afterPresent(NOTHING, 'reveal', true);
+    expect(afterPresent(up, 'reveal', true)).toBe(up);
+  });
+
+  it('returns the same object for a non-blocking surface presented twice', () => {
+    const up = afterPresent(NOTHING, 'champion', false);
+    expect(afterPresent(up, 'champion', false)).toBe(up);
+  });
+
+  it('still returns a new object when the surface changes', () => {
+    const up = afterPresent(NOTHING, 'champion', false);
+    expect(afterPresent(up, 'reveal', false)).not.toBe(up);
+  });
+
+  it('still returns a new object when only the blocking flag changes', () => {
+    const up = afterPresent(NOTHING, 'reveal', false);
+    const blocked = afterPresent(up, 'reveal', true);
+    expect(blocked).not.toBe(up);
+    expect(blocked.blocking).toBe(true);
+  });
+});
