@@ -5,6 +5,10 @@ import { describe, expect, it } from 'vitest';
 
 import {
   BACKSPLASH,
+  CEILING,
+  CEILING_FIELD,
+  CEILING_SCORCH,
+  CEILING_TONES,
   FACE,
   FIELD,
   LIT_TILE,
@@ -13,6 +17,7 @@ import {
   SURFACES,
   cleanBoardFace,
   cleanSurfaces,
+  clearCeilingScorch,
   despeckle,
   hexAt,
   shadeAlcove,
@@ -416,5 +421,231 @@ describe('despeckle', () => {
 
     expect(despeckle(pixels, WIDTH, ALL)).toBeGreaterThan(0);
     expect(despeckle(pixels, WIDTH, ALL), 'a second run found something to do').toBe(0);
+  });
+});
+
+/* ============================================================== the ceiling == */
+
+/**
+ * The ceiling's scorch, and the grid it shares a colour with.
+ *
+ * This surface had no mechanism for two milestones, on a recorded conclusion that
+ * it needed *"a targeted regeneration"*. It does not. The blotches and the tile
+ * grid are painted in the same two browns, so no colour rule can separate them —
+ * but the grid is one unit wide and the blotches are thick, and a morphological
+ * opening separates exactly that.
+ *
+ * The assertions below are structural rather than photographic on purpose. A
+ * screenshot cannot show that the *grid survived*, because a grid with a third of
+ * its pixels missing still looks like a grid at 360px; a pixel count can.
+ */
+
+/** Every colour the ceiling is allowed to be made of. Anything else is structure. */
+function structuralPixels(pixels: Buffer, width: number): Map<string, string> {
+  const found = new Map<string, string>();
+  for (let y = CEILING.top; y <= CEILING.bottom; y += 1) {
+    for (let x = CEILING.left; x <= CEILING.right; x += 1) {
+      const hex = hexAt(pixels, width, x, y);
+      if (!CEILING_TONES.has(hex)) found.set(`${String(x)},${String(y)}`, hex);
+    }
+  }
+  return found;
+}
+
+function scorchCount(pixels: Buffer, width: number): number {
+  let n = 0;
+  for (let y = CEILING.top; y <= CEILING.bottom; y += 1) {
+    for (let x = CEILING.left; x <= CEILING.right; x += 1) {
+      if (CEILING_SCORCH.has(hexAt(pixels, width, x, y))) n += 1;
+    }
+  }
+  return n;
+}
+
+describe('the committed shell — the ceiling', () => {
+  it('has had its scorch cleared', async () => {
+    const { pixels, width } = await shellPixels();
+    expect(clearCeilingScorch(pixels, width), REAPPLY).toBe('already-clean');
+  });
+
+  it('still carries the tile grid', async () => {
+    const { pixels, width } = await shellPixels();
+
+    /*
+     * The grid is what is *left* in the scorch colours after the opening. The
+     * range is wide enough that a legitimate change to the operator does not
+     * break it and narrow enough to be a real claim: erasing the grid gives ~0,
+     * and skipping the clean entirely gives ~3,973.
+     */
+    const grid = scorchCount(pixels, width);
+    expect(grid, `${REAPPLY} — or the grid was eroded`).toBeGreaterThan(1500);
+    expect(grid, 'more brown than the grid alone — is the scorch back?').toBeLessThan(2400);
+  });
+
+  it('keeps the beam, the sign and the fittings byte-identical', async () => {
+    /*
+     * The strongest form of the safeguard, and it needs no coordinates: every
+     * pixel inside the ceiling rectangle that is *not* a ceiling tone is
+     * structure — the doorway beam, the neon sign, the lights, the pendant — and
+     * running the clean again must not move any of them.
+     */
+    const { pixels, width } = await shellPixels();
+    const before = structuralPixels(pixels, width);
+    expect(before.size, 'no structure found in the ceiling rect at all').toBeGreaterThan(500);
+
+    clearCeilingScorch(pixels, width);
+    expect(structuralPixels(pixels, width)).toEqual(before);
+  });
+
+  it('introduces no colour the ceiling did not already have', async () => {
+    const { pixels, width } = await shellPixels();
+    const before = new Set<string>();
+    for (let y = CEILING.top; y <= CEILING.bottom; y += 1) {
+      for (let x = CEILING.left; x <= CEILING.right; x += 1) before.add(hexAt(pixels, width, x, y));
+    }
+    clearCeilingScorch(pixels, width);
+    for (let y = CEILING.top; y <= CEILING.bottom; y += 1) {
+      for (let x = CEILING.left; x <= CEILING.right; x += 1) {
+        expect(before.has(hexAt(pixels, width, x, y))).toBe(true);
+      }
+    }
+  });
+});
+
+describe('clearCeilingScorch', () => {
+  /*
+   * The canvas is the ceiling's real size, like `cleanBoardFace`'s above and for
+   * the same reason: the integrity check reads four fixed probe points, and a
+   * smaller canvas puts them out of bounds — which the first version of this
+   * block did, and the check caught.
+   */
+  const W = CEILING.right + 1;
+  const H = CEILING.bottom + 1;
+
+  /** A canvas of ceiling field, with the probe points the integrity check reads. */
+  function canvas(): Buffer {
+    const px = Buffer.alloc(W * H * 4);
+    for (let i = 0; i < W * H; i += 1) {
+      px[i * 4] = 0xc9;
+      px[i * 4 + 1] = 0x7a;
+      px[i * 4 + 2] = 0x22;
+      px[i * 4 + 3] = 255;
+    }
+    return px;
+  }
+
+  function set(px: Buffer, x: number, y: number, hex: string): void {
+    const i = (y * W + x) * 4;
+    px[i] = Number.parseInt(hex.slice(1, 3), 16);
+    px[i + 1] = Number.parseInt(hex.slice(3, 5), 16);
+    px[i + 2] = Number.parseInt(hex.slice(5, 7), 16);
+    px[i + 3] = 255;
+  }
+
+  it('removes a thick blob', () => {
+    const px = canvas();
+    for (let y = 5; y <= 9; y += 1) for (let x = 5; x <= 9; x += 1) set(px, x, y, '#7A4A2A');
+
+    expect(clearCeilingScorch(px, W)).toBe('cleared');
+    expect(scorchCount(px, W)).toBe(0);
+  });
+
+  it('leaves a one-unit line alone, in every direction', () => {
+    const px = canvas();
+    for (let x = 2; x <= 30; x += 1) set(px, x, 4, '#7A4A2A'); // horizontal
+    for (let y = 6; y <= 18; y += 1) set(px, 20, y, '#7A4A2A'); // vertical
+    for (let i = 0; i <= 10; i += 1) set(px, 5 + i, 8 + i, '#7A4A2A'); // diagonal
+    for (let i = 0; i <= 8; i += 2) set(px, 30, 2 + i, '#7A4A2A'); // dashed
+
+    const before = Buffer.from(px);
+    expect(clearCeilingScorch(px, W)).toBe('already-clean');
+    expect(px.equals(before)).toBe(true);
+  });
+
+  it('never writes structure, however thick the brown beside it is', () => {
+    /*
+     * The safeguard the beam depends on — and it is worth being precise about
+     * what it does and does not promise.
+     *
+     * It does **not** promise that brown touching the beam survives. That brown
+     * is ceiling scorch lying against a beam and clearing it is the point. What
+     * it promises is that no core ever forms *inside* structure, so the beam
+     * itself is never written — which is the failure that would be invisible in
+     * review and permanent in the asset.
+     */
+    const px = canvas();
+    for (let y = 4; y <= 8; y += 1) for (let x = 4; x <= 7; x += 1) set(px, x, y, '#7A4A2A');
+    for (let y = 3; y <= 9; y += 1) set(px, 8, y, '#1A1214'); // the beam's edge
+
+    clearCeilingScorch(px, W);
+    for (let y = 3; y <= 9; y += 1) expect(hexAt(px, W, 8, y), 'the beam was written').toBe('#1A1214');
+  });
+
+  it('leaves a brown detail enclosed by structure entirely alone', () => {
+    /*
+     * The "threshold cannot silently expand into structural regions" case, as the
+     * asset actually presents it: a **two-unit** brown highlight running along a
+     * beam, structure on both sides. Every pixel of it can see the near-black, so
+     * no pixel can be a core and the whole run survives at any length.
+     *
+     * The bound is worth stating rather than implying, because it is the
+     * mechanism's one real limit: a brown region three or more units thick in
+     * *both* directions has an interior that cannot see the structure around it,
+     * and this will treat that interior as a blotch. On this ceiling that is the
+     * intended reading — nothing structural here is a solid brown slab, and a
+     * solid brown slab is what the defect looks like. A surface where it were not
+     * true would need a different mechanism, exactly as this one did.
+     */
+    const px = canvas();
+    for (let y = 4; y <= 14; y += 1) { set(px, 5, y, '#7A4A2A'); set(px, 6, y, '#7A4A2A'); }
+    for (let y = 3; y <= 15; y += 1) { set(px, 4, y, '#1A1214'); set(px, 7, y, '#1A1214'); }
+    for (const x of [4, 5, 6, 7]) { set(px, x, 3, '#1A1214'); set(px, x, 15, '#1A1214'); }
+
+    const before = Buffer.from(px);
+    expect(clearCeilingScorch(px, W)).toBe('already-clean');
+    expect(px.equals(before)).toBe(true);
+  });
+
+  it('clears scorch that merely sits near structure, without touching it', () => {
+    // Two units of clearance: the blob's own neighbourhood is pure ceiling, so it
+    // is cleared, and the structure beside it is never written.
+    const px = canvas();
+    for (let y = 4; y <= 9; y += 1) for (let x = 4; x <= 9; x += 1) set(px, x, y, '#7A4A2A');
+    for (let y = 3; y <= 10; y += 1) set(px, 12, y, '#8C1F22'); // the sign
+
+    expect(clearCeilingScorch(px, W)).toBe('cleared');
+    for (let y = 3; y <= 10; y += 1) expect(hexAt(px, W, 12, y)).toBe('#8C1F22');
+    // The blob's interior went; only its structure-facing edge could remain.
+    expect(scorchCount(px, W)).toBeLessThan(8);
+  });
+
+  it('is idempotent', () => {
+    const px = canvas();
+    for (let y = 5; y <= 10; y += 1) for (let x = 5; x <= 12; x += 1) set(px, x, y, '#9C6640');
+
+    expect(clearCeilingScorch(px, W)).toBe('cleared');
+    const settled = Buffer.from(px);
+    expect(clearCeilingScorch(px, W)).toBe('already-clean');
+    expect(px.equals(settled)).toBe(true);
+  });
+
+  it('never writes anything but the field colour', () => {
+    const px = canvas();
+    for (let y = 5; y <= 10; y += 1) for (let x = 5; x <= 12; x += 1) set(px, x, y, '#7A4A2A');
+    const before = Buffer.from(px);
+
+    clearCeilingScorch(px, W);
+    for (let i = 0; i < px.length; i += 4) {
+      if (px[i] === before[i] && px[i + 1] === before[i + 1] && px[i + 2] === before[i + 2]) continue;
+      expect(`#${[px[i], px[i + 1], px[i + 2]].map((v) => (v ?? 0).toString(16).padStart(2, '0')).join('')}`.toUpperCase()).toBe(
+        CEILING_FIELD,
+      );
+    }
+  });
+
+  it('refuses a surface that is not this ceiling', () => {
+    const px = canvas();
+    set(px, 55, 2, '#1A1214');
+    expect(() => clearCeilingScorch(px, W)).toThrow(/not the shell/);
   });
 });

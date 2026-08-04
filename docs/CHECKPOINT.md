@@ -336,14 +336,42 @@ a gate because it was invisible in review and depended on that week's fixture
 names; these six are visible in a screenshot at any width, and gating a specific
 margin or tone would be brittle. `docs/TEXT_REPORT_AUDIT.md §5`.
 
+### Visual debt 9 — closed, and the recorded conclusion was wrong
+
+The ceiling had no mechanism for two milestones on a recorded conclusion that it
+*"needs a targeted regeneration, not a filter"*. **It did not, and no new art was
+required.**
+
+The reason no filter had worked is sharper than the old note said. It is not just
+that the grid is dashed: **the scorch and the grid are painted in the same two
+browns**, so no rule that asks what colour a pixel is can separate them. They
+differ in *shape* — the grid is one unit wide, the scorch is thick blobs — and a
+**morphological opening** separates precisely that. Erosion deletes anything a
+unit thick, so a line has no interior and never enters the mask at all; the grid
+is not preserved by a rule that mentions it, which is a stronger guarantee than
+any coordinate list and needs no maintenance when the art changes.
+
+A **purity guard** stops a core forming anywhere the 3×3 neighbourhood is not all
+ceiling. That is what keeps the doorway beam, the neon sign and the pendant safe:
+their brown *edges* can always see the near-black beside them, so they can never
+seed a blob. Scorch lying *against* the beam is still cleared — the dilation
+reaches it — while the beam itself is never written.
+
+**2,259 cleared · 1,714 grid preserved · every non-ceiling pixel in the rectangle
+byte-identical · no colour introduced · dimensions and alpha unchanged ·
+idempotent.** Twelve tests, eight of them synthetic, and the mechanism's one real
+limit is stated rather than implied: a brown region three or more units thick in
+both directions has an interior that cannot see structure, and this treats that
+interior as a blotch. Nothing structural on this ceiling is a solid brown slab.
+
+Full-room regeneration was never attempted and would have been the riskier path —
+it discards the board-face repaint and the alcove shading the same file carries.
+
 ### Next executable task, in order
 
 The art queue that used to sit here is closed (`#55`) and this replaces it.
 
-1. **Visual debt 9 — the parlor ceiling.** A scorch-like smear and dashed grid
-   above the rear doorway. Needs a targeted regeneration of that surface, not a
-   filter; recorded as `EXCLUDED_CEILING` in `scripts/clean-parlor-surfaces.ts`.
-2. **Visual debt 12 — the intermittent `#418`.** Instrumented, quarantined under
+1. **Visual debt 12 — the intermittent `#418`.** Instrumented, quarantined under
    a ceiling, six states and five routes named, two classes of cause eliminated,
    no reproduction. Do not ship a speculative repair; chase the next sighting on
    a **dev** build, which is the only configuration that names the element.
@@ -354,7 +382,7 @@ The art queue that used to sit here is closed (`#55`) and this replaces it.
    captures completed before it stopped, with no sighting. Teaching the driver to
    skip its production-only passes under a `--dev` flag is step one, and it is
    cheap. Deleting the quarantine entry is the definition of done.
-3. Deferred with reasons and not queued: debts 1, 2, 11 and 14.
+2. Deferred with reasons and not queued: debts 1, 2, 11 and 14.
 
 ---
 
