@@ -302,6 +302,22 @@ export function PressMasthead({
  * It formats nothing. `MANDATE §9`: the interface never derives a fantasy fact,
  * and *rounding a score* derives one — which is why the string arrives already
  * validated against the fact packet.
+ *
+ * ## It breaks between the two teams, never inside one
+ *
+ * The deck arrives as one string — `Matty B 164.74 — Nick 130.78` — and set as
+ * ordinary text it wraps wherever the line runs out. On 2025 week 7 at 390px
+ * that landed between `Nick` and `130.78`, printing a manager on one line and
+ * their score on the next. A score separated from the person who posted it is
+ * not a smaller version of the same line; it is two lines that each say
+ * something incomplete, and it is exactly the "headlines must wrap
+ * intentionally" case.
+ *
+ * So the string is split on its own separator and each side is kept whole. The
+ * **string is not modified** and nothing is reformatted — `MANDATE §9` again:
+ * this component may choose where a line breaks and may not touch what it says.
+ * A deck with no separator (`monday-comeback` is a sentence about a deficit)
+ * falls through and wraps as prose, which is right for prose.
  */
 export function ScoreDeck({ children }: { children: React.ReactNode }) {
   return (
@@ -309,8 +325,43 @@ export function ScoreDeck({ children }: { children: React.ReactNode }) {
       className={`mt-2.5 border-y-2 border-ink-900/25 py-1.5 ${TYPE.scoreDeck} text-ink-900`}
       data-slice-deck=""
     >
-      {children}
+      {splitDeck(children)}
     </p>
+  );
+}
+
+/** The separator `deckOf` puts between two teams. Not a hyphen. */
+const DECK_SEPARATOR = ' — ';
+
+/**
+ * Keep each side of the separator unbreakable, and let the break fall between.
+ *
+ * Only strings are handled. Anything else is passed straight through — a caller
+ * composing a deck out of elements has already decided how it breaks, and
+ * second-guessing that here would be a component overriding its own consumer.
+ */
+function splitDeck(children: React.ReactNode): React.ReactNode {
+  if (typeof children !== 'string') return children;
+
+  const at = children.indexOf(DECK_SEPARATOR);
+  if (at === -1) return children;
+
+  return (
+    <>
+      <span className="inline-block whitespace-nowrap">{children.slice(0, at)}</span>
+      {/*
+        * The separator carries the break.
+        *
+        * It stays attached to the left side rather than floating, so a wrapped
+        * deck reads `Matty B 164.74 —` / `Nick 130.78` — the dash trailing the
+        * first team the way a continued line does, rather than starting the
+        * second.
+        */}
+      <span>{DECK_SEPARATOR}</span>
+      <span className="inline-block whitespace-nowrap">
+        {children.slice(at + DECK_SEPARATOR.length)}
+      </span>
+    </>
   );
 }
 
