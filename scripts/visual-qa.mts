@@ -2392,6 +2392,87 @@ const DESK_EXPECTATIONS: Record<
  * `reveal-*` states cost a milestone to exactly that, so the marker is checked
  * rather than the pixels.
  */
+/**
+ * A score deck breaks between the two teams, never inside one.
+ *
+ * ## The defect this exists for
+ *
+ * The deck is one string — `Matty B 164.74 — Nick 130.78` — and set as ordinary
+ * text it wraps wherever the line runs out. On 2025 week 7 at 390px that landed
+ * between `Nick` and `130.78`, printing a manager on one line and their score on
+ * the next. Both lines are grammatical and neither is complete.
+ *
+ * ## Why this is measured rather than photographed
+ *
+ * It is invisible in a screenshot review unless the reviewer happens to know
+ * what the deck said, and it depends on the **names in that week's fixture** —
+ * so it appears and disappears as the demo editions change, which is the worst
+ * kind of regression to chase. Client rects are the only honest test: the two
+ * halves each occupy one line or the deck occupies one line, and no other
+ * arrangement is allowed.
+ *
+ * Fails on the old build, where the halves were bare text nodes with no
+ * `whitespace-nowrap` and a two-line deck put the break inside a team.
+ */
+async function checkDeckWrap(page: Page, width: number, state: string): Promise<void> {
+  const decks = await page.evaluate(() => {
+    const out: { text: string; halves: number[]; lines: number }[] = [];
+
+    for (const deck of document.querySelectorAll('[data-slice-deck]')) {
+      const text = (deck.textContent ?? '').trim();
+      // Only the two-team form is constrained. A deck with no separator is a
+      // sentence and wraps as prose, deliberately.
+      if (!text.includes(' \u2014 ')) continue;
+
+      /*
+       * How many lines the deck occupies, from its own client rects rather than
+       * from a height division — a `Range` reports one rect per line box, which
+       * is the browser's own answer to "did this wrap".
+       */
+      const range = document.createRange();
+      range.selectNodeContents(deck);
+      const lines = new Set(
+        [...range.getClientRects()].map((rect) => Math.round(rect.top)),
+      ).size;
+
+      // Each half must sit on exactly one line. `inline-block` + nowrap is what
+      // makes that true; without it a half is a bare text node that can split.
+      const halves = [...deck.querySelectorAll('span')]
+        .filter((span) => (span.textContent ?? '').trim() !== '\u2014')
+        .map(
+          (span) =>
+            new Set([...span.getClientRects()].map((rect) => Math.round(rect.top))).size,
+        );
+
+      out.push({ text, halves, lines });
+    }
+
+    return out;
+  });
+
+  for (const deck of decks) {
+    if (deck.halves.length !== 2) {
+      fail(
+        'deck-wrap',
+        `@${String(width)} ${state} score deck "${deck.text}" is not split into two ` +
+          `unbreakable halves (found ${String(deck.halves.length)}). A deck that is one ` +
+          `text node wraps between a manager and their score.`,
+      );
+      continue;
+    }
+
+    const split = deck.halves.find((count) => count > 1);
+    if (split !== undefined) {
+      fail(
+        'deck-wrap',
+        `@${String(width)} ${state} score deck "${deck.text}" broke *inside* a team — ` +
+          `one half occupies ${String(split)} lines. A score separated from the person ` +
+          `who posted it is two incomplete lines, not a smaller version of one.`,
+      );
+    }
+  }
+}
+
 async function checkReviewDesk(page: Page, width: number, state: string): Promise<void> {
   const expected = DESK_EXPECTATIONS[state];
   if (expected === undefined) {
@@ -3155,6 +3236,12 @@ async function run(): Promise<void> {
          * precisely because only the state designed around it was ever checked.
          */
         await checkOneTransient(page, width, state);
+        /*
+         * Everywhere, not only on `slice-*`. The Slice's paper is also rendered
+         * on the review desk's "as it will print" preview, and that is a
+         * different route with the same defect available to it.
+         */
+        await checkDeckWrap(page, width, state);
         if (state === 'keyboard-focus') await checkFocusVisible(page, width);
 
         {

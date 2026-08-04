@@ -298,6 +298,33 @@ via an injected trigger, and retry after it clears.
 
 `docs/WEEKLY_REWARDS_BOUNDARY.md` is the canonical account.
 
+### The text-report visual pass — started, one defect closed
+
+`docs/TEXT_REPORT_AUDIT.md` is the queue and the canonical account. The
+commissioner's benchmark is *"intentionally designed physical artifacts inside
+Tony's Pizza, not normal web pages with a pixel font placed on top."*
+
+**The audit's main finding is that the primitives already exist.**
+`text-surface.tsx` carries the mounted sheet, rules, headings, metadata strips,
+plaques, masthead, score deck, warning glyph and ledger, and the press desk
+already uses all of them — it is the worked redesign the ruling points at. A
+parallel report system is not needed and would be the mistake that file's own
+header warns about.
+
+**Closed:** the score deck broke *inside* a team. `Matty B 164.74 — Nick 130.78`
+wrapped between `Nick` and `130.78` at 390px — a manager on one line, their score
+on the next. `ScoreDeck` now keeps each side of the separator unbreakable so the
+break falls between the two teams. `checkDeckWrap` measures it from client rects
+everywhere and **fails on the old build at all three widths**.
+
+**One audit item was withdrawn on inspection** and the reasoning kept: the lede
+deck looked like it competed with its headline, but its prominence is a recorded
+decision and the flatness was the two-line wrap, now fixed.
+
+**Still open:** Slice status treatment across edition states · board scores
+running together · page rhythm · the desk's two competing plaques, its flat
+metadata block and its missing headline. All specified in the audit.
+
 ### Next executable task, in order
 
 The art queue that used to sit here is closed (`#55`) and this replaces it.
@@ -791,6 +818,33 @@ Two of its steps are worth knowing about:
 **15 placeholder / 9 generated**, hard-coded rather than derived, because a derived
 count would pass whatever the registry happened to say — which is the drift it exists
 to catch.
+
+### The text-report visual pass — started, one defect closed
+
+`docs/TEXT_REPORT_AUDIT.md` is the queue and the canonical account. The
+commissioner's benchmark is *"intentionally designed physical artifacts inside
+Tony's Pizza, not normal web pages with a pixel font placed on top."*
+
+**The audit's main finding is that the primitives already exist.**
+`text-surface.tsx` carries the mounted sheet, rules, headings, metadata strips,
+plaques, masthead, score deck, warning glyph and ledger, and the press desk
+already uses all of them — it is the worked redesign the ruling points at. A
+parallel report system is not needed and would be the mistake that file's own
+header warns about.
+
+**Closed:** the score deck broke *inside* a team. `Matty B 164.74 — Nick 130.78`
+wrapped between `Nick` and `130.78` at 390px — a manager on one line, their score
+on the next. `ScoreDeck` now keeps each side of the separator unbreakable so the
+break falls between the two teams. `checkDeckWrap` measures it from client rects
+everywhere and **fails on the old build at all three widths**.
+
+**One audit item was withdrawn on inspection** and the reasoning kept: the lede
+deck looked like it competed with its headline, but its prominence is a recorded
+decision and the flatness was the two-line wrap, now fixed.
+
+**Still open:** Slice status treatment across edition states · board scores
+running together · page rhythm · the desk's two competing plaques, its flat
+metadata block and its missing headline. All specified in the audit.
 
 ### Next executable task, in order
 
