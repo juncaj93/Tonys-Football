@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useRef } from 'react';
 
-import { TYPE } from '@/lib/design/type';
+import { RoomPanel, type PanelMaterial } from '@/components/scene/room-panel';
+import { useRoomStage } from '@/components/scene/room-stage';
 import { place, type RoomObjectSpec } from '@/lib/parlor/objects';
 
 /**
@@ -105,18 +106,42 @@ export function RoomDoor({ spec, children }: { spec: RoomObjectSpec; children?: 
   );
 }
 
-/** A Display: read in place, over the room. No route, no glow. */
+/**
+ * A Display: read in place, over the room. No route, no glow.
+ *
+ * ## Its open state belongs to the room, not to it
+ *
+ * This used to hold `useState(false)` and open its own panel, which is the
+ * obvious implementation and is what let two transient surfaces be up at once —
+ * `MANDATE §6`'s named failure, recorded as visual debt 4. A Display cannot see
+ * Tony's order pad and the pad cannot see a Display, so neither can yield.
+ *
+ * `useRoomStage()` is the arbiter. Presenting takes down whatever was up, and
+ * the pad reads the same value and steps aside. Nothing about *what a Display
+ * contains* moved: the content is still whatever the caller passes, resolved on
+ * the server, and this file still knows nothing about tokens, seasons or routes.
+ *
+ * The `key` for the stage is the object's own id, which is already unique across
+ * the room because the object-map gate asserts it.
+ */
 export function RoomDisplay({
   spec,
   title,
+  material,
+  actions,
   children,
 }: {
   spec: RoomObjectSpec;
   title: string;
+  /** Which of the room's two surfaces this panel is made of. */
+  material?: PanelMaterial;
+  /** The foreground row: where this panel leads, if anywhere. */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 }) {
-  const [open, setOpen] = useState(false);
+  const stage = useRoomStage();
   const trigger = useRef<HTMLButtonElement>(null);
+  const open = stage.isShowing(spec.id);
 
   return (
     <>
@@ -126,7 +151,7 @@ export function RoomDisplay({
         aria-label={spec.label}
         aria-haspopup="dialog"
         onClick={() => {
-          setOpen(true);
+          stage.present(spec.id);
         }}
         style={place(spec.rect)}
         className="room-shape absolute z-30 outline-none"
@@ -134,15 +159,17 @@ export function RoomDisplay({
       />
 
       {open && (
-        <Sheet
+        <RoomPanel
           title={title}
+          material={material}
+          actions={actions}
           onClose={() => {
-            setOpen(false);
+            stage.dismiss(spec.id);
             trigger.current?.focus();
           }}
         >
           {children}
-        </Sheet>
+        </RoomPanel>
       )}
     </>
   );
@@ -159,108 +186,5 @@ export function RoomToy({ spec, onTap }: { spec: RoomObjectSpec; onTap: () => vo
       className="room-shape absolute z-30 outline-none"
       {...roomObjectAttributes(spec)}
     />
-  );
-}
-
-/**
- * What a Display opens into.
- *
- * ## It was a bottom sheet, and that was the wrong idiom
- *
- * This used to be a full-width cream slab pinned to the bottom edge at
- * `max-h-[76dvh]`, sliding up over the room. Everything about it was competent
- * and none of it belonged: a sheet that spans the viewport and covers
- * three-quarters of the screen is the gesture language of a phone app with a
- * themed background, and it made the parlor into that background. Tapping the
- * receipt should feel like picking a piece of paper off a counter, not like
- * summoning an action sheet.
- *
- * So it is now **a thing lying on the counter, in front of the room**: sized to
- * its contents, centred in the room's own column rather than the viewport's,
- * pixel-bevelled like every other surface in the shop, and never taller than it
- * needs to be. It shares its material with Tony's speech box and the champion
- * panel, so all three transient surfaces read as one shop rather than three
- * component libraries.
- *
- * The room stays visible behind it, dimmed. That is deliberate — a panel you
- * opened is allowed to sit over the art (`18 §7.2.4`); a panel that *replaces*
- * the art has taken the room away.
- */
-function Sheet({
-  title,
-  onClose,
-  children,
-}: {
-  title: string;
-  onClose: () => void;
-  children: React.ReactNode;
-}) {
-  const headingId = useId();
-  const panel = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    panel.current?.focus();
-
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-      {/*
-        * Putting the thing down again. Deliberately not a button and not in the
-        * tab order: the panel already has a real Close control and Escape.
-        */}
-      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink-900/60" />
-
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={headingId}
-        tabIndex={-1}
-        className="panel-rise pixel-edge relative w-full max-w-[19.5rem] border-2 border-wood-dark bg-paper-mid text-ink-900 outline-none"
-      >
-        <span aria-hidden="true" className="absolute inset-x-0 top-0 h-[2px] bg-amber-mid/45" />
-
-        <div className="flex items-start justify-between gap-3 px-3.5 pt-3.5 pb-2.5">
-          <h2
-            id={headingId}
-            className={`${TYPE.eyebrow} text-ink-700`}
-          >
-            {title}
-          </h2>
-          {/*
-            * A pixel cross, not a labelled button. The panel is small enough
-            * that a word-sized `CLOSE` control was the second-loudest thing in
-            * it; Escape and the scrim do the same job without the furniture.
-            * 44px of hit area around a 12px mark.
-            */}
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="-mt-2.5 -mr-2 flex h-11 w-11 shrink-0 items-center justify-center active:translate-y-px"
-          >
-            <span aria-hidden="true" className="relative block h-3 w-3 opacity-70">
-              <span className="absolute top-1/2 left-0 h-[2px] w-full rotate-45 bg-ink-700" />
-              <span className="absolute top-1/2 left-0 h-[2px] w-full -rotate-45 bg-ink-700" />
-            </span>
-          </button>
-        </div>
-
-        <div
-          className="max-h-[52dvh] overflow-y-auto px-3.5 pb-4"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) * 0.5 + 1rem)' }}
-        >
-          {children}
-        </div>
-      </div>
-    </div>
   );
 }

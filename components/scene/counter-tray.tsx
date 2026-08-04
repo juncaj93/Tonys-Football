@@ -7,6 +7,7 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 import { openBoxAction, type RevealPayload } from '@/app/actions/counter';
 import { TYPE } from '@/lib/design/type';
 import { RoomDoor, roomObjectAttributes } from '@/components/scene/room-object';
+import { useRoomStage } from '@/components/scene/room-stage';
 import { AssetView } from '@/lib/assets/placeholder';
 import { type AssetResolution } from '@/lib/assets/types';
 import {
@@ -142,26 +143,28 @@ export function CounterTray({
    * Independent components will always do this; the fix is not to teach each one
    * about the others but to give the room a single **focus** they defer to.
    *
-   * Opening a box claims it. `globals.css` decides what yielding looks like —
-   * here it is only declared, so a future transient (a purchase, a bounty) can
-   * claim the same focus without this file learning about it.
+   * That focus used to be written straight onto `document.body` from here,
+   * because the room is a server component and the two siblings had no common
+   * client ancestor. `RoomStage` is now that ancestor, so this declares the
+   * claim and the stage does the writing — one writer for the attribute instead
+   * of a component reaching outside its own subtree.
    *
-   * On `body` rather than in React state because the two components have no
-   * common client ancestor: the room is a server component, and adding a
-   * provider around it to carry one boolean would be a larger change than the
-   * defect. Cleared on unmount, so a navigation mid-reveal cannot leave Tony
-   * permanently mute.
+   * **Blocking**, and that word is load-bearing. A panel is something you opened
+   * and can replace by opening another; the reveal is a recorded, once-only
+   * moment, and a manager who taps the receipt halfway through it must not be
+   * able to make it disappear. So while the box is opening the stage refuses
+   * every other surface, and the room simply does not answer that tap.
    */
+  const stage = useRoomStage();
+  const claimed = phase === 'anticipation' || phase === 'reveal';
   useEffect(() => {
-    const claimed = phase === 'anticipation' || phase === 'reveal';
-    if (claimed) document.body.dataset['parlorFocus'] = 'reveal';
-    else delete document.body.dataset['parlorFocus'];
-  }, [phase]);
+    if (claimed) stage.present('reveal', { blocking: true });
+    else stage.dismiss('reveal');
+  }, [claimed, stage]);
 
   useEffect(
     () => () => {
       if (timer.current !== null) clearTimeout(timer.current);
-      delete document.body.dataset['parlorFocus'];
     },
     [],
   );

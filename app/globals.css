@@ -612,16 +612,28 @@ button {
 /*
  * Interaction priority.
  *
- * One primary transient at a time. `data-parlor-focus` is claimed by whatever
- * owns the moment — today only the box opening — and everything ambient yields
- * for as long as it is held.
+ * **One primary transient at a time** — `MANDATE §6`. `data-parlor-focus` is
+ * written by `components/scene/room-stage.tsx` and carries the identifier of
+ * whatever is up; everything ambient yields for as long as it is held.
  *
  * Tony does not lose his line; it is set aside and comes straight back when the
- * plate is cleared, because the state that holds it never unmounts. He is
+ * surface is cleared, because the state that holds it never unmounts. He is
  * standing right there watching you open it, and a shopkeeper talking over the
  * thing he just handed you is the interruption, not the courtesy.
+ *
+ * ## The selector matches the attribute's presence, not one of its values
+ *
+ * It was `[data-parlor-focus='reveal']`, because the box opening was the only
+ * thing that ever claimed it. That is visual debt 4: a **panel** claims it too,
+ * and with the value pinned the pad stayed up behind the panel's scrim — dimmed,
+ * not overlapping, and still a second transient surface. The driver dismissed
+ * the pad before opening a board, so every board screenshot was clean and a
+ * manager who tapped the sign mid-sentence was not.
+ *
+ * Matching on presence means a surface added later yields the ambient room
+ * without editing this rule, which is the property the attribute was chosen for.
  */
-body[data-parlor-focus='reveal'] .tony-line {
+body[data-parlor-focus] .tony-line {
   opacity: 0;
   transform: translate3d(0, 6px, 0);
   pointer-events: none;
@@ -630,8 +642,22 @@ body[data-parlor-focus='reveal'] .tony-line {
     transform 160ms ease-out;
 }
 
+/*
+ * And nothing inside it takes a tap either.
+ *
+ * `pointer-events: none` on the wrapper is not enough on its own: the pad sets
+ * `pointer-events: auto` on the box itself so it can be dismissed, and a child
+ * re-enabling them overrides the parent. An invisible dismiss button was
+ * therefore still hit-testable across the bottom of the room while the reveal
+ * was up — the plate is `z-26` inside the room and the pad is `z-40` fixed, so
+ * they are not even in the same stacking context and the pad wins.
+ */
+body[data-parlor-focus] .tony-line * {
+  pointer-events: none;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  body[data-parlor-focus='reveal'] .tony-line {
+  body[data-parlor-focus] .tony-line {
     transition: none;
     transform: none;
   }
@@ -720,118 +746,65 @@ body[data-parlor-focus='reveal'] .tony-line {
 
 /* --- Knowing what you can touch ------------------------------------------ *
  *
- * **Only available Doors glow, and they glow all the time.**
+ * **Only available Doors glow, and only on their own alpha.**
  *
- * A Door goes somewhere; that is a promise the room should keep making. A
- * Display is read where it hangs and a Toy answers back — neither is a way out,
- * so neither advertises. Scenery does not appear in the markup at all.
+ * `18 §2` is the taxonomy: a Door glows *only when it has something to say*, and
+ * a Display and a Toy have **no** affordance — for a Display, the content *is*
+ * the affordance. `18 §9.4` is the mechanism: `filter: drop-shadow()` on the
+ * overlay's own alpha channel. **No authored masks, no SVG polygons, no hit-map
+ * images.**
  *
- * The glow is drawn on the object's own polygon rather than on a box around it,
- * so it follows the glass of the display case instead of fencing it.
- * `vector-effect: non-scaling-stroke` keeps every stroke at its authored width
- * however far the room is scaled, which is what stops a 3px line becoming a
- * 3.6px line on one phone and 4px on another.
+ * ## What used to be here, and why it is gone — visual debt 10
  *
- * ## Why it is a lit object and not an outlined one
+ * About 90 lines implementing the mechanism `§9.4` withdrew: `.door-shadow`,
+ * `.door-edge`, `.door-wash` and `.affordance-on-request`, all SVG `stroke` and
+ * `fill` properties meant to be painted along a hand-traced polygon per object,
+ * plus a `door-breathes` keyframe. **Every one of them had zero consumers** —
+ * `room-object.tsx` says so in its own header: *"An earlier version traced each
+ * object as an SVG polygon... That is withdrawn."* The polygons went and the
+ * paint stayed.
  *
- * The first attempt was a thin warm line, and on a phone it disappeared: the
- * display case is lit glass over a red counter, so a pale 2px stroke reads as
- * one more highlight in artwork that is already full of them. Three things fix
- * that, and all three are needed.
+ * The debt was filed as *"`.affordance-on-request` is dead CSS"*, and the whole
+ * withdrawn vocabulary was dead beside it. It also asked whether the class
+ * should be **wired up** instead, so that `look around` reveals the Displays and
+ * the Toy rather than only Tony's own edge. It cannot be, and the reason is
+ * geometric rather than a matter of taste: **five of the eight homepage objects
+ * are baked into the shell.** The board, the sign, the receipt, the tray and the
+ * rear doorway have no overlay, so no alpha, so nothing for a drop-shadow to
+ * follow. Giving them an affordance means drawing a shape that is not the
+ * object's — an authored rectangle — which is what `§9.4` withdrew and what
+ * `MANDATE §6` bans twice over as *"persistent button rectangles"* and *"visible
+ * hitboxes"*.
  *
- *   1. **The object fills.** A wash inside the polygon lights the case itself
- *      rather than fencing it, and area survives being looked at sideways in a
- *      way a hairline never does.
- *   2. **The dark contour is constant.** It does not pulse. A light line needs
- *      something to sit against at every point of the cycle, and against this
- *      art the dark pass is doing most of the separating.
- *   3. **The light edge is 3px and nearly white at its peak.** Warm-on-warm was
- *      the whole problem; #fff4d8 is outside the drawing's range.
+ * So it is deleted rather than revived, and this comment is the record of why.
+ * Dead code that draws the old style is an invitation to reintroduce it.
+ *
+ * ## The focus ring went with it, and that is a real defect
+ *
+ * `.room-shape:focus-visible .door-edge` was how a room object showed keyboard
+ * focus. With the polygons gone that selector matched nothing, every room object
+ * carries `outline-none`, and **nothing else in this stylesheet styles focus at
+ * all** — so tabbing through the parlor moved an invisible cursor. There is a
+ * `keyboard-focus` screenshot state; it has been photographing a room with no
+ * visible focus for as long as the polygons have been gone, because no gate
+ * asserted the ring existed.
+ *
+ * `MANDATE §6` requires focus states that *"stay usable, appear only during
+ * relevant interaction, and stay pixel-aligned"*, and WCAG 2.4.7 requires them
+ * outright. So the ring is real again, and it is the one rectangle this room is
+ * allowed: it appears **only** while a keyboard is driving, it is two whole
+ * pixels, and `outline-offset: -2px` draws it inside the hit region so it lands
+ * on the grid rather than half a pixel outside it.
+ *
+ * What remains is `.box-owned` below — one Door, with real alpha, that has
+ * something to say — and Tony's warm edge above, which is the reveal answering
+ * *"what can I touch"* on the one object in the room that carries its own alpha
+ * and is not a way out of it.
  */
-.door-wash {
-  stroke: none;
-  fill: rgba(255, 219, 148, 0.16);
-  animation: door-breathes 3400ms ease-in-out infinite;
-  transition: opacity 200ms ease-out;
-}
 
-/* Constant, not breathing — see (2) above. */
-.door-shadow {
-  fill: none;
-  stroke: rgba(22, 13, 15, 0.85);
-  stroke-width: 7;
-  stroke-linejoin: round;
-  opacity: 0.9;
-  transition: opacity 200ms ease-out;
-}
-
-.door-edge {
-  fill: none;
-  stroke: #fff4d8;
-  stroke-width: 3;
-  stroke-linejoin: round;
-  animation: door-breathes 3400ms ease-in-out infinite;
-  transition: opacity 200ms ease-out;
-}
-
-@keyframes door-breathes {
-  0%,
-  100% {
-    opacity: 0.62;
-  }
-  50% {
-    opacity: 1;
-  }
-}
-
-/*
- * The same outline, on the things that do not advertise.
- *
- * A Display is read where it hangs and a Toy answers back; neither is a way out
- * of the room, so neither claims your attention unasked. But "what can I touch"
- * is a fair question, and the honest answer is the same outline the Doors wear —
- * a *different* treatment for the same meaning would be the room contradicting
- * itself. So it is drawn, and simply hidden until asked for.
- */
-.affordance-on-request {
-  opacity: 0;
-  transition: opacity 260ms ease-out;
-}
-
-.showing-taps .affordance-on-request,
-/* And while it is being pressed, so a Display confirms the tap it just took. */
-.room-shape:active .affordance-on-request,
-.room-shape:focus-visible .affordance-on-request {
-  opacity: 1;
-}
-
-/*
- * Stronger, briefly: while a finger is down and on keyboard focus. The pulse
- * stops so the object holds still while somebody is looking straight at it, and
- * a wash arrives inside the outline to lift it off the counter.
- */
-.room-shape:active .door-edge,
-.room-shape:focus-visible .door-edge,
-.room-shape:active .door-shadow,
-.room-shape:focus-visible .door-shadow,
-.room-shape:active .door-wash,
-.room-shape:focus-visible .door-wash {
-  animation: none;
-  opacity: 1;
-}
-
-.room-shape:active .door-wash,
-.room-shape:focus-visible .door-wash {
-  fill: rgba(255, 231, 180, 0.3);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  /* A static, lit object. The information stays; the movement goes. */
-  .door-edge,
-  .door-wash {
-    animation: none;
-    opacity: 0.92;
-  }
+.room-shape:focus-visible {
+  outline: 2px solid var(--color-amber-glow);
+  outline-offset: -2px;
 }
 
 /* --- The box on the tray ------------------------------------------------- *

@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { Arriving } from '@/components/scene/arrival';
+import { RoomStage } from '@/components/scene/room-stage';
 import { BannerRail } from '@/components/scene/banner-rail';
 import { CounterTray } from '@/components/scene/counter-tray';
 import { RoomDisplay, RoomDoor } from '@/components/scene/room-object';
@@ -219,7 +220,21 @@ export default async function ParlorPage({
 
   return (
     <Page oneScreen>
+      {/*
+        * Two providers, two different jobs, and neither renders an element.
+        *
+        * `Arriving` owns the room's **timeline** — the entrance, the reveal, and
+        * whether Tony is mid-sentence. `RoomStage` owns its **transient
+        * surfaces** — which one panel is up, and the rule that only one ever is
+        * (`MANDATE §6`). Keeping them apart is what stops either becoming the
+        * room's junk drawer: a schedule and an arbiter answer different
+        * questions, and a component usually wants exactly one of them.
+        *
+        * Neither emits DOM, so the served HTML and the hydrated tree are the
+        * same tree with or without them.
+        */}
       <Arriving>
+        <RoomStage>
         {/*
           * The utility bar. Deliberately the smallest thing on the screen:
           * **who you are, and nothing else.** The "what's open?" control that
@@ -508,6 +523,7 @@ export default async function ParlorPage({
             <TonyToy spec={roomObject('tony')} greeting={line} />
           </div>
         </main>
+        </RoomStage>
       </Arriving>
     </Page>
   );
