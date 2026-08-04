@@ -127,6 +127,14 @@ export default async function CounterPage() {
             * line above it, and one was a sentence and a link.
             *
             * A panel is for the thing you can *act on*. That is the box.
+            *
+            * The statement below is the **second** panel, and it is not a
+            * relapse. The three that were removed repeated each other and the
+            * sentences around them; a statement is the one thing on this page
+            * the manager cannot get anywhere else, and `03 §5` requires the
+            * displayed balance to be reconcilable to the ledger. It carries no
+            * balance of its own for exactly the reason the paragraph above
+            * gives — `BuyBox` already says it, three lines up.
             */}
           <div className="mt-6">
             <PixelPanel className="px-4 pt-4 pb-4">
@@ -189,11 +197,13 @@ export default async function CounterPage() {
             * the shop read as a bank statement.
             */}
           {purse !== null && (
-            <div className="mt-7">
-              <PanelHeading>Your tab</PanelHeading>
-              <div className="mt-1.5">
-                <Tab balance={purse.balance} movements={purse.movements} />
-              </div>
+            <div className="mt-6">
+              <PixelPanel className="px-4 pt-4 pb-4">
+                <PanelHeading>Your tab</PanelHeading>
+                <div className="mt-2">
+                  <Tab movements={purse.movements} />
+                </div>
+              </PixelPanel>
             </div>
           )}
 

@@ -30,16 +30,17 @@ export interface TabMovement {
   readonly description: string;
 }
 
-export function Tab({
-  balance,
-  movements,
-}: {
-  readonly balance: number;
-  readonly movements: readonly TabMovement[];
-}) {
+export function Tab({ movements }: { readonly movements: readonly TabMovement[] }) {
   return (
+    /*
+     * Movements only — **no balance row**.
+     *
+     * `BuyBox` states the balance three lines above this, and the counter page's
+     * own comment records what happens when one fact is rendered twice a few
+     * lines apart: it reads as a defect. The heading names the tab; these rows
+     * say what has happened to it.
+     */
     <Ledger data-tab-movements={String(movements.length)}>
-      <LedgerRow label="On your tab" value={`${String(balance)}`} />
       {movements.map((movement, index) => (
         <LedgerRow
           /*
