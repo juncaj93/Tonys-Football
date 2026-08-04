@@ -4,7 +4,12 @@ import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import { ensureEconomyConfig } from '@/lib/counter/tokens';
 import { closePool, getDb } from '@/lib/db';
-import { seasons, sliceIssueVersions, weekFinalizations } from '@/lib/db/schema';
+import {
+  seasons,
+  sliceIssueVersions,
+  weekFinalizations,
+  weeklyRewards,
+} from '@/lib/db/schema';
 import { resetDatabase } from '@/lib/db/test-helpers';
 import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
@@ -51,9 +56,9 @@ afterAll(async () => {
   if (hasDatabase) await closePool();
 });
 
-async function importLeague(): Promise<void> {
+async function importLeague(finalizeYears: readonly number[] = [2024, 2025]): Promise<void> {
   const chain = await traverseChain(createFixtureSource(), LEAGUE_2026, { includeWeeks: true });
-  await persistChain(db!, chain, { sourceLabel: 'test', finalizeYears: [2024, 2025] });
+  await persistChain(db!, chain, { sourceLabel: 'test', finalizeYears: [...finalizeYears] });
   await seedManagerNames(db!, readManagerNames());
 
   /*
@@ -196,6 +201,95 @@ describe.skipIf(!hasDatabase)('the Tuesday job', () => {
 
     const closures = await db!.select({ id: weekFinalizations.id }).from(weekFinalizations);
     expect(closures).toHaveLength(0);
+  });
+
+  /*
+   * Rewards, inside the sequence.
+   *
+   * `03 §4`'s token sources are paid by the job rather than beside it, so the
+   * two things worth asserting here are the two a unit test cannot reach: that
+   * a live season actually pays through the whole chain, and that a closed one
+   * declines in a sentence instead of raising out of the ledger four frames
+   * down and costing the league its paper.
+   */
+  describe('the reward step', () => {
+    it('pays a live season once, and pays nothing the second time', async () => {
+      // 2025 left open, so its weeks are closed by the job rather than by the
+      // January season close — which is the only state that can pay at all.
+      await resetDatabase(db!);
+      await importLeague([2024]);
+
+      const first = await runTuesday(db!, { season: SEASON, week: 1, at: AT });
+
+      expect(first.finalized).toBe(true);
+      expect(first.rewards?.refusal).toBeNull();
+      expect(first.rewards!.paid.length).toBeGreaterThan(0);
+      expect(first.rewards!.tokens).toBeGreaterThan(0);
+      expect(first.failed).toEqual([]);
+
+      const afterFirst = await db!.select().from(weeklyRewards);
+      expect(afterFirst.length).toBe(first.rewards!.paid.length);
+
+      const second = await runTuesday(db!, { season: SEASON, week: 1, at: AT });
+
+      expect(second.rewards?.paid).toEqual([]);
+      expect(second.rewards?.tokens).toBe(0);
+      expect(second.rewards!.alreadyPaid).toBe(afterFirst.length);
+      expect(await db!.select().from(weeklyRewards)).toHaveLength(afterFirst.length);
+    });
+
+    it('pays exactly one high score for the week', async () => {
+      await resetDatabase(db!);
+      await importLeague([2024]);
+      await runTuesday(db!, { season: SEASON, week: 1, at: AT });
+
+      const high = (await db!.select().from(weeklyRewards)).filter(
+        (row) => row.reason === 'WEEKLY_HIGH_SCORE',
+      );
+      // One, because the fixture holds no exact-cent tie. If it ever does, this
+      // fails loudly rather than the tie rule changing behaviour unnoticed.
+      expect(high).toHaveLength(1);
+    });
+
+    it('declines a closed season in a sentence, and still prints the paper', async () => {
+      const week = await playableWeek();
+      await resetDatabase(db!);
+      await importLeague();
+
+      const report = await runTuesday(db!, { season: SEASON, week, at: AT });
+
+      // 2025 is finalized here, so every week of it is final by way of the
+      // closed season — and `apply_token_delta` refuses a finalized season.
+      expect(report.rewards?.refusal).toBe('season-closed');
+      expect(report.failed).toEqual([]);
+      expect(report.skipped.some((line) => line.includes('books are shut'))).toBe(true);
+      // The decline cost the league nothing else.
+      expect(report.draft?.outcome).toBe('created');
+      expect(await db!.select().from(weeklyRewards)).toHaveLength(0);
+    });
+
+    it('does not wait on the commissioner approving the paper', async () => {
+      await resetDatabase(db!);
+      await importLeague([2024]);
+
+      const report = await runTuesday(db!, { season: SEASON, week: 1, at: AT });
+
+      /*
+       * Nothing has been published — on an open season the Slice will not even
+       * draft, which is a stronger version of the same point than an unapproved
+       * draft would be: the paper is as far from the league's eyes as it gets.
+       */
+      const versions = await db!
+        .select({ status: sliceIssueVersions.status })
+        .from(sliceIssueVersions);
+      expect(versions.some((version) => version.status === 'published')).toBe(false);
+
+      // And the tokens moved anyway. Nothing in `03` or `16` makes a manager's
+      // 150 wait on an editor, and a coupling would be invisible in production
+      // because the desk would look merely quiet.
+      expect(report.rewards!.tokens).toBeGreaterThan(0);
+      expect(await db!.select().from(weeklyRewards)).not.toHaveLength(0);
+    });
   });
 
   it('never closes a week of a season the books are shut on by writing to another', async () => {

@@ -226,6 +226,8 @@ async function main(): Promise<void> {
           // version a deploy actually stored.
           `line ${String(economy.values.weeklyLineStakeTokens)} · ` +
           `bounty ${String(economy.values.bountyRewardTokens)} · ` +
+          `win ${String(economy.values.matchupWinTokens)} · ` +
+          `high ${String(economy.values.weeklyHighScoreTokens)} · ` +
           `PROVISIONAL until the P3 simulation`,
       );
     }
