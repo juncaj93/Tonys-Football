@@ -395,6 +395,46 @@ the database was reset. Shipping code whose comment tells a false story is worse
 than not shipping it.
 
 
+### Visual debt 12 — closed, and the cause was the camera
+
+Two milestones of investigation, six states, five routes, three widths, roughly
+one sighting per 209 captures, no reproduction, and no cause anywhere in
+application code. A dev sweep finally named the element:
+
+```
+<input type="text" maxLength={160} name="note" required={true} ...
+-  style={{caret-color:"transparent"}}
+```
+
+`/admin/slice/<version>` at 375, `readyState=complete`, 0 pending Suspense
+boundaries. **Nothing on that screen sets a caret colour.**
+
+**Playwright does.** Its screenshot defaults to `caret: 'hide'`, and it hides a
+caret by writing `caret-color: transparent !important` into the **inline style of
+every element** and then taking it away. Measured with a `MutationObserver` on
+one input:
+
+```
+default (caret: 'hide')  -> ["caret-color: transparent !important;", ""]
+caret: 'initial'         -> []
+```
+
+A capture landing while React hydrates hands React a `style` attribute the server
+never sent. **The instrument was the defect.**
+
+That accounts for every recorded property, including the one that fitted no
+theory: **144 targeted document loads could not reproduce what a sweep hit every
+209 captures.** Those probes loaded the pages; they did not photograph them. It
+also explains why static analysis kept coming back clean, and why two routes with
+no client components at all could produce a mismatch — the DOM was being edited
+from outside React entirely.
+
+The fix is one option, in `scripts/visual-qa-capture.ts` so a test can reach it.
+The regression drives a real browser and asserts both halves: the driver's
+options mutate nothing, **and** the default does — so it fails on the pre-fix
+behaviour rather than restating the code.
+
+
 ### Next executable task, in order
 
 The art queue that used to sit here is closed (`#55`) and this replaces it.

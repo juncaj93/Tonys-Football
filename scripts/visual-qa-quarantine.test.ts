@@ -22,18 +22,25 @@ const REAL =
   'additional helpful warnings.';
 
 describe('the known-defect quarantine', () => {
-  it('holds exactly one entry', () => {
+  it('is empty', () => {
     /*
-     * **The load-bearing assertion.** A second entry is not a bigger allowance,
-     * it is evidence that the gate has stopped being trusted — so adding one has
-     * to be a deliberate act that changes this line and explains itself.
+     * **The load-bearing assertion**, and it now asserts *nothing is tolerated*.
+     *
+     * The one entry this table ever held was debt 12, and it turned out not to
+     * be a product defect at all: the driver's own screenshot was writing
+     * `caret-color: transparent` into the page while React hydrated it
+     * (`scripts/visual-qa-capture.ts`). With the camera fixed there is nothing
+     * left to tolerate.
+     *
+     * A first entry is now as deliberate an act as a second one was: it changes
+     * this line and has to explain itself.
      */
-    expect(QUARANTINE).toHaveLength(1);
-    expect(QUARANTINE[0]?.debt).toBe(12);
+    expect(QUARANTINE).toHaveLength(0);
   });
 
-  it('tolerates the error that actually fired', () => {
-    expect(quarantineFor(REAL)?.debt).toBe(12);
+  it('tolerates nothing, including the error it was built for', () => {
+    // The exact production text that opened debt 12. It fails the gate again.
+    expect(quarantineFor(REAL)).toBeUndefined();
   });
 
   it('does not tolerate a content mismatch', () => {
@@ -98,8 +105,16 @@ describe('the known-defect quarantine', () => {
     expect(driver).toContain('quarantined,');
   });
 
-  it('is described where the defect is recorded', () => {
+  it('leaves the mechanism described where the defect was recorded', () => {
+    /*
+     * This used to assert that the *open* debt-12 entry pointed at the
+     * quarantine. Debt 12 is closed and the table is empty, so what is worth
+     * holding is the account of **why the mechanism exists and how it ended** —
+     * a quarantine that quietly loses its story is how the next one gets added
+     * without a conversation.
+     */
     const debt = readFileSync(path.join(ROOT, 'docs', 'VISUAL_DEBT.md'), 'utf8');
-    expect(debt).toContain('visual-qa-quarantine.ts');
+    expect(debt).toContain('Quarantine entry removed');
+    expect(debt).toContain('visual-qa-capture.ts');
   });
 });

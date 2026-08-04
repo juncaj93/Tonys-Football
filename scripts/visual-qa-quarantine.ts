@@ -64,13 +64,21 @@ export interface QuarantineEntry {
  */
 export const QUARANTINE_CEILING = 2;
 
-export const QUARANTINE: readonly QuarantineEntry[] = [
-  {
-    debt: 12,
-    why: 'the intermittent production #418 structure mismatch — six states, five routes, no reproduction',
-    shape: /Minified React error #418\b[\s\S]*args\[\]=HTML/,
-  },
-];
+/**
+ * **Empty, and that is the point.**
+ *
+ * The one entry this table ever held was visual debt 12 — an intermittent
+ * hydration mismatch with no reproduction and no cause in application code.
+ * There was none to find: the driver's own screenshot was writing
+ * `caret-color: transparent` into the page while React hydrated it. The camera
+ * was the defect (`docs/VISUAL_DEBT.md` 12, `scripts/visual-qa-capture.ts`).
+ *
+ * The mechanism stays because the next time a gate goes intermittent it should
+ * be *counted and printed* rather than muted or deleted — that is what made this
+ * one solvable. But it stays empty until something earns a row, and the test
+ * beside it still refuses more than one.
+ */
+export const QUARANTINE: readonly QuarantineEntry[] = [];
 
 /** The entry that tolerates this message, if any. */
 export function quarantineFor(text: string): QuarantineEntry | undefined {
