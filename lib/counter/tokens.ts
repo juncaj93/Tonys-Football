@@ -69,6 +69,24 @@ export const PROVISIONAL_ECONOMY = {
    * worth noticeably more than a market a manager plays every week.
    */
   bountyRewardTokens: 100,
+  /**
+   * `03 §4`: "matchup win: 150".
+   *
+   * Taken from the specification rather than derived, exactly like
+   * `seasonStartTokens` above it and for the same reason — `03 §4` calls these
+   * "initial baseline values" and requires that "final numbers must be
+   * configurable and reviewed against simulations before launch", which is what
+   * `provisional` and the content-hash version are for. Do not tune it here.
+   */
+  matchupWinTokens: 150,
+  /**
+   * `03 §4`: "weekly high score: 400".
+   *
+   * Worth more than a win and more than eight boxes a season is not an accident
+   * of the spec: a win is a thing half the league does every week, and the high
+   * score is a thing exactly one manager does.
+   */
+  weeklyHighScoreTokens: 400,
 } as const;
 
 export type EconomyValues = typeof PROVISIONAL_ECONOMY;
@@ -81,7 +99,11 @@ export type LiveTokenReason =
   /** A pick on Tony's Line, debited when it is placed (`lib/stakes/`). */
   | 'STAKE_PLACED'
   /** A winning pick, or a claimed bounty. Credited by settlement, once. */
-  | 'STAKE_PAYOUT';
+  | 'STAKE_PAYOUT'
+  /** Won a paired game in a finalized week (`lib/rewards/`). */
+  | 'MATCHUP_WIN'
+  /** Posted the week's best score in a finalized week (`lib/rewards/`). */
+  | 'WEEKLY_HIGH_SCORE';
 
 export interface TokenDelta {
   readonly userId: string;

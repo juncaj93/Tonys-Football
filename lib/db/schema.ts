@@ -725,17 +725,25 @@ export const adminAuditLogs = pgTable(
  * has a finite, auditable set of answers. Adding a value is a one-line
  * migration.
  *
- * Only the two that can actually happen today are used by application code:
+ * What is wired today:
  *
  *   - `SEASON_START` — the opening balance. `03 §4` names 250 as a baseline; the
  *     value lives in `economy_configs` and is provisional until P3.
  *   - `BOX_PURCHASE` — spending at the counter.
+ *   - `STAKE_PLACED` / `STAKE_PAYOUT` — weekly stakes (`0010`).
+ *   - `MATCHUP_WIN` / `WEEKLY_HIGH_SCORE` — weekly rewards (`0013`), paid by the
+ *     Tuesday job once a week is finalized.
  *
- * The rest are declared because they are named in `03 §4` and the ledger should
- * not need a migration the first Tuesday of the season. They are deliberately
- * **not** wired to anything: there is no cron yet (`16 §4.3` allows exactly two
- * jobs and neither is built), and inventing a weekly reward that fires on
- * nothing would be fabricated data.
+ * The last pair spent a long time declared and unwired, and the reason is worth
+ * keeping: *"inventing a weekly reward that fires on nothing would be fabricated
+ * data"* — matchup wins and high scores need a played week and the job that
+ * closes it, and `16 §4.3`'s crons did not exist. Both now do (`#56`, `#59`), so
+ * the precondition is met rather than waived.
+ *
+ * `SEASON_AWARD` remains declared and unwired, and the same rule still applies to
+ * it: `03 §4` names "championship and season awards" without amounts and puts
+ * them at season close, which is not this slice. Do not reach for it because it
+ * is there.
  */
 export const tokenReason = pgEnum('token_reason', [
   'SEASON_START',
@@ -1991,3 +1999,74 @@ export const weekSnapshots = pgTable(
 );
 
 export type WeekSnapshot = typeof weekSnapshots.$inferSelect;
+
+/* -------------------------------------------------------------------------
+ * Weekly token rewards
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Why a weekly reward was paid.
+ *
+ * Narrower than {@link tokenReason} deliberately — see `0013`'s header. Both
+ * values are named in `03 §4` and both are derivable from a finalized week
+ * without inference.
+ */
+export const weeklyRewardReason = pgEnum('weekly_reward_reason', [
+  'MATCHUP_WIN',
+  'WEEKLY_HIGH_SCORE',
+]);
+
+/**
+ * One reward, and the basis it was paid on.
+ *
+ * The ledger says money moved; this says why, against which numbers, for which
+ * game. `0013`'s header carries the full argument for why both records exist.
+ *
+ * Append-only, with no correction path: a mistake is a new
+ * `COMMISSIONER_ADJUSTMENT` in the ledger, not an edit here.
+ */
+export const weeklyRewards = pgTable(
+  'weekly_rewards',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+    week: integer('week').notNull(),
+    seasonMembershipId: uuid('season_membership_id')
+      .notNull()
+      .references(() => seasonMemberships.id, { onDelete: 'restrict' }),
+    reason: weeklyRewardReason('reason').notNull(),
+    amount: integer('amount').notNull(),
+
+    /** The seat, kept beside the membership. `11 §2` separates the two. */
+    rosterId: integer('roster_id').notNull(),
+    /** What they scored that week, in cents. Self-describing without a join. */
+    pointsCents: integer('points_cents').notNull(),
+    /** `WeekGame.key` — `2025-w14-m3`. Text, not an FK: see `0013`. */
+    gameKey: text('game_key').notNull(),
+
+    /** `economy_configs.version` — the content hash of the numbers in force. */
+    economyVersion: text('economy_version').notNull(),
+
+    tokenTransactionId: uuid('token_transaction_id')
+      .notNull()
+      .references(() => tokenTransactions.id, { onDelete: 'restrict' }),
+    awardedAt: timestamp('awarded_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique('weekly_rewards_once_per_manager_per_reason').on(
+      table.seasonId,
+      table.week,
+      table.seasonMembershipId,
+      table.reason,
+    ),
+    unique('weekly_rewards_one_per_transaction').on(table.tokenTransactionId),
+    index('weekly_rewards_season_week_idx').on(table.seasonId, table.week),
+    index('weekly_rewards_membership_idx').on(table.seasonMembershipId, table.awardedAt),
+    check('weekly_rewards_week_positive', sql`${table.week} > 0`),
+    check('weekly_rewards_amount_positive', sql`${table.amount} > 0`),
+  ],
+);
+
+export type WeeklyReward = typeof weeklyRewards.$inferSelect;

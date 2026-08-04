@@ -1,13 +1,14 @@
 import Link from 'next/link';
 
 import { BuyBox } from '@/components/counter/buy-box';
+import { Tab, type TabMovement } from '@/components/counter/tab';
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
 import { TYPE } from '@/lib/design/type';
 import { requireUser } from '@/lib/auth/current-user';
 import { counterState } from '@/lib/counter/boxes';
-import { economyFor, openSeason, wallet } from '@/lib/counter/tokens';
+import { economyFor, openSeason, recentTransactions, wallet } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
 
 /**
@@ -126,6 +127,14 @@ export default async function CounterPage() {
             * line above it, and one was a sentence and a link.
             *
             * A panel is for the thing you can *act on*. That is the box.
+            *
+            * The statement below is the **second** panel, and it is not a
+            * relapse. The three that were removed repeated each other and the
+            * sentences around them; a statement is the one thing on this page
+            * the manager cannot get anywhere else, and `03 §5` requires the
+            * displayed balance to be reconcilable to the ledger. It carries no
+            * balance of its own for exactly the reason the paragraph above
+            * gives — `BuyBox` already says it, three lines up.
             */}
           <div className="mt-6">
             <PixelPanel className="px-4 pt-4 pb-4">
@@ -176,6 +185,28 @@ export default async function CounterPage() {
             * something would make the counter's claim about permanence
             * unverifiable.
             */}
+          {/*
+            * The statement, under the thing it pays for.
+            *
+            * Only when there is a tab to show one for — a manager with no seat
+            * has no wallet, and an empty ledger addressed to them would be
+            * answering a question they cannot ask.
+            *
+            * Deliberately *below* the box: the reason to come here is to buy
+            * something, and a wall of accounting above the counter would make
+            * the shop read as a bank statement.
+            */}
+          {purse !== null && (
+            <div className="mt-6">
+              <PixelPanel className="px-4 pt-4 pb-4">
+                <PanelHeading>Your tab</PanelHeading>
+                <div className="mt-2">
+                  <Tab movements={purse.movements} />
+                </div>
+              </PixelPanel>
+            </div>
+          )}
+
           <div className="mt-7">
             <p className={`${TYPE.body} text-paper-mid/85`}>
               {collectiblesOwned > 0
@@ -212,12 +243,25 @@ async function purseFor(
   db: ReturnType<typeof getDb>,
   userId: string,
   seasonId: string,
-): Promise<{ balance: number; economy: Awaited<ReturnType<typeof economyFor>> } | null> {
+): Promise<{
+  balance: number;
+  economy: Awaited<ReturnType<typeof economyFor>>;
+  movements: readonly TabMovement[];
+} | null> {
   const held = await wallet(db, { userId, seasonId });
   if (held === null) return null;
 
   try {
-    return { balance: held.balance, economy: await economyFor(db, seasonId) };
+    return {
+      balance: held.balance,
+      economy: await economyFor(db, seasonId),
+      /*
+       * Six, because the statement sits under the thing a manager came here to
+       * buy rather than being the page. A season's worth of Tuesdays belongs on
+       * a surface built for it, and no such surface is in v1.
+       */
+      movements: await recentTransactions(db, held.membershipId, 6),
+    };
   } catch (error: unknown) {
     // Loud in the log, quiet in the shop.
     console.error('[counter] no economy config for the open season', error);

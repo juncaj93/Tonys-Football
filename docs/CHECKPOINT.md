@@ -20,6 +20,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Stats & Data** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #33 | Weekly reputation tags (`16 §10`), once a live season produces events |
 | **Tuesday Slice** | `QUEUED_NOT_ACTIVE`, independently verified | `main` | #46 | Nothing. The review queue it was waiting on is built — see below |
 | **Weekly stakes** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #51 | Nothing. The Tuesday job that calls it is built — see below |
+| **Weekly token rewards** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. `03 §4`'s two derivable sources, paid by the Tuesday job from a finalized week, with the statement on `/counter`. `docs/WEEKLY_REWARDS_BOUNDARY.md` |
 | **Slice review chain** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Ten steps, seven demo states, 23 database tests, and the rack now serves only what was approved. `docs/SLICE_REVIEW_BOUNDARY.md` |
 | **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
@@ -246,20 +247,65 @@ recorded on unmodified `main`.
 both jobs at once. Until it is set in Vercel production, both are scheduled and
 inert — they answer 404 to everything, including Vercel's own scheduler.
 
+### Weekly token rewards — built this session
+
+`03 §4`'s fantasy-performance token sources, as the producer, the record, the
+audit and the surface rather than a table with nothing writing it.
+
+**The assignment's premise was wrong, and so was this file's.** Both said
+`weekly_rewards` already existed and nothing wrote it. There was no such table —
+the schema had `reward_tables`, which is the loot-box weight table and is both
+written and read. What did exist was narrower: `token_reason` had declared
+`MATCHUP_WIN` and `WEEKLY_HIGH_SCORE` since `0005`, unwired, with
+`IMPLEMENTATION_HANDOFF.md` recording why — *"do not invent a weekly reward that
+fires on nothing"*, because the two crons did not exist. **Both now do**, so the
+precondition was met rather than the rule waived.
+
+- **The amounts are specified, not chosen.** `03 §4` names matchup win **150**
+  and weekly high score **400** in the same list that gave `seasonStartTokens`
+  its 250, and requires that final numbers be configurable and simulation-
+  reviewed — which is exactly what `economy_configs` already is. No commissioner
+  decision was needed. Do not tune them; that is P3's job.
+- **Two reasons, and the absences are decisions.** Upset, playoff advancement and
+  consolation placing are **not in `03 §4` at all**; the schema would accept them
+  and that is not a reason. `SEASON_AWARD` stays declared and unwired. Week type
+  is **not** a multiplier — a playoff win and a consolation win each pay 150, and
+  two tests pin the absence of a branch.
+- **The finality gate had a defect the integration test found.** `weekFinality`
+  *prefers* a week's own finalization when both records exist, and the Tuesday
+  job writes that row in step 1 — so a `source === 'season_closed'` check never
+  fires on a closed season, and `apply_token_delta` raises from four frames down
+  instead. Every week of 2024 and 2025 is in that position. The gate now tests
+  `seasons.finalized_at` directly, **the same condition the ledger enforces**.
+  *No fabricated failures*, the quiet partner of no fabricated data.
+- **Idempotency is two database locks and no application check.** There is no
+  `SELECT ... WHERE already_rewarded` anywhere: that is a race with a
+  comfortable-looking body. The key is derived from the occasion and **omits the
+  amount**, so a rebalance mid-week raises rather than paying twice at two
+  prices. Payment is applied first and the justification second, because the
+  ledger is the idempotency authority.
+- **Rewards do not wait on the commissioner.** `16 §9` requires approval of the
+  *paper*; nothing makes a manager's 150 tokens wait on an editor. Asserted in
+  both directions — tokens move while no version is published.
+- **`/counter` gained a statement**, through the text-surface `Ledger`
+  primitives. `recentTransactions` had been written and unused since the ledger
+  shipped; this is its first caller, and it is what `03 §5`'s "the displayed
+  balance should reconcile to the ledger" finally has something to reconcile.
+
+38 tests in `lib/rewards/` plus four in the Tuesday job, against a real Postgres,
+covering replay, ten replays, two concurrent runs, rollback on partial failure
+via an injected trigger, and retry after it clears.
+
+`docs/WEEKLY_REWARDS_BOUNDARY.md` is the canonical account.
+
 ### Next executable task, in order
 
 The art queue that used to sit here is closed (`#55`) and this replaces it.
 
-1. **Weekly token rewards.** `16` puts *"token ledger and weekly rewards"* in v1.
-   The ledger, `apply_token_delta` and the box economy are all shipped; the
-   **weekly grant is not** — `weekly_rewards` exists in `lib/db/schema.ts` and
-   nothing writes it, and `runTuesday` has four steps with no reward among them.
-   It is the largest remaining gap in the v1 list and the Tuesday job is already
-   the place it belongs.
-2. **Visual debt 9 — the parlor ceiling.** A scorch-like smear and dashed grid
+1. **Visual debt 9 — the parlor ceiling.** A scorch-like smear and dashed grid
    above the rear doorway. Needs a targeted regeneration of that surface, not a
    filter; recorded as `EXCLUDED_CEILING` in `scripts/clean-parlor-surfaces.ts`.
-3. **Visual debt 12 — the intermittent `#418`.** Instrumented, quarantined under
+2. **Visual debt 12 — the intermittent `#418`.** Instrumented, quarantined under
    a ceiling, six states and five routes named, two classes of cause eliminated,
    no reproduction. Do not ship a speculative repair; chase the next sighting on
    a **dev** build, which is the only configuration that names the element.
@@ -270,7 +316,7 @@ The art queue that used to sit here is closed (`#55`) and this replaces it.
    captures completed before it stopped, with no sighting. Teaching the driver to
    skip its production-only passes under a `--dev` flag is step one, and it is
    cheap. Deleting the quarantine entry is the definition of done.
-4. Deferred with reasons and not queued: debts 1, 2, 11 and 14.
+3. Deferred with reasons and not queued: debts 1, 2, 11 and 14.
 
 ---
 
