@@ -77,6 +77,15 @@ interface Failure {
 }
 
 const failures: Failure[] = [];
+
+/**
+ * Hydration messages, as the pages themselves reported them.
+ *
+ * Module-scoped beside `failures` and for the same reason: it outlives the
+ * per-width browser context, so `report.json` carries every sighting from the
+ * whole run rather than only the last width's.
+ */
+const sightings: (HydrationSighting & { state: string; width: number })[] = [];
 const fail = (gate: string, detail: string): void => {
   failures.push({ gate, detail });
 };
@@ -1313,6 +1322,29 @@ interface TonyFrame {
   readonly cw: number;
   readonly ch: number;
   readonly speaking: boolean;
+  /**
+   * The entrance is running in this frame.
+   *
+   * Recorded for the same reason `speaking` is: `tony-steps-up` is a sanctioned
+   * animation that genuinely moves him, so its frames are not evidence of the
+   * defect this gate exists for and must be filtered rather than judged.
+   *
+   * It used to be excluded by waiting for `performance.now() >= 1300` instead,
+   * and that is a different claim than it looks. The entrance is scheduled from
+   * a `useEffect`, so it is anchored to **hydration**; `performance.now()` is
+   * anchored to **navigation**. On this machine hydration lands at 118-178ms and
+   * the entrance's last movement at 1114-1157ms, so the constant cleared it by
+   * about 150ms — and on a loaded runner it did not. A local production sweep
+   * failed with `dy moved 0.74px (-134.04 at t=1323ms, -134.78 at t=1457ms)`,
+   * which is the tail of `tony-steps-up` easing out, judged as a defect.
+   *
+   * Reading the class per frame removes the guess. It also cannot hide a real
+   * defect: `.arriving` is on for 1100ms of one first visit per pass, and every
+   * other frame in every pass is still judged.
+   */
+  readonly arriving: boolean;
+  /** The affordance reveal is lit in this frame. Anchors the coverage windows. */
+  readonly revealed: boolean;
 }
 
 /**
@@ -1401,6 +1433,8 @@ function tonySampler(ms: number): string {
       cw: Math.max(0, c.right - c.left),
       ch: Math.max(0, c.bottom - c.top),
       speaking: document.querySelector('.speaking') !== null,
+      arriving: document.querySelector('.arriving') !== null,
+      revealed: document.querySelector('.showing-taps') !== null,
     });
     if (performance.now() < until) requestAnimationFrame(tick);
     else resolve(frames);
@@ -1508,11 +1542,16 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
   /*
    * The arrival timeline, from `arrival.tsx`. Duplicated deliberately: a gate
    * that imports the constants it is checking cannot notice them changing, and
-   * these three numbers are the schedule this whole gate exists to sample
-   * across. If they move, this fails and says so, which is the point.
+   * these numbers are the schedule this whole gate exists to sample across. If
+   * they move, this fails and says so, which is the point.
+   *
+   * They are **durations**, not page times. `arrival.tsx` starts its timers from
+   * a `useEffect`, so every one of them is measured from hydration — which is
+   * why `REVEAL_AT` is only ever a fallback here and the windows below are
+   * anchored to the frame the reveal was first seen lit in.
    */
   const REVEAL_AT = 1600;
-  const REVEAL_OFF = 1600 + 3300;
+  const REVEAL_FOR = 3300;
   const RAMP = 260;
 
   const firstVisit = async (): Promise<void> => {
@@ -1548,17 +1587,37 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
   const covers = (frames: readonly TonyFrame[], lo: number, hi: number): boolean =>
     frames.some((f) => f.t >= lo && f.t <= hi);
 
+  /** Frames where nothing is *supposed* to be moving. */
+  const still = (frames: readonly TonyFrame[]): TonyFrame[] =>
+    frames.filter((f) => !f.speaking && !f.arriving);
+
+  /**
+   * When the reveal actually turned on, in page time.
+   *
+   * `arrival.tsx` schedules it 1600ms after **hydration**, so the constant
+   * above is only the right answer on a machine where hydration is free. Every
+   * window below is expressed relative to what the frames say happened, so a
+   * slow runner costs coverage rather than producing a failure about a defect
+   * that is not there. Falls back to the constant when no frame saw it lit,
+   * which keeps a genuinely missing reveal loud.
+   */
+  const revealOnset = (frames: readonly TonyFrame[]): number =>
+    frames.find((f) => f.revealed)?.t ?? REVEAL_AT;
+
   /** Past the reveal's 4900ms end plus its ramp, with room to spare. */
   const WINDOW_ENDS = 6600;
 
   /* --- A. Nobody touches anything ------------------------------------- */
 
   await firstVisit();
-  // The entrance genuinely moves him — that is `tony-steps-up`, by design. It
-  // ends at 980ms and `arriving` comes off at 1100ms, so 1300 is clear of it.
-  await page.waitForFunction(() => performance.now() >= 1300, undefined, { timeout: 10_000 });
+  /*
+   * Sampled from the first frame there is one. The entrance still moves him —
+   * that is `tony-steps-up`, by design — but its frames are now excluded by the
+   * class that causes them rather than by a constant that hoped to have
+   * outlasted it. See `TonyFrame.arriving`.
+   */
   const undisturbed = await sampleUntil(WINDOW_ENDS);
-  const quietA = undisturbed.filter((f) => !f.speaking);
+  const quietA = still(undisturbed);
   assertSteady(quietA, width, 'pass A (untouched homepage)', 60);
 
   /*
@@ -1566,10 +1625,11 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
    * has no still frames before the reveal turns on — pass B exists for those.
    * What A must cover is the reveal *standing* and the reveal *gone*.
    */
-  if (!covers(quietA, REVEAL_AT + 1400, REVEAL_OFF - 100)) {
+  const litA = revealOnset(undisturbed);
+  if (!covers(quietA, litA + 1400, litA + REVEAL_FOR - 100)) {
     fail('tony-steady', `@${String(width)} pass A never sampled a still frame while lit`);
   }
-  if (!covers(quietA, REVEAL_OFF + RAMP + 200, REVEAL_OFF + 1500)) {
+  if (!covers(quietA, litA + REVEAL_FOR + RAMP + 200, litA + REVEAL_FOR + 1500)) {
     fail('tony-steady', `@${String(width)} pass A never sampled a still frame after the reveal`);
   }
 
@@ -1589,26 +1649,25 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
   const dismiss = page.getByRole('button', { name: /Dismiss what Tony said/i });
   if ((await dismiss.count()) > 0) await dismiss.click({ force: true });
   /*
-   * Dismissed early, sampled from 1300ms — **both**, and the second is not
-   * optional.
+   * Sampled from the moment the dismissal returns, and judged on the frames the
+   * entrance is not running in.
    *
-   * An earlier version dismissed and then sampled immediately, on the reasoning
-   * that starting sooner covers more of the pre-reveal interval. It covered the
-   * **entrance** instead: the click returns around 700ms and `tony-steps-up`
-   * runs to 980ms, so the first two hundred milliseconds of the window were
-   * frames of an animation that is supposed to move him. It reported
-   * `dy moved 5.52px` at all three widths — the gate catching the harness,
-   * which is the right way round.
+   * An earlier version sampled immediately and reported `dy moved 5.52px` at
+   * all three widths — the entrance, judged as a defect. That was patched by
+   * waiting for `performance.now() >= 1300`, which held on a fast machine and
+   * broke on a loaded one for the same reason: the wait is on the navigation
+   * clock and the animation is on the hydration clock. Excluding the frames by
+   * their own class is the version that has no margin to run out.
    */
-  await page.waitForFunction(() => performance.now() >= 1300, undefined, { timeout: 10_000 });
   const dismissed = await sampleUntil(WINDOW_ENDS);
-  const quietB = dismissed.filter((f) => !f.speaking);
+  const quietB = still(dismissed);
   assertSteady(quietB, width, 'pass B (line dismissed)', 120);
 
+  const litB = revealOnset(dismissed);
   for (const [lo, hi, what] of [
-    [1200, REVEAL_AT - 50, 'before the reveal'],
-    [REVEAL_AT + RAMP + 100, REVEAL_OFF - 100, 'while the reveal is lit'],
-    [REVEAL_OFF + RAMP + 200, REVEAL_OFF + 1200, 'after the reveal'],
+    [0, litB - 50, 'before the reveal'],
+    [litB + RAMP + 100, litB + REVEAL_FOR - 100, 'while the reveal is lit'],
+    [litB + REVEAL_FOR + RAMP + 200, litB + REVEAL_FOR + 1200, 'after the reveal'],
   ] as const) {
     if (!covers(quietB, lo, hi)) {
       fail(
@@ -1694,7 +1753,7 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
   await page.waitForTimeout(500);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(500);
-  const afterPanel = (await sample(700)).filter((f) => !f.speaking);
+  const afterPanel = still(await sample(700));
   assertSteady(afterPanel, width, 'pass E (a panel opened and closed)', 20);
 
   /*
@@ -1707,7 +1766,7 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
   await page.waitForURL((url) => url.pathname.startsWith('/back-hall'), { timeout: 20_000 });
   await page.goto(BASE, { waitUntil: 'networkidle' });
   await page.waitForTimeout(1200);
-  const returned = (await sample(1600)).filter((f) => !f.speaking);
+  const returned = still(await sample(1600));
   assertSteady(returned, width, 'pass E (back from the Back Hall)', 40);
   if (returned.length > 0 && Math.abs(returned[0]!.dy - baseline.dy) > STEADY_EPS) {
     fail(
@@ -1717,6 +1776,104 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
     );
   }
 
+  /* --- F. A slow arrival ------------------------------------------------ */
+
+  /*
+   * The entrance may not move a room the manager is already looking at.
+   *
+   * Passes A-E all measure a *fast* arrival, which is the one case where this
+   * defect is invisible: the server renders Tony at the counter, the browser
+   * paints that, and hydration attaches `.arriving` about 150ms later — so
+   * `tony-steps-up`'s opening keyframe, `translate3d(0, 26%, 0)` under
+   * `animation-fill-mode: both`, drops him a quarter of his height before
+   * anybody has focused on him.
+   *
+   * Under an 8x CPU throttle the same sequence measured: **the room paints
+   * complete at 331ms and at 642ms he drops 62.42px** — behind the counter
+   * front, which is drawn over him — and takes three seconds to climb back.
+   * That is the commissioner's *"Tony's bottom half clips, seconds after the
+   * homepage settles"*, and no pass that hydrates in 150ms can see it.
+   *
+   * ## Why the client bundle is delayed rather than the CPU throttled
+   *
+   * CPU throttling was the first attempt and it is the wrong instrument: it
+   * slows paint and hydration *together*, so the gap between them — which is the
+   * entire defect — stays small and the pass reports whatever the runner
+   * happened to do. It passed at two widths and failed at the third on the same
+   * build, which is a measurement that has not measured anything.
+   *
+   * Delaying `/_next/static/chunks/` models the real case exactly and
+   * deterministically: the HTML and the CSS arrive, the room paints complete,
+   * and the script that animates it turns up several hundred milliseconds
+   * later. That is a phone on a real network, and it is reproducible.
+   *
+   * `arrival.tsx` skips the entrance once the finished room has been on screen
+   * longer than `ENTRANCE_STALE_AFTER_MS`, so with that rule he holds still, and
+   * with it removed this reports a sixty-pixel move at every width.
+   *
+   * The route is removed before returning. A gate that leaves every script
+   * delayed would charge every check after it for this one.
+   */
+  const BUNDLE_DELAY_MS = 700;
+  try {
+    await page.route('**/_next/static/chunks/**', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, BUNDLE_DELAY_MS));
+      await route.continue();
+    });
+    await page.evaluate(FORGET_ARRIVAL);
+    /*
+     * `commit` rather than `load`, because the whole point is to be sampling
+     * *before* the script arrives — waiting for the load event would wait out
+     * the delay this pass just installed.
+     *
+     * Which means the sampler can be injected before the parser has reached
+     * Tony, so both of the elements it measures are waited for explicitly.
+     * They are in the server's HTML, so this resolves as soon as the document
+     * parses and long before the delayed bundle: it costs no coverage. Without
+     * it the pass raced at 375 on a loaded machine and aborted the whole sweep
+     * with "the sampler returned nothing".
+     */
+    await page.goto(BASE, { waitUntil: 'commit' });
+    await page.waitForSelector('.tony-mark', { state: 'attached', timeout: 20_000 });
+    await page.waitForSelector('[data-room-layer="counter-front"]', {
+      state: 'attached',
+      timeout: 20_000,
+    });
+
+    // Long enough to cover the delayed bundle, hydration, and the whole 900ms
+    // the entrance would have run for had it started.
+    const slow = await sample(4200);
+    const judged = slow.filter((f) => !f.speaking);
+    if (judged.length < 30) {
+      fail(
+        'tony-steady',
+        `@${String(width)} pass F (a slow arrival): only ${String(judged.length)} frames to ` +
+          `judge. A pass with nothing in it is not a pass.`,
+      );
+    } else {
+      // The position the server painted, taken from the first frame — before
+      // any client code has had the chance to move him.
+      const painted = judged[0]!;
+      const worst = judged.reduce(
+        (far, f) => (Math.abs(f.dy - painted.dy) > Math.abs(far.dy - painted.dy) ? f : far),
+        painted,
+      );
+      const moved = Math.abs(worst.dy - painted.dy);
+      if (moved > STEADY_EPS) {
+        fail(
+          'tony-steady',
+          `@${String(width)} pass F (a slow arrival): the room painted him at ` +
+            `${painted.dy.toFixed(2)} and he moved ${moved.toFixed(2)}px from it at ` +
+            `t=${String(worst.t)}ms. An entrance may not start on a room that is already on ` +
+            `screen — see ENTRANCE_STALE_AFTER_MS in arrival.tsx.`,
+        );
+      }
+    }
+  } finally {
+    await page.unroute('**/_next/static/chunks/**');
+  }
+
+  await page.goto(BASE, { waitUntil: 'networkidle' });
   await dismissTony(page);
 }
 
@@ -2618,6 +2775,127 @@ function luminance([r, g, b]: [number, number, number]): number {
   return 0.2126 * linear[0] + 0.7152 * linear[1] + 0.0722 * linear[2];
 }
 
+/* ------------------------------------------------- hydration attribution -- */
+
+/**
+ * What a hydration mismatch looks like, and where it actually happened.
+ *
+ * Visual debt 12 is one intermittent React `#418` that has now been filed under
+ * **four** state names across **three** routes, and every one of those labels
+ * was wrong in a different way. The state name was wrong because `capturing` is
+ * set before the navigation. Reading `page.url()` in the Node-side console
+ * handler was better and is still not right: a Playwright console event is
+ * delivered over CDP and handled asynchronously, so under load the URL can
+ * already be the *next* document by the time the handler runs. Both attributions
+ * are guesses made outside the document that produced the error.
+ *
+ * This one is made **inside** it. `window` belongs to exactly one document, so a
+ * pathname read synchronously in the page, at the moment the message is logged,
+ * cannot name a different page than the one that logged it. There is no timing
+ * under which it can be wrong.
+ *
+ * ## It reports rather than gates
+ *
+ * The Node-side listeners below are untouched and remain the gate — they catch
+ * console errors the *browser* emits (a failed request, a CSP refusal) which
+ * never pass through the page's own `console.error` and which an in-page hook
+ * would silently stop failing on. This is additive evidence, not a replacement,
+ * because a diagnostic that quietly narrows a gate is worse than no diagnostic.
+ *
+ * ## And it carries the evidence the next sighting needs
+ *
+ * `#418`'s first argument says `text` or `HTML` and nothing else, so the
+ * production bundle names no element. What it can still record is the shape of
+ * the document at the instant React gave up on it: how far loading had got, and
+ * whether any Suspense boundary was still unresolved. That is what distinguishes
+ * a component that renders differently from a boundary spliced in mid-hydration,
+ * and it is the distinction this defect has never had evidence for.
+ */
+interface HydrationSighting {
+  readonly path: string;
+  readonly text: string;
+  readonly readyState: string;
+  readonly sinceNavigationMs: number;
+  /** Suspense boundaries still pending, and the document's top-level shape. */
+  readonly pending: number;
+  readonly bodyChildren: string;
+  readonly headChildren: string;
+}
+
+/** Messages worth capturing evidence for. Deliberately broad. */
+const HYDRATION_SHAPED = /#4(18|19|2[0-5])|hydrat|did not match|server (?:rendered|HTML)/i;
+
+/**
+ * Installed into every document before any page script runs.
+ *
+ * Written as a string rather than a function so the whole thing is obviously
+ * page-side: it closes over nothing from this file, and the binding it calls is
+ * the only channel back.
+ */
+const HYDRATION_REPORTER = `(() => {
+  const SHAPED = ${String(HYDRATION_SHAPED)};
+
+  const census = () => {
+    let pending = 0;
+    const walker = document.createTreeWalker(document, NodeFilter.SHOW_COMMENT);
+    while (walker.nextNode()) {
+      // React marks an unresolved Suspense boundary '$?' and a suspended-again
+      // one '$~'. A resolved boundary is a bare '$'.
+      const data = walker.currentNode.data;
+      if (data === '$?' || data === '$~' || data === '$!') pending += 1;
+    }
+    const names = (parent) =>
+      Array.from(parent?.children ?? [])
+        .map((el) => el.tagName.toLowerCase())
+        .join(',')
+        .slice(0, 400);
+    return { pending, bodyChildren: names(document.body), headChildren: names(document.head) };
+  };
+
+  const report = (text) => {
+    if (!SHAPED.test(text)) return;
+    try {
+      window.__qaHydration({
+        path: location.pathname + location.search,
+        text: text.slice(0, 500),
+        readyState: document.readyState,
+        sinceNavigationMs: Math.round(performance.now()),
+        ...census(),
+      });
+    } catch {
+      // The binding is gone with the document, or the page is being torn down.
+      // Losing one report is better than throwing inside console.error.
+    }
+  };
+
+  const original = console.error.bind(console);
+  console.error = (...args) => {
+    original(...args);
+    try {
+      report(args.map((a) => String(a && a.message ? a.message : a)).join(' '));
+    } catch {
+      // As above: never let the diagnostic break the page it is watching.
+    }
+  };
+  window.addEventListener('error', (event) => {
+    try {
+      report(String(event.message));
+    } catch {
+      /* as above */
+    }
+  });
+})();`;
+
+/** The sighting whose text matches a gate failure, if the page reported one. */
+function sightingFor(text: string, sightings: HydrationSighting[]): HydrationSighting | undefined {
+  if (!HYDRATION_SHAPED.test(text)) return undefined;
+  // React logs the same message through both channels, so match on a prefix
+  // rather than on equality — Playwright's console text and the page's own
+  // stringification of the arguments are not character-identical.
+  const head = text.slice(0, 60);
+  return sightings.find((s) => s.text.startsWith(head) || text.startsWith(s.text.slice(0, 60)));
+}
+
 /* -------------------------------------------------------------------- main -- */
 
 async function run(): Promise<void> {
@@ -2677,6 +2955,15 @@ async function run(): Promise<void> {
         if (m.type() === 'error') note(m.text());
       });
       page.on('pageerror', (e) => { note(e.message); });
+
+      /*
+       * The same errors, attributed from inside the document that produced them.
+       * See `HYDRATION_REPORTER` — this adds evidence and gates nothing.
+       */
+      await ctx.exposeBinding('__qaHydration', (_source, sighting: HydrationSighting) => {
+        sightings.push({ ...sighting, state: capturing, width });
+      });
+      await ctx.addInitScript(HYDRATION_REPORTER);
 
       await signIn(page);
 
@@ -2805,7 +3092,25 @@ async function run(): Promise<void> {
       }
 
       for (const e of errors.slice(0, 5)) {
-        fail('console', `@${String(width)} on ${e.url} during "${e.state}" — ${e.text}`);
+        /*
+         * Where the page says it happened beats where the harness thinks it was
+         * standing. When the two disagree, both are printed: the disagreement is
+         * itself the measurement this defect kept producing, and hiding it would
+         * throw away the reason the in-page reporter exists.
+         */
+        const seen = sightingFor(e.text, sightings);
+        const where =
+          seen === undefined
+            ? e.url
+            : seen.path === e.url
+              ? seen.path
+              : `${seen.path} (the harness said ${e.url})`;
+        const evidence =
+          seen === undefined
+            ? ''
+            : ` [readyState=${seen.readyState}, ${String(seen.sinceNavigationMs)}ms in, ` +
+              `${String(seen.pending)} pending Suspense boundar${seen.pending === 1 ? 'y' : 'ies'}]`;
+        fail('console', `@${String(width)} on ${where} during "${e.state}" — ${e.text}${evidence}`);
       }
       await ctx.close();
     }
@@ -2818,6 +3123,12 @@ async function run(): Promise<void> {
     widths: WIDTHS,
     states,
     failures,
+    /*
+     * Every hydration message the pages reported, whether or not it failed a
+     * gate. The artifact is the only durable record of a defect that has never
+     * reproduced on demand, so a run that saw one and recovered still says so.
+     */
+    hydration: sightings,
     passed: failures.length === 0,
   };
   writeFileSync(path.join(OUT, 'report.json'), `${JSON.stringify(report, null, 2)}\n`);

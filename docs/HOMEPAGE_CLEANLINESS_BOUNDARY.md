@@ -326,3 +326,126 @@ debt.
 `docs/evidence/homepage-cleanliness/` — the board and the wall behind Tony,
 before and after, at 4× nearest-neighbour. Full-room captures at 390 / 375 / 360
 are the `tony-steady` state in the visual-QA artifacts.
+
+---
+
+## 10. The clip was not finished — the entrance drops him
+
+**Added 2026-08-03.** `§1` and `§9` closed visual debt 7 and the repair holds.
+The commissioner then reported the same symptom again, with a detail: *"Tony's
+bottom half clips at the exact moment his glow disappears."* That became visual
+debt 13, scoped in `docs/TEXT_SURFACE_BOUNDARY.md §10` as ten candidate
+mechanisms around the glow-off transition.
+
+**None of them is it, and that was established by measurement rather than by
+inspection.**
+
+### The glow is innocent, at all three widths
+
+`filter` was set to a series of static values with the ramp disabled, and each
+one photographed at device resolution:
+
+| state | vs `filter: none` |
+|---|---|
+| `drop-shadow(0 0 2px …) drop-shadow(0 0 10px …)` — the full glow | 44 493 px differ, **all outside the silhouette** |
+| the ramp at half strength | 19 024 px |
+| the ramp at a quarter | 7 027 px |
+| `drop-shadow(0 0 0 transparent)` — the last interpolated frame | **0 px** |
+
+`drop-shadow(0 0 0 transparent)` and `none` are **pixel-identical at 390, 375 and
+360**. The composited layer that the filter creates is therefore torn down
+without moving or re-rastering a single pixel of him, which removes
+compositing-layer teardown, filter removal, raster resampling and z-index change
+from the list in one measurement. An amplified difference image shows the halo
+is strictly *outside* his alpha and stops exactly at the counter's cut — the
+interior is unchanged, so the sprite is never redrawn.
+
+The dynamic path agrees: a CDP screencast of a real first visit, aligned to the
+page's own clock via `performance.timeOrigin`, shows the glow fading
+monotonically from 4 745 differing pixels to 0 across its 260ms ramp with no
+spike, no transient and no frame in which he moves.
+
+### What actually drops him
+
+The rule at the top of `arrival.tsx` — *"the server renders the finished
+state"* — has a cost that had never been named. Tony is at the counter **in the
+HTML**. The entrance is attached afterwards, by a class, from a `useEffect`. So
+the entrance is anchored to **hydration**, while the picture it animates away
+from is already on the glass.
+
+`tony-steps-up` opens on `translate3d(0, 26%, 0)` under
+`animation-fill-mode: both`, so the **backwards fill applies during the
+animation's own 80ms delay**. The instant `.arriving` lands, Tony snaps down a
+quarter of his height — behind the counter front, which is drawn over him — and
+then walks back up.
+
+Measured, at 390 under an 8× CPU throttle:
+
+```
+t+331ms   the room paints complete — Tony standing, his line up, the board readable
+t+642ms   .arriving lands and he drops 62.42px
+t+3522ms  he finishes climbing back
+```
+
+`docs/evidence/entrance-drop/` holds the two frames 31ms apart. In the first the
+parlor is finished; in the second only his head and shoulders are above the
+counter.
+
+On this machine hydration follows paint by 118–178ms and nobody sees it. **A
+phone on a real network is the throttled case, not the fast one** — which is why
+this was reported from a phone and never from the gate.
+
+### The fix: an entrance may not start on a room already on screen
+
+`ENTRANCE_STALE_AFTER_MS = 250` in `arrival.tsx`. If the finished room has been
+painted for longer than that, the entrance is skipped and the manager gets the
+same thing `prefers-reduced-motion` gets — the reveal without the entrance. It is
+one branch for both, because the correct behaviour is identical.
+
+The measurement is **time since `first-contentful-paint`**, not
+`performance.now()`. Those answer different questions: time since navigation
+includes the network, so a slow connection would look like a stale room when the
+picture had only just appeared. What is being protected is how long this person
+has been looking at a complete parlor.
+
+Nothing else changes. `arrived` is still set, so the greeting still types — that
+is Tony answering, not the room assembling itself.
+
+### Two gate defects fell out of it
+
+**The gate was judging the wrong window.** `checkTonySteady`'s passes A and B
+waited for `performance.now() >= 1300` to clear the entrance. The entrance is on
+the hydration clock and that wait is on the navigation clock; the margin was
+about 150ms on this machine and it ran out on a loaded one. A local production
+sweep failed with `dy moved 0.74px (-134.04 at t=1323ms, -134.78 at t=1457ms)` —
+the tail of `tony-steps-up` easing out, reported as a defect. The sampler now
+records `arriving` per frame and the passes exclude those frames by the class
+that causes them, the same way `speaking` already was. The reveal windows are
+likewise anchored to the frame the reveal was first seen lit in rather than to
+`1600`.
+
+**And the gate could not see the defect at all.** Every pass measured a fast
+arrival, which is the one case where the drop is invisible. **Pass F** delays
+`/_next/static/chunks/` by 700ms so the room paints before the script arrives,
+then asserts Tony never leaves the position the server painted him in.
+
+CPU throttling was the first attempt and is the wrong instrument: it slows paint
+and hydration together, so the gap between them — the entire defect — stays
+small. It passed at two widths and failed at the third on the same build.
+Delaying the bundle models the real case and is deterministic.
+
+| build | pass F |
+|---|---|
+| before | **fails at all three widths** — 62.42px @390, 60.02px @375, 57.62px @360 |
+| after | passes at all three |
+
+### What is *not* claimed
+
+That this is the whole of what the commissioner saw. The report tied the timing
+to the glow, and the glow has been measured clean; the drop is tied to hydration
+instead. What is claimed is narrower and is backed by pictures: **this is a real
+defect, of exactly the reported shape, on exactly the reported surface, and it is
+the only movement in the room that puts his bottom half behind the counter.** If
+the symptom survives this, the next report should say whether the room had
+finished loading first — that one detail separates the two remaining
+explanations.

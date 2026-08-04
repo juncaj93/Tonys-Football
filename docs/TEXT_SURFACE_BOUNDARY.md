@@ -344,21 +344,35 @@ already photographed **byte-identically** once for exactly that reason
 
 ---
 
-## 10. Tony's clipping — still open, and the detail that matters
+## 10. Tony's clipping — closed 2026-08-03
 
-Not touched by this slice, and kept here so the detail is not lost:
+Kept in place because the scoping here is what the investigation was run
+against, and because the conclusion contradicts it.
 
 > **Tony's bottom half clips specifically at the moment his glow disappears.**
 
-That timing is the finding. It is **not** generic idle clipping, and it is not
-the 2px `showing-taps` lift that `checkTonySteady` already closed (visual debt 7)
-— that one moved him on a 260ms ramp at 1600ms and 4900ms and is gone. What is
-described here is coincident with the **glow-off transition** itself.
+This section named ten candidate mechanisms around the glow-off transition —
+class removal, opacity, mask, clipping boundary, ancestor overflow,
+pseudo-element bounds, compositing-layer teardown, z-index, the `drop-shadow`
+being removed, a transient transform or raster resample — and asked for that
+transition to be investigated specifically.
 
-When the homepage is next touched, investigate that transition specifically:
-class removal · opacity transition · mask · clipping boundary · ancestor overflow
-· pseudo-element bounds · compositing-layer teardown · z-index change · the
-`drop-shadow` filter being removed · any transient transform or raster
-resampling. The existing hydration and whole-pixel fixes are to be preserved.
+**It was, and the transition is clean.** `drop-shadow(0 0 0 transparent)` and
+`filter: none` render Tony pixel-identically at 390, 375 and 360; the halo never
+touches a pixel inside his alpha; and a frame-by-frame screencast of the real
+ramp fades monotonically with no transient. Every mechanism on that list is
+eliminated by those two measurements.
 
-Recorded in `docs/VISUAL_DEBT.md` so it survives this session.
+The cause is the **entrance**, and it is on the hydration clock rather than the
+glow's: the server draws Tony standing, `.arriving` is attached from a
+`useEffect`, and `tony-steps-up`'s opening keyframe under
+`animation-fill-mode: both` drops him a quarter of his height behind the counter
+before walking him back up. Measured at 62.42px, 311ms after the room finished
+painting, under an 8× throttle.
+
+**The timing detail in the report was the one thing that did not survive.** It
+sent the investigation at the glow for a session and a half. That is not a
+criticism of the report — it is why the measurement had to come before the fix.
+
+`docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md §10` is the canonical account. The
+existing hydration and whole-pixel fixes were preserved and are still asserted.
