@@ -163,12 +163,13 @@ protection was always coming from.
 
 ### Visual debt 12 — two sweeps, and the instrument killed a lead before it was chased
 
-Two consecutive 261-capture sweeps of the same build.
+Three 261-capture sweeps of the same build.
 
 | | |
 |---|---|
 | Run 1 | **two** — `/slice?board=long-names&open=tonysLine` @390, `/?board=quiet&open=tonysLine` @375 |
 | Run 2 | **one** — `/` @360 under `six-banners`, **no query string at all** |
+| Run 3 | **one** — `/slice?edition=blowout` @375 under `slice-blowout` |
 
 Run 1 looked like a lead: **both sightings carried `open=tonysLine`**, and Tony's
 Line is flag-gated and shut in v1 (`18 §3.4`), so a server/client flag
@@ -182,12 +183,17 @@ carries it.
 reporter is for: it records the URL of the document that logged the message, so a
 lead can be tested instead of believed.
 
-What the two runs do establish: the rate is stable at roughly **one per 255
-captures**; `pending` is **0** in all three, so no Suspense boundary is
-outstanding; `readyState` is *complete* twice and *loading* once, so it is not
-tied to a document phase; and time-since-navigation clusters at **88, 112 and
-114ms**. Six distinct routes have now been named, and the states move every run —
-which is why a red sweep on this error is not a regression signal.
+What the three runs do establish: **four sightings, four different states, three
+widths, no state repeated**, and a rate of roughly **one per 196 captures**.
+`pending` is **0** in all four, so no Suspense boundary is outstanding;
+`readyState` is *complete* twice and *loading* twice, so it is not tied to a
+document phase; time-since-navigation clusters at **88, 112, 114 and 124ms**. Six
+distinct routes are now named.
+
+That rate is the operationally important number: a 261-capture sweep has better
+than even odds of hitting it, **so a red sweep on this error is not a regression
+signal on any branch**. Every gate that measures the product — type floor,
+one-transient, focus ring, Tony steadiness — was green in all three runs.
 
 **It is not this slice.** The failing states are board and banner states this
 slice does not touch, they move between runs, and the same defect has been
@@ -198,7 +204,7 @@ recorded on unmodified `main`.
 | | |
 |---|---|
 | `npm run check` | **1238 passed, 78 files, none skipped** — typecheck · lint · full suite against a real Postgres · production build |
-| `npm run visual:qa`, production build, fresh database | **87 states × 3 widths**, twice. Every gate green except one intermittent visual-debt-12 `#418` per run, at a different state and width each time |
+| `npm run visual:qa`, production build, fresh database | **87 states × 3 widths, three times.** Every product gate green in all three; one intermittent visual-debt-12 `#418` per run, at a different state and width each time |
 | The rendered edition | leads with *"Alex gets it back on Monday"*, deck *"Alex was 35.1 behind before Monday"*, full four-game board beneath (`docs/evidence/monday-comeback/`) |
 
 `docs/SUNDAY_SNAPSHOT_BOUNDARY.md` is the canonical account.
