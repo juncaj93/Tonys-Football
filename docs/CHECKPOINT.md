@@ -170,6 +170,7 @@ Three 261-capture sweeps of the same build.
 | Run 1 | **two** — `/slice?board=long-names&open=tonysLine` @390, `/?board=quiet&open=tonysLine` @375 |
 | Run 2 | **one** — `/` @360 under `six-banners`, **no query string at all** |
 | Run 3 | **one** — `/slice?edition=blowout` @375 under `slice-blowout` |
+| Run 4 — **CI, on PR #59** | **one** — `/admin/slice` @375 under `review-published` |
 
 Run 1 looked like a lead: **both sightings carried `open=tonysLine`**, and Tony's
 Line is flag-gated and shut in v1 (`18 §3.4`), so a server/client flag
@@ -183,17 +184,22 @@ carries it.
 reporter is for: it records the URL of the document that logged the message, so a
 lead can be tested instead of believed.
 
-What the three runs do establish: **four sightings, four different states, three
-widths, no state repeated**, and a rate of roughly **one per 196 captures**.
-`pending` is **0** in all four, so no Suspense boundary is outstanding;
-`readyState` is *complete* twice and *loading* twice, so it is not tied to a
-document phase; time-since-navigation clusters at **88, 112, 114 and 124ms**. Six
-distinct routes are now named.
+What the four runs establish: **five sightings, five different states, three
+widths, no state repeated and no route repeated within the branch**, at a rate of
+roughly **one per 209 captures**. `pending` is **0** in every locally captured
+sighting, so no Suspense boundary is outstanding; `readyState` is *complete*
+twice and *loading* twice; time-since-navigation clusters at **88, 112, 114 and
+124ms**. Seven distinct routes are now named across the defect's whole history.
 
 That rate is the operationally important number: a 261-capture sweep has better
-than even odds of hitting it, **so a red sweep on this error is not a regression
-signal on any branch**. Every gate that measures the product — type floor,
-one-transient, focus ring, Tony steadiness — was green in all three runs.
+than even odds of hitting it, **so a red sweep on this error is a property of the
+gate rather than a signal about the diff**. Every gate that measures the
+product — type floor, one-transient, focus ring, Tony steadiness — was green in
+all four runs, as were all 87 states at all three widths otherwise.
+
+**PR #59's visual-QA run is red on exactly this**, at `/admin/slice` under
+`review-published` — a route this branch does not touch. It is answered in the
+PR thread rather than merged past, re-run, or fixed speculatively.
 
 **It is not this slice.** The failing states are board and banner states this
 slice does not touch, they move between runs, and the same defect has been
