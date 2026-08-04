@@ -30,7 +30,7 @@
  * downscale and the same 32 colours produce the same output. The correction has
  * to happen after quantization, on the 320 × 569 grid.
  *
- * ## Two mechanisms, because they are two different defects
+ * ## Three mechanisms, because they are three different defects
  *
  * `docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md §6` asks for the *correct* mechanism
  * per surface and for the choice to be recorded. So:
@@ -39,11 +39,12 @@
  * |---|---|---|
  * | The Tonight board's face | **deterministic replacement** | it is a flat writing surface with nothing in it to preserve. §6 names it as the example. |
  * | The back wall and the alcove | **palette-preserving despeckle** | there *is* something to preserve — tile, frames, shelves — so the noise is removed and the structure is not redrawn. |
- * | The ceiling | **nothing** | see `EXCLUDED_CEILING`. |
+ * | The ceiling | **morphological opening**, with a purity guard | the scorch and the tile grid are *the same two browns*, so no colour rule can separate them — but the grid is one unit wide and the scorch is thick, and an opening separates exactly that. See `clearCeilingScorch`. |
  *
- * Neither mechanism can introduce a colour. The replacement paints two palette
- * values; the despeckle only ever assigns a colour already dominant among a
- * pixel's own neighbours.
+ * **No mechanism here can introduce a colour.** The replacement paints two
+ * palette values; the despeckle only ever assigns a colour already dominant
+ * among a pixel's own neighbours; the opening paints the one colour that is
+ * already 64% of the surface it writes onto.
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -287,24 +288,203 @@ const SURFACES: readonly Surface[] = [
 ];
 
 /**
- * The ceiling is deliberately **not** on that list.
+ * The ceiling is deliberately **not** on the despeckle's list, and it has its own
+ * mechanism instead — see {@link clearCeilingScorch}.
  *
- * It was, for one run. The ceiling carries the tile grid as **one-unit diagonal
- * lines**, drawn dashed — and a dashed diagonal is exactly what a lone-pixel
- * filter cannot tell from noise, because a good many of its pixels genuinely
- * have no neighbour of their own colour. The pass dashed the grid further,
- * trading a defect the direction names for one it names twice: *"random scratch
- * overlays"* becoming broken structure.
+ * It was on the list, for one run. The ceiling carries the tile grid as
+ * **one-unit diagonal lines**, drawn dashed — and a dashed diagonal is exactly
+ * what a lone-pixel filter cannot tell from noise, because a good many of its
+ * pixels genuinely have no neighbour of their own colour. The pass dashed the
+ * grid further, trading a defect the direction names for one it names twice:
+ * *"random scratch overlays"* becoming broken structure.
  *
  * The wall and the alcove have no such feature: their structure is frames,
  * shelves and tile, all of it orthogonal and continuous, so every pixel of it
  * has a neighbour of its own colour and the same filter leaves it standing.
  *
- * Recorded rather than silently omitted, because *"the ceiling still looks
- * scorched"* is a fair observation and this is the answer to it: the surface
- * needs a different mechanism — a targeted regeneration — not this one.
+ * **This used to say the surface needed a targeted regeneration. That was
+ * wrong**, and the correction is the substance of this slice: the defect is
+ * separable without repainting anything. See `docs/VISUAL_DEBT.md` 9.
  */
-const EXCLUDED_CEILING = { x0: 0, y0: 0, x1: 319, y1: 62 } as const;
+const CEILING: Rect = { left: 0, right: 319, top: 0, bottom: 62 };
+
+/**
+ * The ceiling's own field colour — the amber the tiles are painted in.
+ *
+ * The only value this mechanism ever writes, and it is already the dominant
+ * colour of the surface it writes onto: 12,780 of the rectangle's ~20,000
+ * pixels. Nothing new enters the palette.
+ */
+const CEILING_FIELD = '#C97A22';
+
+/**
+ * The two browns the scorch is made of — **and the grid too**.
+ *
+ * This is the whole reason no colour rule could ever have worked here, and it is
+ * worth stating plainly: the blotches and the tile grid are *the same paint*.
+ * `#7A4A2A` is 3,277 pixels of the rectangle and it is simultaneously the grout
+ * line and the smear. A filter that asks "what colour is this pixel" is asking a
+ * question with no answer.
+ */
+const CEILING_SCORCH = new Set(['#7A4A2A', '#9C6640']);
+
+/** Everything the ceiling is allowed to be made of. Anything else is structure. */
+const CEILING_TONES = new Set([CEILING_FIELD, ...CEILING_SCORCH]);
+
+/**
+ * Four samples of ceiling field, well inside the rectangle and away from the
+ * beam, the sign and the pendant.
+ *
+ * The integrity check, in the same spirit as {@link RING}: the rectangle above
+ * says *where* to look, and this says the thing found there is actually this
+ * ceiling. Without it a reprocessed or replaced shell would be scanned by a
+ * transform written against a different picture.
+ *
+ * Each is the centre of a 5×5 block of unbroken field, chosen by measuring the
+ * file rather than by reading a zoomed screenshot — the first four were picked by
+ * eye and one of them landed on `#5E3A25`, which is what this check is for.
+ */
+const CEILING_PROBE = [
+  { x: 55, y: 2 },
+  { x: 141, y: 3 },
+  { x: 210, y: 26 },
+  { x: 280, y: 13 },
+] as const;
+
+export type ScorchAction = 'cleared' | 'already-clean';
+
+/**
+ * Remove the ceiling's scorch blotches and leave the tile grid standing.
+ *
+ * ## The separation is structural, because the colour separation does not exist
+ *
+ * The grid and the smear are the same two browns (see {@link CEILING_SCORCH}), so
+ * the only thing that tells them apart is **shape**: the grid is drawn as
+ * one-unit lines, and the scorch is thick connected blobs. A morphological
+ * opening is precisely the operator that keeps one and drops the other —
+ * erosion deletes anything a unit wide, so a one-pixel line has no interior and
+ * vanishes from the mask entirely, while a blob survives as a smaller blob and
+ * is then dilated back out.
+ *
+ * The grid is therefore not *preserved* by a rule that mentions it. It is
+ * preserved because it is never in the mask this paints from. That is a stronger
+ * guarantee than a coordinate list, and it does not have to be maintained when
+ * the art changes.
+ *
+ * ## The purity guard, and what it is actually for
+ *
+ * An opening alone is not enough. The rectangle contains the doorway beam, the
+ * neon sign's housing and the pendant fitting, and their **edges** are brown —
+ * so a thick brown region that is really the top of the beam would erode and
+ * dilate exactly like a blotch, and this would quietly sand the beam.
+ *
+ * So a pixel may only seed a blob if its **entire 3×3 neighbourhood is ceiling**
+ * — field or scorch, nothing else. A brown pixel that can see the beam's
+ * near-black, the sign's red or a light's cream is on a boundary with structure
+ * and never becomes a core. The scorch that sits *against* the beam is still
+ * cleared, because the dilation reaches it; what cannot happen is a core forming
+ * *inside* structure.
+ *
+ * This is the same principle the despeckle already works on — never assign a
+ * colour that is not already dominant among a pixel's own neighbours — applied
+ * one step out, to which pixels are allowed to *start* a region.
+ *
+ * ## Idempotent by construction
+ *
+ * A cleared pixel becomes {@link CEILING_FIELD}, which is not in
+ * {@link CEILING_SCORCH}, so it cannot be in the mask on a second run and cannot
+ * seed or join a blob. Re-running finds no cores and reports `already-clean`.
+ * There is no state and no threshold that drifts.
+ */
+export function clearCeilingScorch(pixels: Buffer, width: number): ScorchAction {
+  for (const { x, y } of CEILING_PROBE) {
+    const found = hexAt(pixels, width, x, y);
+    if (found !== CEILING_FIELD) {
+      throw new Error(
+        `expected ceiling field ${CEILING_FIELD} at ${String(x)},${String(y)} but found ${found} — ` +
+          `this is not the shell clearCeilingScorch was written against.`,
+      );
+    }
+  }
+
+  const inside = (x: number, y: number): boolean =>
+    x >= CEILING.left && x <= CEILING.right && y >= CEILING.top && y <= CEILING.bottom;
+
+  const isScorch = (x: number, y: number): boolean =>
+    inside(x, y) && CEILING_SCORCH.has(hexAt(pixels, width, x, y));
+
+  /** Every pixel of the 3×3 block is a ceiling tone — so none of it is structure. */
+  const neighbourhoodIsCeiling = (x: number, y: number): boolean => {
+    for (let dy = -1; dy <= 1; dy += 1) {
+      for (let dx = -1; dx <= 1; dx += 1) {
+        if (!inside(x + dx, y + dy)) return false;
+        if (!CEILING_TONES.has(hexAt(pixels, width, x + dx, y + dy))) return false;
+      }
+    }
+    return true;
+  };
+
+  /*
+   * The erosion. A core is a scorch pixel with scorch on all four sides, whose
+   * neighbourhood contains no structure. A one-unit line — orthogonal, diagonal
+   * or dashed — can never satisfy the first condition.
+   */
+  const cores: boolean[] = [];
+  const at = (x: number, y: number): number =>
+    (y - CEILING.top) * (CEILING.right - CEILING.left + 1) + (x - CEILING.left);
+
+  for (let y = CEILING.top; y <= CEILING.bottom; y += 1) {
+    for (let x = CEILING.left; x <= CEILING.right; x += 1) {
+      cores[at(x, y)] =
+        isScorch(x, y) &&
+        isScorch(x - 1, y) &&
+        isScorch(x + 1, y) &&
+        isScorch(x, y - 1) &&
+        isScorch(x, y + 1) &&
+        neighbourhoodIsCeiling(x, y);
+    }
+  }
+
+  /*
+   * The dilation, intersected with the mask.
+   *
+   * **Eight-connected, where the erosion is four-connected**, and the asymmetry
+   * is deliberate. A plus-shaped dilation cannot reach a blob's four corners —
+   * they are diagonal from the nearest core — so a cleared blotch left four
+   * single brown pixels behind, one at each corner, on a surface that has no
+   * despeckle pass to tidy them.
+   *
+   * Erring wider on the way *out* is safe in a way that erring wider on the way
+   * *in* would not be: every candidate is still filtered by `isScorch`, so the
+   * dilation can only ever reach pixels that were scorch-coloured to begin with,
+   * and it can never reach structure. What it does reach is the odd grid pixel
+   * that touches a blotch diagonally — at a junction where the blotch had
+   * already interrupted the line.
+   */
+  const doomed: { x: number; y: number }[] = [];
+  for (let y = CEILING.top; y <= CEILING.bottom; y += 1) {
+    for (let x = CEILING.left; x <= CEILING.right; x += 1) {
+      if (!isScorch(x, y)) continue;
+      let touchesCore = false;
+      for (let dy = -1; dy <= 1 && !touchesCore; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (inside(x + dx, y + dy) && cores[at(x + dx, y + dy)] === true) {
+            touchesCore = true;
+            break;
+          }
+        }
+      }
+      if (touchesCore) doomed.push({ x, y });
+    }
+  }
+
+  if (doomed.length === 0) return 'already-clean';
+  for (const { x, y } of doomed) paint(pixels, width, x, y, CEILING_FIELD);
+  return 'cleared';
+}
+
+/** Kept as the old name for the rectangle, so existing references still read. */
+const EXCLUDED_CEILING = { x0: CEILING.left, y0: CEILING.top, x1: CEILING.right, y1: CEILING.bottom } as const;
 
 /**
  * How lonely a pixel has to be before it is noise: **completely**.
@@ -432,16 +612,36 @@ export function cleanSurfaces(
 ): {
   readonly face: FaceAction;
   readonly alcove: AlcoveAction;
+  readonly ceiling: ScorchAction;
   readonly despeckled: Record<string, number>;
 } {
   const face = cleanBoardFace(pixels, width);
   const alcove = shadeAlcove(pixels, width);
+  /*
+   * The ceiling runs before the despeckle and is untouched by it — the
+   * despeckle's surfaces do not reach row 62. Order is stated rather than
+   * assumed because the next surface added might.
+   */
+  const ceiling = clearCeilingScorch(pixels, width);
   const despeckled: Record<string, number> = {};
   for (const surface of SURFACES) despeckled[surface.name] = despeckle(pixels, width, surface);
-  return { face, alcove, despeckled };
+  return { face, alcove, ceiling, despeckled };
 }
 
-export { BACKSPLASH, EXCLUDED_CEILING, FACE, FIELD, LIT_TILE, SHADED_TILE, SHADOW, SURFACES };
+export {
+  BACKSPLASH,
+  CEILING,
+  CEILING_FIELD,
+  CEILING_SCORCH,
+  CEILING_TONES,
+  EXCLUDED_CEILING,
+  FACE,
+  FIELD,
+  LIT_TILE,
+  SHADED_TILE,
+  SHADOW,
+  SURFACES,
+};
 
 async function main(): Promise<void> {
   const file = path.join(process.cwd(), SHELL_PATH);
@@ -450,7 +650,7 @@ async function main(): Promise<void> {
   const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
   const pixels = Buffer.from(data);
   const before = Buffer.from(pixels);
-  const { face, alcove, despeckled } = cleanSurfaces(pixels, info.width);
+  const { face, alcove, ceiling, despeckled } = cleanSurfaces(pixels, info.width);
 
   if (pixels.equals(before)) {
     console.log(`${SHELL_PATH}\n  already clean — nothing to do.`);
@@ -465,7 +665,7 @@ async function main(): Promise<void> {
     .map(([name, n]) => `${name} ${String(n)}`)
     .join(', ');
   console.log(
-    `${SHELL_PATH}\n  board face: ${face}\n  alcove: ${alcove}\n  despeckled: ${counts}`,
+    `${SHELL_PATH}\n  board face: ${face}\n  alcove: ${alcove}\n  ceiling: ${ceiling}\n  despeckled: ${counts}`,
   );
 }
 
