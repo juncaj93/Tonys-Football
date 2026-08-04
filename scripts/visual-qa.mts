@@ -48,6 +48,7 @@ import path from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright';
 
 import { TYPE_FLOOR_PX } from '../lib/design/type.ts';
+import { QUARANTINE_CEILING, quarantineFor } from './visual-qa-quarantine.ts';
 
 /**
  * The only `data-environmental-type` this product declares.
@@ -86,6 +87,16 @@ const failures: Failure[] = [];
  * whole run rather than only the last width's.
  */
 const sightings: (HydrationSighting & { state: string; width: number })[] = [];
+
+/**
+ * Console errors matching a known-defect entry, counted rather than fired.
+ *
+ * Module-scoped for the same reason as `sightings`: the ceiling is a property of
+ * **the sweep**, not of one width, and the whole point of the number is that a
+ * deterministic mismatch clears it by appearing at every width.
+ */
+const quarantined: { debt: number; why: string; detail: string }[] = [];
+
 const fail = (gate: string, detail: string): void => {
   failures.push({ gate, detail });
 };
@@ -3257,7 +3268,17 @@ async function run(): Promise<void> {
             ? ''
             : ` [readyState=${seen.readyState}, ${String(seen.sinceNavigationMs)}ms in, ` +
               `${String(seen.pending)} pending Suspense boundar${seen.pending === 1 ? 'y' : 'ies'}]`;
-        fail('console', `@${String(width)} on ${where} during "${e.state}" — ${e.text}${evidence}`);
+        const detail = `@${String(width)} on ${where} during "${e.state}" — ${e.text}${evidence}`;
+
+        /*
+         * A known defect is counted rather than fired, and the count is still a
+         * gate — see `visual-qa-quarantine.ts`. Anything that is not the exact
+         * quarantined shape fails on sight, including the dev build's message,
+         * which is the one that would finally name the element.
+         */
+        const known = quarantineFor(e.text);
+        if (known === undefined) fail('console', detail);
+        else quarantined.push({ debt: known.debt, why: known.why, detail });
       }
       await ctx.close();
     }
@@ -3265,11 +3286,37 @@ async function run(): Promise<void> {
     await browser.close();
   }
 
+  /*
+   * The quarantine's ceiling, evaluated once the whole sweep is in.
+   *
+   * This is the half that keeps it a gate rather than a mute. A deterministic
+   * structural mismatch fires on every capture of the state it affects — three
+   * widths, so at least three — and clears a ceiling of two the first time it
+   * appears. The background rate of visual debt 12 does not: five sweeps of one
+   * build produced 2, 1, 1, 1 and 1.
+   */
+  if (quarantined.length > QUARANTINE_CEILING) {
+    fail(
+      'console',
+      `${String(quarantined.length)} quarantined hydration errors in one sweep, ` +
+        `which is over the ceiling of ${String(QUARANTINE_CEILING)} — this is no longer ` +
+        `background noise. See scripts/visual-qa-quarantine.ts.`,
+    );
+    for (const q of quarantined) fail('console', q.detail);
+  }
+
   const report = {
     base: BASE,
     widths: WIDTHS,
     states,
     failures,
+    /*
+     * Known-defect sightings that did not fail the run, kept in the artifact so
+     * a tolerated error is still a recorded one. A quarantine nobody can count
+     * afterwards is indistinguishable from a gate that was deleted.
+     */
+    quarantined,
+    quarantineCeiling: QUARANTINE_CEILING,
     /*
      * Every hydration message the pages reported, whether or not it failed a
      * gate. The artifact is the only durable record of a defect that has never
@@ -3287,6 +3334,21 @@ async function run(): Promise<void> {
       `\nScreenshots and report.json are in ${OUT}/. See VISUAL_ACCEPTANCE.md for what each gate protects.`,
     );
     process.exit(1);
+  }
+
+  /*
+   * A tolerated error is still printed. The whole hazard of a quarantine is that
+   * it becomes invisible and then permanent, so a green run that swallowed one
+   * has to say so on the way past.
+   */
+  for (const q of quarantined) {
+    console.warn(`  [quarantined · visual debt ${String(q.debt)}] ${q.detail}`);
+  }
+  if (quarantined.length > 0) {
+    console.warn(
+      `\n${String(quarantined.length)} known-defect error(s) tolerated, ceiling ${String(QUARANTINE_CEILING)}. ` +
+        `${quarantined[0]?.why ?? ''}\n`,
+    );
   }
 
   console.log(

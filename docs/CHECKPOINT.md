@@ -197,9 +197,36 @@ gate rather than a signal about the diff**. Every gate that measures the
 product — type floor, one-transient, focus ring, Tony steadiness — was green in
 all four runs, as were all 87 states at all three widths otherwise.
 
-**PR #59's visual-QA run is red on exactly this**, at `/admin/slice` under
-`review-published` — a route this branch does not touch. It is answered in the
-PR thread rather than merged past, re-run, or fixed speculatively.
+**PR #59's visual-QA run went red on exactly this twice** — `/admin/slice` under
+`review-published`, then `/back-hall` under `back-hall-rooms-open` after a
+docs-only push retriggered the workflows. **Six sightings, six states, five
+routes, three widths, never the same place twice.**
+
+### The gate is quarantined rather than muted, and the ceiling is the design
+
+**Commissioner-delegated, 2026-08-04.** The choice was put up with three options
+and came back as *"you decide"*.
+
+Merging past it once fixes nothing and hands the same coin flip to the next pull
+request; blocking all delivery behind a defect that has already resisted three
+attempts is disproportionate. So `scripts/visual-qa-quarantine.ts` **records,
+counts and prints** the exact minified `#418 … args[]=HTML` shape without failing
+the run — and the run **still fails above a ceiling of two**.
+
+> A newly introduced structural mismatch is **deterministic**: it fires on every
+> capture of the state it affects, at minimum once per supported width, so it
+> clears a ceiling of two on its first appearance. The background does not —
+> five sweeps of one build gave 2, 1, 1, 1, 1.
+
+`scripts/visual-qa-quarantine.test.ts` holds nine assertions and two of them are
+load-bearing: the ceiling must stay **below the width count**, so no regression
+can hide under it, and the table must hold **exactly one entry** — a second is
+not a bigger allowance, it is evidence the gate has stopped being trusted.
+
+The shape is deliberately narrow. `args[]=text` (a content mismatch),
+`#419`–`#425`, and above all the **dev build's message — which names the element
+and is the one sighting this defect has never had** — all still fail on sight.
+`VISUAL_ACCEPTANCE.md §3` carries the specification.
 
 **It is not this slice.** The failing states are board and banner states this
 slice does not touch, they move between runs, and the same defect has been

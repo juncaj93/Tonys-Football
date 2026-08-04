@@ -96,7 +96,43 @@ Purchase fixed it properly rather than by contrivance. Each width now **buys its
 | `tony-steady` | Tony's offset from the counter, his size, and what survives every clipping ancestor are **identical in every frame he is not talking**; while talking he occupies only the two whole-pixel positions `tony-talks` defines | Sampled **every animation frame** across six passes on `tony-steady`, at all three widths — an untouched first visit, the same window with his line dismissed, speaking, after speaking, a return from the Back Hall, and **a slow arrival**. This is the gate for a **transient** defect, and it is why it cannot be a screenshot: Tony was lifted 2px at 1600ms and dropped back at 4900ms, and every capture this driver had ever taken landed inside or outside that window and saw a still room. It fails on the old CSS with 12 failures. It then found a second one nothing else could have: `steps(2, end)` was rendering `0, -0.5, -1, -0.5` — half a pixel, on every sentence Tony spoke. Pass F drives the sixth: the client bundle is delayed 700ms so the room paints complete before the script that animates it arrives, which is a phone on a real network and the one case the other five cannot see. It fails on the pre-fix build at **all three widths** — 62.42px, 60.02px, 57.62px — because `tony-steps-up` opens on `translate3d(0, 26%, 0)` under `animation-fill-mode: both` and so drops a man the server already drew standing. See `docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md §9` and `§10`. |
 | `review-desk` | Every `review-*` state carries the marker its entry in `DESK_EXPECTATIONS` names — the desk's own `data-review-queue`, the hold's position, the section counts, or the draft's status and the validator's answer | The same class of gate as `slice-edition`, and a sharper case of it. `requireAdmin()` answers with **`notFound()`**, so a press-desk demo whose seat failed to get the commissioner's keys renders a 404 — which is a clean, well-composed screenshot that passes tap targets, contrast, overflow and colour fidelity, and files under the state's name. `lib/slice/review-coverage.test.ts` closes the other half: a state with no `case` and a state with no expectation are both build failures. |
 | `type-floor` | Every visible text-bearing element computes to at least **13 CSS px**, on every state and every width. One declared exemption: `data-environmental-type="banner-year"`, and a second kind of it is itself a failure | The machine half of *"text uncomfortable to read on an iPhone"*. `lib/design/typography.test.ts` refuses a `text-[Npx]` outside `lib/design/type.ts`, which closes the door somebody walks through on purpose; it cannot see a size **inherited** and re-set smaller by a stylesheet, a size that exists only in **one state**, or a size the **browser** supplies. This product had seven call sites at 8 and 9px and thirty files under 16px, each of which had been "fixed" at least once — 9px on the Back Hall was repaired in #48 while five more survived it. |
-| `console` | No console errors or failed requests | This is the gate that caught the `/underground` 404. |
+| `console` | No console errors or failed requests, **except one named known defect under a ceiling** — see below | This is the gate that caught the `/underground` 404. |
+
+### The known-defect quarantine, and why it is a ceiling rather than a mute
+
+**Commissioner-delegated decision, 2026-08-04.** `scripts/visual-qa-quarantine.ts`.
+
+Visual debt 12 — an intermittent production React `#418` — has appeared under
+**six state names across five routes and three widths, never twice in the same
+place**, at roughly **one per two hundred captures**. A full sweep is 261
+captures, so the gate had better-than-even odds of failing *any* pull request for
+a reason that had nothing to do with it. It did exactly that twice running on
+PR #59, on `/admin/slice` and then `/back-hall`, neither of which that branch
+touched.
+
+A gate that fails a coin flip regardless of the change is not protecting
+anything. It teaches everybody to bypass the visual gate, and bypassing the
+visual gate is how all four regressions named at the top of `visual-qa.yml`
+shipped.
+
+So the message is **recorded, counted and printed**, and the run **still fails
+above a ceiling of two**. The ceiling is the entire design:
+
+> A newly introduced structural mismatch is **deterministic**. It fires on every
+> capture of the state it affects — at minimum once per supported width — so it
+> clears a ceiling of two on its first appearance. The background rate does not:
+> five sweeps of one build produced 2, 1, 1, 1, 1.
+
+`visual-qa-quarantine.test.ts` asserts the ceiling stays **below the width
+count**, so a regression can never hide under it, and that the table holds
+**exactly one entry** — a second is not a bigger allowance, it is evidence the
+gate has stopped being trusted, and it should force a conversation rather than an
+append.
+
+The shape is narrow on purpose. Only the minified `#418` with `args[]=HTML` is
+tolerated. A content mismatch (`args[]=text`), `#419`–`#425`, and above all the
+**dev build's message — which names the element and is the one sighting this
+defect has never had** — all still fail on sight.
 
 ### Why `object-map` counts markers and not anchors
 
