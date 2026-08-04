@@ -31,6 +31,185 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Where the product is — 2026-08-03 (twelfth session)
+
+### The local gates were runnable all along, and `db:up` was hiding it
+
+**Every checkpoint in this repository has recorded the same limitation** — *"no
+`DATABASE_URL` in this environment"*, 412 tests skipped, `visual:qa` not run — and it
+was **not true**. `scripts/dev-db.sh` has had a native-binaries fallback since it was
+written, for exactly the machine that has PostgreSQL installed and no Docker daemon.
+
+What hid it: **`npm run db:up` called `docker compose` directly**, bypassing the script
+entirely. A session checks for a database, runs the obvious command, gets
+`failed to connect to the docker API`, and reasonably concludes there is no database —
+while `npm run db:fresh` two lines below would have worked. `db:up` now routes through
+`scripts/dev-db.sh up` like `reset`, `fresh` and `status` already did.
+
+**The visual gate needs one more environment variable here, and it already exists.**
+This sandbox ships Chromium build 1194 while Playwright asks for 1234, so
+`npm run visual:qa` dies at launch with *"Executable doesn't exist"*. The driver has
+honoured **`PLAYWRIGHT_CHROMIUM`** since it was written:
+
+```
+PLAYWRIGHT_CHROMIUM=/opt/pw-browsers/chromium-1194/chrome-linux/chrome
+```
+
+No repository change is needed and none was made — this is a note so the next session
+does not conclude the gate is unrunnable for the same shape of reason `db:up` caused.
+
+`db:down` is deliberately left on `docker compose down -v`: `dev-db.sh` has no `down`
+command, and inventing one means deciding whether the binaries path should delete the
+data directory to match `-v`. That is a separate decision, and mis-wiring it to the
+script's help text would be worse than leaving it honest.
+
+**What the working database then proved, in one session:**
+
+| | |
+|---|---|
+| `npm run test` | **1153 passed, 0 skipped** across 71 files — the first fully green run on record, including the six `tuesday.test.ts` tests |
+| The Tuesday route's inertness | **empirically verified**, not read off the source: with `CRON_SECRET` unset it answers **404** to an unauthenticated request *and* to a guessed bearer |
+
+### Visual debt 13 — Tony's clip is the entrance, and the glow is innocent
+
+**Closed, with pictures.** The commissioner reported *"Tony's bottom half clips at the
+exact moment his glow disappears"* after debt 7 was fixed, and
+`TEXT_SURFACE_BOUNDARY.md §10` scoped ten candidate mechanisms around the glow-off
+transition. **None of them is it**, and that was settled by measurement before anything
+was changed:
+
+| | |
+|---|---|
+| `drop-shadow(0 0 0 transparent)` vs `filter: none`, static, at device resolution | **0 pixels differ**, at 390, 375 and 360 |
+| The glow at full strength vs none | 44 493 px differ, **every one of them outside his alpha**; the interior is untouched and the halo stops exactly at the counter's cut |
+| The real ramp, screencast frame by frame on the page's own clock | fades **monotonically** 4 745 → 0 px across 260ms; no spike, no transient, no movement |
+
+Compositing-layer teardown, filter removal, raster resampling and z-index change are
+eliminated by the first row alone.
+
+**What actually drops him is the rule at the top of `arrival.tsx`.** The server renders
+the finished state — Tony is at the counter *in the HTML* — and the entrance is
+attached afterwards, by a class, from a `useEffect`. So the entrance is on the
+**hydration** clock while the picture it animates away from is already on the glass.
+`tony-steps-up` opens on `translate3d(0, 26%, 0)` under `animation-fill-mode: both`, so
+the backwards fill lands during the animation's own 80ms delay:
+
+```
+t+331ms   the room paints complete — Tony standing, his line up, the board readable
+t+642ms   .arriving lands and he drops 62.42px, behind the counter drawn over him
+t+3522ms  he finishes climbing back
+```
+
+At 390 under an 8× throttle. `docs/evidence/entrance-drop/` holds the two frames 31ms
+apart. On this machine hydration follows paint by 118–178ms and nobody sees it; **a
+phone on a real network is the throttled case**, which is why it was reported from a
+phone and never by the gate.
+
+**The fix is `ENTRANCE_STALE_AFTER_MS = 250`** — an entrance may not start on a room
+that has already been on screen, measured from `first-contentful-paint` rather than
+from navigation, because the second includes the network and would call a
+just-painted room stale. Someone in that case gets what `prefers-reduced-motion` gets:
+the reveal without the entrance, one branch for both. `arrived` is still set, so the
+greeting still types.
+
+### The same gate had two defects, and one of them had just failed a run
+
+**It was judging the wrong window.** `checkTonySteady` cleared the entrance by waiting
+for `performance.now() >= 1300`. The entrance is on the hydration clock and that wait
+is on the navigation clock; measured, hydration lands at 118–178ms and the entrance's
+last movement at 1114–1157ms, so the margin was ~150ms — and on a loaded machine it
+ran out. A local production sweep failed with `dy moved 0.74px (-134.04 at t=1323ms,
+-134.78 at t=1457ms)`: the tail of `tony-steps-up` easing out, reported as a defect.
+The sampler now records `arriving` per frame and the passes exclude those frames by the
+class that causes them, exactly as they already did for `speaking`; the reveal windows
+are anchored to the frame the reveal was first seen lit in rather than to `1600`.
+
+**And it could not see the defect at all.** Every pass measured a fast arrival, the one
+case where the drop is invisible. **Pass F** delays `/_next/static/chunks/` by 700ms so
+the room paints before the script arrives, then asserts Tony never leaves the position
+the server painted him in.
+
+CPU throttling was the first instrument and is the wrong one — it slows paint and
+hydration *together*, so the gap between them, which is the entire defect, stays small.
+It passed at two widths and failed at the third on the same build. Delaying the bundle
+models a real phone and is deterministic:
+
+| build | pass F |
+|---|---|
+| before | **fails at all three widths** — 62.42px @390, 60.02px @375, 57.62px @360 |
+| after | passes at all three |
+
+`docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md §10` is the canonical account. What is **not**
+claimed: that this is the whole of what the commissioner saw. The report tied the
+timing to the glow and the glow measures clean. What is claimed is that this is a real
+defect of exactly the reported shape, on exactly the reported surface, and the only
+movement in the room that puts his bottom half behind the counter.
+
+### Visual debt 12 reproduced, and two whole classes of cause are eliminated
+
+PR #57's sweep failed on **`/counter/collection`** at 390, and a local sweep of the
+identical CI configuration — production build, fresh database, 85 states × 3 widths —
+failed on **`/admin/slice`** at 360. Those are the fourth and fifth routes.
+
+**Both render no client components at all.** `panel.tsx`, `room-behind.tsx`,
+`shell.tsx`, `placeholder.tsx`, `text-surface.tsx` and `review.tsx` are every component
+on those pages and not one is `'use client'`. So no application component can be
+changing shape between the server's HTML and the client's first render, because there
+is no application component with a first render.
+
+The production HTML rules out the other obvious candidate. Both Suspense boundaries are
+already resolved (`<!--$--><!--/$-->`); there is no `$RC`, no `<!--$?-->` and no
+`div hidden id="S:"`, so nothing is spliced in asynchronously — and the metadata is
+emitted directly in `<head>`, so there is no body-to-head hoisting script racing
+hydration.
+
+It is still not reproducible on demand: 36 throttled document loads of
+`/counter/collection` and 108 of the parlor are clean. It appears roughly **once per
+255-capture sweep**.
+
+**What changed is the instrument.** The driver now installs `HYDRATION_REPORTER` into
+every document, which reads `location.pathname` **synchronously inside the document
+that logged the message** — `window` belongs to one document, so attribution can no
+longer be wrong under load, which the Node-side `page.url()` read demonstrably could
+be — and records `document.readyState`, time since navigation and the number of
+still-pending Suspense boundaries beside it. Every sighting lands in `report.json`
+whether or not it failed a gate. **The Node-side listeners are untouched and remain the
+gate**, so nothing is narrowed: they catch browser-emitted console errors that never
+pass through the page's own `console.error`.
+
+**Still no speculative fix.** The evidence now says the cause is not in application
+component code, and guessing at framework internals is the same mistake one level down.
+
+### Visual debt 12 — the earlier attempt in this session, superseded above
+
+The parlor's intermittent React `#418`. A probe drove a **dev build** — where React
+prints the full hydration diff and names the element, rather than the production
+bundle's bare `#418` — through **24 passes** at all three widths, each in a fresh
+context (no cookies, no `sessionStorage`) so both the sign-in redirect and the arrival
+sequence ran as they do for a real manager, each under **8× CPU throttling** to widen
+the race, and each followed by a same-session reload to hit the branch where
+`sessionStorage` says the entrance already played. **All 24 clean.** The two CI sweeps
+on PRs #55 and #56 were also clean.
+
+Static analysis alongside it ruled out the obvious causes: **no render-time
+nondeterminism** anywhere in the parlor's client components — every `window`,
+`matchMedia`, `sessionStorage` and `performance` access is inside an effect or a
+handler, and both `useId` call sites are React's hydration-safe ID; **no invalid
+nesting**; and `SpokenLine`'s shape is invariant and pinned by `spoken-line.test.tsx`,
+so debt 6's repair holds.
+
+**No fix was shipped, deliberately.** Without a reproduction the exact structural
+mismatch is unidentified, and a speculative repair to the room's most-seen screen is
+the false confidence this repository has shipped three times.
+
+**Superseded later the same session.** The recorded next step — *"chase it on a dev
+build, the only configuration that will name the element"* — turned out to be the wrong
+next step, because a dev build never produced one to chase. What produced a
+reproduction was running the **whole CI configuration locally**, which is what the
+`db:up` repair above made possible for the first time. See the section two above.
+
+---
+
 ## Where the product is — 2026-08-03 (eleventh session)
 
 ### Batch B launch art is closed. Nothing further is required on it.

@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "check": "npm run typecheck && npm run lint && npm run test && npm run build",
-    "db:up": "docker compose up -d --wait postgres",
+    "db:up": "bash scripts/dev-db.sh up",
     "db:down": "docker compose down -v",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "tsx scripts/migrate.ts",

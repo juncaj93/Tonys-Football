@@ -38,6 +38,11 @@ import { TYPE } from '@/lib/design/type';
  *   - it plays once per session. `02 §12` bans repeated onboarding, and seeing
  *     Tony walk up every time you navigate back is exactly that.
  *
+ * It has one cost, and it is the reason `ENTRANCE_STALE_AFTER_MS` exists: the
+ * finished state is on screen *before* the animation is attached, so an
+ * entrance that starts late does not introduce Tony — it takes a man who is
+ * already standing there and drops him. See that constant for the measurement.
+ *
  * The reveal is deliberately separate from the entrance in the reduced-motion
  * case: somebody who has asked for less movement still needs to know which
  * parts of the room are things, so they get the warm edges without the breath.
@@ -47,6 +52,70 @@ const ENTRANCE_MS = 900;
 const REVEAL_AT_MS = 1600;
 const REVEAL_FOR_MS = 3300;
 const PLAYED_KEY = 'tonys:arrived';
+
+/**
+ * How long the finished room may already have been on screen and still be
+ * allowed an entrance.
+ *
+ * ## The defect this exists for
+ *
+ * The server renders the **finished** state — that is the rule at the top of
+ * this file and it is a good one: Tony is at the counter in the HTML, so a
+ * browser that never runs the script shows a complete room. The entrance is
+ * then added afterwards, by a class, from a `useEffect`.
+ *
+ * Which means the entrance is anchored to **hydration**, and the picture it
+ * animates away from is already on the glass. `tony-steps-up` opens on
+ * `translate3d(0, 26%, 0)` with `animation-fill-mode: both`, so the backwards
+ * fill applies during the animation's own 80ms delay: the instant `.arriving`
+ * lands, Tony snaps down a quarter of his height — behind the counter front,
+ * which is drawn over him — and then walks back up.
+ *
+ * On a fast machine hydration follows paint by about 150ms and nobody sees it.
+ * Under an 8x CPU throttle, measured: the room paints complete at 331ms and at
+ * 642ms **he drops 62.42px**, taking three seconds to climb back. A phone on a
+ * real network is the throttled case, not the fast one.
+ *
+ * That is *"Tony's bottom half clips, seconds after the homepage settles"* —
+ * and it is the only movement in this room that puts his bottom half behind the
+ * counter. It is not the glow: the glow-off ramp was measured frame by frame at
+ * all three widths and is pixel-clean, including its endpoints.
+ *
+ * ## Why a threshold rather than a repair to the animation
+ *
+ * Nothing is wrong with the entrance. It is wrong to *start* one on a room the
+ * manager has already been looking at — at that point a quarter-height jump is
+ * not a man stepping up, it is the page faulting. `02 §12` already bans
+ * repeated onboarding and this file already refuses to replay within a session;
+ * this is the same refusal against a different clock.
+ *
+ * 250ms is chosen against the drop rather than against a feel: below it the
+ * room is still visibly arriving and the movement reads as part of that, and
+ * above it the eye has settled on a finished picture. It is deliberately
+ * generous — every measured local hydration lands at 118-178ms, so the entrance
+ * still plays everywhere it should, and only a genuinely late one is skipped.
+ */
+const ENTRANCE_STALE_AFTER_MS = 250;
+
+/**
+ * How long the finished room has already been on the manager's screen.
+ *
+ * `first-contentful-paint` rather than `performance.now()`, because the two
+ * answer different questions. Time since *navigation* includes the network, so
+ * a slow connection would look like a stale room even though the picture only
+ * just appeared. Time since *paint* is the thing being protected: how long has
+ * this person been looking at a complete parlor.
+ *
+ * A browser that reports no paint entry has not painted anything worth
+ * preserving, so the entrance plays — that is the safe direction, and it keeps
+ * the entrance on browsers without the Paint Timing API.
+ */
+function roomOnScreenForMs(): number {
+  const painted = performance
+    .getEntriesByType('paint')
+    .find((entry) => entry.name === 'first-contentful-paint');
+  return painted === undefined ? 0 : performance.now() - painted.startTime;
+}
 
 interface Arrival {
   /**
@@ -121,7 +190,18 @@ export function Arriving({ children }: { children: React.ReactNode }) {
 
     setArrived(true);
 
-    const still = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    /*
+     * Somebody who has asked for less movement, or somebody whose room has been
+     * standing there long enough that a jump would read as a fault, get the same
+     * thing: the reveal without the entrance. They arrive at it for different
+     * reasons and the correct behaviour is identical, so it is one branch.
+     *
+     * `arrived` is set above either way — the greeting still types, because that
+     * is Tony answering rather than the room assembling itself.
+     */
+    const still =
+      window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      roomOnScreenForMs() > ENTRANCE_STALE_AFTER_MS;
 
     if (still) {
       // No entrance at all. The edges still appear, because knowing what you
