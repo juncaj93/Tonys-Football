@@ -114,7 +114,7 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
 
       {issue.nothingToPrint === null ? (
         <>
-          <article className="mt-4">
+          <article className="mt-4" data-slice-lede="">
             <h1 className={`${HEADLINE_ROLE[issue.character]} text-ink-900`}>{issue.headline}</h1>
 
             {/*
@@ -128,7 +128,7 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
           </article>
 
           {issue.secondary.length > 0 && (
-            <Section label="Also this week">
+            <Section label="Also this week" weight="heavy">
               <div className="mt-2.5 space-y-4">
                 {issue.secondary.map((story) => (
                   <article key={story.headline}>
@@ -151,7 +151,16 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
           )}
 
           {issue.scoreboard.length > 0 && (
-            <Section label="The board" data-slice-board="">
+            <Section
+              label="The board"
+              data-slice-board=""
+              /*
+               * Closes the lead only when nothing came between. An issue with no
+               * secondary story goes straight from the lede to the board, and the
+               * board is then the first thing after it.
+               */
+              weight={issue.secondary.length === 0 ? 'heavy' : 'rule'}
+            >
               {/*
                 * Every game of the week, whether or not it was a story.
                 *
@@ -201,7 +210,23 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
                             * this is reinforcement.
                             */}
                           <span className={row.leftWon ? 'font-display font-bold' : ''}>{row.leftPoints}</span>
-                          <span className="text-ink-500">&ndash;</span>
+                          {/*
+                            * The separator gets room on both sides.
+                            *
+                            * `131.84–123.38` set tight reads as one nine-figure
+                            * number at a glance, which is the opposite of what a
+                            * results board is for — the reader is comparing two
+                            * quantities and the first thing they need is to see
+                            * that there *are* two.
+                            *
+                            * Margin rather than spaces in the string: the value
+                            * is `whitespace-nowrap`, so two space characters
+                            * would widen the unbreakable column by two full
+                            * glyphs of a wide pixel face and push the names on a
+                            * 360 screen. 3px a side buys the separation for a
+                            * fifth of the cost.
+                            */}
+                          <span className="mx-[3px] text-ink-500">&ndash;</span>
                           <span className={!row.leftWon && !row.tie ? 'font-display font-bold' : ''}>
                             {row.rightPoints}
                           </span>
@@ -266,14 +291,26 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
 function Section({
   label,
   children,
+  /**
+   * `heavy` on the **first** section only, to close the lead.
+   *
+   * Every section used the same rule, so a reader met four equal chunks and had
+   * to work out from the words which one was the story. A newspaper answers that
+   * with furniture: the lead runs under the masthead and a heavier rule says it
+   * is over. `PrintedRule`'s own contract already reserves `heavy` for exactly
+   * this — *"closes a masthead or opens a colophon"* — and this is the third
+   * place on the sheet where something closes.
+   */
+  weight = 'rule',
   ...rest
 }: {
   label: string;
   children: React.ReactNode;
+  weight?: 'rule' | 'heavy';
 } & React.HTMLAttributes<HTMLElement>) {
   return (
     <section className="mt-6" {...rest}>
-      <PrintedRule />
+      <PrintedRule weight={weight} />
       <div className="mt-2">
         <SectionHeading>{label}</SectionHeading>
       </div>

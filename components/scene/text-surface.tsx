@@ -281,8 +281,39 @@ export function PressMasthead({
         <PrintedRule weight="heavy" />
       </div>
 
+      {/*
+        * The stamp is a stamp — an object pressed onto the copy, not a caption.
+        *
+        * It was a centred line of small caps in `wood-mid`, which is the quietest
+        * treatment on the sheet, sitting immediately under the loudest rule. So
+        * the one piece of information that changes what the whole page *is* —
+        * *"this is last season's paper"* — was the least visible thing on it, and
+        * a reader scanning the masthead had no reason to stop at it.
+        *
+        * A stamp is a physical object in this world and there is already a
+        * primitive for one. Reusing `Plaque` rather than restyling this line is
+        * the point: the desk presses the same object onto a proof sheet, and two
+        * surfaces that mean *"somebody marked this"* should look like the same
+        * act (`docs/TEXT_REPORT_AUDIT.md §3`).
+        *
+        * Tilted very slightly, because a stamp pressed by hand is never square to
+        * the page — one degree, which reads at a glance and still lands the type
+        * on whole pixels at every width the product supports.
+        */}
       {stamp !== null && (
-        <p className={`mt-2.5 text-center ${TYPE.eyebrow} text-wood-mid`}>{stamp}</p>
+        <p className="mt-3 text-center">
+          {/*
+            * `max-w-full` because the one stamp that exists today fits at 360 and
+            * that is not the same as fitting. A longer string would push the
+            * plaque past the sheet's edge, and the failure would be a horizontal
+            * scrollbar on a page of prose rather than anything that looks like a
+            * typo — so it is bounded here rather than left to the next stamp
+            * somebody writes.
+            */}
+          <span className="inline-block max-w-full rotate-[-1deg]">
+            <Plaque tone="wood">{stamp}</Plaque>
+          </span>
+        </p>
       )}
     </header>
   );
