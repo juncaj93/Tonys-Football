@@ -1,4 +1,5 @@
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
 
 import { chromium, type Browser } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -101,5 +102,36 @@ describe.skipIf(!hasBrowser)('the visual driver never edits the page it photogra
      */
     const seen = await mutationsDuring((page) => page.screenshot({ fullPage: true }));
     expect(seen.some((style) => style?.includes('caret-color') === true)).toBe(true);
+  });
+});
+
+/**
+ * The wiring, asserted without a browser.
+ *
+ * The suite above is the real proof and it **skips in CI**: `ci.yml` runs vitest
+ * and never installs a browser, while `visual-qa.yml` installs one and never
+ * runs vitest. Adding a browser download to `ci.yml` would buy this coverage
+ * with Actions minutes the commissioner has ruled are not to be spent
+ * (`AUTONOMY.md §4`).
+ *
+ * So the behavioural claim is proved wherever a browser exists, and the *wiring*
+ * is proved everywhere. On its own this would be the "grep for the changed code"
+ * test that proves nothing; as the cheap half of a pair whose expensive half
+ * measures the actual DOM, it is what stops the option being quietly dropped on
+ * a machine that cannot run the other one. `visual-qa-quarantine.test.ts` guards
+ * its own driver wiring the same way.
+ */
+describe('the capture options are actually used', () => {
+  it('names the caret explicitly rather than taking the default', () => {
+    expect(CAPTURE.caret).toBe('initial');
+  });
+
+  it('is spread into the driver’s screenshot call', () => {
+    const driver = readFileSync(
+      path.join(__dirname, 'visual-qa.mts'),
+      'utf8',
+    );
+    expect(driver).toContain("import { CAPTURE } from './visual-qa-capture'");
+    expect(driver).toContain('page.screenshot({ ...CAPTURE');
   });
 });
