@@ -1,4 +1,6 @@
+import { comebackFor } from './comeback';
 import { classify, percentileOf, type Intensity, type SignificancePolicy } from './significance';
+import { type WeekSnapshotMap } from './snapshot';
 import { standingsThrough, winStreak, type StandingRow } from './standings';
 import { type StoredWeekGame, type TeamWeek, type WeekGame, type WeekRecord } from './week';
 
@@ -53,7 +55,8 @@ export type StoryKind =
   | 'elimination'
   | 'upset'
   | 'streak'
-  | 'standings-move';
+  | 'standings-move'
+  | 'monday-comeback';
 
 /** The typed payload. A renderer switches on `kind` and reads only its own fields. */
 export type StoryDetail =
@@ -112,6 +115,25 @@ export type StoryDetail =
       readonly from: number;
       readonly to: number;
       readonly climbed: boolean;
+    }
+  | {
+      /**
+       * Somebody was behind before Monday and was not behind at the end.
+       *
+       * Every number here comes from `lib/stats/comeback.ts`, which is two
+       * subtractions on a stored pre-Monday snapshot and a finalized result. No
+       * projection, no win probability, no model — `16 §9` bans all three from
+       * the paper, and this is the story most likely to tempt one in.
+       */
+      readonly kind: 'monday-comeback';
+      readonly winner: string;
+      readonly loser: string;
+      /** How far the winner was behind on Sunday night. Always positive. */
+      readonly deficit: number;
+      /** What the game finished on. */
+      readonly margin: number;
+      /** Deficit plus final margin: how far the game moved. */
+      readonly swing: number;
     };
 
 export interface StoryCandidate {
@@ -178,6 +200,21 @@ export const STORY_GATES = Object.freeze({
   minStandingsWeek: 5,
   /** Wins of separation before beating somebody is an upset. */
   minUpsetGap: 3,
+  /**
+   * Points behind on Sunday night before a Monday recovery is a story.
+   *
+   * A flipped result alone is not enough. Almost every game moves on Monday, and
+   * a manager who was 0.4 behind and won by 2 did not come back from anything —
+   * publishing that as a comeback is the *"do not call every ordinary Monday
+   * scoring change a comeback"* failure, in the one place the paper is most
+   * tempted to.
+   *
+   * Ten points is a starter's afternoon. Below it the swing is inside the noise
+   * of a single stat correction; above it somebody had to actually outscore
+   * somebody. Provisional in the sense `significance.ts` means — changed here and
+   * nowhere else.
+   */
+  minComebackDeficit: 10,
 });
 
 export interface StoryInput {
@@ -202,6 +239,17 @@ export interface StoryInput {
    * true of nobody and would publish nothing.
    */
   readonly playoffRosters: ReadonlySet<number>;
+  /**
+   * What the scores were before Monday, keyed by `sleeperMatchupId`.
+   *
+   * Optional, and its absence is meaningful rather than empty: every historical
+   * season this league imported predates the snapshot job, so those weeks have
+   * none and simply produce no comeback candidate. A week that *was*
+   * photographed and produced no comeback and a week that was never photographed
+   * are both silent here — `lib/stats/comeback.ts` keeps them distinguishable
+   * for anyone who needs to know which.
+   */
+  readonly snapshots?: WeekSnapshotMap;
 }
 
 /**
@@ -605,7 +653,92 @@ export function deriveStories(input: StoryInput): readonly StoryCandidate[] {
     if (upset !== null) out.push({ ...upset, id: id('upset') });
   }
 
+  /* ---- what Monday did ------------------------------------------------- */
+
+  const comeback = pickComeback(playable, input.snapshots);
+  if (comeback !== null) out.push({ ...comeback, id: id('monday-comeback') });
+
   return out.sort((x, y) => y.significance - x.significance || x.id.localeCompare(y.id));
+}
+
+/**
+ * The week's biggest Monday recovery, or nothing.
+ *
+ * ## Two conditions, and the second is what keeps it honest
+ *
+ * `lib/stats/comeback.ts` reports the flip; this decides whether a flip is worth
+ * a headline. **The result must have flipped and the deficit must have been
+ * real.** A manager who was 0.4 behind on Sunday night and won by 2 did not come
+ * back from anything, and a paper that says they did has spent its credibility
+ * on noise.
+ *
+ * ## Its significance is the deficit, not the margin
+ *
+ * Every other margin-shaped story here scores on how the game *ended*. This one
+ * scores on how far back somebody was, because that is the whole claim — a
+ * one-point win after being forty behind is a bigger story than a one-point win
+ * after being one behind, and the final margin cannot tell them apart.
+ *
+ * ## A week with no snapshot produces nothing, silently
+ *
+ * Which is correct rather than convenient. Every historical season predates the
+ * job, so `no-snapshot` is the normal state of most of the archive, and a story
+ * that appeared for some weeks and not others with no explanation would be worse
+ * than one that appears only where the evidence exists.
+ */
+function pickComeback(
+  playable: readonly WeekGame[],
+  snapshots: WeekSnapshotMap | undefined,
+): Omit<StoryCandidate, 'id'> | null {
+  if (snapshots === undefined || snapshots.size === 0) return null;
+
+  const found = playable
+    .map((game) => ({ game, fact: comebackFor(game, snapshots) }))
+    .filter((entry) => entry.fact.outcome === 'comeback')
+    .filter((entry) => entry.fact.deficitCents >= STORY_GATES.minComebackDeficit * 100)
+    // Deepest hole first; the matchup id only breaks an exact tie.
+    .sort(
+      (x, y) =>
+        y.fact.deficitCents - x.fact.deficitCents ||
+        x.game.sleeperMatchupId - y.game.sleeperMatchupId,
+    );
+
+  const top = found[0];
+  if (top === undefined) return null;
+
+  const { game, fact } = top;
+  const winner = fact.winner;
+  const loser = fact.loser;
+  if (winner === null || loser === null) return null;
+
+  const deficit = fact.deficitCents / 100;
+  const margin = fact.finalMarginCents / 100;
+  const swing = fact.swingCents / 100;
+
+  return {
+    kind: 'monday-comeback',
+    season: game.season,
+    week: game.week,
+    /*
+     * 400 clears `STORY_FLOOR` (340) but not `LEAD_FLOOR` (460) on its own, so a
+     * modest recovery is printed and does not lead. Two points of significance
+     * per point of deficit puts a thirty-point hole at 460 — the size of hole
+     * that should lead a quiet week and should still lose to a record margin.
+     */
+    significance: round(400 + deficit * 2),
+    gameKey: game.key,
+    subjects: [game.winner?.managerId ?? null, game.loser?.managerId ?? null].filter(isString),
+    evidence: [
+      `stored game ${game.key}`,
+      `pre-Monday snapshot for matchup ${String(fact.sleeperMatchupId)}, week ${String(game.week)}`,
+      `${winner} trailed by ${one(deficit)} at the snapshot and won by ${one(margin)}`,
+      `swing of ${one(swing)}, which is the deficit plus the final margin`,
+      'both numbers are stored rows subtracted — the snapshot and the finalized game',
+    ],
+    detail: { kind: 'monday-comeback', winner, loser, deficit, margin, swing },
+    allowedNumbers: [one(deficit), one(margin), one(swing)],
+    allowedNames: [winner, loser],
+  };
 }
 
 /**

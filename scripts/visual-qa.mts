@@ -185,6 +185,7 @@ type StateName =
   | 'slice-no-stories'
   | 'slice-one-story'
   | 'slice-competing-stories'
+  | 'slice-monday-comeback'
   | 'reveal-common'
   | 'reveal-rare'
   | 'reveal-epic'
@@ -901,7 +902,8 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'slice-historical-recap':
     case 'slice-no-stories':
     case 'slice-one-story':
-    case 'slice-competing-stories': {
+    case 'slice-competing-stories':
+    case 'slice-monday-comeback': {
       const key = state.slice('slice-'.length);
       await page.goto(`${BASE}/slice?edition=${key}`, { waitUntil: 'networkidle' });
       await page.waitForSelector('[data-slice-edition]', { state: 'attached' });
@@ -1217,6 +1219,7 @@ const ALL_STATES: readonly StateName[] = [
   'slice-no-stories',
   'slice-one-story',
   'slice-competing-stories',
+  'slice-monday-comeback',
   // The four rarity treatments, side by side and repeatable. Signed in as
   // whoever the previous demo state left us as, which is fine: the payload is
   // synthesised and does not depend on what that seat owns.

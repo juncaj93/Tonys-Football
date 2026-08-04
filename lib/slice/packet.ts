@@ -3,6 +3,7 @@ import { seasonMemberships, seasons } from '@/lib/db/schema';
 import { activeManagerIds } from '@/lib/league/membership';
 import { finalizedMarginsCents } from '@/lib/stats/facts';
 import { standardPolicy } from '@/lib/stats/significance';
+import { weekSnapshot, type WeekSnapshotMap } from '@/lib/stats/snapshot';
 import { deriveStories, type StoryCandidate } from '@/lib/stats/stories';
 import {
   buildWeek,
@@ -295,6 +296,28 @@ export async function factPacket(
 
   const publishable = await activeManagerIds(db);
 
+  /*
+   * The pre-Monday photographs, if the Sunday job took any.
+   *
+   * Read here rather than inside `deriveStories` for the reason every other
+   * population in `context` is: derivation is pure and takes what it is given,
+   * so a fixture can drive the real pipeline. A week with no snapshot yields an
+   * empty map and no comeback candidate, which is every historical week in the
+   * archive.
+   *
+   * **Three weeks, not one.** `recentLeadKinds` re-derives the previous two
+   * issues to keep this one from repeating their lead, and it re-derives them
+   * with the same inputs they had — so a week whose lead *was* a comeback has to
+   * still look like one from here. Reading only the current week would leave
+   * `monday-comeback` permanently invisible to the no-repeat rule, and two
+   * comebacks in a row would print unreordered.
+   */
+  const snapshotFor = new Map<number, WeekSnapshotMap>();
+  for (const weekNumber of [input.week, input.week - 1, input.week - 2]) {
+    if (weekNumber < 1) continue;
+    snapshotFor.set(weekNumber, await weekSnapshot(db, { season: input.season, week: weekNumber }));
+  }
+
   const forWeek = (weekNumber: number): { raw: WeekRecord; open: WeekRecord } => {
     const raw = buildWeek({
       season: input.season,
@@ -311,9 +334,13 @@ export async function factPacket(
   return assemblePacket({
     week: open,
     rawWeek: raw,
-    candidates: deriveStories({ ...context, week: open }),
+    candidates: deriveStories({
+      ...context,
+      week: open,
+      snapshots: snapshotFor.get(input.week) ?? new Map(),
+    }),
     publishableManagerIds: publishable,
-    recentLeadKinds: recentLeadKinds(input.week, forWeek, context),
+    recentLeadKinds: recentLeadKinds(input.week, forWeek, context, snapshotFor),
   });
 }
 
@@ -334,14 +361,24 @@ export async function factPacket(
 function recentLeadKinds(
   week: number,
   forWeek: (week: number) => { raw: WeekRecord; open: WeekRecord },
-  context: Omit<Parameters<typeof deriveStories>[0], 'week'>,
+  context: Omit<Parameters<typeof deriveStories>[0], 'week' | 'snapshots'>,
+  /**
+   * Each week's own photograph.
+   *
+   * A previous week has to be re-derived with the inputs it actually had. Hand
+   * it this week's snapshot and it would report a comeback that never happened;
+   * hand it none and `monday-comeback` could never be a recent lead, so the
+   * no-repeat rule would never see one.
+   */
+  snapshotFor: ReadonlyMap<number, WeekSnapshotMap>,
 ): readonly StoryKind[] {
   const kinds: StoryKind[] = [];
   for (const previous of [week - 1, week - 2]) {
     if (previous < 1) break;
     const { open } = forWeek(previous);
     if (open.games.length === 0) continue;
-    const lead = selectStories(deriveStories({ ...context, week: open })).lead;
+    const snapshots = snapshotFor.get(previous) ?? new Map();
+    const lead = selectStories(deriveStories({ ...context, week: open, snapshots })).lead;
     if (lead !== null) kinds.push(lead.kind);
   }
   return kinds;

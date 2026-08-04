@@ -44,33 +44,51 @@ Set in **Vercel → Project → Settings → Environment Variables**. The Enviro
 | `COMMISSIONER_SLEEPER_USER_ID` | commissioner's Sleeper ID | same | same | Unset = nobody is an admin and admin routes 404. |
 | `CLAIM_CODE` | optional | optional | — | A shared word the claim screen asks for once. Unset = anyone with the URL can claim an unclaimed name. |
 | `ANTHROPIC_API_KEY` | optional | leave unset | — | The Slice must publish without it (`16 §9`). |
-| `CRON_SECRET` | **required** | — | — | `openssl rand -base64 32`. The Tuesday job's only door. **Unset means the route refuses everything**, including Vercel's own scheduler — a job that runs unprotected is a job whose missing secret nobody notices. Production only: a preview deploy must never close a week. |
+| `CRON_SECRET` | **required** | — | — | `openssl rand -base64 32`. **Both** scheduled jobs' only door — `lib/cron/secret.ts`, one implementation. **Unset means both routes refuse everything**, including Vercel's own scheduler; a job that runs unprotected is a job whose missing secret nobody notices. Production only: a preview deploy must never close a week or photograph one. |
 
-### The scheduled job
+### The scheduled jobs
 
-`vercel.json` declares **one** cron — `/api/cron/tuesday` at `0 9 * * 2`.
+`vercel.json` declares **two**, which is the number `16 §4.3` allows and the
+number that now exist. There is no third.
 
-That is 09:00 UTC, which is 5am Eastern while the clock is on EDT and 4am after
-the November change. `16 §4.3` asks for *"Tuesday ~5am ET"*; Vercel's schedules
-are UTC and Hobby allows two crons total, so a second entry to hold the hour
-across DST would spend the Sunday job's slot on a daylight-saving correction. An
-hour either side of 5am is before the shop opens; a missing snapshot job is not.
+| path | schedule | UTC | Eastern |
+|---|---|---|---|
+| `/api/cron/sunday` | `55 4 * * 1` | Monday 04:55 | **Mon 00:55 EDT · Sun 23:55 EST** |
+| `/api/cron/tuesday` | `0 9 * * 2` | Tuesday 09:00 | Tue 05:00 EDT · Tue 04:00 EST |
 
-**The Sunday pre-Monday snapshot is deliberately absent.** `16 §4.3` specifies
-it and nothing implements it yet, and a cron pointed at a route that does not
-exist is a scheduled 404 — an error every week that means nothing. Its slot is
-reserved by that paragraph rather than by an entry.
+Vercel's schedules are UTC and the league's day is Eastern, so neither can hold
+its local hour across the November change. Each is placed where the drift is
+harmless in the direction it drifts.
 
-The job is safe to retry and safe to run by hand:
+**Sunday is the one that had to be thought about.** `16 §4.3` asks for *"Sunday
+~11:55pm ET"*, and the obvious `55 3 * * 1` is 11:55pm during EDT and **10:55pm
+during EST — inside the Sunday night game** for half the season. `55 4 * * 1` is
+11:55pm ET in EST and 00:55 ET on Monday in EDT: after Sunday night football
+either way, and before any Monday game either way. The job runs slightly late in
+September rather than slightly early in December.
+
+Tuesday's hour is not load-bearing in the same way — an hour either side of 5am
+is before the shop opens.
+
+Both are safe to retry and safe to run by hand:
 
 ```
+curl -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/sunday
+curl -H "Authorization: Bearer $CRON_SECRET" "https://<host>/api/cron/sunday?week=6"
 curl -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/tuesday
 curl -H "Authorization: Bearer $CRON_SECRET" "https://<host>/api/cron/tuesday?week=6"
 ```
 
-It answers `200` with a report, `500` with a report naming the step that threw,
-and `404` to anything without the secret. **It never publishes** — the draft
-lands on `/admin/slice` and stops (`16 §9`).
+Each answers `200` with a report, `500` when something threw, and `404` to
+anything without the secret.
+
+**Tuesday never publishes** — the draft lands on `/admin/slice` and stops
+(`16 §9`).
+
+**Sunday never overwrites.** A week is photographed once; a second run reports
+`captured: false` and writes nothing, because the second photograph would already
+include Monday scoring. `docs/SUNDAY_SNAPSHOT_BOUNDARY.md §4` is why that is a
+constraint and a trigger rather than a convention.
 
 **Pooled, not direct.** Neon shows two connection strings. Use the one whose host contains `-pooler`. Serverless functions open a pool per instance; the direct endpoint runs out of connections under even this league's tiny load.
 

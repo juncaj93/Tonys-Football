@@ -2,6 +2,7 @@ import { type Queryable } from '@/lib/db';
 import { DemoRefused, assertDemoAllowed } from '@/lib/demo/guard';
 import { finalizedMarginsCents } from '@/lib/stats/facts';
 import { standardPolicy } from '@/lib/stats/significance';
+import { type SnapshotEntry } from '@/lib/stats/snapshot';
 import { deriveStories, type StoryKind } from '@/lib/stats/stories';
 import { buildWeek, publishableWeek, type StoredWeekGame } from '@/lib/stats/week';
 
@@ -64,6 +65,7 @@ export const SLICE_EDITIONS = [
   'no-stories',
   'one-story',
   'competing-stories',
+  'monday-comeback',
 ] as const;
 
 export type SliceEditionKey = (typeof SLICE_EDITIONS)[number];
@@ -94,6 +96,16 @@ interface FixtureGame {
   readonly aPoints: number;
   readonly b: string;
   readonly bPoints: number;
+  /**
+   * What the two sides had before Monday, when the fixture is photographing one.
+   *
+   * Absent on every other fixture, which is the normal case and the historical
+   * one: the snapshot job did not exist for any imported season, so those weeks
+   * produce no comeback candidate at all. A fixture that supplies these is
+   * declaring *"this week was photographed"*.
+   */
+  readonly aBefore?: number;
+  readonly bBefore?: number;
 }
 
 interface FixtureWeek {
@@ -314,6 +326,44 @@ const FIXTURES: Readonly<Partial<Record<SliceEditionKey, EditionFixture>>> = {
       },
     ],
   },
+
+  /*
+   * A week that was photographed before Monday, and moved after it.
+   *
+   * The only fixture in this file that supplies `aBefore` / `bBefore`, because
+   * it is the only state where the paper is allowed to say what somebody was
+   * doing on Sunday night. Alex is 35.10 down at the snapshot and wins by 6.66 —
+   * a hole deep enough to clear `LEAD_FLOOR` and lead the issue, which is what
+   * makes this a demo of the story rather than of a footnote.
+   *
+   * The other three games move too, and none of them flips. That is the half of
+   * the demo that matters: a state showing only the comeback would not prove the
+   * paper can tell a recovery from an ordinary Monday, which is the exact failure
+   * `docs/SUNDAY_SNAPSHOT_BOUNDARY.md §5` is written against.
+   */
+  'monday-comeback': {
+    season: 2026,
+    show: 3,
+    finalized: true,
+    weeks: [
+      { week: 1, weekType: 'regular', games: ORDINARY },
+      { week: 2, weekType: 'regular', games: ORDINARY },
+      {
+        week: 3,
+        weekType: 'regular',
+        games: [
+          // Behind 82.30 to 117.40 before Monday; wins 128.44 to 121.78.
+          { a: A, aPoints: 128.44, b: NI, bPoints: 121.78, aBefore: 82.3, bBefore: 117.4 },
+          // Ahead and stays ahead. Moves 20 points and is not a story.
+          { a: B, aPoints: 131.06, b: C, bPoints: 108.52, aBefore: 111.06, bBefore: 104.52 },
+          // Behind and stays behind.
+          { a: J, aPoints: 104.7, b: ML, bPoints: 119.18, aBefore: 88.7, bBefore: 112.18 },
+          // Level at the snapshot, decided on Monday. Not a comeback: nobody was behind.
+          { a: MB, aPoints: 117.2, b: NA, bPoints: 110.86, aBefore: 100, bBefore: 100 },
+        ],
+      },
+    ],
+  },
 };
 
 const HISTORICAL: Readonly<Partial<Record<SliceEditionKey, HistoricalEdition>>> = {
@@ -352,6 +402,7 @@ export const SLICE_EDITION_DESCRIPTIONS: Readonly<Record<SliceEditionKey, string
   'no-stories': 'a week where nothing cleared the bar; the board still prints',
   'one-story': 'an issue carrying exactly one story',
   'competing-stories': 'three strong stories of different shapes, and the desk choosing',
+  'monday-comeback': 'a week photographed before Monday, where one game turned over and three did not',
 };
 
 /** The catalog, for the CLI and for the visual driver's exhaustiveness check. */
@@ -495,6 +546,35 @@ async function renderFixture(
     }),
   );
 
+  /*
+   * The fixture's own pre-Monday photograph, for the one state that has one.
+   *
+   * Built from the same `sleeperMatchupId` the rows above use, so the snapshot
+   * and the game join exactly as they do in production. A fixture that supplies
+   * no `aBefore` produces an empty map, and an empty map produces no comeback
+   * candidate — which is the behaviour of every other edition here and of every
+   * historical week in the archive.
+   */
+  const shownWeek = fixture.weeks.find((week) => week.week === fixture.show);
+  const snapshots: Map<number, SnapshotEntry> = new Map(
+    (shownWeek?.games ?? []).flatMap((game, index) =>
+      game.aBefore === undefined || game.bBefore === undefined
+        ? []
+        : [
+            [
+              index + 1,
+              {
+                sleeperMatchupId: index + 1,
+                rosterAId: rosterIdOf.get(game.a)!,
+                rosterBId: rosterIdOf.get(game.b)!,
+                pointsACents: Math.round(game.aBefore * 100),
+                pointsBCents: Math.round(game.bBefore * 100),
+              },
+            ] as const,
+          ],
+    ),
+  );
+
   const raw = buildWeek({
     season: fixture.season,
     week: fixture.show,
@@ -525,6 +605,7 @@ async function renderFixture(
       playoffRosters: new Set(
         (fixture.playoffManagers ?? []).map((name) => rosterIdOf.get(name) ?? -1),
       ),
+      snapshots,
     }),
     publishableManagerIds: publishableIds,
   });
