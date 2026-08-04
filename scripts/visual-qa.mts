@@ -49,6 +49,7 @@ import { chromium, type Browser, type Page } from 'playwright';
 
 import { TYPE_FLOOR_PX } from '../lib/design/type.ts';
 import { QUARANTINE_CEILING, quarantineFor } from './visual-qa-quarantine.ts';
+import { CAPTURE } from './visual-qa-capture';
 
 /**
  * The only `data-environmental-type` this product declares.
@@ -3205,7 +3206,36 @@ async function run(): Promise<void> {
         else await reachDemo(page, state, demoKey);
 
         await page.waitForTimeout(300);
-        await page.screenshot({ path: path.join(OUT, `${String(width)}-${state}.png`) });
+        /*
+         * `caret: 'initial'` — **the instrument must not edit the page it is
+         * measuring**, and until this line it did.
+         *
+         * Playwright's screenshot defaults to `caret: 'hide'`, and the way it
+         * hides a text caret is to write `caret-color: transparent !important`
+         * into the **inline style of every element** and then take it away
+         * again. Measured directly, with a MutationObserver on one `<input>`:
+         *
+         *     default (caret: hide)  -> ["caret-color: transparent !important;", ""]
+         *     caret: 'initial'       -> []
+         *
+         * If a capture lands while React is hydrating, React compares the DOM it
+         * finds against the DOM the server sent, finds a `style` attribute
+         * nobody rendered, and reports a mismatch. That is visual debt 12, and
+         * it was never a defect in this product: a dev sweep named the element,
+         * and it was `<input name="note">` with `style={{caret-color:
+         * "transparent"}}` on a screen whose own code never sets a caret colour.
+         *
+         * It also explains the one thing about debt 12 that never made sense —
+         * that **144 targeted document loads could not reproduce what a sweep
+         * hit every 209 captures**. Those probes loaded pages; they did not
+         * photograph them. The error needed the camera.
+         *
+         * The cost is that a *focused* text field may show its caret in a
+         * screenshot. Nothing the driver focuses is a text field — `keyboard-focus`
+         * focuses room objects — so in practice nothing changes, and a visible
+         * caret would be the truth about a focused input anyway.
+         */
+        await page.screenshot({ ...CAPTURE, path: path.join(OUT, `${String(width)}-${state}.png`) });
 
         /*
          * Colour fidelity and legacy references apply to **every** page.
