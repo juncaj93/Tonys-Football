@@ -435,6 +435,43 @@ options mutate nothing, **and** the default does — so it fails on the pre-fix
 behaviour rather than restating the code.
 
 
+### The economy simulation — `16 §8`'s release gate is built, and it does not pass
+
+Every economy value in this product carries `provisional: true` and a comment
+saying not to tune it, because *this* was the thing that decides. It exists now
+(`docs/ECONOMY_SIMULATION.md`), it is deterministic and seeded, and it reads the
+real prices, the real reward table and the real catalog rather than a copy.
+
+**Four of six ranges are missed, and they are one finding seen four ways.** A
+median manager earns up to 550 tokens a week against a box price of 50, so:
+
+| Range | Target | Measured |
+|---|---|---|
+| Boxes per manager per season | 6–12 | **31.5** |
+| Legendaries league-wide per season | 2–3 | **8.0** |
+| Reward-bearing weeks, median | 35–55% | 57.1% |
+| Direct grants per manager/season | 2–3 | **0.20** |
+
+The **legendary rate per opening is inside its range** at 2.4%. The rate is fine;
+the number of openings is not — which means the reward table is not the thing to
+change. Three levers exist (box price, weekly amounts, a per-week cap) and the
+simulation deliberately chooses none of them: `03 §4` names the amounts and
+`16 §8` says the values are simulation-*reviewed*, not simulation-chosen.
+
+**Direct grants describe something that does not exist.** The welcome box is the
+only direct grant and it is granted once ever. Either grants need a source or the
+range needs revising — a scope finding rather than a tuning one.
+
+**Duplicate protection is now answerable.** Both policies are simulated, which is
+how the open *"salvage is unbuilt and P3-gated"* question gets a number: the
+specified rule completes 10/10 collections against 8/10, and far sooner. At the
+current box rate both produce ~86% duplicate openings, which is the headline
+again from another angle.
+
+**Nothing is approved.** The gate is built; signing off the ranges is a
+commissioner act and the values stay provisional until it happens.
+
+
 ### Next executable task, in order
 
 The art queue that used to sit here is closed (`#55`) and this replaces it.
