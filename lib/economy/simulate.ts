@@ -72,15 +72,17 @@ export type ProfileName = keyof typeof PROFILES;
 /**
  * How a duplicate is handled.
  *
- * - `as-built` — what `openBox` does today: roll the table, take whatever comes
- *   up, duplicates included.
- * - `specified` — what `16 §8` requires: *"roll rarity → pick an **unowned**
- *   item in that tier → if exhausted, salvage tokens. No pity timer."*
+ * - `specified` — what `16 §8` requires and what `openBox` now does: *"roll
+ *   rarity → pick an **unowned** item in that tier → if exhausted, salvage
+ *   tokens. No pity timer."*
+ * - `as-built` — what `openBox` did **before `0014`**: roll the table, take
+ *   whatever comes up, duplicates included.
  *
- * Both are simulated because the difference is the answer to a question the
- * checkpoint records as open: **salvage is unbuilt and P3-gated**, so whether it
- * is worth building is one of the things this gate decides. Running only the
- * rule that exists would measure the product; running both measures the choice.
+ * The names come from when this gate was written, and the second one is now
+ * historical. It is kept rather than deleted because it is the *counterfactual*:
+ * the gate's job is to measure what the ruling changed, and a comparison needs
+ * both sides. `specified` is what the ranges are measured against — the
+ * simulation reports the economy that exists.
  */
 export type DuplicatePolicy = 'as-built' | 'specified';
 

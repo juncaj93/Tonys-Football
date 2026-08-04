@@ -38,7 +38,9 @@ function input(over: Partial<SimulationInput> = {}): SimulationInput {
     weeks: 14,
     salvage: salvageFor(PROVISIONAL_ECONOMY.standardBoxPriceTokens),
     grantsPerSeason: 2,
-    policy: 'as-built',
+    // The rule the product now follows (`0014`). The counterfactual is asked
+    // for explicitly, in the two tests that compare the two.
+    policy: 'specified',
     seed: 20260804,
     catalogSize: CATALOG_SIZE,
     ...over,

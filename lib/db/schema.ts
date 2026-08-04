@@ -767,7 +767,25 @@ export const tokenReason = pgEnum('token_reason', [
    */
   'STAKE_PLACED',
   'STAKE_PAYOUT',
+  /**
+   * A spare converted to tokens (`0014`).
+   *
+   * `16 §8` hands over an unowned item in the rolled tier and only converts when
+   * that tier holds none left, so this is a rarer line than its name suggests —
+   * a manager sees it after owning all ten commons, not the second time a
+   * squeeze bottle comes up.
+   */
+  'DUPLICATE_SALVAGE',
 ]);
+
+/**
+ * What a box actually produced.
+ *
+ * `ITEM` is every opening that happened before `0014`, and it is the default —
+ * salvage did not exist, so every historical opening produced an item and the
+ * default states that rather than backfilling it.
+ */
+export const boxOpeningOutcome = pgEnum('box_opening_outcome', ['ITEM', 'SALVAGE']);
 
 /**
  * The token ledger. Append-only, and the only way a balance moves.
@@ -1081,11 +1099,45 @@ export const boxOpenings = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: 'restrict' }),
 
-    /** The registry slug of what came out. Not an FK: the catalog is the registry. */
+    /**
+     * The registry slug of what came out. Not an FK: the catalog is the registry.
+     *
+     * **What came out of the box**, which since `0014` is not always what the
+     * roll named: `16 §8` redirects a roll that lands on an item the manager
+     * already owns to an unowned one in the same tier. On a `SALVAGE` outcome the
+     * tier held nothing unowned, so this is the spare that was converted — still
+     * what came out, still not something they now own.
+     *
+     * The *rolled* entry is deliberately not stored beside it. It is
+     * `resolveRoll(table@rewardTableVersion, roll)` — a pure function of two
+     * columns already on this row, and a second copy of a derivable fact is a
+     * copy that can drift.
+     */
     collectibleSlug: text('collectible_slug').notNull(),
 
     /** What the manager was told they got. Frozen, see `collectibleRarity`. */
     rarity: collectibleRarity('rarity').notNull(),
+
+    /**
+     * Kept, or converted to tokens.
+     *
+     * `16 §8`'s duplicate rule: an exhausted tier salvages. See
+     * `drizzle/0014_duplicate_salvage.sql` for why the payment is a constraint
+     * rather than a convention.
+     */
+    outcome: boxOpeningOutcome('outcome').notNull().default('ITEM'),
+
+    /** What the spare was worth. Non-null exactly when `outcome` is `SALVAGE`. */
+    salvageTokens: integer('salvage_tokens'),
+
+    /**
+     * The ledger row that paid the salvage. Non-null exactly when `outcome` is
+     * `SALVAGE`, enforced by `box_openings_salvage_is_paid` — so a converted
+     * spare that paid nothing cannot be written down at all.
+     */
+    tokenTransactionId: uuid('token_transaction_id').references(() => tokenTransactions.id, {
+      onDelete: 'restrict',
+    }),
 
     /**
      * The reward table this roll was resolved against — `18 §4.3`'s "config
@@ -1109,7 +1161,22 @@ export const boxOpenings = pgTable(
 
     openedAt: timestamp('opened_at', { withTimezone: true }).notNull(),
   },
-  (table) => [index('box_openings_user_idx').on(table.userId, table.openedAt)],
+  (table) => [
+    index('box_openings_user_idx').on(table.userId, table.openedAt),
+    index('box_openings_outcome_idx').on(table.outcome, table.openedAt),
+    check(
+      'box_openings_salvage_pays_tokens',
+      sql`(${table.outcome} = 'SALVAGE') = (${table.salvageTokens} IS NOT NULL)`,
+    ),
+    check(
+      'box_openings_salvage_is_positive',
+      sql`${table.salvageTokens} IS NULL OR ${table.salvageTokens} > 0`,
+    ),
+    check(
+      'box_openings_salvage_is_paid',
+      sql`(${table.outcome} = 'SALVAGE') = (${table.tokenTransactionId} IS NOT NULL)`,
+    ),
+  ],
 );
 
 /**
@@ -1119,11 +1186,22 @@ export const boxOpenings = pgTable(
  * Roster 4 in 2025 is not roster 4 in 2026, and a replacement manager must not
  * inherit the previous occupant's shelf.
  *
- * Duplicates are allowed — no unique on `(user_id, slug)`. Pulling the same
- * parmesan shaker twice is an ordinary outcome of a weighted table, and the
- * Collection counts copies. Forbidding it would silently turn every duplicate
- * roll into a reroll, which is a reward-pacing change made by accident in a
- * constraint.
+ * ## There is no `UNIQUE (user_id, slug)`, and the reason changed in `0014`
+ *
+ * It used to be *"duplicates are an ordinary outcome of a weighted table"*. That
+ * was wrong about the specification the whole time: `16 §8` has always read
+ * **roll rarity → pick an unowned item in that tier → if exhausted, salvage
+ * tokens**, so under the approved rules a manager acquires each slug at most
+ * once. M2 shipped the first half of that sentence and `0014` shipped the
+ * second.
+ *
+ * The constraint still is not here, for a different and narrower reason: every
+ * database that opened a box between M2 and `0014` legitimately holds duplicates
+ * acquired under the rule that was live at the time, and `collectibles_undeletable`
+ * makes tidying them away impossible on purpose. So the guarantee is a
+ * transaction lock per manager in `openBox` plus `collectibles_never_from_salvage`,
+ * and the cost of that choice is written down in the migration rather than
+ * discovered later.
  */
 export const collectibles = pgTable(
   'collectibles',

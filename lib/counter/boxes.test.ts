@@ -39,6 +39,17 @@ if (process.env['CI'] === 'true' && !hasDatabase) {
 
 const db = hasDatabase ? getDb() : null;
 
+/*
+ * Where a salvage would be paid, if one happened.
+ *
+ * `null` in these tests on purpose: none of them fills a whole tier, so no
+ * opening below can reach `16 §8`'s conversion — and passing a season that is
+ * never used would suggest otherwise. The salvage path has its own tests, which
+ * build the collection that makes it reachable.
+ */
+const seasonId: string | null = null;
+
+
 describe.skipIf(!hasDatabase)('opening a box', () => {
   beforeEach(async () => {
     await resetDatabase(db!);
@@ -98,7 +109,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       // dressed up as a deployment.
       const alex = await makeManager();
       const box = await grantOne(alex.id, 'k');
-      await openBox(db!, { userId: alex.id, boxId: box.id });
+      await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       const again = await grantBox(db!, { userId: alex.id, grantKey: 'k', source: 'seed' });
       expect(again.granted).toBe(false);
@@ -118,7 +129,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const table = standardRewardTable();
 
       setFixedRoll(0);
-      const result = await openBox(db!, { userId: alex.id, boxId: box.id });
+      const result = await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
       expect(result.status).toBe('opened');
 
       const [opening] = await db!
@@ -140,7 +151,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const box = await grantOne(alex.id);
 
       setFixedRoll(1234);
-      const result = await openBox(db!, { userId: alex.id, boxId: box.id });
+      const result = await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       const [opening] = await db!
         .select()
@@ -158,7 +169,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const table = standardRewardTable();
 
       setFixedRoll(table.totalWeight - 1);
-      const result = await openBox(db!, { userId: alex.id, boxId: box.id });
+      const result = await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       expect(result.status === 'opened' && result.reveal.rarity).toBe('legendary');
     });
@@ -181,7 +192,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const alex = await makeManager();
       const box = await grantOne(alex.id);
 
-      await expect(openBox(db!, { userId: alex.id, boxId: box.id })).rejects.toThrow(
+      await expect(openBox(db!, { userId: alex.id, boxId: box.id, seasonId })).rejects.toThrow(
         /not stored/,
       );
 
@@ -198,11 +209,11 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const box = await grantOne(alex.id);
 
       setFixedRoll(500);
-      const first = await openBox(db!, { userId: alex.id, boxId: box.id });
+      const first = await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       // A second call would roll differently if it rolled at all.
       setFixedRoll(3999);
-      const second = await openBox(db!, { userId: alex.id, boxId: box.id });
+      const second = await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       expect(first.status).toBe('opened');
       expect(second.status).toBe('opened');
@@ -229,7 +240,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
 
       setFixedRoll(100);
       const results = await Promise.all(
-        Array.from({ length: 10 }, () => openBox(db!, { userId: alex.id, boxId: box.id })),
+        Array.from({ length: 10 }, () => openBox(db!, { userId: alex.id, boxId: box.id, seasonId })),
       );
 
       const slugs = new Set(
@@ -247,7 +258,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const alex = await makeManager();
       const box = await grantOne(alex.id);
       setFixedRoll(0);
-      await openBox(db!, { userId: alex.id, boxId: box.id });
+      await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       await expectPgError(
         db!.insert(boxOpenings).values({
@@ -267,7 +278,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const alex = await makeManager();
       const box = await grantOne(alex.id);
       setFixedRoll(0);
-      await openBox(db!, { userId: alex.id, boxId: box.id });
+      await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       const [opening] = await db!
         .select()
@@ -293,7 +304,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const zack = await makeManager('Zack');
       const box = await grantOne(alex.id, 'alex');
 
-      const result = await openBox(db!, { userId: zack.id, boxId: box.id });
+      const result = await openBox(db!, { userId: zack.id, boxId: box.id, seasonId });
 
       expect(result.status).toBe('not_found');
       // And Alex still has it.
@@ -306,6 +317,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const result = await openBox(db!, {
         userId: alex.id,
         boxId: '00000000-0000-0000-0000-000000000000',
+        seasonId,
       });
       expect(result.status).toBe('not_found');
     });
@@ -335,7 +347,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const alex = await makeManager();
       const box = await grantOne(alex.id);
       setFixedRoll(0);
-      await openBox(db!, { userId: alex.id, boxId: box.id });
+      await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       await expectPgError(
         db!
@@ -352,7 +364,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const zack = await makeManager('Zack');
       const box = await grantOne(alex.id);
       setFixedRoll(0);
-      await openBox(db!, { userId: alex.id, boxId: box.id });
+      await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       await expectPgError(
         db!
@@ -367,7 +379,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const alex = await makeManager();
       const box = await grantOne(alex.id);
       setFixedRoll(0);
-      await openBox(db!, { userId: alex.id, boxId: box.id });
+      await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
 
       await expectPgError(
         db!.delete(collectibles).where(eq(collectibles.userId, alex.id)),
@@ -406,7 +418,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       });
 
       setFixedRoll(0);
-      await openBox(db!, { userId: alex.id, boxId: box.id });
+      await openBox(db!, { userId: alex.id, boxId: box.id, seasonId });
       expect(await counterState(db!, alex.id)).toEqual({
         unopenedBoxes: 1,
         collectiblesOwned: 1,
@@ -429,22 +441,32 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       expect(first!.id).toBe(oldest!.id);
     });
 
-    it('keeps duplicate pulls as separate collectibles', async () => {
-      // A weighted table produces duplicates. Forbidding them would silently
-      // turn every duplicate roll into a reroll.
+    it('never hands over an item the manager already owns', async () => {
+      /*
+       * This used to assert the opposite — *"keeps duplicate pulls as separate
+       * collectibles"* — and it was wrong about the specification the whole
+       * time. `16 §8` reads **roll rarity → pick an unowned item in that tier**,
+       * so the same roll twice must produce two different commons.
+       *
+       * Rewritten rather than deleted: the sequence it drives is exactly the one
+       * that used to produce a duplicate, so it is the test that would notice if
+       * the redirect were ever removed.
+       */
       const alex = await makeManager();
       await grantBox(db!, { userId: alex.id, grantKey: 'a', source: 'seed' });
       await grantBox(db!, { userId: alex.id, grantKey: 'b', source: 'seed' });
 
       setFixedRoll(0);
       const one = await ownedBox(db!, alex.id);
-      await openBox(db!, { userId: alex.id, boxId: one!.id });
+      await openBox(db!, { userId: alex.id, boxId: one!.id, seasonId });
       const two = await ownedBox(db!, alex.id);
-      await openBox(db!, { userId: alex.id, boxId: two!.id });
+      await openBox(db!, { userId: alex.id, boxId: two!.id, seasonId });
 
       const owned = await db!.select().from(collectibles).where(eq(collectibles.userId, alex.id));
       expect(owned).toHaveLength(2);
-      expect(owned[0]!.slug).toBe(owned[1]!.slug);
+      expect(owned[0]!.slug).not.toBe(owned[1]!.slug);
+      // Same tier, though: the roll decided the rarity and nothing moved it.
+      expect(owned[0]!.rarity).toBe(owned[1]!.rarity);
     });
   });
 
@@ -465,7 +487,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const box = await grantOne(departed.id, 'test:seatless:box');
 
       setFixedRoll(0);
-      const opened = await openBox(db!, { userId: departed.id, boxId: box.id });
+      const opened = await openBox(db!, { userId: departed.id, boxId: box.id, seasonId });
 
       expect(opened.status).toBe('opened');
       const owned = await db!

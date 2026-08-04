@@ -1,5 +1,5 @@
 import { CATALOG_SIZE, RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
-import { PROVISIONAL_ECONOMY } from '@/lib/counter/tokens';
+import { PROVISIONAL_ECONOMY, salvageValue } from '@/lib/counter/tokens';
 import { resolveAsset } from '@/lib/assets/registry';
 import { type AssetResolution } from '@/lib/assets/types';
 
@@ -48,6 +48,8 @@ export interface PreviewReveal {
   readonly name: string;
   readonly rarity: Rarity;
   readonly replayed: boolean;
+  /** Synthetic salvage, for `?preview_stage=spare`. Null in every other stage. */
+  readonly salvageTokens: number | null;
   readonly asset: AssetResolution;
   /** Synthetic, like the rest of it — see the note on `previewReveal`. */
   readonly distinct: number;
@@ -83,10 +85,14 @@ export interface PreviewReveal {
  *   - `broke` — the tab is short, so **there is no offer and no link**, which is
  *     the composition the ruling cares most about being seen: no greyed-out
  *     price, no explanation, nothing
+ *   - `spare` — `16 §8`'s salvage: the tier is complete, so the plate names the
+ *     tokens instead of the shelf. Added with `0014`, and for the same reason
+ *     the others exist — the outcome depends on owning a whole tier, which no
+ *     screenshot harness can arrange from a URL
  *
  * `mid` is the default, so an unqualified `?preview_reveal=` behaves as before.
  */
-export const PREVIEW_STAGES = ['first', 'mid', 'complete', 'broke'] as const;
+export const PREVIEW_STAGES = ['first', 'mid', 'complete', 'broke', 'spare'] as const;
 export type PreviewStage = (typeof PREVIEW_STAGES)[number];
 
 /**
@@ -115,17 +121,34 @@ export type PreviewStage = (typeof PREVIEW_STAGES)[number];
  */
 const PRICE = String(PROVISIONAL_ECONOMY.standardBoxPriceTokens);
 
-const STAGES: Record<PreviewStage, { distinct: number; entryKey: string | null; line: string | null }> =
+const STAGES: Record<
+  PreviewStage,
   {
-    first: { distinct: 1, entryKey: 'O1', line: `First one was free. Next one's ${PRICE}.` },
-    mid: { distinct: 7, entryKey: 'O3', line: `${PRICE} tokens gets you another.` },
-    complete: {
-      distinct: CATALOG_SIZE,
-      entryKey: 'O7',
-      line: `Shelf's full. Another's ${PRICE}, and it'd be a spare.`,
-    },
-    broke: { distinct: 7, entryKey: null, line: null },
-  };
+    distinct: number;
+    entryKey: string | null;
+    line: string | null;
+    /** Non-null puts the plate in `16 §8`'s salvage composition. */
+    salvage?: boolean;
+  }
+> = {
+  first: { distinct: 1, entryKey: 'O1', line: `First one was free. Next one's ${PRICE}.` },
+  mid: { distinct: 7, entryKey: 'O3', line: `${PRICE} tokens gets you another.` },
+  complete: {
+    distinct: CATALOG_SIZE,
+    entryKey: 'O7',
+    line: `Shelf's full. Another's ${PRICE}, and it'd be a spare.`,
+  },
+  broke: { distinct: 7, entryKey: null, line: null },
+  /*
+   * A tier finished, mid-collection.
+   *
+   * `distinct` is deliberately **not** the full catalog: salvage happens the
+   * moment one tier is exhausted, which for a legendary is two items in, so a
+   * plate that only ever showed it beside "the whole shelf" would be reviewing
+   * the rarest arrangement of the composition rather than the usual one.
+   */
+  spare: { distinct: 7, entryKey: 'O3', line: `${PRICE} tokens gets you another.`, salvage: true },
+};
 
 function isRarity(value: string): value is Rarity {
   return (RARITIES as readonly string[]).includes(value);
@@ -184,6 +207,9 @@ export function previewReveal(
     name: item.name,
     rarity: item.rarity,
     replayed: false,
+    // Read through `salvageValue` rather than typed, so the preview cannot show
+    // a number the economy no longer pays — the same rule as `PRICE` above.
+    salvageTokens: stage.salvage === true ? salvageValue(PROVISIONAL_ECONOMY, item.rarity) : null,
     asset: resolveAsset(item.slug),
     distinct: stage.distinct,
     total: CATALOG_SIZE,

@@ -145,6 +145,65 @@ export function resolveRoll(
 }
 
 /**
+ * What a box actually hands over, given who is opening it.
+ *
+ * `16 §8`'s duplicate rule, and the whole of it: **roll rarity → pick an unowned
+ * item in that tier → if exhausted, salvage tokens.**
+ *
+ * ## The roll still decides, and it decides first
+ *
+ * The rarity comes from `resolveRoll` exactly as before — the weights, the
+ * integer, the version and the cumulative walk are untouched. The commissioner's
+ * ruling §1 is explicit that a legendary must stay as likely as it was, and the
+ * only way to be sure of that is for this function to have no opinion about
+ * rarity at all. It receives a tier and stays inside it.
+ *
+ * ## Within the tier, the walk starts where the roll landed
+ *
+ * If the rolled item is unowned, that is the answer and nothing has changed. If
+ * it is owned, the walk continues **from that item forward, wrapping**, and takes
+ * the first unowned one. Starting at the roll rather than at the top of the tier
+ * matters: a fixed start would make the alphabetically-first unowned item of a
+ * tier the answer to almost every redirect, so a manager filling a set would
+ * receive it in near-alphabetical order and the box would feel like a list.
+ *
+ * ## Pure, so an opening stays auditable
+ *
+ * No clock, no database, no randomness. Given the table version, the recorded
+ * roll and what the manager owned at that moment — reconstructible from
+ * `collectibles.acquired_at` — the outcome recomputes exactly, which is what
+ * `18 §4.3` means by an auditable opening.
+ */
+export type Award =
+  | { readonly kind: 'item'; readonly slug: string; readonly rarity: Rarity }
+  /** Every item in the rolled tier is already owned. `slug` is the spare. */
+  | { readonly kind: 'salvage'; readonly slug: string; readonly rarity: Rarity };
+
+export function selectAward(
+  table: Pick<RewardTableConfig, 'entries' | 'totalWeight'>,
+  roll: number,
+  owned: ReadonlySet<string>,
+): Award {
+  const rolled = resolveRoll(table, roll);
+  if (!owned.has(rolled.slug)) {
+    return { kind: 'item', slug: rolled.slug, rarity: rolled.rarity };
+  }
+
+  const tier = table.entries.filter((entry) => entry.rarity === rolled.rarity);
+  const start = tier.findIndex((entry) => entry.slug === rolled.slug);
+
+  for (let step = 1; step < tier.length; step += 1) {
+    const candidate = tier[(start + step) % tier.length];
+    if (candidate !== undefined && !owned.has(candidate.slug)) {
+      return { kind: 'item', slug: candidate.slug, rarity: candidate.rarity };
+    }
+  }
+
+  // The tier is complete. The box still contained something; it is a spare.
+  return { kind: 'salvage', slug: rolled.slug, rarity: rolled.rarity };
+}
+
+/**
  * The table's identity: a hash of exactly what it will roll against.
  *
  * A hash rather than a counter, for two reasons. Two environments seeding the

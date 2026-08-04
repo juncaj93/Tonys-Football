@@ -6,6 +6,8 @@ import { now } from '@/lib/clock';
 import { type Queryable } from '@/lib/db';
 import { economyConfigs, seasonMemberships, seasons, tokenTransactions } from '@/lib/db/schema';
 
+import { type Rarity } from './catalog';
+
 /**
  * Tony Tokens.
  *
@@ -136,6 +138,25 @@ export const PROVISIONAL_ECONOMY = {
 
 export type EconomyValues = typeof PROVISIONAL_ECONOMY;
 
+/**
+ * What a spare in this tier is worth.
+ *
+ * A lookup rather than four call sites reading four keys: the mapping from a
+ * rarity to its salvage key is a rule, and a rule spelled out at each caller is
+ * a rule that will eventually be spelled differently at one of them. Exhaustive
+ * over `Rarity`, so adding a tier fails to compile here rather than silently
+ * salvaging it for nothing.
+ */
+export function salvageValue(values: EconomyValues, rarity: Rarity): number {
+  const byRarity: Record<Rarity, number> = {
+    common: values.salvageCommonTokens,
+    rare: values.salvageRareTokens,
+    epic: values.salvageEpicTokens,
+    legendary: values.salvageLegendaryTokens,
+  };
+  return byRarity[rarity];
+}
+
 /** Reasons application code may actually use today. See the enum's comment. */
 export type LiveTokenReason =
   | 'SEASON_START'
@@ -148,7 +169,9 @@ export type LiveTokenReason =
   /** Won a paired game in a finalized week (`lib/rewards/`). */
   | 'MATCHUP_WIN'
   /** Posted the week's best score in a finalized week (`lib/rewards/`). */
-  | 'WEEKLY_HIGH_SCORE';
+  | 'WEEKLY_HIGH_SCORE'
+  /** A spare from an exhausted tier, converted at the opening (`lib/counter/boxes.ts`). */
+  | 'DUPLICATE_SALVAGE';
 
 export interface TokenDelta {
   readonly userId: string;

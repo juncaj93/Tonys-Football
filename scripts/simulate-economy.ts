@@ -97,8 +97,10 @@ if (process.argv.includes('--sweep')) {
 } else {
   const price = arg('price', PROVISIONAL_ECONOMY.standardBoxPriceTokens);
   const salvage = salvageFor(price);
-  run(price, 'as-built', salvage);
+  // The rule that ships, then the pre-`0014` counterfactual beneath it — so the
+  // report shows what the ruling changed rather than only where it landed.
   run(price, 'specified', salvage);
+  run(price, 'as-built', salvage);
 }
 
 console.log(

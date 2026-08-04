@@ -23,6 +23,7 @@ import { eq } from 'drizzle-orm';
 import { now } from '@/lib/clock';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import { ensureRewardTable, grantBox } from '@/lib/counter/boxes';
+import { grantSeasonalBoxes } from '@/lib/counter/grants';
 import { applyTokenDelta, ensureEconomyConfig, openSeason } from '@/lib/counter/tokens';
 import { CATALOG_SIZE } from '@/lib/counter/catalog';
 import { standardRewardTable } from '@/lib/counter/rewards';
@@ -237,6 +238,29 @@ async function main(): Promise<void> {
           // because that column means "these may still be re-versioned", which
           // is true of every economy config and always will be.
           `reviewed at P3 · provisional row`,
+      );
+
+      /*
+       * The season-opening free box, from the 2026-08-04 economy ruling.
+       *
+       * Here rather than in the Tuesday job for one reason: *"season-opening"*
+       * means before a ball is thrown, and the Tuesday job first runs after week
+       * one has been played. The job grants it too — `milestonesDue` is
+       * monotonic, so a season that was never seeded still catches up — and both
+       * callers write the same `grant_key`, so whichever arrives first is the
+       * only one that writes anything.
+       *
+       * `week: 0` is the season before it starts, so only the opening milestone
+       * is due. The midseason box is the Tuesday job's, because only the job
+       * knows what week it is.
+       */
+      const seasonal = await grantSeasonalBoxes(db, { seasonYear: open.year, week: 0 });
+      console.log(
+        seasonal.refusal !== null
+          ? `Grants   none — ${seasonal.refusal}`
+          : `Grants   ${String(seasonal.granted)} season-opening boxes granted · ` +
+              `${String(seasonal.alreadyGranted)} seats already had theirs · ` +
+              `${String(seasonal.seats)} active seats`,
       );
     }
 

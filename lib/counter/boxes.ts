@@ -1,13 +1,13 @@
-import { and, asc, count, eq } from 'drizzle-orm';
+import { and, asc, count, eq, sql } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
-import { type Database } from '@/lib/db';
+import { type Database, type Queryable } from '@/lib/db';
 import { boxOpenings, collectibles, lootBoxes, rewardTables } from '@/lib/db/schema';
 
 import { catalogItem, type Rarity } from './catalog';
-import { resolveRoll, standardRewardTable } from './rewards';
+import { selectAward, standardRewardTable } from './rewards';
 import { rollBelow } from './rng';
-import { applyTokenDelta, economyFor, wallet } from './tokens';
+import { applyTokenDelta, economyFor, salvageValue, wallet } from './tokens';
 
 /**
  * Owning a box, and opening it.
@@ -39,12 +39,33 @@ export interface Reveal {
    * must show the same collectible rather than rolling again.
    */
   readonly replayed: boolean;
+  /**
+   * Tokens paid instead of the item, or null when the item was kept.
+   *
+   * Non-null means the manager already owned every item in the rolled tier, so
+   * `16 §8` converted the spare. `slug` is still what came out of the box — they
+   * are being shown the thing they got a second copy of, because that is what
+   * happened, and a plate that named nothing would make salvage read as the box
+   * having been empty.
+   */
+  readonly salvageTokens: number | null;
 }
 
 export type OpenResult =
   | { readonly status: 'opened'; readonly reveal: Reveal }
   /** No such box, or it is not this manager's. The two are deliberately one answer. */
-  | { readonly status: 'not_found' };
+  | { readonly status: 'not_found' }
+  /**
+   * The box rolled a spare and there is nowhere to pay the salvage into.
+   *
+   * A closed season, or a manager holding no seat in the open one. **The box is
+   * left unopened**, which is the only non-destructive answer: the alternatives
+   * are handing over a duplicate the rules do not allow, or opening the box and
+   * paying nothing — and the ruling's own words are that a duplicate reveal must
+   * never silently disappear. Nothing is lost; the box is still on the tray when
+   * they hold a wallet again.
+   */
+  | { readonly status: 'salvage_unavailable' };
 
 /**
  * Grant a box, idempotently.
@@ -58,7 +79,11 @@ export type OpenResult =
  * instead of claiming work it did not do.
  */
 export async function grantBox(
-  db: Database,
+  // `Queryable` rather than `Database`: this is a single insert with no
+  // transaction of its own, so a caller already inside one — the seasonal
+  // grants, a future migration script — can pass its handle rather than
+  // escaping to the pool and losing the enclosing transaction's atomicity.
+  db: Queryable,
   input: { userId: string; grantKey: string; source: string },
 ): Promise<{ granted: boolean }> {
   const written = await db
@@ -286,12 +311,59 @@ export async function ensureRewardTable(db: Database): Promise<{ version: string
  * The client sends a box id and nothing else. The roll, the table version and
  * the resolved item are all decided in this function and written down together,
  * which is what makes the outcome reproducible by anybody holding the row.
+ *
+ * ## `16 §8`'s duplicate rule, and the fourth lock it needed
+ *
+ * The roll names a **tier**; `selectAward` then hands over an unowned item in
+ * that tier, or — when the manager owns all of them — converts the spare to
+ * tokens. That reads the manager's collection, and a read-then-write is a race:
+ * two boxes opened at the same instant by one manager would both see the same
+ * unowned set and both pick the same item, and the three locks above are all
+ * scoped to a *box* so neither would notice the other.
+ *
+ * So a fourth engages first: a **transaction-scoped advisory lock on the
+ * manager**, taken before the box is even read. It serializes one manager's
+ * openings against each other and nobody else's. Two managers opening
+ * simultaneously never wait; one manager double-tapping two different boxes
+ * resolves the second against the first's result, which is the whole point.
+ *
+ * It is taken *before* the row lock, always, so the two are acquired in one
+ * order everywhere and cannot deadlock against each other.
+ *
+ * There is no `UNIQUE (user_id, slug)` underneath it, and
+ * `drizzle/0014_duplicate_salvage.sql` records why: every database that opened a
+ * box before that migration legitimately holds duplicates from the rule that was
+ * live then, and `collectibles_undeletable` makes clearing them impossible on
+ * purpose.
  */
 export async function openBox(
   db: Database,
-  input: { userId: string; boxId: string },
+  input: {
+    userId: string;
+    boxId: string;
+    /**
+     * Where a salvage payment goes. `null` when no season is open.
+     *
+     * Required rather than resolved in here, for the reason every dated or
+     * seasonal input in this project is injected: the caller already knows which
+     * season is live, and a service that looks it up itself is a service a test
+     * cannot put in October.
+     */
+    seasonId: string | null;
+  },
 ): Promise<OpenResult> {
   return db.transaction(async (tx) => {
+    /*
+     * The manager's turnstile. See the note above.
+     *
+     * `pg_advisory_xact_lock` releases at commit or rollback with no unlock call
+     * to forget, which is the property that matters in a function with several
+     * early returns.
+     */
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(hashtext(${`collectible:${input.userId}`})::bigint)`,
+    );
+
     const locked = await tx
       .select({ id: lootBoxes.id, kind: lootBoxes.kind, state: lootBoxes.state })
       .from(lootBoxes)
@@ -308,6 +380,7 @@ export async function openBox(
         .select({
           slug: boxOpenings.collectibleSlug,
           rarity: boxOpenings.rarity,
+          salvageTokens: boxOpenings.salvageTokens,
         })
         .from(boxOpenings)
         .where(eq(boxOpenings.boxId, box.id))
@@ -328,6 +401,10 @@ export async function openBox(
           name: catalogItem(opening.slug).name,
           rarity: opening.rarity,
           replayed: true,
+          // Read back rather than recomputed. A replay must show what happened,
+          // not what would happen if it happened now — and what a spare was
+          // worth is a property of the prices that were live at the time.
+          salvageTokens: opening.salvageTokens,
         },
       };
     }
@@ -352,18 +429,75 @@ export async function openBox(
     }
 
     const roll = rollBelow(table.totalWeight);
-    const entry = resolveRoll(table, roll);
     const openedAt = now();
+
+    /*
+     * What this manager already has, read under the advisory lock above.
+     *
+     * Distinct slugs rather than rows: `selectAward` asks "is this owned", and a
+     * database that still holds pre-`0014` duplicates would otherwise answer the
+     * question twice for the same item.
+     */
+    const held = await tx
+      .selectDistinct({ slug: collectibles.slug })
+      .from(collectibles)
+      .where(eq(collectibles.userId, input.userId));
+
+    const award = selectAward(table, roll, new Set(held.map((row) => row.slug)));
+
+    /*
+     * A spare, and the tab it is paid onto.
+     *
+     * Resolved before anything is written, because a salvage that cannot be paid
+     * must leave the box **unopened** rather than opened for nothing. Returning
+     * here commits an empty transaction — the box row lock is released and the
+     * box is exactly as it was.
+     */
+    let salvage: { tokens: number; transactionId: string } | null = null;
+
+    if (award.kind === 'salvage') {
+      if (input.seasonId === null) return { status: 'salvage_unavailable' };
+
+      const seat = await wallet(tx, { userId: input.userId, seasonId: input.seasonId });
+      if (seat === null) return { status: 'salvage_unavailable' };
+
+      const { values } = await economyFor(tx, input.seasonId);
+      const tokens = salvageValue(values, award.rarity);
+
+      /*
+       * The key names the **box**, which is the natural occasion here: a box
+       * salvages once, so a retry that reaches this line — and it can, because
+       * the whole transaction may be retried — replays the same delta rather
+       * than paying twice. The amount is deliberately not in the key, so a
+       * mid-season reprice raises instead of quietly paying a second time at a
+       * second price.
+       */
+      const transactionId = await applyTokenDelta(tx, {
+        userId: input.userId,
+        seasonId: input.seasonId,
+        amount: tokens,
+        reason: 'DUPLICATE_SALVAGE',
+        // `03 §5` requires human-readable text. Curated, not generated.
+        description: 'Tony takes the spare off your hands.',
+        idempotencyKey: `salvage:${box.id}`,
+        sourceRef: box.id,
+      });
+
+      salvage = { tokens, transactionId };
+    }
 
     const openedRows = await tx
       .insert(boxOpenings)
       .values({
         boxId: box.id,
         userId: input.userId,
-        collectibleSlug: entry.slug,
-        rarity: entry.rarity,
+        collectibleSlug: award.slug,
+        rarity: award.rarity,
         rewardTableVersion: table.version,
         roll,
+        outcome: award.kind === 'salvage' ? 'SALVAGE' : 'ITEM',
+        salvageTokens: salvage?.tokens ?? null,
+        tokenTransactionId: salvage?.transactionId ?? null,
         openedAt,
       })
       .returning({ id: boxOpenings.id });
@@ -371,13 +505,15 @@ export async function openBox(
     const opening = openedRows[0];
     if (opening === undefined) throw new Error('the opening was not recorded');
 
-    await tx.insert(collectibles).values({
-      userId: input.userId,
-      slug: entry.slug,
-      rarity: entry.rarity,
-      acquiredAt: openedAt,
-      sourceOpeningId: opening.id,
-    });
+    if (award.kind === 'item') {
+      await tx.insert(collectibles).values({
+        userId: input.userId,
+        slug: award.slug,
+        rarity: award.rarity,
+        acquiredAt: openedAt,
+        sourceOpeningId: opening.id,
+      });
+    }
 
     await tx
       .update(lootBoxes)
@@ -387,10 +523,11 @@ export async function openBox(
     return {
       status: 'opened',
       reveal: {
-        slug: entry.slug,
-        name: catalogItem(entry.slug).name,
-        rarity: entry.rarity,
+        slug: award.slug,
+        name: catalogItem(award.slug).name,
+        rarity: award.rarity,
         replayed: false,
+        salvageTokens: salvage?.tokens ?? null,
       },
     };
   });

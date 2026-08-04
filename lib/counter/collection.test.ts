@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
 import { closePool, getDb } from '@/lib/db';
-import { seasonMemberships, seasons, users } from '@/lib/db/schema';
+import { collectibles, seasonMemberships, seasons, users } from '@/lib/db/schema';
 import { resetDatabase } from '@/lib/db/test-helpers';
 
 import { ensureRewardTable, grantBox, openBox, ownedBox } from './boxes';
@@ -28,6 +28,17 @@ if (process.env['CI'] === 'true' && !hasDatabase) {
 }
 
 const db = hasDatabase ? getDb() : null;
+
+/*
+ * Where a salvage would be paid, if one happened.
+ *
+ * `null` in these tests on purpose: none of them fills a whole tier, so no
+ * opening below can reach `16 §8`'s conversion — and passing a season that is
+ * never used would suggest otherwise. The salvage path has its own tests, which
+ * build the collection that makes it reachable.
+ */
+const seasonId: string | null = null;
+
 
 describe.skipIf(!hasDatabase)('the collection', () => {
   beforeEach(async () => {
@@ -59,7 +70,7 @@ describe.skipIf(!hasDatabase)('the collection', () => {
     await grantBox(db!, { userId, grantKey: key, source: 'test' });
     const box = await ownedBox(db!, userId);
     setFixedRoll(roll);
-    const result = await openBox(db!, { userId, boxId: box!.id });
+    const result = await openBox(db!, { userId, boxId: box!.id, seasonId });
     if (result.status !== 'opened') throw new Error('the test box did not open');
     return result.reveal;
   }
@@ -90,12 +101,33 @@ describe.skipIf(!hasDatabase)('the collection', () => {
     expect(collection.copies).toBe(1);
   });
 
-  it('counts duplicates as copies without adding to set progress', async () => {
-    // `03 §12` defers salvage to after simulation, so a duplicate is a fact about
-    // the shelf and nothing more. It must not inflate progress either.
+  /*
+   * A second copy, written straight into the table.
+   *
+   * `0014` made `openBox` incapable of producing one — `16 §8` redirects a roll
+   * onto an unowned item in the tier — but the **schema still permits** it, and
+   * that is deliberate: every database that opened a box before `0014` holds
+   * duplicates acquired under the rule that was live then, and
+   * `collectibles_undeletable` makes tidying them away impossible on purpose.
+   *
+   * So the counting behaviour below is not dead code. It is what those managers'
+   * shelves still render through, and these two tests are the only remaining way
+   * to reach it. Driving them through `openBox` would now assert the opposite of
+   * the rule.
+   */
+  async function secondCopy(userId: string, slug: string, rarity: 'common', at: string) {
+    await db!.insert(collectibles).values({
+      userId,
+      slug,
+      rarity,
+      acquiredAt: new Date(at),
+    });
+  }
+
+  it('counts a pre-0014 duplicate as a copy without adding to set progress', async () => {
     const alex = await manager();
-    await pull(alex.id, 0, 'a');
-    await pull(alex.id, 0, 'b');
+    const reveal = await pull(alex.id, 0, 'a');
+    await secondCopy(alex.id, reveal.slug, 'common', '2026-07-30T12:00:00Z');
 
     const collection = await collectionFor(db!, alex.id);
     expect(collection.distinct).toBe(1);
@@ -106,9 +138,8 @@ describe.skipIf(!hasDatabase)('the collection', () => {
   it('records the earliest acquisition, not the latest', async () => {
     const alex = await manager();
     setFixedClock('2026-07-01T00:00:00Z');
-    await pull(alex.id, 0, 'a');
-    setFixedClock('2026-07-20T00:00:00Z');
-    await pull(alex.id, 0, 'b');
+    const reveal = await pull(alex.id, 0, 'a');
+    await secondCopy(alex.id, reveal.slug, 'common', '2026-07-20T00:00:00Z');
 
     const collection = await collectionFor(db!, alex.id);
     const held = collection.entries.find((entry) => entry.count === 2);

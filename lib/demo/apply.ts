@@ -330,6 +330,15 @@ function firstOfRarity(rarity: Rarity): string {
   return found.slug;
 }
 
+/** Every catalog slug of a rarity, in the table's stable order. */
+function allOfRarity(rarity: Rarity): readonly string[] {
+  const found = catalog().filter((item) => item.rarity === rarity).map((item) => item.slug);
+  if (found.length === 0) {
+    throw new DemoRefused(`the catalog holds no ${rarity} item to demo`);
+  }
+  return found;
+}
+
 /**
  * Grant the demo's *n*th box and open it, forcing the roll that yields `slug`.
  *
@@ -354,7 +363,13 @@ async function pull(
   seat: DemoSeat,
   index: number,
   slug: string,
-): Promise<{ slug: string; rarity: string; replayed: boolean; boxId: string }> {
+): Promise<{
+  slug: string;
+  rarity: string;
+  replayed: boolean;
+  salvageTokens: number | null;
+  boxId: string;
+}> {
   await grantBoxes(db, seat, index + 1);
 
   const boxId = await boxAt(db, seat, index);
@@ -362,7 +377,11 @@ async function pull(
 
   setFixedRoll(rollForSlug(slug));
   try {
-    const result = await openBox(db, { userId: seat.userId, boxId });
+    const result = await openBox(db, {
+      userId: seat.userId,
+      boxId,
+      seasonId: seat.seasonId,
+    });
     if (result.status !== 'opened') {
       throw new DemoRefused(`opening the demo box returned ${result.status}`);
     }
@@ -494,29 +513,48 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
   'pull-whipped-cream': pullSlug('collectible_reddiwip'),
 
   /**
-   * The same item twice.
+   * A spare, and what Tony gives you for it.
    *
-   * Two boxes, both forced to one slug, so the second reveal is a genuine
-   * duplicate rather than a duplicate flag set by hand. `collectionFor` counts
-   * copies, so the evidence records the count it actually produced.
+   * ## The old version of this state is now unreachable, which is the point
+   *
+   * It used to open two boxes forced to the same slug and photograph the second
+   * copy. `16 §8` — implemented in `0014` — redirects a roll that lands on
+   * something owned to an unowned item in the same tier, so there is no longer
+   * any sequence of boxes that produces two of one thing. Keeping the old
+   * applier would have meant a demo asserting a rule the product had stopped
+   * following, and it would have kept passing: the second pull simply returns a
+   * different common.
+   *
+   * So the state moved to the outcome that replaced it. Every legendary is
+   * pulled first — the smallest tier, so this costs three boxes rather than
+   * eleven — and the next legendary roll has nowhere to go and converts.
+   *
+   * The salvage is **rolled, never set**: the applier forces the roll and reads
+   * back what the server decided, exactly as every other reveal state does.
    */
   'pull-duplicate': async (db, seat) => {
     await openTab(db, seat);
-    const slug = firstOfRarity('common');
+    const tier = allOfRarity('legendary');
 
-    const first = await pull(db, seat, 0, slug);
-    const second = await pull(db, seat, 1, slug);
+    for (const [index, slug] of tier.entries()) {
+      await pull(db, seat, index, slug);
+    }
+
+    const spare = await pull(db, seat, tier.length, tier[0] ?? '');
 
     const collection = await collectionFor(db, seat.userId);
-    const entry = collection.entries.find((candidate) => candidate.slug === slug);
 
     return {
       evidence: {
-        slug,
-        firstRarity: first.rarity,
-        secondRarity: second.rarity,
-        count: entry?.count ?? 0,
+        slug: spare.slug,
+        rarity: spare.rarity,
+        // Zero would be a lie about a salvage and is impossible for one —
+        // `box_openings_salvage_is_positive` refuses it — so it reads as "this
+        // state did not salvage" without needing a second field to say so.
+        salvageTokens: spare.salvageTokens ?? 0,
+        tierSize: tier.length,
         distinct: collection.distinct,
+        balance: (await wallet(db, { userId: seat.userId, seasonId: seat.seasonId }))?.balance ?? 0,
       },
     };
   },
@@ -565,7 +603,11 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
     await openTab(db, seat);
     const first = await pull(db, seat, 0, firstOfRarity('rare'));
 
-    const again = await openBox(db, { userId: seat.userId, boxId: first.boxId });
+    const again = await openBox(db, {
+      userId: seat.userId,
+      boxId: first.boxId,
+      seasonId: seat.seasonId,
+    });
     if (again.status !== 'opened') {
       throw new DemoRefused(`re-opening the demo box returned ${again.status}`);
     }

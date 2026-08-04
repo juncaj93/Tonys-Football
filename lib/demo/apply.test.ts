@@ -351,12 +351,22 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
     expect(outcome.evidence['rewardTable']).toBe(standardRewardTable().version);
   });
 
-  it('makes a duplicate a second copy rather than a second item', async () => {
+  it('converts a spare from a completed tier rather than handing over a copy', async () => {
+    /*
+     * This asserted the opposite until `0014` — *"a duplicate is a second copy
+     * rather than a second item"* — and the rule it was pinning was never the
+     * approved one. `16 §8` reads **roll rarity → pick an unowned item in that
+     * tier → if exhausted, salvage tokens**, so the state fills the legendary
+     * tier and photographs what the next legendary roll becomes.
+     */
     const outcome = await applyDemoState(db!, 'pull-duplicate', ALLOWED);
     const collection = await collectionFor(db!, outcome.seat.userId);
 
-    expect(collection.distinct).toBe(1);
+    // Both legendaries, one each — no copies anywhere.
+    expect(collection.distinct).toBe(2);
     expect(collection.copies).toBe(2);
+    expect(outcome.evidence['rarity']).toBe('legendary');
+    expect(outcome.evidence['salvageTokens']).toBe(120);
   });
 
   it('replays an opened box to the same item instead of rolling again', async () => {

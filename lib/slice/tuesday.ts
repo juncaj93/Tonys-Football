@@ -1,3 +1,4 @@
+import { grantSeasonalBoxes, type GrantRefusal, type GrantReport } from '@/lib/counter/grants';
 import { type Database } from '@/lib/db';
 import { featureFlags } from '@/lib/flags';
 import { awardWeek, type RewardRefusal, type RewardReport } from '@/lib/rewards/service';
@@ -20,6 +21,13 @@ const REWARD_REFUSALS: Record<RewardRefusal, (week: number) => string> = {
   'season-closed': (week) =>
     `Week ${String(week)} belongs to a finalized season, whose books are shut.`,
   'nothing-payable': (week) => `Week ${String(week)} had nothing the rules pay for.`,
+};
+
+/** The same, for the seasonal boxes. Also one sentence, for the same reason. */
+const GRANT_REFUSALS: Record<GrantRefusal, () => string> = {
+  'no-season': () => 'That season has not been imported, so no boxes were handed out.',
+  'season-closed': () => 'That season is finalized, and a closed season hands out nothing.',
+  'no-active-seats': () => 'Nobody holds an active seat that season, so there was nobody to give a box to.',
 };
 
 /**
@@ -53,6 +61,7 @@ const REWARD_REFUSALS: Record<RewardRefusal, (week: number) => string> = {
  * | `finalizeWeek` | `UNIQUE(season_id, week)` plus an append-only trigger. A closed week cannot be reopened |
  * | `settleSeason` | `stake_resolutions.stake_id UNIQUE`, inserted **before** any token moves. Ten parallel settlements pay once |
  * | `awardWeek` | `token_transactions.idempotency_key UNIQUE` on a key derived from the occasion, plus `weekly_rewards_once_per_manager_per_reason` |
+ * | `grantSeasonalBoxes` | `loot_boxes.grant_key UNIQUE` on a key naming the season, the milestone and the manager |
  * | `authorStakesForWeek` | reads what already exists for the week and writes only what is missing |
  * | `generateDraft` | `UNIQUE(issue_id, content_hash)`. A retried Tuesday on unchanged facts appends nothing and reads the first draft back |
  *
@@ -69,7 +78,7 @@ const REWARD_REFUSALS: Record<RewardRefusal, (week: number) => string> = {
  *
  * ## A step that declines is not a step that failed
  *
- * Four of the five have a legitimate *"nothing to do"*: a week with no
+ * Five of the six have a legitimate *"nothing to do"*: a week with no
  * publishable game cannot be finalized, a season with no open stakes settles
  * nothing, a week that is not closed pays nobody, and a week whose facts refuse
  * cannot be drafted. None of those is an error and none of them stops the chain —
@@ -93,6 +102,8 @@ export interface TuesdayReport {
   readonly settled: Readonly<Record<string, number>>;
   /** What the closed week paid, or why it paid nothing. Null when the step threw. */
   readonly rewards: RewardReport | null;
+  /** The season's free boxes, or why none were handed out. Null when the step threw. */
+  readonly grants: GrantReport | null;
   /** New offers written for the week ahead. */
   readonly authored: number;
   /** What happened to the draft, in `generateDraft`'s own words. */
@@ -218,7 +229,29 @@ export async function runTuesday(
     skipped.push(REWARD_REFUSALS[rewards.refusal](input.week));
   }
 
-  // --- 4. Author the week ahead --------------------------------------------
+  // --- 4. Hand out the season's free boxes ---------------------------------
+  /*
+   * The commissioner's two seasonal grants, checked every week rather than on
+   * the two weeks they fall due.
+   *
+   * `milestonesDue` is monotonic, so this is a **catch-up** rather than a
+   * schedule: a manager seated in week 9, a Tuesday that failed and was retried
+   * on Thursday, and an environment seeded halfway through a season all end with
+   * the same two boxes. A job that only granted on weeks 1 and 7 would silently
+   * skip every one of those, and the silence is the problem — nothing about a
+   * missing box looks like an error.
+   *
+   * Idempotent through `loot_boxes.grant_key UNIQUE`, like every other grant in
+   * the product, so running it fourteen times a season costs fourteen no-ops.
+   */
+  const grants = await attempt('grant', failed, () =>
+    grantSeasonalBoxes(db, { seasonYear: input.season, week: input.week }),
+  );
+  if (grants !== null && grants.refusal !== null) {
+    skipped.push(GRANT_REFUSALS[grants.refusal]());
+  }
+
+  // --- 5. Author the week ahead --------------------------------------------
   /*
    * `18 §3.4` puts Tony's Line behind a deploy-time flag, and it is shut. The
    * job reads the same flag every surface reads rather than deciding for itself
@@ -239,7 +272,7 @@ export async function runTuesday(
     );
   }
 
-  // --- 5. Draft the Slice, and stop at the desk ----------------------------
+  // --- 6. Draft the Slice, and stop at the desk ----------------------------
   const draft = await attempt('draft', failed, () =>
     generateDraft(db, { season: input.season, week: input.week, submit: true }),
   );
@@ -257,6 +290,7 @@ export async function runTuesday(
     games: closed.games,
     settled,
     rewards,
+    grants,
     authored: authoring.written,
     draft,
     skipped,

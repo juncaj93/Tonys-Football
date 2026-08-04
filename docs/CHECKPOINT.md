@@ -473,10 +473,29 @@ tests, the preview fixtures, and `weeklyLineStakeTokens`' rationale, which was
 "a fifth of a box" and is now stale; **the value is deliberately unchanged**
 because the ruling moved one price and Tony's Line is flag-gated shut.
 
-**Still to build:** the two seasonal grants and duplicate salvage as *runtime*
-systems — schema, service, idempotency, ledger reasons, surfaces. The price is
-safe ahead of them: at 200 with no grants the gate still measures 9.0 boxes and
-2.1 legendaries, both in range, so they are additive rather than load-bearing.
+**The grants and the salvage shipped with it**, so the whole ruling is in the
+product rather than only in the gate. `docs/ECONOMY_RULING_BOUNDARY.md` is the
+canonical account; the three things worth carrying forward are:
+
+- **The grants are owed to a seat.** `loot_boxes.grant_key UNIQUE` on
+  `season-grant:<season>:<milestone>:<manager>` is the entire idempotency
+  mechanism — no `already_granted` read exists anywhere — and `milestonesDue` is
+  **monotonic**, which is what makes a manager seated in week 9 receive both
+  boxes rather than be told they missed two that were never conditional on
+  anything.
+- **Salvage needed a fourth lock.** `openBox`'s three existing locks are all
+  scoped to a *box*; choosing an unowned item reads the *collection*, so two
+  boxes opened at once by one manager would both hand over the same item. A
+  transaction-scoped **advisory lock on the manager**, taken before the row lock,
+  is what serializes them. There is no `UNIQUE (user_id, slug)` underneath it,
+  and the reason is recorded in `0014`: every database that opened a box since M2
+  legitimately holds duplicates, and `collectibles_undeletable` makes clearing
+  them impossible on purpose.
+- **A schema comment was wrong, not merely outdated.** *"Duplicates are an
+  ordinary outcome of a weighted table"* contradicted `16 §8` from the day it was
+  written. Five tests asserted the same thing and every one of them was rewritten
+  to assert the rule instead — including a demo state whose premise had become
+  unreachable while still passing.
 
 ### Next executable task, in order
 

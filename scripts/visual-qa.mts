@@ -206,6 +206,13 @@ type StateName =
   | 'reveal-complete-offer'
   | 'reveal-no-offer'
   /*
+   * `16 §8`'s salvage, which `0014` made real: the tier is complete, so the
+   * plate names the tokens rather than the shelf. Photographed for the same
+   * reason the four rarities are — the outcome depends on owning a whole tier,
+   * which no harness can arrange from a URL.
+   */
+  | 'reveal-spare'
+  /*
    * The weekly-stakes board, one state per named fixture.
    *
    * `board-quiet` is the state a real manager meets today — nothing authored,
@@ -1030,13 +1037,16 @@ async function reach(page: Page, state: StateName): Promise<void> {
      */
     case 'reveal-first-offer':
     case 'reveal-complete-offer':
-    case 'reveal-no-offer': {
+    case 'reveal-no-offer':
+    case 'reveal-spare': {
       const stage =
         state === 'reveal-first-offer'
           ? 'first'
           : state === 'reveal-complete-offer'
             ? 'complete'
-            : 'broke';
+            : state === 'reveal-spare'
+              ? 'spare'
+              : 'broke';
       await page.goto(`${BASE}/?preview_reveal=rare&preview_stage=${stage}`, {
         waitUntil: 'networkidle',
       });
@@ -1265,6 +1275,7 @@ const ALL_STATES: readonly StateName[] = [
   'reveal-first-offer',
   'reveal-complete-offer',
   'reveal-no-offer',
+  'reveal-spare',
   /*
    * The board. Resolved from `?board=` on the **server**, so a run without
    * `DEMO_FIXTURES` on the server process answers every one of these with the
@@ -2932,6 +2943,22 @@ async function checkRevealPresent(page: Page, width: number, state: string): Pro
 
   if ((state === 'reveal-first-offer' || state === 'reveal-complete-offer') && !offered) {
     fail('reveal', `@${String(width)} ${state} shows no offer, which is what it is for`);
+  }
+
+  /*
+   * A spare says what it is worth, in tokens, on the plate.
+   *
+   * The composition differs from every other reveal in exactly one line — the
+   * one that would otherwise say "7 of 24 on your shelf", which on a salvage is
+   * false because nothing went on the shelf. A plate that lost this line would
+   * still show an item, a rarity and an offer, and would look entirely fine.
+   */
+  if (state === 'reveal-spare' && !/spare/i.test(seen.text)) {
+    fail(
+      'reveal',
+      `@${String(width)} ${state} does not say what happened to the spare. ` +
+        'A converted duplicate must never read as an item that was kept.',
+    );
   }
 
   /*
