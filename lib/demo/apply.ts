@@ -1,10 +1,15 @@
-import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, like, sql } from 'drizzle-orm';
 
 import { DEFAULT_CONFIGURATION } from '@/lib/character/composite';
 import { characterFor, grantWearable, ownedWearables, saveCharacter } from '@/lib/character/service';
 import { now } from '@/lib/clock';
 import { type Database } from '@/lib/db';
-import { fantasyMatchups, lootBoxes, seasons } from '@/lib/db/schema';
+import {
+  fantasyMatchups,
+  lootBoxes,
+  seasons,
+  tokenTransactions,
+} from '@/lib/db/schema';
 import { RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
 import { ensureRewardTable, grantBox, openBox, purchaseBox } from '@/lib/counter/boxes';
 import { collectionFor } from '@/lib/counter/collection';
@@ -211,6 +216,57 @@ async function spendDownTo(db: Database, seat: DemoSeat, target: number): Promis
 }
 
 /**
+ * Top the tab up to `target`, if it is short.
+ *
+ * The mirror of {@link spendDownTo}, and it exists because a demo state that
+ * promises *"tokens to spend"* has to keep that promise at whatever the box
+ * costs. `openTab` grants the season's opening balance **once, ever**, so a seat
+ * that has already bought something is never refilled — which was invisible
+ * while a 250-token opening bought five 50-token boxes, and broke the moment the
+ * commissioner's ruling moved the box to 200 and the same balance bought one.
+ *
+ * A `COMMISSIONER_ADJUSTMENT` rather than a balance write, for the reason
+ * `spendDownTo` gives: there is no balance write to make.
+ *
+ * **The key counts the top-ups**, and getting there took two wrong answers worth
+ * recording. Keying on the *target* raises the second time the seat needs a
+ * different sum to reach it, because `apply_token_delta` refuses a key already
+ * recorded with a different delta. Keying on the *amount* then silently no-ops
+ * when the same sum is needed twice — which is exactly what happens when three
+ * screen widths each buy a box from one seat.
+ *
+ * Two legitimate top-ups of the same size are two events, so the key says which
+ * one it is. A genuine re-apply never reaches the key at all: it short-circuits
+ * on `held.balance >= target` above.
+ */
+async function topUpTo(db: Database, seat: DemoSeat, target: number): Promise<number> {
+  const held = await wallet(db, { userId: seat.userId, seasonId: seat.seasonId });
+  if (held === null) throw new DemoRefused('the demo seat has no wallet; ensureDemoSeat failed');
+  if (held.balance >= target) return held.balance;
+
+  const [prior] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(tokenTransactions)
+    .where(
+      and(
+        eq(tokenTransactions.seasonMembershipId, held.membershipId),
+        like(tokenTransactions.idempotencyKey, `${key(seat, 'top-up')}%`),
+      ),
+    );
+
+  await applyTokenDelta(db, {
+    userId: seat.userId,
+    seasonId: seat.seasonId,
+    amount: target - held.balance,
+    reason: 'COMMISSIONER_ADJUSTMENT',
+    description: 'Tony puts enough on the tab for the demo to buy something.',
+    idempotencyKey: key(seat, `top-up-${String(prior?.n ?? 0)}`),
+  });
+
+  return target;
+}
+
+/**
  * Put `count` boxes on the tray, granted once each, ever.
  *
  * Each box's grant key carries its index, so a box is addressable by *which* box
@@ -375,8 +431,16 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
    * "absence" state should have.
    */
   'no-box': async (db, seat) => {
-    const opening = await openTab(db, seat);
-    return { evidence: { unopenedBoxes: await unopenedCount(db, seat), balance: opening } };
+    /*
+     * *"An empty tray with **tokens to spend**"* — so the tab has to be able to
+     * buy a box, whatever a box costs. The opening balance alone was enough
+     * while boxes were 50 and is exactly one box at 200, and a seat that has
+     * already spent is never refilled by `openTab`, which grants once ever.
+     */
+    await openTab(db, seat);
+    const { values } = await economyFor(db, seat.seasonId);
+    const balance = await topUpTo(db, seat, values.standardBoxPriceTokens);
+    return { evidence: { unopenedBoxes: await unopenedCount(db, seat), balance } };
   },
 
   'one-box': async (db, seat) => {

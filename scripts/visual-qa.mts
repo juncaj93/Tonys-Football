@@ -277,6 +277,23 @@ type StateName =
  */
 const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'demo-tray-empty': 'no-box',
+  /*
+   * The reveal buys its own box, and now needs its own **tab** to buy it with.
+   *
+   * It used to run on the shared signed-in seat, and `reach`'s comment recorded
+   * the assumption that made that work: *"each width buys its own box out of the
+   * season's opening balance, **which covers several at the provisional
+   * price**."* At 50 tokens the 250-token opening balance covered five. The
+   * commissioner's ruling moved the box to 200, so it covers **one** — and the
+   * second width found an empty tab and hung on a fifteen-second wait for a
+   * purchase the database was right to refuse.
+   *
+   * `no-box` seats a fresh manager with the opening balance and an empty tray,
+   * and `reachDemo` mints one **per width** — so each capture buys with its own
+   * 250 rather than three widths sharing one. The purchase, the ledger and the
+   * balance check are all still exercised; what changed is whose money it is.
+   */
+  'tray-reveal': 'no-box',
   'demo-collection-full': 'collection-full',
   'demo-counter-broke': 'broke',
   'demo-showcase-chosen': 'showcased',
@@ -683,9 +700,13 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * database and fails on the second run, which is worse than no gate.
      *
      * Purchase fixes it properly rather than by contrivance: each width buys its
-     * own box out of the season's opening balance, which covers several at the
-     * provisional price. So this state now also exercises the ledger, the balance
-     * check and the tray transition in one pass.
+     * own box and so also exercises the ledger, the balance check and the tray
+     * transition in one pass.
+     *
+     * **The money comes from a demo seat now, one per width** (`DEMO_BACKED`).
+     * This used to spend the shared seat's opening balance, on the reasoning that
+     * it "covers several at the provisional price" — true at 50 tokens a box and
+     * false at 200, where 250 covers exactly one and the second width hung.
      */
     case 'tray-reveal': {
       await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
