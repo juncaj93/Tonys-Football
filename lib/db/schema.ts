@@ -1900,3 +1900,94 @@ export const slicePublicationHolds = pgTable('slice_publication_holds', {
 export type SliceIssue = typeof sliceIssues.$inferSelect;
 export type SliceIssueVersion = typeof sliceIssueVersions.$inferSelect;
 export type SliceReview = typeof sliceReviews.$inferSelect;
+
+/**
+ * The score of every game as it stood before the Monday portion of the week.
+ *
+ * `16 §4.3` names this as the first of the two permitted cron jobs, and gives
+ * the reason: *"this is the only way the Monday-comeback stories required by
+ * `07 §8` can be truthful"*. A final score cannot tell you whether somebody was
+ * behind on Sunday night. Nothing else in the product records it, so without
+ * this table the paper could only guess — and `MANDATE §9` does not allow the
+ * paper to guess.
+ *
+ * ## The unique constraint is the correctness mechanism, not a dedupe
+ *
+ * `UNIQUE(season_id, week, sleeper_matchup_id)` plus an append-only trigger
+ * means the **first** capture of a week is the one that counts, permanently.
+ * That is not tidiness. A retry an hour later would capture a state that already
+ * includes Monday scoring, and an upsert would silently overwrite the pre-Monday
+ * score with a post-Monday one — turning every comeback claim of that week into
+ * a false statement, with nothing anywhere to show it had happened.
+ *
+ * So a second run is a no-op by construction rather than by care, and there is
+ * **no correction path**. `docs/SUNDAY_SNAPSHOT_BOUNDARY.md §4` records that as
+ * a decision: a snapshot is a photograph of a moment that has passed, and a
+ * league that can retake it does not have one.
+ *
+ * ## What it does not record, and why
+ *
+ * No remaining-Monday-players count, and no eligible scoring exposure. Sleeper's
+ * league API has no NFL schedule — `lib/sleeper/endpoints.ts` is the whole
+ * surface this product talks to, and none of its eight endpoints says when a
+ * game kicks off or which players are in it. The only available proxy is
+ * *"starters on zero points"*, which cannot distinguish a player who has not
+ * played from one who played and scored nothing. A number that is wrong
+ * sometimes is worse than a number that is absent.
+ *
+ * **Points are cents**, like `fantasy_matchups`, for the same reason: a swing of
+ * 50.51 has to stay exactly 50.51.
+ */
+export const weekSnapshots = pgTable(
+  'week_snapshots',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    week: integer('week').notNull(),
+
+    /** Stable within a week, and what joins a snapshot to its finalized game. */
+    sleeperMatchupId: integer('sleeper_matchup_id').notNull(),
+
+    rosterAId: integer('roster_a_id').notNull(),
+    rosterBId: integer('roster_b_id').notNull(),
+
+    pointsACents: integer('points_a_cents').notNull(),
+    pointsBCents: integer('points_b_cents').notNull(),
+
+    /** From the injected clock — the business instant the photograph was taken. */
+    capturedAt: timestamp('captured_at', { withTimezone: true }).notNull(),
+
+    /**
+     * Where the numbers came from, in `sync_runs.source`'s vocabulary.
+     *
+     * `live(https://api.sleeper.app/v1)` or `fixtures(fixtures/sleeper)`. A
+     * claim published in December should be traceable to the thing that was read
+     * in October, and "we fetched it" is not traceability.
+     */
+    source: text('source').notNull(),
+
+    ...timestamps,
+  },
+  (table) => [
+    unique('week_snapshots_season_week_matchup_unique').on(
+      table.seasonId,
+      table.week,
+      table.sleeperMatchupId,
+    ),
+    index('week_snapshots_season_week_idx').on(table.seasonId, table.week),
+    check('week_snapshots_week_positive', sql`${table.week} > 0`),
+    // Sleeper can report a negative team score; it cannot report one under -100
+    // points, and a parse failure that produced one should not be storable.
+    check(
+      'week_snapshots_points_sane',
+      sql`${table.pointsACents} >= -10000 AND ${table.pointsBCents} >= -10000`,
+    ),
+    check('week_snapshots_rosters_differ', sql`${table.rosterAId} <> ${table.rosterBId}`),
+  ],
+);
+
+export type WeekSnapshot = typeof weekSnapshots.$inferSelect;

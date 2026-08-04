@@ -1,5 +1,6 @@
 import { now } from '@/lib/clock';
 import { openSeason } from '@/lib/counter/tokens';
+import { cronAuthorized, cronJson, cronNotFound } from '@/lib/cron/secret';
 import { getDb } from '@/lib/db';
 import { suggestedDraftWeek } from '@/lib/slice/publication';
 import { runTuesday } from '@/lib/slice/tuesday';
@@ -12,21 +13,12 @@ import { runTuesday } from '@/lib/slice/tuesday';
  * Slice onto the press desk. `lib/slice/tuesday.ts` is the job; this file is
  * only the door and the clock.
  *
- * ## It is a shared secret, not an IP allowlist
+ * ## The door is shared with Sunday
  *
- * Vercel sends `Authorization: Bearer $CRON_SECRET` on a scheduled invocation.
- * That is the whole check, and it is deliberately the whole check: an allowlist
- * of Vercel's egress ranges is a list that changes without telling you, and the
- * route writes to the league's own record.
- *
- * **With `CRON_SECRET` unset the route refuses everything.** Not "runs
- * unprotected in development" — a job that quietly works without its secret is a
- * job whose secret nobody notices is missing. `docs/DEPLOYMENT.md` carries the
- * value; nothing in this repository ever logs it.
- *
- * The comparison is length-checked first and then constant-time, because a
- * naive `===` on a secret leaks its length and prefix to anyone who can time a
- * request.
+ * `lib/cron/secret.ts`, and it used to be a private copy here. Two copies of a
+ * security check is a fix applied to one door and not the other — with
+ * `CRON_SECRET` unset **both** routes refuse everything, and that has to stay
+ * one sentence rather than two implementations of it.
  *
  * ## It never publishes
  *
@@ -49,38 +41,8 @@ export const runtime = 'nodejs';
 // A cached cron response would be a job that appears to run and does not.
 export const dynamic = 'force-dynamic';
 
-/** Constant-time once the lengths match. */
-function secretMatches(given: string, expected: string): boolean {
-  if (given.length !== expected.length) return false;
-  let diff = 0;
-  for (let i = 0; i < given.length; i += 1) {
-    diff |= given.charCodeAt(i) ^ expected.charCodeAt(i);
-  }
-  return diff === 0;
-}
-
-function authorized(request: Request, env: NodeJS.ProcessEnv): boolean {
-  const expected = env['CRON_SECRET'] ?? '';
-  // Unset means the door is shut, not that it is open.
-  if (expected === '') return false;
-
-  const header = request.headers.get('authorization') ?? '';
-  const prefix = 'Bearer ';
-  if (!header.startsWith(prefix)) return false;
-
-  return secretMatches(header.slice(prefix.length), expected);
-}
-
 export async function GET(request: Request): Promise<Response> {
-  if (!authorized(request, process.env)) {
-    /*
-     * 404, not 401.
-     *
-     * The same reasoning as `requireAdmin()`, which answers `notFound()`: a 401
-     * confirms the route exists and is worth attacking. A 404 says nothing.
-     */
-    return new Response('Not found', { status: 404 });
-  }
+  if (!cronAuthorized(request, process.env)) return cronNotFound();
 
   const db = getDb();
   const season = await openSeason(db);
@@ -91,7 +53,10 @@ export async function GET(request: Request): Promise<Response> {
      * close, and a non-2xx here would have the platform retry an empty job every
      * few minutes until September.
      */
-    return json({ ran: false, why: 'There is no open season, so there is no week to close.' }, 200);
+    return cronJson(
+      { ran: false, why: 'There is no open season, so there is no week to close.' },
+      200,
+    );
   }
 
   const requested = new URL(request.url).searchParams.get('week');
@@ -113,7 +78,7 @@ export async function GET(request: Request): Promise<Response> {
      * The report goes in the body either way: whoever is holding the secret is
      * the person who needs to know which step it was.
      */
-    return json({ ran: true, report }, report.failed.length === 0 ? 200 : 500);
+    return cronJson({ ran: true, report }, report.failed.length === 0 ? 200 : 500);
   } catch (error: unknown) {
     /*
      * A thrown step is the only failure. 500 so the platform retries, which is
@@ -125,13 +90,6 @@ export async function GET(request: Request): Promise<Response> {
      * carry a connection string.
      */
     console.error('The Tuesday job failed:', error);
-    return json({ ran: false, why: 'The job failed. See the runtime log.' }, 500);
+    return cronJson({ ran: false, why: 'The job failed. See the runtime log.' }, 500);
   }
-}
-
-function json(body: unknown, status: number): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json', 'cache-control': 'no-store' },
-  });
 }

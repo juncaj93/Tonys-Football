@@ -66,6 +66,10 @@ export async function resetDatabase(db: Database): Promise<void> {
       stake_entries,
       weekly_stakes,
       week_finalizations,
+      -- The pre-Monday snapshot, listed for the same reason: it refuses DELETE
+      -- by trigger, and it protects a fact rather than an audit trail — the
+      -- score before Monday is unrecoverable once Monday has happened.
+      week_snapshots,
       -- The Slice review chain, listed for the same reason: versions, reviews
       -- and holds all refuse DELETE by trigger. slice_issues and
       -- slice_issue_versions reference each other, so both must be named in

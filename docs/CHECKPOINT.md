@@ -31,6 +31,249 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Where the product is — 2026-08-04 (fourteenth session)
+
+### The second cron exists, and the architecture is now complete at two
+
+`16 §4.3` allows exactly two scheduled jobs and specifies both. Tuesday shipped
+in #56; **Sunday shipped this session**, and there is no third.
+
+It exists for one sentence. `16 §4.3`: *"this is the only way the Monday-comeback
+stories required by `07 §8` can be truthful"*. A final score cannot say whether
+somebody was behind on Sunday night, nothing else records it, and it is
+unrecoverable afterwards.
+
+**The producer did not ship alone.** `07 §8`'s story had no implementation —
+there was no `monday-comeback` anywhere in `lib/stats` or `lib/slice` — so a
+snapshot table on its own would have been a photograph nobody looks at.
+
+### Timing, which was the one real decision
+
+Vercel runs crons in UTC; the league's day is Eastern; the NFL season crosses the
+November change. `55 4 * * 1` — Monday 04:55 UTC:
+
+| period | local | where that sits |
+|---|---|---|
+| EDT (Sep – early Nov) | **Mon 00:55 ET** | after Sunday night football, before any Monday game |
+| EST (Nov – Jan) | **Sun 23:55 ET** | `16 §4.3`'s stated time exactly |
+
+The obvious `55 3 * * 1` is 11:55pm ET in EDT and **10:55pm ET in EST — inside
+the Sunday night game** for half the season. So the job runs slightly late in
+September rather than slightly early in December.
+
+### What the snapshot cannot record, and why that is a hard limit
+
+**Remaining Monday exposure is not available.** `lib/sleeper/endpoints.ts` is the
+whole surface this product talks to and none of its eight endpoints carries an
+NFL schedule — no kickoff times, no game assignments. The only proxy in the
+payload is *"starters on zero points"*, which cannot distinguish a player who has
+not played from one who played and scored nothing.
+
+So the boundary is **a clock, not a schedule**, and the cost is stated rather than
+hidden: a game with no Monday exposure is photographed at its final score and
+correctly produces nothing; a game postponed past the photograph would produce a
+claim that is literally true but wrong to call *Monday*.
+`docs/SUNDAY_SNAPSHOT_BOUNDARY.md §3` and `lib/slice/sunday.test.ts` hold it.
+
+### Idempotency here is stronger than everywhere else in the schema
+
+Everywhere else it means *"a retry is harmless"*. Here:
+
+> **A second capture of a week is a materially different and worse photograph.**
+
+A retry an hour later includes Monday scoring. An upsert would replace the truth
+with a plausible-looking falsehood, silently, and turn every comeback claim of
+that week into a false statement in a published newspaper. So
+`UNIQUE(season_id, week, sleeper_matchup_id)` with `ON CONFLICT DO NOTHING` plus
+an append-only trigger — **the first photograph is the one that counts,
+permanently, and there is no correction path.** A league that can retake it does
+not have one.
+
+### The comeback, defined so it cannot flatter an ordinary Monday
+
+`lib/stats/comeback.ts` is two subtractions. Eight named outcomes, including
+three that say nothing — `no-snapshot`, `not-final`, `unpaired` — because a caller
+that cannot tell *"nobody came back"* from *"we never looked"* will publish the
+second as the first.
+
+Printing needs **two** conditions: the result flipped, **and** the deficit was at
+least `STORY_GATES.minComebackDeficit` (10 points, a starter's afternoon). The
+threshold lives with every other editorial gate rather than inside the
+arithmetic — a threshold in the fact module would be a second, invisible policy
+under the one that is written down.
+
+It scores on the **deficit**, not the final margin, which is the one place it
+disagrees with every other margin-shaped kind: a one-point win after being forty
+behind is a bigger story than a one-point win after being one behind, and the
+margin cannot tell them apart.
+
+### Nothing about the paper's existing rules moved
+
+The board still prints in full; retired managers are still filtered upstream by
+`publishableWeek` before derivation sees the game; the Tuesday job still ends at
+`submit: true`. A week with no snapshot produces no candidate at all, silently —
+which is every historical week in the archive.
+
+The retired-manager rule is asserted **through the real filter** rather than by
+reading the code (`comeback-story.test.ts`): a week where one side has retired is
+run through `publishableWeek` and produces no comeback, so a future kind wired in
+below that filter fails there.
+
+`slice-monday-comeback` is the demo state, and its fixture supplies one recovery
+**and three games that also moved and did not flip**. A state showing only the
+comeback would not prove the paper can tell a recovery from an ordinary Monday.
+
+### One defect the new kind created in an old rule, found and fixed
+
+**Novelty ordering would never have seen a comeback.** `recentLeadKinds`
+re-derives the previous two issues so this one does not repeat their lead, and it
+was reading no snapshots — so `monday-comeback` could be *this* week's lead and
+could never be a *recent* one, and two comebacks in a row would have printed
+unreordered. `factPacket` now reads three weeks' photographs and hands each
+previous week **its own**: this week's would report a recovery that did not
+happen, and none at all makes the kind invisible to the rule.
+
+### One refactor came with it, and it grew a test
+
+`lib/cron/secret.ts` — the door, shared. It was a private copy inside the Tuesday
+route, and two copies of a security check is a fix applied to one door and not
+the other.
+
+`lib/cron/secret.test.ts` is new and asserts the two things nothing else in the
+build could:
+
+- **Unset `CRON_SECRET` refuses a well-formed `Bearer` request**, along with a
+  wrong secret, a prefix of the right one and a wrong scheme; the refusal is a
+  404; a job response is never cacheable. Both routes call the shared check as
+  their **first statement, before `getDb()`**, and neither reads the secret
+  itself.
+- **`vercel.json` declares exactly two crons**, every declared path has a
+  `route.ts` on disk — the scheduled-404 failure that kept the Sunday entry out
+  until the route existed — and the Sunday hour is converted into Eastern at
+  **both** UTC offsets and asserted to land after 23:00 Sunday ET and before
+  06:00 Monday ET. A session that moves it has to change the assertion that says
+  why it is where it is.
+
+Testing it needed one config line: `server-only` is a module that throws unless
+the bundler resolved it under React's `react-server` condition, so **any module
+carrying the marker was uncollectable by Vitest** — and they are the ones worth
+testing. `vitest.config.ts` aliases it to an empty stub. The marker protects the
+client bundle and Next.js still enforces it at build time, which is where the
+protection was always coming from.
+
+### Visual debt 12 — two sweeps, and the instrument killed a lead before it was chased
+
+Three 261-capture sweeps of the same build.
+
+| | |
+|---|---|
+| Run 1 | **two** — `/slice?board=long-names&open=tonysLine` @390, `/?board=quiet&open=tonysLine` @375 |
+| Run 2 | **one** — `/` @360 under `six-banners`, **no query string at all** |
+| Run 3 | **one** — `/slice?edition=blowout` @375 under `slice-blowout` |
+| Run 4 — **CI, on PR #59** | **one** — `/admin/slice` @375 under `review-published` |
+
+Run 1 looked like a lead: **both sightings carried `open=tonysLine`**, and Tony's
+Line is flag-gated and shut in v1 (`18 §3.4`), so a server/client flag
+disagreement would have been a plausible structural mechanism. **Run 2 refuted
+it** — neither state reproduced and the one that did carries no parameter. The
+correlation was an artefact of `?open=tonysLine` travelling with all seventeen
+board URLs for symmetry with the live path, so any sighting inside that block
+carries it.
+
+**Nothing was implemented on the strength of it.** That is what the in-page
+reporter is for: it records the URL of the document that logged the message, so a
+lead can be tested instead of believed.
+
+What the four runs establish: **five sightings, five different states, three
+widths, no state repeated and no route repeated within the branch**, at a rate of
+roughly **one per 209 captures**. `pending` is **0** in every locally captured
+sighting, so no Suspense boundary is outstanding; `readyState` is *complete*
+twice and *loading* twice; time-since-navigation clusters at **88, 112, 114 and
+124ms**. Seven distinct routes are now named across the defect's whole history.
+
+That rate is the operationally important number: a 261-capture sweep has better
+than even odds of hitting it, **so a red sweep on this error is a property of the
+gate rather than a signal about the diff**. Every gate that measures the
+product — type floor, one-transient, focus ring, Tony steadiness — was green in
+all four runs, as were all 87 states at all three widths otherwise.
+
+**PR #59's visual-QA run went red on exactly this twice** — `/admin/slice` under
+`review-published`, then `/back-hall` under `back-hall-rooms-open` after a
+docs-only push retriggered the workflows. **Six sightings, six states, five
+routes, three widths, never the same place twice.**
+
+### The gate is quarantined rather than muted, and the ceiling is the design
+
+**Commissioner-delegated, 2026-08-04.** The choice was put up with three options
+and came back as *"you decide"*.
+
+Merging past it once fixes nothing and hands the same coin flip to the next pull
+request; blocking all delivery behind a defect that has already resisted three
+attempts is disproportionate. So `scripts/visual-qa-quarantine.ts` **records,
+counts and prints** the exact minified `#418 … args[]=HTML` shape without failing
+the run — and the run **still fails above a ceiling of two**.
+
+> A newly introduced structural mismatch is **deterministic**: it fires on every
+> capture of the state it affects, at minimum once per supported width, so it
+> clears a ceiling of two on its first appearance. The background does not —
+> five sweeps of one build gave 2, 1, 1, 1, 1.
+
+`scripts/visual-qa-quarantine.test.ts` holds nine assertions and two of them are
+load-bearing: the ceiling must stay **below the width count**, so no regression
+can hide under it, and the table must hold **exactly one entry** — a second is
+not a bigger allowance, it is evidence the gate has stopped being trusted.
+
+The shape is deliberately narrow. `args[]=text` (a content mismatch),
+`#419`–`#425`, and above all the **dev build's message — which names the element
+and is the one sighting this defect has never had** — all still fail on sight.
+`VISUAL_ACCEPTANCE.md §3` carries the specification.
+
+**It is not this slice.** The failing states are board and banner states this
+slice does not touch, they move between runs, and the same defect has been
+recorded on unmodified `main`.
+
+### Verified
+
+| | |
+|---|---|
+| `npm run check` | **1238 passed, 78 files, none skipped** — typecheck · lint · full suite against a real Postgres · production build |
+| `npm run visual:qa`, production build, fresh database | **87 states × 3 widths, three times.** Every product gate green in all three; one intermittent visual-debt-12 `#418` per run, at a different state and width each time |
+| The rendered edition | leads with *"Alex gets it back on Monday"*, deck *"Alex was 35.1 behind before Monday"*, full four-game board beneath (`docs/evidence/monday-comeback/`) |
+
+`docs/SUNDAY_SNAPSHOT_BOUNDARY.md` is the canonical account.
+
+**`CRON_SECRET` is now the only remaining activation step**, and it activates
+both jobs at once. Until it is set in Vercel production, both are scheduled and
+inert — they answer 404 to everything, including Vercel's own scheduler.
+
+### Next executable task, in order
+
+The art queue that used to sit here is closed (`#55`) and this replaces it.
+
+1. **Weekly token rewards.** `16` puts *"token ledger and weekly rewards"* in v1.
+   The ledger, `apply_token_delta` and the box economy are all shipped; the
+   **weekly grant is not** — `weekly_rewards` exists in `lib/db/schema.ts` and
+   nothing writes it, and `runTuesday` has four steps with no reward among them.
+   It is the largest remaining gap in the v1 list and the Tuesday job is already
+   the place it belongs.
+2. **Visual debt 9 — the parlor ceiling.** A scorch-like smear and dashed grid
+   above the rear doorway. Needs a targeted regeneration of that surface, not a
+   filter; recorded as `EXCLUDED_CEILING` in `scripts/clean-parlor-surfaces.ts`.
+3. **Visual debt 12 — the intermittent `#418`.** Instrumented, quarantined under
+   a ceiling, six states and five routes named, two classes of cause eliminated,
+   no reproduction. Do not ship a speculative repair; chase the next sighting on
+   a **dev** build, which is the only configuration that names the element.
+   **First obstacle, measured this session:** the driver cannot currently sweep a
+   dev build at all — `checkTonySteady`'s Pass F delays the client bundle by
+   intercepting `**/_next/static/chunks/**`, and `next dev` serves different
+   chunk URLs, so the sampler finds nothing and the run aborts at state two. 89
+   captures completed before it stopped, with no sighting. Teaching the driver to
+   skip its production-only passes under a `--dev` flag is step one, and it is
+   cheap. Deleting the quarantine entry is the definition of done.
+4. Deferred with reasons and not queued: debts 1, 2, 11 and 14.
+
+---
+
 ## Where the product is — 2026-08-04 (thirteenth session)
 
 ### Visual debts 3, 4 and 10 were one defect, and it was a missing owner

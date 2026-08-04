@@ -146,6 +146,11 @@ export const HEADLINES = {
   streak: ['{m} makes it {n} in a row', '{n} straight for {m}', '{m} will not lose'],
   'standings-up': ['{m} climbs', '{m} is on the move', '{m} goes up the table'],
   'standings-down': ['{m} slides', '{m} drops down the table', 'A costly week for {m}'],
+  'monday-comeback': [
+    '{w} was gone, and then was not',
+    '{w} gets it back on Monday',
+    '{l} had it, right up until they did not',
+  ],
   quiet: ['A quiet week at the shop', 'Not a lot to report', 'Week {k}, and not much in it'],
 } as const;
 
@@ -236,6 +241,10 @@ export const COLOUR: Record<Intensity, readonly string[]> = {
 
 /** Meaning lines for the kinds that are not about a margin. */
 export const KIND_COLOUR = {
+  'monday-comeback': [
+    'Tony had already written the other name down.',
+    'The shop had that one settled by Sunday night. It was not.',
+  ],
   championship: [
     'That is the season. Everything else was on the way here.',
     'The banner goes up, and it stays up.',
@@ -397,6 +406,7 @@ function headlineKey(detail: StoryDetail): keyof typeof HEADLINES {
     case 'elimination':
     case 'upset':
     case 'streak':
+    case 'monday-comeback':
       return detail.kind;
   }
 }
@@ -445,6 +455,15 @@ function tokensFor(detail: StoryDetail, week: number): Record<string, string> {
       return { ...base, m: detail.manager, n: String(detail.length) };
     case 'standings-move':
       return { ...base, m: detail.manager, a: String(detail.from), b: String(detail.to) };
+    case 'monday-comeback':
+      return {
+        ...base,
+        w: detail.winner,
+        l: detail.loser,
+        d: margin(detail.deficit),
+        g: margin(detail.margin),
+        s: margin(detail.swing),
+      };
   }
 }
 
@@ -486,6 +505,16 @@ function deckOf(story: StoryCandidate): string | null {
       return `${detail.manager} ${points(detail.points)} — ${detail.opponent} ${points(detail.opponentPoints)}`;
     case 'tie':
       return `${detail.a} ${points(detail.points)} — ${detail.b} ${points(detail.points)}`;
+    case 'monday-comeback':
+      /*
+       * The deficit, not the two final scores. Every other deck says how the
+       * game ended; this story is about where it started, and the final scores
+       * are already on the board below.
+       */
+      return `${detail.winner} was {d} behind before Monday`.replace(
+        '{d}',
+        margin(detail.deficit),
+      );
     case 'streak':
     case 'standings-move':
       return null;

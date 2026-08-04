@@ -85,6 +85,13 @@
       "when": 1785800000000,
       "tag": "0011_slice_publication",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1785900000000,
+      "tag": "0012_week_snapshots",
+      "breakpoints": true
     }
   ]
 }
