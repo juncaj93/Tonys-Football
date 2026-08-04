@@ -31,7 +31,7 @@ import {
 } from '@/components/slice/review';
 import { requireAdmin } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
-import { TYPE } from '@/lib/design/type';
+import { INK, TYPE } from '@/lib/design/type';
 import { publicationHold, reviewDetail } from '@/lib/slice/publication';
 
 /**
@@ -107,9 +107,22 @@ export default async function SliceReviewPage({
               * thing the screen exists to say. The stamp answers *what state is
               * this in*, which is question one.
               */}
+            {/*
+              * `Staff only` is wood, not red.
+              *
+              * Moving it after the stamp fixed the reading *order* and left the
+              * loudness backwards: a red plaque beside a cream one is still the
+              * first thing the eye lands on, so on an approved draft the loudest
+              * object on the screen was a permanent fact about the door.
+              *
+              * Red on this surface means **refused** — `StatusStamp` spends it on
+              * exactly one state and `WarningGlyph` on one more. A door sign is
+              * a fixture, and the wood tone is what the fixtures in this room are
+              * made of (`docs/TEXT_REPORT_AUDIT.md §4`).
+              */}
             <div className="flex flex-wrap items-center gap-2">
               <StatusStamp status={detail.status} />
-              <Plaque tone="stop">Staff only</Plaque>
+              <Plaque tone="wood">Staff only</Plaque>
             </div>
 
             <div className="mt-3.5">
@@ -117,6 +130,23 @@ export default async function SliceReviewPage({
                 Season {detail.season} &middot; Week {detail.week}
               </PanelHeading>
             </div>
+
+            {/*
+              * What the issue actually says, at the top.
+              *
+              * The screen went from identity straight to the verdict, so *"what
+              * is this issue about"* — the question a reviewer is here to answer
+              * — could only be answered by scrolling past the findings to the
+              * preview. A proof sheet names the story on it.
+              *
+              * `headlineQuiet` rather than a loud role: it is the subject of the
+              * page, not its status, and the stamp above must stay the first
+              * thing read. It is the same string the paper prints, taken from the
+              * edition already on `detail` — nothing is derived here.
+              */}
+            <h2 className={`mt-2 ${TYPE.headlineQuiet} ${INK.paper.strong}`}>
+              {detail.edition.headline}
+            </h2>
 
             {/*
               * The draft's identity, on two lines rather than one.
@@ -127,10 +157,29 @@ export default async function SliceReviewPage({
               * digest is the thing an approval is *against*, so it gets its own
               * line in the machine role, which breaks anywhere by design.
               */}
+            {/*
+              * `set by the` is gone, and it is a wrap fix rather than an edit for
+              * its own sake: at 390 the longer phrase put `PRESS` alone on a
+              * second line, which reads as a mistake rather than as a sentence.
+              * The typographic sense of "set" was nice and it was costing a line
+              * on every draft.
+              */}
             <MetadataStrip className="mt-1.5">
-              Draft {detail.version} &middot; set by the {detail.renderer} press
+              Draft {detail.version} &middot; {detail.renderer} press
             </MetadataStrip>
-            <MetadataStrip className="mt-1" role="machine">{detail.contentHash}</MetadataStrip>
+            {/*
+              * The digest recedes.
+              *
+              * It sat at the same weight as the draft line above it, so the least
+              * important thing in the block — a sixteen-character hash nobody
+              * reads unless they are comparing two of them — had equal billing
+              * with the sentence that says which draft this is. Quiet ink, same
+              * role: it is still selectable, still complete, and no longer
+              * competing.
+              */}
+            <MetadataStrip className="mt-1" role="machine" ink={INK.paper.quiet}>
+              {detail.contentHash}
+            </MetadataStrip>
 
             {published && (
               <div className="mt-4">
