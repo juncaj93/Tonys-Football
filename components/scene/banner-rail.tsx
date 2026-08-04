@@ -1,9 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useId, useRef, useState } from 'react';
+import { useRef } from 'react';
 
 import { TYPE } from '@/lib/design/type';
+import { RoomPanel } from '@/components/scene/room-panel';
+import { useRoomStage } from '@/components/scene/room-stage';
 import { roomObjectAttributes } from '@/components/scene/room-object';
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
@@ -82,13 +84,25 @@ function Year({ label }: { label: string }) {
 }
 
 export function BannerRail({ banners }: { banners: readonly Banner[] }) {
-  const [openSlot, setOpenSlot] = useState<number | null>(null);
+  const stage = useRoomStage();
   const triggers = useRef<(HTMLButtonElement | null)[]>([]);
   const partitions = bannerPartitions();
-  const open = openSlot === null ? null : banners[openSlot];
   // The rail's own entry in the object map. Every partition below reports as
   // this one Display.
   const rail = roomObject('banners');
+
+  /*
+   * One stage surface per slot.
+   *
+   * The rail is a single Display with six targets, so `rail.id` alone cannot
+   * say *which* banner is open. The partition index makes each slot its own
+   * surface while the object map still sees one object — the same distinction
+   * `data-room-partition` draws for the gate, applied to the room's transient
+   * state.
+   */
+  const surfaceFor = (index: number): string => `${rail.id}:${String(index)}`;
+  const openSlot = banners.findIndex((_, index) => stage.isShowing(surfaceFor(index)));
+  const open = openSlot === -1 ? null : banners[openSlot];
 
   return (
     <>
@@ -111,7 +125,7 @@ export function BannerRail({ banners }: { banners: readonly Banner[] }) {
                 : `${String(banner.year)} champion`
             }
             onClick={() => {
-              setOpenSlot(index);
+              stage.present(surfaceFor(index));
             }}
             style={place(partition)}
             className="room-shape absolute z-30 outline-none"
@@ -153,9 +167,8 @@ export function BannerRail({ banners }: { banners: readonly Banner[] }) {
         <ChampionPanel
           banner={open}
           onClose={() => {
-            const index = openSlot;
-            setOpenSlot(null);
-            if (index !== null) triggers.current[index]?.focus();
+            stage.dismiss(surfaceFor(openSlot));
+            triggers.current[openSlot]?.focus();
           }}
         />
       )}
@@ -167,70 +180,46 @@ export function BannerRail({ banners }: { banners: readonly Banner[] }) {
  * What a banner opens into.
  *
  * The full four-digit season, the champion's canonical name, and a way through
- * to that season. It may cover part of the board while it is up — that is fine,
- * it is transient and dismissible — and it is a rectangular pixel-art panel,
- * which is allowed. The rule about not boxing things applies to objects sitting
- * inert in the room, not to a panel you deliberately opened.
+ * to that season.
+ *
+ * ## It is a `RoomPanel` now, and that was the whole point of the pass
+ *
+ * This used to be a second hand-built dialog — its own fixed layer, its own
+ * scrim, its own focus trap, its own Escape handler — written a milestone after
+ * `Sheet` and quietly disagreeing with it about the scrim's opacity, the outer
+ * padding, the maximum width and the close control. Neither set of numbers was
+ * chosen; they are what two hands produce from the same brief, and nothing in
+ * the build could notice they had drifted.
+ *
+ * So the geometry, the scrim, the focus and the dismissal are `RoomPanel`'s, and
+ * what stays here is the only part that was ever about champions: the words, and
+ * the link to the season. `material="enamel"` is the dark surface the rail hangs
+ * on, which is why this panel is not made of the same cream paper the receipt is.
  */
 function ChampionPanel({ banner, onClose }: { banner: Banner; onClose: () => void }) {
-  const headingId = useId();
-  const panel = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    panel.current?.focus();
-    const onKey = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => {
-      document.removeEventListener('keydown', onKey);
-    };
-  }, [onClose]);
-
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-6">
-      <div aria-hidden="true" onClick={onClose} className="absolute inset-0 bg-ink-900/55" />
+    <RoomPanel
+      title={`${String(banner.year)} season`}
+      material="enamel"
+      onClose={onClose}
+      actions={
+        <Link
+          href={`/timeline#${String(banner.year)}`}
+          className={`pixel-edge flex min-h-[44px] items-center border-2 border-amber-mid/60 px-3.5 ${TYPE.action} text-amber-glow active:translate-y-px`}
+        >
+          View season
+        </Link>
+      }
+    >
+      <p className={`${TYPE.subhead}`}>{banner.champion ?? 'TBD'}</p>
 
-      <div
-        ref={panel}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby={headingId}
-        tabIndex={-1}
-        className="pixel-edge relative w-full max-w-[300px] border-2 border-amber-mid bg-ink-900 px-5 pt-4 pb-5 text-paper-mid outline-none"
-      >
-        <h2 id={headingId} className={`${TYPE.eyebrow} text-amber-mid`}>
-          {String(banner.year)} season
-        </h2>
-
-        <p className={`mt-2 ${TYPE.subhead}`}>
-          {banner.champion ?? 'TBD'}
+      {banner.champion === null && (
+        <p className={`mt-2 ${TYPE.bodyCompact} text-paper-mid/70`}>
+          {banner.current
+            ? 'Still being played. Nobody has won it yet.'
+            : 'Not finalized, so there is no champion on record.'}
         </p>
-
-        {banner.champion === null && (
-          <p className={`mt-2 ${TYPE.bodyCompact} text-paper-mid/70`}>
-            {banner.current
-              ? 'Still being played. Nobody has won it yet.'
-              : 'Not finalized, so there is no champion on record.'}
-          </p>
-        )}
-
-        <div className="mt-4 flex items-center gap-3">
-          <Link
-            href={`/timeline#${String(banner.year)}`}
-            className={`pixel-edge flex min-h-[44px] items-center border-2 border-amber-mid/60 px-3.5 ${TYPE.action} text-amber-glow active:translate-y-px`}
-          >
-            View season
-          </Link>
-          <button
-            type="button"
-            onClick={onClose}
-            className={`flex min-h-[44px] items-center px-2 ${TYPE.action} text-paper-mid/60`}
-          >
-            Close
-          </button>
-        </div>
-      </div>
-    </div>
+      )}
+    </RoomPanel>
   );
 }

@@ -31,6 +31,112 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Where the product is — 2026-08-04 (thirteenth session)
+
+### Visual debts 3, 4 and 10 were one defect, and it was a missing owner
+
+Filed as three cosmetic items on three surfaces, a milestone apart, by three
+different pieces of work. **The room had no owner for its transient state** — five
+surfaces, five private owners, nothing arbitrating:
+
+| surface | owner | its state |
+|---|---|---|
+| the Tonight board, the sign, the receipt | `RoomDisplay` | `useState` `open` |
+| the champion panel | `BannerRail` | `useState` `openSlot` |
+| Tony's order pad | `TonyToy` | `useState` `dismissed` |
+| the shut door's line | `ShutDoor` | `useState` `saying` |
+| the reveal plate | `CounterTray` | `useState` `phase` |
+
+**The repository had already reached half of this conclusion and written it
+down.** `counter-tray.tsx` set `data-parlor-focus` on `document.body` directly,
+with the comment that *"the fix is not to teach each one about the others but to
+give the room a single focus they defer to"* and that a provider *"would be a
+larger change than the defect"*. That provider is `components/scene/room-stage.tsx`
+now, and the attribute has one writer instead of a component reaching outside its
+own subtree.
+
+### `RoomStage` and `RoomPanel` — the contract
+
+`RoomStage` owns **which one surface is up** and nothing else: no data, no
+routing, no permissions, no ownership, no statistics, no navigation. The rule is
+two exported pure functions (`afterPresent`, `afterDismiss`) so the test drives
+the transitions rather than asserting on source text. It **renders no DOM** —
+asserted — because the parlor's hydration mismatch is still open and a wrapper in
+the middle of the object map is a hazard for no benefit.
+
+**Blocking** is the one nuance worth remembering: a panel can be replaced by
+opening another, and the collectible reveal cannot. `CounterTray` presents
+`'reveal'` as blocking, so a manager who taps the receipt mid-reveal gets nothing
+rather than a panel drawn over the biggest moment in the product.
+
+`RoomPanel` replaces two hand-built dialogs written a milestone apart that
+disagreed on the scrim (0.60 / 0.55), the padding (`px-4` / `p-6`), the width
+(312px / 300px) and the close control. None of those was a decision. Slots are
+`title · children · actions · material`; it imports nothing from `lib/` and is
+asserted not to.
+
+### The pad yields rather than unmounting, and that was deliberate twice over
+
+Its state survives, so it is back on the counter when the panel goes — and **the
+DOM structure does not change**, which with visual debt 12 open is worth more
+than the tidier conditional render. The selector went from
+`body[data-parlor-focus='reveal']` to `body[data-parlor-focus]`: the value was
+pinned because the box opening was the only claimant, and a panel claims it too.
+
+One defect fell out: `pointer-events: none` on the wrapper was overridden by
+`pointer-events: auto` on the box inside it, so **an invisible dismiss button was
+hit-testable across the bottom of the room for the whole reveal** — the plate is
+`z-26` inside the room and the pad is `z-40` fixed, so they are not in the same
+stacking context and the pad wins.
+
+### Debt 10 is deleted rather than wired up, and the parlor had no focus ring
+
+About ninety lines went — `.affordance-on-request`, `.door-edge`, `.door-wash`,
+`.door-shadow`, `door-breathes` — **all with zero consumers**, the corpse of the
+SVG-polygon mechanism `18 §9.4` withdrew. The entry named one of the five.
+
+It asked whether to wire it up instead. **It cannot be**: `§9.4` derives the glow
+from the overlay's own alpha, and **five of the eight homepage objects are baked
+into the shell**. The board, the sign, the receipt, the tray and the rear doorway
+have no overlay and no alpha, so an affordance for them is an authored rectangle —
+what `§9.4` withdrew and what `MANDATE §6` bans twice. `18 §2` agrees: a
+Display's affordance is *"none — the content is the affordance"*.
+
+**And the half the entry did not name.** `.room-shape:focus-visible .door-edge`
+was how a room object showed keyboard focus. With the polygons gone the selector
+matched nothing, every room object carries `outline-none`, and nothing else in
+the stylesheet styled focus — so **the parlor had no visible focus indicator at
+all**. There is a `keyboard-focus` screenshot state; it photographed that and
+passed, because a screenshot only fails when somebody looks at it. WCAG 2.4.7.
+
+### Debt 3 was a review, and the review's result is that they never competed
+
+The pad lands at 980 + 260 = **1240ms**; the affordance reveal begins at
+**1600ms**. 360ms apart, never overlapping. What the review leaves behind is an
+assertion that reads **both numbers from the files that own them**, so moving
+either without the other fails the build — the part an inspection could not.
+
+### Verified
+
+| | |
+|---|---|
+| `npm run check` | **1187 passed, 74 files** |
+| `npm run visual:qa`, production build, fresh database | **86 states × 3 widths, passed**, zero hydration sightings in `report.json` |
+| `checkOneTransient` against the pre-pass build | **fails 3/3 widths** — *"shows 2 transient surfaces at once (panel + tony-line)"* |
+| `checkFocusVisible` against the pre-pass build | **fails 3/3 widths** — *"has no visible ring (outline: none 0px)"* |
+| the unit assertions against the pre-pass build | debt 4's three fail, debt 10's dead-CSS and focus-ring fail, debt 3's two pass — correctly, since debt 3 asked for a review |
+
+`docs/ROOM_TRANSIENTS_BOUNDARY.md` is the canonical account.
+`docs/evidence/room-transients/` holds the first photograph ever taken of visual
+debt 4.
+
+**Visual debt 12 produced no new evidence.** `RoomStage` renders no DOM and the
+panels are conditionally rendered exactly as before, so the pass changed nothing
+about the room's first-render structure. The PR #57 instrumentation is preserved
+intact and no speculative fix was shipped.
+
+---
+
 ## Where the product is — 2026-08-03 (twelfth session)
 
 ### The local gates were runnable all along, and `db:up` was hiding it

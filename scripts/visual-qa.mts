@@ -135,6 +135,15 @@ type StateName =
   | 'character-every-slot'
   | 'character-long-hair-apron'
   | 'tony-dialogue'
+  /*
+   * A Display opened **without** putting Tony's line away first.
+   *
+   * Every other Display state calls `dismissTony` before it taps, which is
+   * exactly why visual debt 4 survived: the pad sat behind the panel's scrim,
+   * so every board screenshot was clean and a manager who tapped the sign
+   * mid-sentence was not. This is the state that photographs what they saw.
+   */
+  | 'display-over-tony'
   | 'tonight-board'
   | 'banner-completed'
   | 'banner-current-tbd'
@@ -451,6 +460,16 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await home(page);
       await dismissTony(page);
       await page.getByRole('button', { name: /Read the board/i }).click({ force: true });
+      return;
+
+    /*
+     * Deliberately no `dismissTony`. The pad is up, the manager taps the board,
+     * and `checkOneTransient` counts what is on screen.
+     */
+    case 'display-over-tony':
+      await home(page);
+      await page.getByRole('button', { name: /Read the board/i }).click({ force: true });
+      await page.waitForTimeout(400);
       return;
     case 'banner-completed':
       await home(page);
@@ -1140,6 +1159,7 @@ const ALL_STATES: readonly StateName[] = [
   'idle',
   'tony-steady',
   'tony-dialogue',
+  'display-over-tony',
   'tonight-board',
   'banner-completed',
   'banner-current-tbd',
@@ -1875,6 +1895,122 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
 
   await page.goto(BASE, { waitUntil: 'networkidle' });
   await dismissTony(page);
+}
+
+/**
+ * Only one transient surface is on screen at a time — `MANDATE §6`.
+ *
+ * ## What it counts, and why it counts pixels rather than elements
+ *
+ * Visual debt 4 was not two overlapping panels. Tony's order pad sat *behind*
+ * the panel's scrim, dimmed, so nothing overlapped and nothing was unreadable —
+ * and it was still a second transient surface up at the same time as the first.
+ * A DOM check that asks "is the pad rendered" would have passed then and passes
+ * now, because the fix is that the pad **yields**: it is still in the tree, at
+ * `opacity: 0`, so its state survives and it comes straight back.
+ *
+ * So this measures what a manager can see: a transient counts when it has real
+ * opacity and real area, following every ancestor's opacity down. That is the
+ * only formulation that fails on the old build and passes on the new one.
+ */
+async function checkOneTransient(page: Page, width: number, state: string): Promise<void> {
+  const visible = await page.evaluate(() => {
+    /*
+     * The room's transient surfaces, by the marker each one already carries.
+     * `[data-room-panel]` is every `RoomPanel`; `.tony-line` is the order pad;
+     * `.reveal-rise` is the collectible plate.
+     */
+    const surfaces = [
+      ['panel', '[data-room-panel]'],
+      ['tony-line', '.tony-line'],
+      ['reveal', '.reveal-rise'],
+    ] as const;
+
+    const shown: string[] = [];
+    for (const [name, selector] of surfaces) {
+      for (const element of document.querySelectorAll<HTMLElement>(selector)) {
+        const box = element.getBoundingClientRect();
+        if (box.width < 4 || box.height < 4) continue;
+
+        // Opacity is inherited multiplicatively through ancestors, and the pad
+        // yields by setting it on a wrapper rather than on the box itself.
+        let opacity = 1;
+        for (let node: HTMLElement | null = element; node !== null; node = node.parentElement) {
+          const style = getComputedStyle(node);
+          if (style.visibility === 'hidden' || style.display === 'none') {
+            opacity = 0;
+            break;
+          }
+          opacity *= Number(style.opacity);
+        }
+        if (opacity > 0.05) shown.push(name);
+      }
+    }
+    return shown;
+  });
+
+  if (visible.length > 1) {
+    fail(
+      'one-transient',
+      `@${String(width)} ${state} shows ${String(visible.length)} transient surfaces at once ` +
+        `(${visible.join(' + ')}). MANDATE §6: the room offers one at a time.`,
+    );
+  }
+}
+
+/**
+ * A focused room object is visible — WCAG 2.4.7, and `MANDATE §6`.
+ *
+ * ## Why this gate did not exist and needed to
+ *
+ * `.room-shape:focus-visible .door-edge` was how a room object showed keyboard
+ * focus. `18 §9.4` withdrew the authored polygons that class was painted on, the
+ * selector stopped matching anything, and **nothing else in the stylesheet
+ * styled focus** — every room object carries `outline-none`. So tabbing through
+ * the parlor moved an invisible cursor.
+ *
+ * There has been a `keyboard-focus` screenshot state the whole time. It
+ * photographed a room with no visible focus and passed, because a screenshot
+ * only fails when somebody looks at it. This is the assertion that does not
+ * depend on anybody looking.
+ */
+async function checkFocusVisible(page: Page, width: number): Promise<void> {
+  const focused = await page.evaluate(() => {
+    const active = document.activeElement;
+    if (!(active instanceof HTMLElement)) return null;
+    const style = getComputedStyle(active);
+    return {
+      room: active.classList.contains('room-shape'),
+      label: active.getAttribute('aria-label')?.slice(0, 40) ?? active.tagName,
+      outlineStyle: style.outlineStyle,
+      outlineWidth: Number.parseFloat(style.outlineWidth),
+      outlineColor: style.outlineColor,
+    };
+  });
+
+  if (focused === null) {
+    fail('focus-visible', `@${String(width)} nothing is focused after tabbing into the room`);
+    return;
+  }
+  if (!focused.room) {
+    // Four tabs is meant to land inside the room. If it does not, this gate is
+    // measuring the utility bar and would pass for the wrong reason.
+    fail(
+      'focus-visible',
+      `@${String(width)} tabbing landed on "${focused.label}", which is not a room object`,
+    );
+    return;
+  }
+
+  const transparent = /rgba\([^)]*,\s*0\s*\)/.test(focused.outlineColor);
+  if (focused.outlineStyle === 'none' || focused.outlineWidth < 2 || transparent) {
+    fail(
+      'focus-visible',
+      `@${String(width)} the focused room object "${focused.label}" has no visible ring ` +
+        `(outline: ${focused.outlineStyle} ${String(focused.outlineWidth)}px ` +
+        `${focused.outlineColor}). WCAG 2.4.7.`,
+    );
+  }
 }
 
 /**
@@ -2998,6 +3134,14 @@ async function run(): Promise<void> {
         // surface, and the defect this catches was on the one surface nobody
         // thought to check.
         await checkRarityContrast(page, width, state);
+        /*
+         * One transient at a time, everywhere — not just on the state built to
+         * catch it. `MANDATE §6` is a property of the room rather than of a
+         * screenshot, and the version of this defect that shipped was invisible
+         * precisely because only the state designed around it was ever checked.
+         */
+        await checkOneTransient(page, width, state);
+        if (state === 'keyboard-focus') await checkFocusVisible(page, width);
 
         {
 
