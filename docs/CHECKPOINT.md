@@ -259,10 +259,17 @@ The art queue that used to sit here is closed (`#55`) and this replaces it.
 2. **Visual debt 9 — the parlor ceiling.** A scorch-like smear and dashed grid
    above the rear doorway. Needs a targeted regeneration of that surface, not a
    filter; recorded as `EXCLUDED_CEILING` in `scripts/clean-parlor-surfaces.ts`.
-3. **Visual debt 12 — the intermittent `#418`.** Instrumented, six routes named,
-   two classes of cause eliminated, no reproduction. Do not ship a speculative
-   repair; chase the next sighting on a **dev** build, which is the only
-   configuration that names the element.
+3. **Visual debt 12 — the intermittent `#418`.** Instrumented, quarantined under
+   a ceiling, six states and five routes named, two classes of cause eliminated,
+   no reproduction. Do not ship a speculative repair; chase the next sighting on
+   a **dev** build, which is the only configuration that names the element.
+   **First obstacle, measured this session:** the driver cannot currently sweep a
+   dev build at all — `checkTonySteady`'s Pass F delays the client bundle by
+   intercepting `**/_next/static/chunks/**`, and `next dev` serves different
+   chunk URLs, so the sampler finds nothing and the run aborts at state two. 89
+   captures completed before it stopped, with no sighting. Teaching the driver to
+   skip its production-only passes under a `--dev` flag is step one, and it is
+   cheap. Deleting the quarantine entry is the definition of done.
 4. Deferred with reasons and not queued: debts 1, 2, 11 and 14.
 
 ---
