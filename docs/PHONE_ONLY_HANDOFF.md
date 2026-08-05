@@ -119,7 +119,7 @@ created and freshly seeded database. None was skipped, shortened or relaxed.
 |---|---|
 | `npm run typecheck` | clean |
 | `npm run lint` | clean |
-| `npm run test` | **1368 passed / 84 files**, 2 skipped |
+| `npm run test` | **1338 passed / 84 files**, 2 skipped — thirty fewer than the previous pass, because `clean-parlor-surfaces.ts`'s thirty-four tests were retired with the script and four took their place |
 | `npm run build` | clean |
 | `npm run art:validate` | clean |
 | `npm run visual:qa` | **88 states × 3 widths, passed — twice**, zero hydration sightings in both |

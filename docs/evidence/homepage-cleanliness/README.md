@@ -16,3 +16,14 @@ capture in this driver had ever taken.
 
 The reasoning, the mechanism chosen per surface, and the proof that the timed
 regression fails on the old behaviour: `docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md §9`.
+
+---
+
+> **Superseded 2026-08-06.** The `after` images here are the output of
+> `scripts/clean-parlor-surfaces.ts`, which has been **deleted**. All three
+> surfaces it repaired were damaged by quantization against the shared 32, and
+> the `zone` family palette stops the damage happening — so the board's face is
+> the painting's own cream rather than a flat fill, and the alcove is the
+> painting's own value. These crops stay as the record of what the defect looked
+> like and what was tried; `docs/evidence/palette-fidelity/` and
+> `docs/evidence/homepage-fidelity/` are the current pictures.

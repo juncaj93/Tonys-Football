@@ -158,9 +158,18 @@ Measured on the shipped shell:
 | distinct colours in the asset | 26 | 30 | **90** |
 | file size | 19 KB | 19 KB | 60 KB |
 
-**Additive, so everything else is byte-identical.** Seven files change — six
-`zone` assets and Tony. All twelve approved Batch B collectibles, every
-`surface`, `ui` and `object` asset outside `zone`, byte-for-byte unchanged.
+**Additive, so everything else is byte-identical.** The asset-family impact,
+measured pixel by pixel against the four-colour state:
+
+| family | changed | detail |
+|---|---|---|
+| `zone` | **6 of 6** | shell 98.0% · counter-front 97.7% · champion banner 100% · front counter 81.4% · newspaper rack 73.1% · owned box 19.6% |
+| `character` | **1 of 1** | Tony, 62.6% |
+| `collectible` | **0 of 12** | every approved Batch B piece byte-identical |
+
+That last row is the property the whole mechanism exists for. An extension that
+*replaced* a shared colour would have rewritten the collectibles too, which is
+the re-approval event the 2026-08-05 scoping decision refused.
 
 ### Tony
 

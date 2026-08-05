@@ -77,6 +77,20 @@ Image models **cannot** produce true pixel art at 32px. They produce 1024px appr
 
 Mechanical quantization is what makes fifty independently generated images look like one world. Without it every batch drifts a few degrees — individually fine, collectively wrong — and the seams become visible around batch four, by which point the earlier batches have to be redone.
 
+**Amended 2026-08-06: that argument is about collectibles, and it is not about
+the room.** It holds for 46 × 46 sprites drawn in independent batches months
+apart. It does not hold for a 941 × 1672 painting with 153,738 distinct colours
+that ships as one asset and has no batch to drift from — and forcing the
+collectible palette onto it destroyed most of what the approved art contained.
+
+So the shared 32 remain **shared**, and a family whose art measurably needs more
+declares its own additive extension in `familyExtensions`. The **size of an
+extension is measured, not chosen**: derive it with
+`npx tsx scripts/derive-family-palette.mts <family> <count>` and read the ladder
+in `docs/PALETTE_FIDELITY_BOUNDARY.md §4` for how the count is settled. Today
+`zone` declares 64 and `character` 16; every other family quantizes against the
+shared 32 exactly as before, byte for byte.
+
 The prompt gets close. **The pipeline makes it exact.**
 
 Also strips `#000000` and `#FFFFFF`, which are common model defaults and are prohibited by the palette.
@@ -112,7 +126,8 @@ distance. Green, at 0.59² = 34.8%, dominates. The metric therefore ranks
 candidates almost entirely by brightness and is nearly blind to hue.
 
 That is the wrong tool for this job. `palette.json` is not a greyscale ramp — it
-is 32 colours across **ten deliberately separated hue families**, and the
+is 32 shared colours across **ten deliberately separated hue families** — plus a
+family's own extension where one is declared — and the
 matcher's first job is to choose the right family. Luma weighting is appropriate
 for converting colour to grey. It is not appropriate for a cross-ramp palette
 matcher.
