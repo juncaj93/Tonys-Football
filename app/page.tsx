@@ -408,8 +408,12 @@ export default async function ParlorPage({
               * text"* the direction bans, arriving from the fix rather than
               * from the art.
               *
-              * `red-dark` on `paper-white` measures 8.4:1 and `wood-dark` on it
-              * 10.6:1. Neither needs help.
+              * `red-dark` on the face's dominant cream measures 5.60:1 and on
+              * its darker end 4.88:1; `wood-dark` measures 7.70:1 and 6.71:1.
+              * All four clear AA, and the *worst* of them is what
+              * `scripts/shell-surfaces.test.ts` asserts — because the face is a
+              * gradient now, so an average would not be the question. Neither
+              * ink needs help.
               */}
             <div
               aria-hidden="true"

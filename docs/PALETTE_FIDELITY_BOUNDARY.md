@@ -206,9 +206,25 @@ has continuous grout lines where the posterized one had broken dashes. A gate
 that prefers the worse picture is not a gate.
 
 `scripts/shell-surfaces.test.ts` therefore tests three things that are true
-regardless of style — the board face is a light even writing surface, the alcove
-reads as a recess, the shell is palette-closed — and leaves *"the ceiling is
-calm"* to the screenshot, where it belongs.
+regardless of style — the board's face can be read on, the alcove reads as a
+recess, the shell is palette-closed — and leaves *"the ceiling is calm"* to the
+screenshot, where it belongs.
+
+### The board's face is now a gradient, and that made an old constant load-bearing
+
+The repaint made the face one flat colour, so *"is it light enough"* had a single
+answer: `red-dark` on `paper-white` measured 8.4:1. The painting's own cream runs
+`#F9C371` down to `#F3B356`, so the question became *"does the **worst** ground a
+letter can land on still clear AA"* — and it has to be asked of every pixel.
+
+Measured: across the whole cream rectangle the worst ground takes `red-dark` to
+**2.69:1**. Inside `TONIGHT_FIELD` the worst is **4.88:1**, and `wood-dark` is
+6.71:1. Both clear AA.
+
+The difference between those two numbers is `FIELD_INSET`, six units, which
+existed to keep text off the painted frame. **It now also keeps text off the dark
+end of the gradient**, and nothing recorded that dependency. It is a test now:
+shrink the inset and the suite fails.
 
 ## 7. Two repair scripts, one retired
 

@@ -3,6 +3,8 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
+import { TONIGHT_FIELD } from '@/lib/parlor/objects';
+
 // `process-art.ts` rather than `palette-study.mts`: this is the palette the
 // **pipeline** builds, which is the one the shipped asset has to be closed over.
 import { loadPalette } from './process-art';
@@ -72,25 +74,83 @@ async function field(x0: number, y0: number, x1: number, y1: number): Promise<Fi
   };
 }
 
+/** Every distinct opaque colour in a rectangle, as `[r, g, b]`. */
+async function distinct(
+  x0: number,
+  y0: number,
+  x1: number,
+  y1: number,
+): Promise<readonly (readonly number[])[]> {
+  const { data, info } = await sharp(SHELL).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const seen = new Map<number, readonly number[]>();
+  for (let y = y0; y <= y1; y += 1) {
+    for (let x = x0; x <= x1; x += 1) {
+      const p = (y * info.width + x) * 4;
+      if (data[p + 3]! < 128) continue;
+      seen.set((data[p]! << 16) | (data[p + 1]! << 8) | data[p + 2]!, [
+        data[p]!,
+        data[p + 1]!,
+        data[p + 2]!,
+      ]);
+    }
+  }
+  return [...seen.values()];
+}
+
+/** WCAG 2.1 relative luminance and contrast ratio. */
+function luminance(c: readonly number[]): number {
+  const channel = (v: number): number => {
+    const s = v / 255;
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+  };
+  return 0.2126 * channel(c[0]!) + 0.7152 * channel(c[1]!) + 0.0722 * channel(c[2]!);
+}
+
+function contrast(a: readonly number[], b: readonly number[]): number {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x) as [number, number];
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 describe('the parlor shell as a surface the product writes on', () => {
-  it('gives the Tonight board a light, even face', async () => {
+  it('gives the Tonight board a face its own ink can be read on', async () => {
     /*
      * The one **functional** requirement of the three, and the reason the old
      * repaint existed at all: `18 §8` puts the league's runtime text on this
-     * surface as HTML, in dark ink. It has to be light enough to read against
-     * and even enough that a letter does not land in a dark patch.
+     * surface as HTML, in dark ink.
      *
-     * Measured on the board's inner field, inset past the frame. The painting's
-     * own cream gives mean 197 of 255 with a 5th percentile of 186 — a gentle
-     * top-to-bottom gradient rather than a flat fill, which is what the approved
-     * art has and what the repaint was throwing away.
+     * ## Stated as contrast, because the face is a gradient now
+     *
+     * The repaint made it one flat colour, so *"is it light enough"* had a
+     * single answer. The painting's own cream runs from `#F9C371` down to
+     * `#F3B356`, which is what the approved art has — so the question is now
+     * *"does the **worst** ground a letter can land on still clear AA"*, and
+     * that has to be asked of every pixel rather than of an average.
+     *
+     * ## And the six-unit inset became load-bearing when it did
+     *
+     * `FIELD_INSET` existed to keep text off the painted frame. It now also
+     * keeps text off the darkest part of the gradient: across the whole cream
+     * rectangle the worst ground takes `red-dark` to **2.69:1**, and inside
+     * `TONIGHT_FIELD` the worst is **4.88:1**. That is a real dependency that
+     * nothing recorded, so it is recorded here — shrink the inset and this
+     * fails, which is the correct outcome.
+     *
+     * Both inks the board actually prints are checked. `page.tsx` renders the
+     * headline in `red-dark` and the detail line in `wood-dark`.
      */
-    const face = await field(62, 88, 177, 170);
-    expect(face.mean, 'the board face is a light writing surface').toBeGreaterThan(170);
-    expect(face.p05, 'no dark patch for a letter to land in').toBeGreaterThan(150);
-    expect(face.darkShare, 'nothing on the face is near-black').toBe(0);
+    const [x, y, w, h] = TONIGHT_FIELD;
+    const grounds = await distinct(x, y, x + w - 1, y + h - 1);
+
+    const INKS = { 'red-dark': [0x8c, 0x1f, 0x22], 'wood-dark': [0x4a, 0x2e, 0x1c] } as const;
+    for (const [name, ink] of Object.entries(INKS)) {
+      const worst = Math.min(...grounds.map((g) => contrast(g, ink as readonly number[])));
+      expect(worst, `${name} on the worst ground inside TONIGHT_FIELD`).toBeGreaterThanOrEqual(4.5);
+    }
+
     // A gradient is fine; a vignette heavy enough to read as texture is not.
+    const face = await field(x, y, x + w - 1, y + h - 1);
     expect(face.p95 - face.p05, 'the face is even').toBeLessThan(40);
+    expect(face.darkShare, 'nothing on the face is near-black').toBe(0);
   });
 
   it('keeps the alcove behind Tony reading as a recess', async () => {
