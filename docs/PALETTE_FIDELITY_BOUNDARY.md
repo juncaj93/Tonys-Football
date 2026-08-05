@@ -4,8 +4,18 @@
 two painterly families quantize against **their own palettes** rather than the
 shared 32. No new art was required at any point.
 
-**Not verified in production.** Nothing carrying this has been merged or
-deployed — see `AUTONOMY.md §4`.
+**Merged as #68**, squashed to `dde6237`, with both hosted gates green:
+`Typecheck · Lint · Test · Build` in 4m30s and `Screenshots · gates` — 88 states
+at three widths on a fresh database against a production build — in 16m00s, with
+no hydration sighting.
+
+**The hosted *render* was not reviewed by eye from this session.** The Vercel
+preview is unreachable through the agent proxy (403 on `*.vercel.app`) and the
+visual-QA artifact is not downloadable here, so the hosted evidence is the gate
+over those screenshots passing rather than a person looking at them. The asset
+bytes it rendered are identical to the ones photographed at 390 / 375 / 360 in
+`docs/evidence/homepage-fidelity/`. Stated because it is the one claim in this
+document that rests on a machine rather than an eye.
 
 ---
 

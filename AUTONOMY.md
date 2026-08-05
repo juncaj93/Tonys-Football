@@ -188,6 +188,15 @@ pushing to `main` · pushing to a branch that has an open PR · re-running any w
 `workflow_dispatch` · empty or documentation-only commits made to trigger CI · **setting
 `CRON_SECRET`** · **claiming production is verified.**
 
+
+
+**2026-08-06 — one PR authorized, spent, and mode resumed.** The commissioner
+authorized a single hosted pull request for the homepage-fidelity slice and no
+more. It merged as **#68** for **~25 minutes** — CI 4m30s + Screenshots 16m00s on
+the PR, plus CI on the push to `main`. Both gates were green first time; nothing
+was re-run. **Conservation mode is active again from that merge**, with the same
+prohibited list as above, and a further hosted run needs a new authorization.
+
 The last two are not Actions rules and are listed here because they are the two things a
 session under this mode is most likely to get wrong. `CRON_SECRET` activates *both* crons at
 once and is the commissioner's step, not a session's. And nothing merged means nothing

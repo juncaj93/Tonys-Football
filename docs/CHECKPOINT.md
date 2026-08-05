@@ -25,7 +25,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Batch B launch art** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #55 | Nothing. 12 of 24 collectibles plus `object_box_owned` have production art, which is the launch commitment. The remaining twelve draw `placeholder_pizza_box` by design |
-| **Homepage art fidelity** | `QUEUED_NOT_ACTIVE` — **built, waiting to merge** | `claude/homepage-palette-fidelity` | this session | Nothing buildable. Four `zone`-scoped palette colours, six reprocessed assets, the shell's two corrections re-derived. **It is waiting on Actions minutes, not on work** — `docs/PHONE_ONLY_HANDOFF.md` is the merge queue and its price |
+| **Homepage art fidelity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #68 | Nothing. Typed family palettes: `zone` 64 colours and `character` 16, each derived from that family's own art. Both hosted gates green, squashed to `dde6237` |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
@@ -138,12 +138,17 @@ after, at device resolution and 1:1.
 | `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed**, zero failures and zero hydration sightings |
 | Full-page evidence | `docs/evidence/homepage-fidelity/` |
 | Asset evidence | `docs/evidence/palette-fidelity/` — four columns: the approved source, the shared 32, the four-colour pass, and what ships |
-| **Production** | **not verified.** Nothing has been merged or deployed |
+| **Production** | **merged as #68** (`dde6237`), both hosted gates green. The hosted *render* was not reviewed by eye from this session — the Vercel preview is unreachable through the agent proxy and the visual-QA artifact is not downloadable here, so that half rests on the gate rather than on a person |
 
 That is **five consecutive clean sweeps** of this branch since the two `#418`
 sightings, so visual debt 16's rate estimate drops again — 1,584 captures and 2
 sightings, roughly 1 per 792. It stays open and unclaimed; nothing here
 investigated it.
+
+**The hosted sweep makes it six.** `Screenshots · gates` on #68 passed with no
+hydration sighting — 1,848 captures against 2, roughly 1 per 924. The rate
+estimate has fallen with every clean run, which is what an estimate off two
+events does: read the order of magnitude, not the figure.
 
 ---
 

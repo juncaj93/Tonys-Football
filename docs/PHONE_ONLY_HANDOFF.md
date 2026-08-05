@@ -1,5 +1,14 @@
 # Handoff — what is waiting, and what it will cost to land
 
+> **Spent, 2026-08-06.** The slice this document was written for merged as
+> **#68** (`dde6237`). It cost **~25 minutes** of hosted Actions: CI 4m30s +
+> Screenshots 16m00s on the pull request, plus CI again on the push to `main`.
+> Both gates were green first time and nothing was re-run.
+>
+> Conservation mode is **active again** — `AUTONOMY.md §4`. The queue below is
+> empty; what stays useful is the shape of it, and §1's arithmetic for whatever
+> is queued next.
+
 **Written 2026-08-05, under the phone-only Actions-conservation mode**
 (`AUTONOMY.md §4`). The commissioner has no machine until the following week, so
 this document assumes **nothing can be run locally by the reader**. Every claim

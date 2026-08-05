@@ -188,7 +188,7 @@ Everything a stake knows about football comes through **one Stats boundary** tha
 - **The isolated-pixel rate is the wrong instrument** and it went **2.23% → 13.46%** while the picture got much better. A second proxy nearly shipped as a gate: an all-dark-3×3 ceiling scan reports **593 blocks on the faithful ceiling against 18 on the posterized one**. A gate that prefers the worse picture is not a gate.
 - **`clean-parlor-surfaces.ts` is deleted** with its thirty-four tests. All three of its repairs were undoing quantization damage — its own header said so — and keeping it would **overpaint the approved art**. Visual debts 8 and 9 stay closed by the cause going. `shift-tonight-board.ts` stays because it is *geometric*.
 
-`docs/evidence/homepage-fidelity/` is the full page at 390 / 375 / 360, before and after.
+`docs/evidence/homepage-fidelity/` is the full page at 390 / 375 / 360, before and after. **Shipped as #68** (`dde6237`), both hosted gates green first time.
 
 **Actions conservation is a hard stop right now** (commissioner, 2026-08-05). 1,800 of 2,000 included minutes are spent and there is **no local machine until next week**, so the one-PR-per-slice authorization is withdrawn and nothing may be handed off as *"run these commands when you get back."* Remote feature branches with no open PR are **storage only** — verified, not assumed. Prohibited until explicitly released: opening or merging a pull request · pushing to `main` or to a PR branch · re-running or dispatching a workflow · **setting `CRON_SECRET`** · **claiming production is verified.** `AUTONOMY.md §4` is the rule; `docs/PHONE_ONLY_HANDOFF.md` is the merge queue and its price.
 
