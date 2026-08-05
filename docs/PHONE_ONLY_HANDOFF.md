@@ -62,25 +62,33 @@ open for it.
 
 ## 3. What the slice actually is
 
-The commissioner's report was *"much of the homepage art now has distorted
-coloring and shading."* The cause is **palette quantization** — not the source
-art, not the browser, not CSS, not scaling, not filters — established by
-rendering the pipeline's own intermediate stage rather than by argument. **No new
-art was required**, which supersedes the earlier `art/SHELL_AUDIT_*` conclusion
-that the homepage needed targeted regeneration.
+The commissioner reported twice. First that *"much of the homepage art now has
+distorted coloring and shading"*, then — after the first fix — that *"the entire
+homepage, including Tony, does not preserve the visual quality of the original
+approved art."* Both were right.
 
-Four warm colours, chosen by weighted k-means over the worst-served pixels and
-scoped to the `zone` family by commissioner decision. Additive: they never
-replace a shared colour, which is the property that keeps Tony and all twelve
-approved Batch B collectibles **byte-identical**. Six assets change, all `zone`.
+**The cause is palette quantization**, established by rendering the pipeline's
+own intermediate stage rather than by argument: the incoming source is clean, the
+downscale is clean, the snap to the shared palette is the defect. **No new art
+was required at any point**, which supersedes the earlier `art/SHELL_AUDIT_*`
+conclusion that the homepage needed targeted regeneration.
 
-**Superseded within the branch, and the second pass is what merges.** Four
-colours halved the error and left a room still visibly orange on a phone. The
-2026-08-06 ruling asked for the page to be judged at true phone size, and at
-true phone size four was not enough.
+**And the source art is not pixel art.** The shell arrives 941 × 1672 with
+153,738 distinct colours; Tony 480 × 1315 with 72,004. The pixel-art look is
+manufactured by the pipeline, and the shared 32 it snaps to were chosen for
+46 × 46 collectibles generated in independent batches. That count was a
+convention rather than a measurement.
 
-What ships is **typed family palettes sized by measurement**: `zone` 64 colours,
-`character` 16, each derived by weighted k-means from that family's own art.
+So what ships is **typed family palettes, sized by measurement**: `zone` 64
+colours and `character` 16, each derived by weighted k-means from that family's
+own art and written into `palette.json` as literals. Additive, so no extension
+ever replaces a shared colour — which is the property that keeps all twelve
+approved Batch B collectibles **byte-identical**. Seven files change: six `zone`
+assets and Tony.
+
+The four-colour pass earlier on this branch is the same mechanism at a guessed
+size. It halved the error and left a room still visibly orange at phone size, and
+it is kept in history because the evidence set uses it as a column.
 
 | shipped shell | shared 32 | +4 | **now** |
 |---|---|---|---|
@@ -104,9 +112,10 @@ Pictures, and the second set is the one to look at first:
 - `docs/evidence/homepage-fidelity/` — **the whole page** at 390 / 375 / 360,
   before and after, at device resolution and at 1:1. The 2026-08-06 ruling asks
   for the composition rather than crops, and this is it.
-- `docs/evidence/palette-fidelity/` — asset crops, **three-way**: the shared 32,
-  the four-colour pass, and what ships. The middle column is the argument — it
-  shows that more of the same was not the answer.
+- `docs/evidence/palette-fidelity/` — asset crops in **four columns**: the
+  approved source, the shared 32, the four-colour pass, and what ships. The
+  source column is what fidelity is measured against; the four-colour column is
+  what shows that more of the same was not the answer.
 
 Both regenerable: `scripts/palette-evidence.mts` reads its inputs out of git, and
 `scripts/homepage-shot.mts` drives a local production server.
@@ -125,24 +134,26 @@ created and freshly seeded database. None was skipped, shortened or relaxed.
 | `npm run test` | **1338 passed / 84 files**, 2 skipped — thirty fewer than the previous pass, because `clean-parlor-surfaces.ts`'s thirty-four tests were retired with the script and four took their place |
 | `npm run build` | clean |
 | `npm run art:validate` | clean |
-| `npm run visual:qa` | **88 states × 3 widths, passed — twice**, zero hydration sightings in both |
+| `npm run visual:qa` | **88 states × 3 widths, passed — three times**, zero hydration sightings in all three |
 
 **One thing to know before the hosted Visual QA runs, because it changes what to
 do if it comes back red.** A sweep of this branch once failed on two React `#418`
-hydration errors, and the same commit swept clean before it and twice after —
-four sweeps is 1,056 captures and 2 sightings, roughly **one per 528**. It is
+hydration errors, and the branch has swept clean **five times** around them —
+1,584 captures, 2 sightings, roughly **one per 792**. It is
 **intermittent and not this slice**, which changes only PNG bytes,
 `art/palette.json` and the art scripts. It is now **visual debt 16**, measured in
 `docs/VISUAL_DEBT.md`.
 
-At that rate a 264-capture sweep expects half a sighting, so a hosted run has
-roughly a **40% chance of failing on a defect that has nothing to do with the
-change**. If it does, there are two honest options and neither is a re-run:
+At that rate a 264-capture sweep expects a quarter of a sighting, so a hosted run
+has roughly a **1-in-4 chance of failing on a defect that has nothing to do with
+the change** — and the estimate has fallen with every clean run, so read the
+order of magnitude rather than the figure. If it does fail that way, there are
+two honest options and neither is a re-run:
 
-- **Merge on the evidence.** Four local sweeps of this commit's product code,
-  three of them clean, and the failure is a console error rather than a rendering
-  defect — every product gate was green in all four. This is the commissioner's
-  call, not a session's.
+- **Merge on the evidence.** Six local sweeps of this branch, five of them
+  clean, and the failure is a console error rather than a rendering defect —
+  every product gate was green in all six. This is the commissioner's call, not
+  a session's.
 - **Leave it and come back to visual debt 16 first.** Also defensible. What is
   not defensible is spending sixteen more minutes to re-roll the same die.
 

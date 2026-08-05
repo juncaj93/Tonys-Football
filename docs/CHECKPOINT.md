@@ -127,6 +127,24 @@ the wall has depth again and a scan for one exact colour stopped on the first ro
 `docs/evidence/homepage-fidelity/` is the full page at 390 / 375 / 360, before and
 after, at device resolution and 1:1.
 
+### Verified
+
+| | |
+|---|---|
+| `npm run typecheck`, `npm run lint` | clean |
+| `npm run test` | **1338 passed / 84 files**, 2 skipped. Thirty fewer than the last pass: `clean-parlor-surfaces`'s thirty-four went with the script and four took their place |
+| `npm run build` | clean |
+| `npm run art:validate` | clean — 12 of 24 collectibles, every one fits its slot |
+| `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed**, zero failures and zero hydration sightings |
+| Full-page evidence | `docs/evidence/homepage-fidelity/` |
+| Asset evidence | `docs/evidence/palette-fidelity/` — four columns: the approved source, the shared 32, the four-colour pass, and what ships |
+| **Production** | **not verified.** Nothing has been merged or deployed |
+
+That is **five consecutive clean sweeps** of this branch since the two `#418`
+sightings, so visual debt 16's rate estimate drops again — 1,584 captures and 2
+sightings, roughly 1 per 792. It stays open and unclaimed; nothing here
+investigated it.
+
 ---
 
 ## Where the product is — 2026-08-05 (fifteenth session)

@@ -262,7 +262,7 @@ colour retires it. Two of its constants were re-measured rather than relaxed:
 | `npm run test` | **1338 passed / 84 files**, 2 skipped. Thirty fewer than before: the thirty-four `clean-parlor-surfaces` tests are gone and four took their place |
 | `npm run build` | clean |
 | `npm run art:validate` | clean — 12 of 24 collectibles, every one fits its slot |
-| `npm run visual:qa` | see `docs/CHECKPOINT.md` |
+| `npm run visual:qa` | **88 states × 3 widths, passed** — zero failures, zero hydration sightings |
 | Full-page evidence | `docs/evidence/homepage-fidelity/` — 390 / 375 / 360, before and after, device resolution and 1:1 |
 | Asset evidence | `docs/evidence/palette-fidelity/` — three-way: shared 32, +4, shipped |
 | **Production** | **not verified.** Nothing has been merged or deployed. |
