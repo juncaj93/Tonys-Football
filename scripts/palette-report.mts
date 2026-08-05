@@ -66,14 +66,29 @@ for (const asset of STUDY) {
   }
 }
 
-function table(palette: readonly PaletteEntry[], title: string): void {
-  console.log(`\n  ${title} — ${String(palette.length)} colours`);
+/**
+ * One row per study asset, quantized against `palette`.
+ *
+ * `palette` may be a function of the asset rather than a constant, which is what
+ * the SHIPPED table below needs: since the `zone` extension landed, production
+ * does **not** quantize every asset against the same colours, and a table that
+ * assumed it did would be reporting a palette nothing is built with.
+ */
+function table(
+  palette: readonly PaletteEntry[] | ((asset: StudyAsset) => readonly PaletteEntry[]),
+  title: string,
+): void {
+  const forAsset = (asset: StudyAsset): readonly PaletteEntry[] =>
+    typeof palette === 'function' ? palette(asset) : palette;
+  const sizes = new Set(loaded.map(({ asset }) => forAsset(asset).length));
+  const size = [...sizes].sort((a, b) => a - b).join('/');
+  console.log(`\n  ${title} — ${size} colours`);
   console.log(
     `  ${'asset'.padEnd(16)}${'mean err'.padStart(9)}${'p95'.padStart(7)}` +
       `${'isolated'.padStart(10)}${'paper'.padStart(8)}${'amber'.padStart(8)}${'wood'.padStart(7)}${'red'.padStart(7)}`,
   );
   for (const { asset, image } of loaded) {
-    const m = measure(asset.label, image, palette);
+    const m = measure(asset.label, image, forAsset(asset));
     console.log(
       `  ${asset.label.padEnd(16)}` +
         `${m.meanError.toFixed(1).padStart(9)}` +
@@ -87,7 +102,26 @@ function table(palette: readonly PaletteEntry[], title: string): void {
   }
 }
 
-table(base, 'CURRENT');
+table(base, 'SHARED');
+
+/*
+ * What production actually builds.
+ *
+ * Every family that declares an extension gets it; every family that does not is
+ * byte-for-byte the row above. Printed unconditionally rather than behind a flag,
+ * because the failure mode this closes is a reader taking the shared table for
+ * the shipped one — and a flag nobody passes reproduces it exactly.
+ */
+const familyPalette = new Map<string, readonly PaletteEntry[]>();
+const shippedFor = (asset: StudyAsset): readonly PaletteEntry[] => {
+  const family = assetRegistry.get(asset.slug)?.family ?? '';
+  const cached = familyPalette.get(family);
+  if (cached !== undefined) return cached;
+  const built = loadPalette(family);
+  familyPalette.set(family, built);
+  return built;
+};
+table(shippedFor, 'SHIPPED (per-family)');
 
 /* --- Where the error actually lives ------------------------------------- */
 

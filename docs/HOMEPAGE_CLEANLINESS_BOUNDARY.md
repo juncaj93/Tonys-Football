@@ -545,3 +545,24 @@ commissioner's report is about Tony, the rack is not cut by a foreground layer s
 the step has nothing to read against, and widening this slice to every glowing
 overlay is a change to the room's shared affordance rather than a defect repair.
 Recorded so it is a decision rather than an oversight.
+
+### The gate had a race that could take the whole sweep down
+
+Found by running `--state=tony-steady` on its own, which is the one way this gate
+had never been exercised — in a full sweep it is state two of eighty-eight and
+the timing is different.
+
+`Page.screencastFrame` keeps arriving until Chromium has processed
+`stopScreencast`, so **at least one frame is normally still in flight when
+`detach()` runs**, and acking a frame on a detached session rejects. The ack was
+`void`ed, which makes that an *unhandled* rejection — and Node's default for an
+unhandled rejection is to kill the process. So the sweep died with
+`cdpSession.send: Target page, context or browser has been closed`: a message
+about the harness, printed where a reader is looking for a message about the
+room, with no gate result at all.
+
+Two halves, because either alone leaves something wrong. Collection stops the
+moment the session is closing, so a late frame cannot enter the measurement; and
+the ack's rejection is caught, because a frame nobody is going to read does not
+need to be acknowledged. **The gate itself is unchanged** — same window, same
+discriminator, same counts.

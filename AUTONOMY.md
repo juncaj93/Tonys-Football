@@ -158,6 +158,44 @@ visual-QA run rather than a dozen cheap ones.
 
 ---
 
+### 2026-08-05 — emergency conservation, then phone-only
+
+Two directions on the same day, and the second is narrower than the first.
+
+**Emergency, morning.** *"GitHub has reported that this account has used 1,800 of 2,000
+included Actions minutes, with the allowance resetting in 27 days. Effective immediately,
+stop triggering GitHub Actions."* The 2026-08-01 authorization above — one coherent PR per
+completed slice — is **withdrawn for the duration**. There is no PR allowance at all.
+
+**Phone-only, afternoon.** The commissioner has no machine until the following week and
+cannot run anything locally, so a session may **not** hand work off as *"run these commands
+when you get back."* Remote branches may be used as **storage**, on one condition that was
+checked rather than assumed: an ordinary push to a feature branch with **no open pull
+request** creates no workflow run. Verified three ways —
+
+| | |
+|---|---|
+| the files | `ci.yml` is `push: branches: [main]` + `pull_request:`; `visual-qa.yml` is `pull_request:` + `workflow_dispatch:`; `orchestrator.yml` is `workflow_dispatch:` only |
+| the history | 30 of 30 runs on feature branches were `pull_request`; 30 of 30 `push` runs repository-wide were on `main` |
+| the experiment | after pushing `claude/homepage-palette-fidelity`, `list_workflow_runs` for that branch returns `total_count: 0` |
+
+**Do not edit a workflow trigger to permit a backup push.** If a push would cost a run, the
+answer is not to push.
+
+**A backup branch is storage. It is not approval to merge.** Prohibited until the
+commissioner explicitly releases it: opening or reopening a pull request · merging ·
+pushing to `main` · pushing to a branch that has an open PR · re-running any workflow ·
+`workflow_dispatch` · empty or documentation-only commits made to trigger CI · **setting
+`CRON_SECRET`** · **claiming production is verified.**
+
+The last two are not Actions rules and are listed here because they are the two things a
+session under this mode is most likely to get wrong. `CRON_SECRET` activates *both* crons at
+once and is the commissioner's step, not a session's. And nothing merged means nothing
+deployed: a slice under this mode is **verified locally**, which is a true and much smaller
+claim than *verified*.
+
+---
+
 ## 5. Rules that bind every actor
 
 - **Never expose a secret** in code, logs, issue text, PR comments or screenshots. Secrets live in GitHub Actions secrets and are read only by workflows.

@@ -1688,9 +1688,30 @@ async function checkGlowLeavesTonyAlone(page: Page, width: number): Promise<void
 
   const cdp = await page.context().newCDPSession(page);
   const frames: Buffer[] = [];
+  /*
+   * The last frame always arrives after the session is gone.
+   *
+   * Chromium keeps emitting `Page.screencastFrame` until it has processed
+   * `stopScreencast`, so at least one event is normally still in flight when
+   * `detach()` runs — and acking a frame on a detached session **rejects**. The
+   * ack used to be `void`ed, which makes that rejection an *unhandled* one, and
+   * Node's default for an unhandled rejection is to kill the process. So a race
+   * this gate loses roughly one time in ten took down the whole sweep with
+   * `cdpSession.send: Target page, context or browser has been closed` — a
+   * message about the harness, printed where a reader is looking for a message
+   * about the room.
+   *
+   * Two halves: stop collecting once detached, so a late frame cannot change the
+   * measurement, and swallow the ack's rejection, because a frame nobody is
+   * going to read does not need to be acknowledged.
+   */
+  let listening = true;
   cdp.on('Page.screencastFrame', (frame) => {
+    if (!listening) return;
     frames.push(Buffer.from(frame.data, 'base64'));
-    void cdp.send('Page.screencastFrameAck', { sessionId: frame.sessionId });
+    cdp.send('Page.screencastFrameAck', { sessionId: frame.sessionId }).catch(() => {
+      // The session is closing. Ack was best-effort from the start.
+    });
   });
 
   const waitUntilPageTime = async (target: number): Promise<void> => {
@@ -1705,6 +1726,7 @@ async function checkGlowLeavesTonyAlone(page: Page, width: number): Promise<void
   await cdp.send('Page.startScreencast', { format: 'png', everyNthFrame: 1 });
   await waitUntilPageTime(lit + REVEAL_FOR + RAMP + 350);
   await cdp.send('Page.stopScreencast');
+  listening = false;
   await cdp.detach();
 
   if (frames.length < 4) {
@@ -3244,10 +3266,32 @@ function luminance([r, g, b]: [number, number, number]): number {
  *
  * `#418`'s first argument says `text` or `HTML` and nothing else, so the
  * production bundle names no element. What it can still record is the shape of
- * the document at the instant React gave up on it: how far loading had got, and
- * whether any Suspense boundary was still unresolved. That is what distinguishes
- * a component that renders differently from a boundary spliced in mid-hydration,
- * and it is the distinction this defect has never had evidence for.
+ * the document: how far loading had got, and whether any Suspense boundary was
+ * still unresolved.
+ *
+ * ## The census is taken after the recovery, and that had to be measured
+ *
+ * The original note here claimed the census distinguishes *a component that
+ * renders differently* from *a boundary spliced in mid-hydration*. **It does
+ * not**, and visual debt 16's two sightings are what established it. Compared
+ * against ordinary loads of the same routes:
+ *
+ *     a normal /                      body: div, div, script x10
+ *     the sighting on /               body: script x10, div, div
+ *
+ * The scripts and the divs have swapped ends. That is not a partly-parsed
+ * document — parsing is in order — it is the document **after** React discarded
+ * the server's tree and re-rendered it: the RSC payload `<script>` tags are
+ * server-only artifacts with no client counterpart so they stay put, and the
+ * app's `div`s are re-created and appended after them. `#418`'s own text
+ * promises exactly that (*"this tree will be regenerated on the client"*), and
+ * `console.error` runs after the regeneration rather than before it.
+ *
+ * So `servedBody` and `servedHead` are taken at **`interactive`** — the moment
+ * the parser finishes, before any recovery could have happened — and carried on
+ * the sighting. One census is a photograph of the recovery; two is a diff, and a
+ * diff is the thing that says *where* the tree changed. It still will not name an
+ * element. Only a dev build does that.
  */
 interface HydrationSighting {
   readonly path: string;
@@ -3258,6 +3302,9 @@ interface HydrationSighting {
   readonly pending: number;
   readonly bodyChildren: string;
   readonly headChildren: string;
+  /** The same two, at `interactive` — the parsed document, before any recovery. */
+  readonly servedBody: string;
+  readonly servedHead: string;
 }
 
 /** Messages worth capturing evidence for. Deliberately broad. */
@@ -3290,6 +3337,46 @@ const HYDRATION_REPORTER = `(() => {
     return { pending, bodyChildren: names(document.body), headChildren: names(document.head) };
   };
 
+  /*
+   * The earliest shape this reporter managed to see.
+   *
+   * Named 'earliest' rather than 'served' on purpose: one of visual debt 16's
+   * two sightings fired while readyState was still 'loading', so there is no
+   * moment that is guaranteed to be both after the body exists and before React
+   * could have touched it. What is recorded is the first non-empty census plus
+   * **when it was taken**, and a reader compares that timestamp against the
+   * error's. A sample taken after the error is not evidence and says so.
+   *
+   * Sampled from three places because each covers a different failure: a
+   * MutationObserver catches the first node the parser appends, readystatechange
+   * catches a document that was already complete, and the animation frame is the
+   * backstop for a browser that fires neither in time.
+   */
+  let earliest = { bodyChildren: '', headChildren: '', atMs: -1 };
+  // On \`document\`, not \`document.documentElement\` — this script runs before any
+  // HTML is parsed, so the root element does not exist yet and \`observe\` throws
+  // on null. \`document\` is always a Node and subtree covers everything under it.
+  const watcher = new MutationObserver(() => { takeEarliest(); });
+  const takeEarliest = () => {
+    if (earliest.bodyChildren !== '') return;
+    const { bodyChildren, headChildren } = census();
+    if (bodyChildren === '') return;
+    earliest = { bodyChildren, headChildren, atMs: Math.round(performance.now()) };
+    /*
+     * The instrument stops the moment it has its reading.
+     *
+     * A whole-document subtree observer left running fires on every node the
+     * parser appends and every mutation React makes afterwards, for the life of
+     * the page — in a harness whose other gates measure motion frame by frame.
+     * The reading is taken once; the cost has to end with it.
+     */
+    watcher.disconnect();
+    document.removeEventListener('readystatechange', takeEarliest);
+  };
+  watcher.observe(document, { childList: true, subtree: true });
+  document.addEventListener('readystatechange', takeEarliest);
+  takeEarliest();
+
   const report = (text) => {
     if (!SHAPED.test(text)) return;
     try {
@@ -3298,6 +3385,9 @@ const HYDRATION_REPORTER = `(() => {
         text: text.slice(0, 500),
         readyState: document.readyState,
         sinceNavigationMs: Math.round(performance.now()),
+        earliestBody: earliest.bodyChildren,
+        earliestHead: earliest.headChildren,
+        earliestAtMs: earliest.atMs,
         ...census(),
       });
     } catch {

@@ -45,23 +45,47 @@ export interface PaletteEntry extends Rgb {
   readonly ramp: string;
 }
 
-/** The locked palette, in file order. */
-export function loadPalette(): PaletteEntry[] {
+/**
+ * The palette, in file order — shared, or shared plus one family's extension.
+ *
+ * ## Why the parameter exists
+ *
+ * This file is the measurement tool the fidelity argument is made from, and for
+ * one commit it could not measure the palette that had actually shipped:
+ * `process-art.ts` grew a `family` parameter when the extension landed, this did
+ * not, and so every number it printed was silently the *shared* 32 — a
+ * before-picture presented as an after. A measuring instrument that cannot see
+ * the change it was written to justify is worse than no instrument, because its
+ * output still looks like evidence.
+ *
+ * The behaviour is `process-art.ts`'s, deliberately: **additive, never
+ * replacing.** The shared colours keep their indices, so an index below the
+ * shared count means the same colour it always did — which is what lets a caller
+ * ask *"did this pixel need the extension?"* by index alone.
+ */
+export function loadPalette(family?: string): PaletteEntry[] {
   const raw = JSON.parse(readFileSync('art/palette.json', 'utf8')) as {
     ramps: Record<string, { colors: Record<string, string> }>;
+    familyExtensions?: Record<string, { colors?: Record<string, string> }>;
   };
+  const parse = (ramp: string, name: string, hex: string): PaletteEntry => ({
+    ramp,
+    name,
+    r: parseInt(hex.slice(1, 3), 16),
+    g: parseInt(hex.slice(3, 5), 16),
+    b: parseInt(hex.slice(5, 7), 16),
+  });
+
   const out: PaletteEntry[] = [];
   for (const [ramp, spec] of Object.entries(raw.ramps)) {
-    for (const [name, hex] of Object.entries(spec.colors)) {
-      out.push({
-        ramp,
-        name,
-        r: parseInt(hex.slice(1, 3), 16),
-        g: parseInt(hex.slice(3, 5), 16),
-        b: parseInt(hex.slice(5, 7), 16),
-      });
-    }
+    for (const [name, hex] of Object.entries(spec.colors)) out.push(parse(ramp, name, hex));
   }
+
+  const extension = family === undefined ? undefined : raw.familyExtensions?.[family];
+  for (const [name, hex] of Object.entries(extension?.colors ?? {})) {
+    out.push(parse(`${family ?? ''}-extension`, name, hex));
+  }
+
   return out;
 }
 

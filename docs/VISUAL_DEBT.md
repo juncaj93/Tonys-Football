@@ -27,6 +27,7 @@ Visual QA finds something that is genuinely worth improving and genuinely not wo
 | 2 | Reveal plate, all widths | The collectible is 46 units against a plate that is now six or seven rows tall. It is on the plate's axis and standing on it, so it no longer reads as accidental — but the *caption still outweighs the thing it captions*. | Waiting on real collectible art. All 24 items are `art_status: placeholder`, so tuning focal weight now means tuning to a tagged parcel that is about to be replaced by 24 different silhouettes. |
 | 11 | `/admin/slice/<version>`, the record | **The audit history shows the order of decisions but not when they happened.** *"When was this approved"* is a real question about an audit trail, and the answer is in `slice_reviews.occurred_at` but not on the screen. | Formatting a timestamp here means committing to a convention — the league's day is Eastern (`lib/parlor/season.ts`) and no user-facing surface formats a date yet — and inventing one inside a slice about publication governance would be the wrong place to decide it. The sequence and the actor, which are what a reviewer reads first, are both shown. |
 | 14 | The champion pennants, 360 | **The season year is 10.1 CSS px** — the smallest text in the product and the only thing exempt from the `type-floor` gate. It is painted on an 18 × 15 unit pennant and sized in room units so it scales with the artwork; there is no arrangement of that geometry that reaches thirteen. Raised from 7 to 9 units this slice (8.2px → 10.1px), which is as far as the fabric goes. | It is a two-digit mark rather than copy — the champion's *name* is in the panel that opens, and `hotspots.test.ts` guarantees every screen is reachable without reading it. Fixing it properly means a wider pennant, which is `art/B2_CHAMPION_BANNER.md` and a room slice. The exemption is **declared in the DOM** (`data-environmental-type`) and the driver fails if a second kind ever appears, so it cannot quietly become the way small type gets past the floor. |
+| 16 | Any route, any width — the visual gate itself | **A residual React `#418` survived the fix that closed item 12, and the caret account was therefore not complete.** Two sightings on a branch that changes only PNG bytes, `art/palette.json` and the art scripts — nothing in the React tree — at `/admin/slice/<version>` @375 and `/` @360, 96ms and 164ms after navigation. **Not deterministic**: the same commit swept clean twice, so three sweeps of this branch is 792 captures and 2 sightings, roughly **1 per 396**. Item 12's rate was 1 per 209, so the camera was a real cause and cut it about in half — the closure's *"this accounts for every recorded property"* was one claim too strong. | The evidence needed next is the element name, and it can only come from a **dev build**. The census added for exactly this — `pending`, `bodyChildren`, `headChildren` — has now been shown to be **taken too late to answer the question**, and that is the one new thing this session established. See below. |
 
 ## Closed
 
@@ -107,3 +108,63 @@ a plausible cause. Ten minutes in `node_modules` beat an afternoon of
 reproduction attempts — the mismatch never reproduced locally across a full
 sweep, ten timed reloads, fifteen at 10x CPU throttling, and eight against a
 development build.
+
+---
+
+## Why one hydration census could not answer item 16, and what it takes two of
+
+The `HYDRATION_REPORTER` in `scripts/visual-qa.mts` was added to item 12 for a
+specific reason: `#418`'s production message names no element, so the census
+records *the shape of the document at the instant React gave up* — how far
+loading had got, and whether any Suspense boundary was unresolved. The stated
+purpose was to distinguish **a component that renders differently** from **a
+boundary spliced in mid-hydration**.
+
+It cannot do that, and this is what item 16's two sightings established.
+
+Measured directly against an ordinary load of the same routes:
+
+| | `document.body.children` |
+|---|---|
+| a normal `/` | `div, div, script × 10` |
+| the sighting on `/` | `script × 10, div, div` |
+| a normal `/counter` | `div, div, div, script × 7` |
+| the sighting on `/admin/slice/<version>` | `script × 17, div, div, div` |
+
+**The scripts and the divs have swapped ends**, and the same thing has happened
+in `<head>`: the sighting keeps the metadata tail (`meta, title, meta, meta,
+link`) and has lost the leading `meta, meta` and six of the seven preload
+`link`s.
+
+That is not a partially-parsed document — parsing is in order. It is the document
+**after** React has already discarded the server's tree and re-rendered it. The
+RSC payload `<script>` tags are server-only artifacts with no client counterpart,
+so they stay exactly where they were; the app's `div`s are re-created and
+appended *after* them. `#418`'s own text says so — *"as a result this tree will
+be regenerated on the client"* — and `console.error`, which the reporter patches,
+runs after that regeneration rather than before it.
+
+So the census is a photograph of the recovery, not of the mismatch.
+
+**The reporter now takes two.** `earliestBody` / `earliestHead` are the first
+non-empty census the page manages to take, with `earliestAtMs` beside them, and
+the reporter stops sampling the moment it has one — a whole-document
+`MutationObserver` left running would fire on every node the parser appends, in a
+harness whose other gates measure motion frame by frame. It is named *earliest*
+rather than *served* deliberately: one of the two sightings fired while
+`readyState` was still `loading`, so there is no moment guaranteed to be both
+after the body exists and before React could have touched it. The timestamp is
+what makes the reading judgeable — a sample taken after the error is not
+evidence, and now says so.
+
+Two censuses are a **diff**, and a diff says *where* the tree changed. It still
+will not name an element.
+
+**What would.** A **dev build**, whose message names the element it choked on.
+That is how item 12 was closed and it is the only mechanism that has ever worked
+on this defect. `next dev` serves scripts under exactly the path `checkTonySteady`
+intercepts, so a dev sweep runs; the cost recorded in item 15's closure is that
+`tray-reveal` buys a box, so the wallet drains and the sweep needs a freshly
+seeded database. At roughly one sighting per 396 captures, a single dev sweep is
+about a two-in-three chance of catching nothing — so this is a job for several
+runs, or for a probe that reproduces the trigger rather than waiting for it.
