@@ -1,90 +1,86 @@
-# Homepage art fidelity — before and after
+# Homepage art fidelity — three states of the same room
 
-The commissioner's report was *"much of the homepage art now has distorted
-coloring and shading."* The cause is **palette quantization**, not the source
-art, and these are the pictures that show it.
+The commissioner reported twice. First that *"much of the homepage art now has
+distorted coloring and shading"*, then — after the first fix — that *"the entire
+homepage, including Tony, does not preserve the visual quality of the original
+approved art."* Both were right, and these are the pictures that show why the
+first answer was not enough.
 
-`before` is the shipped asset at `4a36244`; `after` is the same asset at `HEAD`.
-Both are read out of git, never off disk, so the pair cannot drift with a working
-tree. Regenerate with:
+**Three columns, not two.** A before/after pair would let a reader conclude the
+first attempt had simply been too timid. The middle column is what shows that
+*more of the same* was not the answer.
 
-```bash
-npx tsx scripts/palette-evidence.mts
-```
-
-Enlargements are **nearest-neighbour**. Smoothing them would blur the one thing
-being compared — which colour each pixel snapped to.
-
-Every claim below is a colour count on the rectangle named, not an impression of
-the picture. Where the two would disagree, the count wins — see *"the light tiles
-never changed"*.
-
-| File | Rectangle | What changed |
+| suffix | state | shell mean error¹ |
 |---|---|---|
-| `shell-whole-before.png` / `-after.png` | the whole shell, **1:1** (320 × 569) | The room read as though lit by sodium light. Its three largest colours were `wood-dark` 25.9%, `red-dark` 22.4% and `amber-deep` 18.1% — one brown, one crimson and one gold doing the work of walls, ceiling, floor, furniture and counter between them. They are now `zone-ember` 35.8%, `zone-brick` 14.7% and `zone-ochre` 11.2%, three warm neighbours, and the materials separate. |
-| `ceiling-before.png` / `-after.png` | x 40–240, y 0–70, **4×** | **68% of the ceiling was a single colour** — `amber-deep` — with the tile grid rendered as dark scratches over it and `red-dark` at 7% making the scorch. It is `zone-ochre` 47.4% and `amber-deep` 36.0% now: **two tile tones**, which is what the ceiling actually is, with a clean one-unit grid between them and the recessed lights reading as lights. The scorch cleanup of visual debt 9 survives, and had to be re-derived to do so (`PALETTE_FIDELITY_BOUNDARY.md §7a`). |
-| `wall-behind-tony-before.png` / `-after.png` | the oven alcove, x 50–160, y 165–265, **4×** | A single brown checker at roughly Tony's own value — `wood-dark` 30.3% with **`skin-4` at 17.0%**, a *skin* colour holding up a wall. The backsplash is `zone-ember` inside a `wood-dark` frame now, so the recess reads as a recess and `skin-4` drops to 13.2%. |
-| `floor-before.png` / `-after.png` | the foreground band, x 40–240, y 460–560, **4×** | A dense red-on-brown mottle across the whole bottom of the screen — the *"muddy"* in the report — now flat deep red with sparse speckle. **The light tiles never changed:** `amber-mid` is 14.5% of the band before *and* after. What changed is the dark half, which was `red-dark` 47.5% *and* `wood-dark` 21.4% — crimson and brown rendering one tile — and is now `zone-ember` 51.9% and `zone-brick` 24.0%, two values of one material. The tiles read cleaner because what surrounds them stopped being two unrelated hues, not because any cream was added. |
-| `booths-before.png` / `-after.png` | x 180–320, y 260–380, **4×** | The same substitution further back: `red-dark` 33.6%, `wood-dark` 22.6% and `skin-4` 9.1% become `zone-ember` 40.4%, `zone-brick` 24.9% and `zone-ochre` 9.7%. The counter's vertical boards stop being red streaks and show grain. |
-| `counter-front-before.png` / `-after.png` | `zone_counter_front.png`, whole, **2×** | The `/counter` backdrop — the same defect on a second asset, and the largest error improvement of any: **36.4 → 20.1**. Heavy stipple across the checker, potted plant brown; clean now, plant green. |
+| `-before` | the shared 32 (`4a36244`) | 35.0 |
+| `-plus4` | the shared 32 + four `zone` colours (`b4815a1`) | 21.6 |
+| `-after` | each painterly family quantized against **its own** palette | **5.9** |
 
-## The numbers behind the pictures
+¹ against the approved source, out of a possible 441.
 
-`npx tsx scripts/palette-report.mts`, measured on the **incoming source art** and
-quantized the way production quantizes it:
+All three are read out of git rather than off disk, so the comparison cannot
+drift with a working tree. Regenerate with `npx tsx scripts/palette-evidence.mts`.
+Enlargements are **nearest-neighbour** — smoothing them would blur the one thing
+being compared.
 
-| asset | family | mean error | isolated px | `paper` share | `amber` share |
-|---|---|---|---|---|---|
-| shell | `zone` | 35.0 → **21.6** | 2.30% → 2.23% | 0.1% | 27.3% → **20.7%** |
-| counter-front | `zone` | 36.4 → **20.1** | 2.49% → 2.86% | 0.0% | 14.1% → 12.8% |
-| newspaper-rack | `zone` | 28.4 → **23.1** | 15.27% → 16.39% | 10.4% | 1.5% → 0.2% |
-| tony | `character` | 30.3 → 30.3 | 11.06% → 11.06% | 25.4% | 10.1% |
-| neon-sign, signed-jersey, burn-barrel | `collectible` | unchanged | unchanged | unchanged | unchanged |
+## The files
 
-The bottom two rows are the point of the scoping decision: **only `zone` changes.**
-Tony and all twelve approved Batch B collectibles are byte-identical, because the
-extension is additive and never replaces a shared colour.
+| file | rectangle | scale |
+|---|---|---|
+| `shell-whole-*` | the whole shell | 1:1 (320 × 569) |
+| `tony-whole-*` | Tony, whole | 2× |
+| `tony-face-*` | his face — the ruling's named fidelity reference | 6× |
+| `ceiling-*` | x 40–240, y 0–70 | 4× |
+| `wall-behind-tony-*` | the oven alcove, x 50–160, y 165–265 | 4× |
+| `floor-*` | the foreground band, x 40–240, y 460–560 | 4× |
+| `booths-*` | x 180–320, y 260–380 | 4× |
+| `counter-front-*` | `zone_counter_front.png`, whole | 2× |
 
-### There are two ways to count a ramp's share, and they answer different questions
+## What to look for
 
-The table above **quantizes the source** and reports where each source pixel
-*would land*. Counting the colours in the **finished PNG** instead gives a
-different and equally true set of numbers, and the two have been mixed up once
-already:
+- **The ceiling** is the clearest of the eight. Under the shared 32 it is **68% a
+  single colour** with the tile grid broken into dashes over it. Under +4 it is
+  two tones and still orange. Now it is a calm shaded surface with continuous
+  grout lines and the downlights reading as light.
+- **Tony's face** is the ruling's reference. His skin was landing on the shared
+  palette's muddy tans because nothing in it is his yellow-orange. It is the
+  source's warm yellow again, his shading is contiguous, and the jersey is a
+  clean blue rather than a near-black navy.
+- **The floor** is the one where appearance and arithmetic disagree, and it is
+  worth knowing before reading the picture: its **light tiles never changed** —
+  `amber-mid` is 14.5% of the band in every column. What changed is the dark
+  half, which was crimson `red-dark` *and* brown `wood-dark` rendering one tile.
+  The tiles read cleaner because their surround stopped being two unrelated hues.
 
-| the shipped shell | `paper` | `amber` | `wood` | `red` | the four new |
-|---|---|---|---|---|---|
-| before | 5.6% | 24.8% | 31.5% | 24.6% | — |
-| after | 5.6% | 16.8% | 6.4% | 0.2% | **62.3%** |
+## The numbers
 
-Two things fall out of it.
+Measured on the shipped shell:
 
-**The room's only cream was painted on, not chosen.** The `paper` share of the
-finished asset is 5.6% before *and* after, while the quantizer routes 0.1% of the
-source there either way. The difference is `clean-parlor-surfaces.ts`, which
-paints the Tonight board's face flat `paper-white` after quantization — so every
-cream pixel in the old room was a repair script's, and none of it was the palette
-reaching the walls. That is the coverage gap, stated from the other side.
+| | shared 32 | +4 | **after** |
+|---|---|---|---|
+| mean quantization error | 35.0 | 21.6 | **5.9** |
+| `amber` (lamp-glow) share | 27.3% | 20.7% | **0.9%** |
+| busiest single colour | 35.8% | 35.8% | **4.2%** |
+| distinct colours in the asset | 26 | 30 | **90** |
+| file size | 19 KB | 19 KB | 60 KB |
 
-**`wood` and `red` collapse, and that is the defect leaving.** 31.5% → 6.4% and
-24.6% → 0.2% look alarming until you read the error census: `#670d07`, `#681306`
-and `#580d07` are deep booth red and were landing on `wood-dark #4A2E1C` at a mean
-distance of 42–47. They now land on `zone-ember #661505`. The pixels moved to a
-**nearer, warmer** colour, which is why the mean error falls with them.
+Tony's mean error goes **30.3 → 14.5**.
 
-Both assets are **palette-closed before and after** — zero off-palette pixels —
-and the dimensions and alpha are unchanged.
+**Only the two painterly families change.** Seven files in total: six `zone`
+assets and Tony. All twelve approved Batch B collectibles are byte-identical,
+because a family extension is additive and never replaces a shared colour.
 
-**Two things these numbers do not say**, and the boundary document says both at
-length:
+## Two things these numbers do not say
 
-- **Isolated pixels do not improve.** The shell's barely moves and two assets get
-  slightly worse. More colours mean more decision boundaries. The *"fewer isolated
-  noisy pixels"* in the acceptance criteria is a different mechanism and is
-  recorded as open.
-- **Tony is not fixed by this and this does not claim he is.** He is the control
-  case: his coverage was already fine, and his 11.06% isolated rate is untouched
-  because his family is not extended.
+- **The isolated-pixel rate got worse and that is not a regression.** The shell's
+  went 2.23% → 13.46% while the picture became far more faithful. The metric
+  counts pixels differing from all four neighbours, which on an honestly rendered
+  gradient is most of them — so it rewards flat posterized fields. The ruling
+  says as much: *"do not rely only on… isolated-pixel rate"*.
+- **This is not the whole page.** `docs/evidence/homepage-fidelity/` has the
+  composition at 390 / 375 / 360, before and after, which is what the ruling asks
+  to be judged. A crop of the ceiling cannot answer whether Tony belongs in the
+  room he is standing in.
 
-The reasoning, the choice of the four colours, the scoping decision and the three
-defects the re-derivation exposed: `docs/PALETTE_FIDELITY_BOUNDARY.md`.
+The reasoning, the four architectures that were measured, and the repair script
+this made unnecessary: `docs/PALETTE_FIDELITY_BOUNDARY.md`.
