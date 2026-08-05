@@ -160,7 +160,7 @@ is a true and much smaller claim.
 | `npm run test` | **1368 passed / 84 files**, 2 skipped |
 | `npm run build` | clean |
 | `npm run art:validate` | clean |
-| `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed**, zero hydration sightings — see below |
+| `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed — twice**, zero hydration sightings in both; the second run carried the two driver repairs — see below |
 | Evidence | `docs/evidence/palette-fidelity/`, twelve PNGs and a README, regenerable from git |
 
 ### The `#418` came back, and item 12's account was one claim too strong
@@ -170,10 +170,12 @@ A sweep of this branch failed on **two** React `#418`s — `/admin/slice/<versio
 PNG bytes, `art/palette.json` and the art scripts. Nothing in the React tree.
 
 **It is not deterministic and it is not this slice**: the same commit swept clean
-before and after. Three sweeps is **792 captures and 2 sightings, roughly 1 per
-396**. Item 12 ran at 1 per 209, so `caret: 'initial'` was a real cause and cut
-the rate about in half — but the closure's *"this accounts for every recorded
-property"* was too strong, and the residual is now **visual debt 16**.
+before it and twice after. Four sweeps is **1,056 captures and 2 sightings,
+roughly 1 per 528** — expected 0.5 per sweep, so about a **40% chance any given
+sweep trips on it**. Item 12 ran at 1 per 209, so `caret: 'initial'` was a real
+cause and cut the rate by more than half — but the closure's *"this accounts for
+every recorded property"* was too strong, and the residual is now **visual debt
+16**.
 
 **The one new thing established is a negative result about the instrument.** The
 hydration census exists to distinguish *a component that renders differently*

@@ -34,18 +34,18 @@ Verified after the fact rather than assumed: `list_workflow_runs` filtered to
 | | |
 |---|---|
 | Branch | `claude/homepage-palette-fidelity` |
-| Head | `b4815a1` — *Give the room four colours it never had* |
 | Base | `origin/main` at `4178187` (#67) |
 | Open PR | **none, deliberately** |
-| Workflow runs created | **0** |
+| Workflow runs created | **0**, confirmed from GitHub after each push |
 
-Three commits:
+Four commits:
 
 | SHA | What |
 |---|---|
 | `6b8fc78` | The four measurement scripts. They change nothing and are what any future palette argument is made from |
 | `4a36244` | `docs/PALETTE_FIDELITY_BOUNDARY.md` — the diagnosis, the mechanism, the candidate, the scoping decision |
 | `b4815a1` | The palette extension itself: `art/palette.json`, six reprocessed `zone` assets, and the re-derived shell corrections |
+| `c85dda7` | The evidence, and repairs to two instruments that were reporting confidently and wrongly — see §4 |
 
 **This branch supersedes the designated branch.**
 `claude/text-surface-tuesday-slice-fouqq1` is two commits ahead of `main`
@@ -101,23 +101,24 @@ created and freshly seeded database. None was skipped, shortened or relaxed.
 | `npm run test` | **1368 passed / 84 files**, 2 skipped |
 | `npm run build` | clean |
 | `npm run art:validate` | clean |
-| `npm run visual:qa` | **88 states × 3 widths, passed**, zero hydration sightings |
+| `npm run visual:qa` | **88 states × 3 widths, passed — twice**, zero hydration sightings in both |
 
 **One thing to know before the hosted Visual QA runs, because it changes what to
 do if it comes back red.** A sweep of this branch once failed on two React `#418`
-hydration errors, and the same commit swept clean before and after — three sweeps
-is 792 captures and 2 sightings, roughly **one per 396**. It is **intermittent and
-not this slice**, which changes only PNG bytes, `art/palette.json` and the art
-scripts. It is now **visual debt 16**, measured in `docs/VISUAL_DEBT.md`.
+hydration errors, and the same commit swept clean before it and twice after —
+four sweeps is 1,056 captures and 2 sightings, roughly **one per 528**. It is
+**intermittent and not this slice**, which changes only PNG bytes,
+`art/palette.json` and the art scripts. It is now **visual debt 16**, measured in
+`docs/VISUAL_DEBT.md`.
 
-So a hosted sweep has roughly a **one-in-three chance of failing on a defect that
-has nothing to do with the change**. If it does, there are two honest options and
-neither is a re-run:
+At that rate a 264-capture sweep expects half a sighting, so a hosted run has
+roughly a **40% chance of failing on a defect that has nothing to do with the
+change**. If it does, there are two honest options and neither is a re-run:
 
-- **Merge on the evidence.** Three local sweeps of this exact commit, two clean,
-  and the failure is a console error rather than a rendering defect — every
-  product gate was green in all three. This is the commissioner's call, not a
-  session's.
+- **Merge on the evidence.** Four local sweeps of this commit's product code,
+  three of them clean, and the failure is a console error rather than a rendering
+  defect — every product gate was green in all four. This is the commissioner's
+  call, not a session's.
 - **Leave it and come back to visual debt 16 first.** Also defensible. What is
   not defensible is spending sixteen more minutes to re-roll the same die.
 

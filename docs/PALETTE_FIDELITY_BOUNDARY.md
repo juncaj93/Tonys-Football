@@ -267,7 +267,7 @@ literal, so a colour that moves fails the test instead of silently detaching it.
 | `npm run test` | **1368 passed / 84 files**, 2 skipped |
 | `npm run art:validate` | clean |
 | `npm run build` (production) | clean |
-| `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed.** See `docs/CHECKPOINT.md` for the intermittent `#418` that appeared once on this branch and did not reproduce — it is visual debt 16 and it is not this slice |
+| `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed — twice**, the second time with the two driver repairs in place. See `docs/CHECKPOINT.md` for the intermittent `#418` that appeared once on this branch and did not reproduce; it is visual debt 16 and it is not this slice |
 | Evidence | `docs/evidence/palette-fidelity/`, regenerable with `scripts/palette-evidence.mts` |
 | **Production** | **not verified.** Nothing carrying this has been merged or deployed. |
 
