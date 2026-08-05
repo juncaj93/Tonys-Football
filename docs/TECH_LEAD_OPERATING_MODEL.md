@@ -127,6 +127,7 @@ Chronological. `PR #n · comment` is the authoritative text.
 | 2026-07-29 | Palette quantization: **plain Euclidean RGB**; luma weighting never reintroduced | `art/ASSET_PIPELINE.md §4` · PR #11 |
 | 2026-07-29 | Full-batch regeneration; B0 re-approval required after a quantizer change | PR #11 |
 | 2026-07-29 | Cream board **closed at step 2** — metric correction alone; palette stays 32 colours | PR #11 |
+| 2026-08-06 | **Superseded in part.** The shared palette stays 32 and stays shared; a family whose art measurably needs more declares an **additive** extension, sized by measurement (`zone` 64, `character` 16). The 2026-07-29 row recorded that a metric fix sufficed *then*, not a standing aesthetic rule | `docs/PALETTE_FIDELITY_BOUNDARY.md` |
 | 2026-07-29 | Receipt is **trigger-only**; every blank surface classified surface-rendered or trigger-only | PR #9 |
 | 2026-07-29 | Tony's Pizza **first-party branding permitted**; generic jersey numbers permitted; `16` canonical. Test is **identifiability, not decoration** | `art/ART_SPEC.md` · PR #11 |
 | 2026-07-29 | Champion banners: **year-only fabric**, names in `/timeline`, six left-aligned slots, current season reveals `TBD` | PR #9 |

@@ -287,6 +287,19 @@ as `shift-tonight-board.ts`: measured, integrity-checked, idempotent, and pinned
 by `scripts/clean-parlor-surfaces.test.ts` so a reprocess that reverts them fails
 the suite by name.
 
+> **Superseded 2026-08-06.** Every row of the table above that names *source
+> artwork* or *deterministic replacement* has been **deleted**, and the surfaces
+> are correct without it. All three were repairs to damage the **quantizer** was
+> doing — this document said so itself, one section up: the board's face was a
+> dithered vignette because thirty-two colours had three ambers to spend on a
+> smooth gradient. The `zone` family palette carries the painting's own values,
+> so the face is the painting's cream rather than a fill and the alcove is the
+> painting's own value step. `scripts/clean-parlor-surfaces.ts` and its
+> thirty-four tests are gone; `scripts/shell-surfaces.test.ts` pins the
+> *properties* they used to produce. The mechanism for these three surfaces is
+> now **"do not damage it in the first place."**
+> `docs/PALETTE_FIDELITY_BOUNDARY.md §7`.
+
 Neither can introduce a colour. The replacement paints two palette values; the
 despeckle only ever assigns a colour already dominant among a pixel's own
 neighbours.
@@ -545,3 +558,24 @@ commissioner's report is about Tony, the rack is not cut by a foreground layer s
 the step has nothing to read against, and widening this slice to every glowing
 overlay is a change to the room's shared affordance rather than a defect repair.
 Recorded so it is a decision rather than an oversight.
+
+### The gate had a race that could take the whole sweep down
+
+Found by running `--state=tony-steady` on its own, which is the one way this gate
+had never been exercised — in a full sweep it is state two of eighty-eight and
+the timing is different.
+
+`Page.screencastFrame` keeps arriving until Chromium has processed
+`stopScreencast`, so **at least one frame is normally still in flight when
+`detach()` runs**, and acking a frame on a detached session rejects. The ack was
+`void`ed, which makes that an *unhandled* rejection — and Node's default for an
+unhandled rejection is to kill the process. So the sweep died with
+`cdpSession.send: Target page, context or browser has been closed`: a message
+about the harness, printed where a reader is looking for a message about the
+room, with no gate result at all.
+
+Two halves, because either alone leaves something wrong. Collection stops the
+moment the session is closing, so a late frame cannot enter the measurement; and
+the ack's rejection is caught, because a frame nobody is going to read does not
+need to be acknowledged. **The gate itself is unchanged** — same window, same
+discriminator, same counts.

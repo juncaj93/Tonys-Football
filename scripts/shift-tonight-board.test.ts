@@ -3,7 +3,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 import { describe, expect, it } from 'vitest';
 
-import { locateBoardRightEdge, shiftBoard } from './shift-tonight-board';
+import { FRAME_PROFILE, locateBoardRightEdge, shiftBoard } from './shift-tonight-board';
 
 /**
  * The Tonight board's one-time correction, asserted.
@@ -94,10 +94,17 @@ describe('shiftBoard', () => {
   const WALL: [number, number, number] = [0xf2, 0xa9, 0x4b];
   const PANEL: [number, number, number] = [0x4a, 0x2e, 0x1c];
   const FIELD: [number, number, number] = [0xf2, 0xc9, 0x4c];
-  const PROFILE: [number, number, number][] = [
-    [0xc9, 0x7a, 0x22], [0xc9, 0x7a, 0x22], [0x4a, 0x2e, 0x1c], [0x8c, 0x1f, 0x22],
-    [0x8c, 0x1f, 0x22], [0x5e, 0x3a, 0x25], [0xa9, 0x71, 0x3f],
-  ];
+  /*
+   * Read from the module rather than written out. These are colours of the real
+   * shell, so they moved when the `zone` extension requantized it — and a fixture
+   * that spells them out fails for a reason that has nothing to do with the
+   * transform under test.
+   */
+  const PROFILE: [number, number, number][] = FRAME_PROFILE.map((hex) => [
+    Number.parseInt(hex.slice(1, 3), 16),
+    Number.parseInt(hex.slice(3, 5), 16),
+    Number.parseInt(hex.slice(5, 7), 16),
+  ]);
 
   function canvas(): Buffer {
     const pixels = Buffer.alloc(WIDTH * HEIGHT * 4);

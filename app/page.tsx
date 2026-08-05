@@ -397,15 +397,23 @@ export default async function ParlorPage({
               * Both lines wore `board-paint` — one hard pixel of `amber-glow` on
               * all four sides — because the board's face was a **dithered amber
               * vignette** and dark-red letters kept landing half on `#FFD98A` and
-              * half on `#F2A94B`. `scripts/clean-parlor-surfaces.ts` made the face
-              * a flat cream writing surface, so there is one ground under every
-              * letter and the outline has nothing left to do. Keeping it would
-              * put a pale halo around dark text on near-white, which is the
-              * *"noisy background competing with text"* the direction bans,
-              * arriving from the fix rather than from the art.
+              * half on `#F2A94B`. That vignette was quantization damage: the
+              * shared 32 had three amber values to spend on a smooth gradient.
+              * The `zone` family palette carries the painting's own cream, so
+              * the face is an even light ground again — mean luma 197 of 255
+              * with a 5th percentile of 186, pinned by
+              * `scripts/shell-surfaces.test.ts` — and the outline has nothing
+              * left to do. Keeping it would put a pale halo around dark text on
+              * near-white, which is the *"noisy background competing with
+              * text"* the direction bans, arriving from the fix rather than
+              * from the art.
               *
-              * `red-dark` on `paper-white` measures 8.4:1 and `wood-dark` on it
-              * 10.6:1. Neither needs help.
+              * `red-dark` on the face's dominant cream measures 5.60:1 and on
+              * its darker end 4.88:1; `wood-dark` measures 7.70:1 and 6.71:1.
+              * All four clear AA, and the *worst* of them is what
+              * `scripts/shell-surfaces.test.ts` asserts — because the face is a
+              * gradient now, so an average would not be the question. Neither
+              * ink needs help.
               */}
             <div
               aria-hidden="true"

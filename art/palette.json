@@ -1,9 +1,8 @@
 {
-  "$comment": "Tony's Pizza Fantasy — locked palette. 32 colors. Every generated asset is quantized to exactly these values during processing; this file is the mechanism that keeps independently generated batches looking like one world. Do not add, remove, or edit a color without regenerating every affected asset.",
+  "$comment": "Tony's Pizza Fantasy — locked palette. 32 shared colours, plus a narrowly typed per-family extension. Every generated asset is quantized to these values during processing; this file is the mechanism that keeps independently generated batches looking like one world. Do not add, remove, or edit a color without regenerating every affected asset.",
   "version": "1.0",
   "status": "PROVISIONAL — locked on approval of art test batch B0",
   "totalColors": 32,
-
   "ramps": {
     "ink": {
       "role": "Outlines, text, shadow anchors. Warm-biased so it never reads as pure black.",
@@ -88,7 +87,99 @@
       }
     }
   },
-
+  "familyExtensions": {
+    "$comment": "Colours available to ONE asset family only. The shared 32 stay shared. A family extension is how a measured coverage gap gets closed without rewriting art that does not have the gap, and its SIZE is a measured property of that family's art rather than a convention -- see docs/PALETTE_FIDELITY_BOUNDARY.md. Derive with `npx tsx scripts/derive-family-palette.mts <family> <count>`; the hexes are literals here and are never recomputed at build time.",
+    "zone": {
+      "$comment": "The room's own 64. `zone_*` assets are large painterly interiors: the shell arrives as a 941x1672 painting with 153,738 distinct colours and 2.9% blockiness -- a continuous-tone illustration, not pixel art. Against the shared 32 it quantized to a mean error of 35 of a possible 441, with the paper ramp taking 0.1% of the pixels and the amber (lamp-glow) ramp 27.3%, which is why the room read as lit by sodium light. Four colours (the 2026-08-05 pass) took that to 21.6 and were still visibly orange and posterized at phone resolution. Sixty-four take it to 5.4 and are visually indistinguishable from the approved source. Ordered by the share of the family each carries.",
+      "colors": {
+        "zone-01": "#ECA546",
+        "zone-02": "#E89B3B",
+        "zone-03": "#E49232",
+        "zone-04": "#670D07",
+        "zone-05": "#6E2D01",
+        "zone-06": "#612902",
+        "zone-07": "#6E0F07",
+        "zone-08": "#F9C371",
+        "zone-09": "#DB882B",
+        "zone-10": "#7B3201",
+        "zone-11": "#552302",
+        "zone-12": "#611008",
+        "zone-13": "#D67F21",
+        "zone-14": "#CC761F",
+        "zone-15": "#581009",
+        "zone-16": "#3C1801",
+        "zone-17": "#B02502",
+        "zone-18": "#873801",
+        "zone-19": "#F3B356",
+        "zone-20": "#481D01",
+        "zone-21": "#750F06",
+        "zone-22": "#5E0C06",
+        "zone-23": "#A51F02",
+        "zone-24": "#B6681D",
+        "zone-25": "#311201",
+        "zone-26": "#4C0F0A",
+        "zone-27": "#985010",
+        "zone-28": "#2D271E",
+        "zone-29": "#753D0C",
+        "zone-30": "#BF6E1E",
+        "zone-31": "#540C05",
+        "zone-32": "#BC2C03",
+        "zone-33": "#A45712",
+        "zone-34": "#86460E",
+        "zone-35": "#691403",
+        "zone-36": "#260E01",
+        "zone-37": "#991B01",
+        "zone-38": "#AE5C11",
+        "zone-39": "#AC611B",
+        "zone-40": "#7E1903",
+        "zone-41": "#C46C16",
+        "zone-42": "#16180F",
+        "zone-43": "#B96414",
+        "zone-44": "#585A40",
+        "zone-45": "#7E0C04",
+        "zone-46": "#944001",
+        "zone-47": "#3E0C04",
+        "zone-48": "#731902",
+        "zone-49": "#8A1F01",
+        "zone-50": "#4B0C03",
+        "zone-51": "#8D0E02",
+        "zone-52": "#A44102",
+        "zone-53": "#992C01",
+        "zone-54": "#2B3F02",
+        "zone-55": "#5B1402",
+        "zone-56": "#F5E9C7",
+        "zone-57": "#A94F02",
+        "zone-58": "#BE0801",
+        "zone-59": "#7D8982",
+        "zone-60": "#536403",
+        "zone-61": "#84BFD2",
+        "zone-62": "#CA5204",
+        "zone-63": "#8E991B",
+        "zone-64": "#DD2504"
+      }
+    },
+    "character": {
+      "$comment": "Tony's own 16. He arrives 480x1315 with 72,004 colours. The shared 32 have no yellow-orange for his skin, so it landed on the skin ramp's muddy tans and his face lost the source's warmth entirely; his jersey blue and apron cream were served no better. Sixteen colours take his mean error from 30.3 to 14.5 while keeping his shading contiguous -- more than that raises the isolated-pixel rate without improving what the face looks like, which is measured in docs/PALETTE_FIDELITY_BOUNDARY.md.",
+      "colors": {
+        "character-01": "#FDF1CC",
+        "character-02": "#201F20",
+        "character-03": "#070403",
+        "character-04": "#A69A8F",
+        "character-05": "#3D1600",
+        "character-06": "#F48E02",
+        "character-07": "#FDB111",
+        "character-08": "#7B4204",
+        "character-09": "#D70704",
+        "character-10": "#B16101",
+        "character-11": "#034FB5",
+        "character-12": "#013F96",
+        "character-13": "#035FCC",
+        "character-14": "#032E6E",
+        "character-15": "#910101",
+        "character-16": "#4173BA"
+      }
+    }
+  },
   "semantic": {
     "$comment": "Semantic roles map to ramp entries. Never introduce a new hex for a semantic role.",
     "outline": "ink-900",
@@ -105,7 +196,6 @@
       "legendary": "amber-glow"
     }
   },
-
   "prohibited": {
     "$comment": "Never sample or introduce these, regardless of what a generation returns.",
     "pureBlack": "#000000",

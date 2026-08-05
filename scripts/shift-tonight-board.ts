@@ -50,6 +50,22 @@ function hexAt(pixels: Buffer, width: number, x: number, y: number): string {
     .join('')}`.toUpperCase();
 }
 
+/**
+ * The lit wall to the board's right — **a set, because the wall has depth now.**
+ *
+ * It used to be the single value `#F2A94B`, and that was true of a wall painted
+ * in one colour by a 32-entry palette with nothing else in range. With the
+ * `zone` family's own 64 the same wall renders in three tones across the height
+ * of the board, which is what the source painting has, so a scan for one exact
+ * colour stops on the first row and reports the board at x 195.
+ *
+ * Measured on the shipped shell across rows 85–170: columns x 181–195 are these
+ * three to within one pixel, and x 180 — the board's amber lip — contains none
+ * of them. That is what keeps this a boundary test rather than a guess, and it
+ * is why the lip's own tones are deliberately **not** in the set.
+ */
+const LIT_WALL = new Set(['#F2A94B', '#ECA546', '#E89B3B']);
+
 /** The board as the shell is painted, and as it must end up. Inclusive. */
 const BOARD = { left: 49, right: 180, top: 79, bottom: 179 } as const;
 
@@ -58,18 +74,39 @@ const BOARD_WIDTH = BOARD.right - BOARD.left + 1;
 
 /**
  * The frame's colour sequence reading inward from its last column, at a row
- * well inside the board. Amber lip, dark bevel, red face, shadow, inner tan.
+ * well inside the board. Amber lip, ochre, ember bevel, brick face, ember, tan.
  *
  * This is the integrity check. The right edge below says *where* the board is;
  * this says the thing found there is actually the board.
+ *
+ * ## Re-measured twice, as the `zone` palette grew
+ *
+ * These are colours of the shell, so they move whenever it is requantized. The
+ * sequence has now been measured three times and the history is the argument for
+ * the family palette rather than a nuisance:
+ *
+ * | palette | sequence |
+ * |---|---|
+ * | shared 32 | `#C97A22 #C97A22 #4A2E1C #8C1F22 #8C1F22 #5E3A25 #A9713F` |
+ * | shared + 4 | `#C97A22 #B46110 #661505 #A02F02 #A02F02 #661505 #A9713F` |
+ * | shared + 64 | the constant below |
+ *
+ * The first has **`#5E3A25` — `skin-4`, on a wooden board frame**, and two pairs
+ * of repeated colours where the painting has a graded bevel: with nothing in
+ * range, a frame's shadow landed on a *skin* colour and its steps collapsed into
+ * each other. The second fixed the skin tone and still repeated. The third has
+ * seven distinct values, which is what the source painting actually has.
+ *
+ * Re-measured rather than relaxed, every time. A profile that tolerated any
+ * colour would stop being an integrity check the moment it was convenient.
  */
-const FRAME_PROFILE = [
-  '#C97A22',
-  '#C97A22',
-  '#4A2E1C',
-  '#8C1F22',
-  '#8C1F22',
-  '#5E3A25',
+export const FRAME_PROFILE = [
+  '#E49232',
+  '#B96414',
+  '#612902',
+  '#873801',
+  '#A44102',
+  '#7B3201',
   '#A9713F',
 ] as const;
 const PROFILE_ROW = 128;
@@ -97,14 +134,15 @@ export function locateBoardRightEdge(pixels: Buffer, width: number): number {
   const FIRST_ROW = 85;
   const LAST_ROW = 170;
   const ROWS = LAST_ROW - FIRST_ROW + 1;
-  const LIT_WALL = '#F2A94B';
   const SOLID = 0.95;
 
   // x 195 is lit wall in both states. Walk left while it stays lit wall.
   let right = 195;
   while (right > 0) {
     let n = 0;
-    for (let y = FIRST_ROW; y <= LAST_ROW; y++) if (hexAt(pixels, width, right, y) === LIT_WALL) n++;
+    for (let y = FIRST_ROW; y <= LAST_ROW; y++) {
+      if (LIT_WALL.has(hexAt(pixels, width, right, y))) n++;
+    }
     if (n / ROWS < SOLID) break;
     right--;
   }

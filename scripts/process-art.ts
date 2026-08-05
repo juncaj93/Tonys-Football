@@ -45,9 +45,35 @@ function parseHex(hex: string): [number, number, number] {
 
 interface PaletteFile {
   readonly ramps: Record<string, { readonly colors: Record<string, string> }>;
+  readonly familyExtensions?: Record<string, { readonly colors?: Record<string, string> }>;
 }
 
-export function loadPalette(): readonly [number, number, number][] {
+/**
+ * The palette an asset is quantized against.
+ *
+ * ## Shared by default, extended only where a gap was measured
+ *
+ * The 32 shared colours are what make independently generated batches look like
+ * one world, and they stay shared. `familyExtensions` adds a handful more to
+ * **one family**, because the homepage-fidelity audit found a coverage gap that
+ * only one family has.
+ *
+ * `zone_*` assets are large painterly interiors. Their dominant surfaces — walls,
+ * ceiling, floor, counter — sit in a warm mid range the shared palette does not
+ * reach: measured on the shell, the `paper` ramp took **0.1%** of the pixels and
+ * the `amber` (lamp-glow) ramp took **27.3%**, at a mean error of 35 out of a
+ * possible 441. That is why the room rendered orange and speckled while the
+ * source and the downscale were both clean.
+ *
+ * A collectible is 46 x 46 of punchy authored shape and has no such gap. Applied
+ * globally the same four colours rewrote all twelve approved Batch B pieces by up
+ * to 39% — a re-approval event, not a defect fix. Commissioner decision,
+ * 2026-08-05: scope it to `zone`.
+ *
+ * **The extension is additive and never replaces a shared colour**, so an asset
+ * in any other family is byte-identical to what it was before this existed.
+ */
+export function loadPalette(family?: string): readonly [number, number, number][] {
   const raw = JSON.parse(
     readFileSync(path.join(process.cwd(), 'art', 'palette.json'), 'utf8'),
   ) as PaletteFile;
@@ -56,6 +82,10 @@ export function loadPalette(): readonly [number, number, number][] {
   for (const ramp of Object.values(raw.ramps)) {
     for (const hex of Object.values(ramp.colors)) colors.push(parseHex(hex));
   }
+
+  const extension = family === undefined ? undefined : raw.familyExtensions?.[family];
+  for (const hex of Object.values(extension?.colors ?? {})) colors.push(parseHex(hex));
+
   return colors;
 }
 
@@ -134,6 +164,17 @@ function parseCanvas(canvas: string): { width: number; height: number } {
     throw new Error(`Unreadable canvas "${canvas}".`);
   }
   return { width, height };
+}
+
+/**
+ * Which family's palette an incoming file is quantized against.
+ *
+ * The registry is the authority, exactly as it is for the canvas — deriving the
+ * family from the filename prefix would be a second, quietly divergent opinion
+ * about what a `zone_` file is.
+ */
+function familyOf(filename: string): string {
+  return assetRegistry.get(slugFromFilename(filename))?.family ?? '';
 }
 
 /** `zone_front_counter_01.png` → `zone_front_counter`. */
@@ -256,11 +297,33 @@ async function main(): Promise<void> {
     process.exit(1);
   }
 
-  const palette = loadPalette();
-  console.log(`Palette: ${String(palette.length)} colours\n`);
+  /*
+   * Resolved per asset, because the palette is per family now. Cached, so the
+   * file is read once per family rather than once per asset — and so the log can
+   * say plainly which family got more than the shared 32.
+   */
+  const byFamily = new Map<string, readonly [number, number, number][]>();
+  const paletteFor = (family: string): readonly [number, number, number][] => {
+    const cached = byFamily.get(family);
+    if (cached !== undefined) return cached;
+    const resolved = loadPalette(family);
+    byFamily.set(family, resolved);
+    return resolved;
+  };
+
+  const shared = loadPalette().length;
+  console.log(`Palette: ${String(shared)} shared colours\n`);
 
   for (const file of files.sort()) {
-    await processOne(file, palette);
+    await processOne(file, paletteFor(familyOf(file)));
+  }
+
+  for (const [family, colours] of [...byFamily].sort()) {
+    if (colours.length > shared) {
+      console.log(
+        `\n${family} used ${String(colours.length - shared)} extra colour(s) from its family extension.`,
+      );
+    }
   }
 
   // A signpost, not a stage.

@@ -1,5 +1,14 @@
 # Shell Audit — `zone_parlor_shell.png`
 
+> **Superseded 2026-08-06.** This audit concluded the shell needed **targeted
+> regeneration of its source art**. It did not. The source is a clean 941 x 1672
+> painting with 153,738 distinct colours; every defect recorded below was created
+> by quantizing it onto a 32-colour palette chosen for 46 x 46 collectibles. Both
+> the "shading detail lands as scattered near-black singles" finding and the
+> "nothing between `red-dark` and near-black" finding are that palette's coverage
+> gap, described from the inside. See `docs/PALETTE_FIDELITY_BOUNDARY.md`.
+
+
 **Source:** `art/incoming/zone_parlor_shell.png` — **941 × 1672, PNG, sRGB, 8-bit, 3 channels, no alpha**
 **Production canvas:** 320 × 569 · **Registered** (canvas only; no path, nothing resolves it)
 **Revision 5** — B0 gate passed. Object map untouched, nothing integrated.

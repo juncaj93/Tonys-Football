@@ -25,10 +25,308 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Batch B launch art** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #55 | Nothing. 12 of 24 collectibles plus `object_box_owned` have production art, which is the launch commitment. The remaining twelve draw `placeholder_pizza_box` by design |
+| **Homepage art fidelity** | `QUEUED_NOT_ACTIVE` — **built, waiting to merge** | `claude/homepage-palette-fidelity` | this session | Nothing buildable. Four `zone`-scoped palette colours, six reprocessed assets, the shell's two corrections re-derived. **It is waiting on Actions minutes, not on work** — `docs/PHONE_ONLY_HANDOFF.md` is the merge queue and its price |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-06 (sixteenth session)
+
+### The homepage was being drawn in a palette that served 2% of it
+
+**Commissioner, 2026-08-06:** Tony's clipping is confirmed fixed and closed. The
+remaining concern is broader — *"the entire homepage, including Tony, does not
+preserve the visual quality of the original approved art"* — with the ruling that
+**visual fidelity at true phone size is the acceptance criterion** and that mean
+error, palette usage and isolated-pixel rate are explicitly *not* sufficient.
+
+**The 2026-08-05 four-colour pass was the right diagnosis at the wrong scale.** It
+halved the shell's mean error, 35.0 → 21.6, and left a room that is still visibly
+orange and posterized on a phone. Growing it was not the answer either; the shape
+was wrong.
+
+### The source art is not pixel art, and that is the finding
+
+| | dimensions | distinct colours | blockiness |
+|---|---|---|---|
+| `zone_parlor_shell.png` | 941 × 1672 | **153,738** | 2.9% |
+| `character_tony_neutral_02.png` | 480 × 1315 | **72,004** | 5.7% |
+
+These are continuous-tone paintings. **The pixel-art look is manufactured by the
+pipeline**, which downscales the shell 2.94:1 and then snaps 153,738 colours onto
+32 — a palette chosen for 46 × 46 collectibles generated in independent batches,
+where a shared palette is what stops batch four looking like a different game.
+The room is not that, and **the count was a convention rather than a
+measurement**.
+
+The room is also drawn at **1170 device pixels from a 320-pixel file** — a 3.66×
+upscale at 390 — so every artifact is magnified three to four times before
+anybody sees it. Comparing 320-pixel files to each other flatters the pipeline,
+so every comparison in the evidence renders *through* that upscale.
+
+### Typed family palettes — option B, sized by measurement
+
+All four architectures in the ruling were measured. **A** (a better shared
+palette) is rejected by the same number that justifies B: the `zone` extension
+now carries **97.93%** of the room and the shared ramps carry 2.07% between them.
+**C** (skip quantization) is visually the benchmark and costs 406 KB against
+60 KB, and gives up palette closure. **D** (higher resolution) is **not needed** —
+the *unquantized* 320 render is already close to the source, so resolution is
+second-order and this slice does not pull it.
+
+| family | extension | mean error | derived from |
+|---|---|---|---|
+| `zone` | **64** | 35.0 → **5.9** | all six `zone` sources |
+| `character` | **16** | 30.3 → **14.5** | Tony |
+
+`scripts/derive-family-palette.mts` prints the block; the hexes are literals in
+`palette.json` and are **never recomputed at build time**. Additive as before, so
+seven files change and every collectible is byte-identical.
+
+| shipped shell | shared 32 | +4 | **now** |
+|---|---|---|---|
+| lamp-glow (`amber`) share | 27.3% | 20.7% | **0.9%** |
+| busiest single colour | 35.8% | 35.8% | **4.2%** |
+| distinct colours in the asset | 26 | 30 | **90** |
+
+The single measurement that says it best: on the lit wall beside the Tonight
+board, the shared 32 drew **8 colours, 39% of them from the `wood` ramp** —
+brown, on a wall, because nothing warmer was in range. It is 27 graded warm tones
+now.
+
+### The isolated-pixel rate is the wrong instrument, and one nearly shipped as a gate
+
+The shell's isolated-pixel rate went **2.23% → 13.46%** while the picture became
+far more faithful. The metric counts pixels differing from all four neighbours,
+which on an honestly rendered gradient is most of them — so it rewards flat
+posterized fields. A second proxy failed the same way and is recorded because it
+was one commit from being a test: an all-dark-3×3 scan of the ceiling reports
+**593 blocks on the faithful ceiling against 18 on the posterized one**, because
+the faithful one has continuous grout lines where the posterized one had broken
+dashes. **A gate that prefers the worse picture is not a gate.**
+
+### A repair script retired, because its cause is gone
+
+`clean-parlor-surfaces.ts`, its thirty-four tests and `measure-ceiling.mts` are
+**deleted**. It repaired a dithered board face, a speckled alcove and a scorched
+ceiling, and it said in its own header that all three *"are created by the
+downscale and the palette snap, not present in [the painting]"*. Keeping it would
+be worse than dead code — it **overpaints the approved art**, replacing the
+board's face with a flat fill the painting does not have. Visual debts 8 and 9
+stay closed by the cause going rather than by the repair.
+
+`shift-tonight-board.ts` stays: it is *geometric*. Two constants re-measured
+rather than relaxed — `FRAME_PROFILE` for the third time (it used to contain
+`skin-4` on a wooden frame), and `LIT_WALL` became a **set of three**, because
+the wall has depth again and a scan for one exact colour stopped on the first row.
+
+`docs/PALETTE_FIDELITY_BOUNDARY.md` is the canonical account.
+`docs/evidence/homepage-fidelity/` is the full page at 390 / 375 / 360, before and
+after, at device resolution and 1:1.
+
+### Verified
+
+| | |
+|---|---|
+| `npm run typecheck`, `npm run lint` | clean |
+| `npm run test` | **1338 passed / 84 files**, 2 skipped. Thirty fewer than the last pass: `clean-parlor-surfaces`'s thirty-four went with the script and four took their place |
+| `npm run build` | clean |
+| `npm run art:validate` | clean — 12 of 24 collectibles, every one fits its slot |
+| `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed**, zero failures and zero hydration sightings |
+| Full-page evidence | `docs/evidence/homepage-fidelity/` |
+| Asset evidence | `docs/evidence/palette-fidelity/` — four columns: the approved source, the shared 32, the four-colour pass, and what ships |
+| **Production** | **not verified.** Nothing has been merged or deployed |
+
+That is **five consecutive clean sweeps** of this branch since the two `#418`
+sightings, so visual debt 16's rate estimate drops again — 1,584 captures and 2
+sightings, roughly 1 per 792. It stays open and unclaimed; nothing here
+investigated it.
+
+---
+
+## Where the product is — 2026-08-05 (fifteenth session)
+
+### The room got four colours it never had, and that was a *cause* fix
+
+**Commissioner report:** *"much of the homepage art now has distorted coloring
+and shading… similar distortion appears in the ceiling and other room art."*
+Three reference images came with it — a clean Tony source, a clean parlor-shell
+source, and a live homepage screenshot — and the instruction *"do not immediately
+request new art generation."*
+
+**The distortion is palette quantization**, and that is established by rendering
+the pipeline's own intermediate stage rather than by argument:
+
+| stage | result |
+|---|---|
+| the incoming source | **clean** — cream walls, calm ceiling, warm wood |
+| the lanczos downscale to 320 × 569, unquantized | **clean** |
+| after the snap to the shared 32 | **the defect** — a room whose three largest colours are one brown, one crimson and one gold, 66% between them, holding up walls, ceiling, floor, furniture and counter alike |
+
+**No new art was required**, which supersedes `art/SHELL_AUDIT_zone_parlor_shell.md`
+and its conclusion that the homepage needed targeted regeneration.
+
+The shared palette *has* three creams; the room essentially never chooses them.
+Measured on the shell, the `paper` ramp took **0.1%** of the pixels and the
+`amber` — *lamp glow* — took **27.3%**, at a mean error of 35 of a possible 441.
+With nothing in range, walls, ceiling and light floor tiles routed onto lamp
+colours and the room read as lit by sodium light.
+
+**Four colours, chosen by weighted k-means over the worst-served pixels rather
+than by eye** — and the first run had to be thrown away, because unconstrained it
+proposed a *blue* and the resulting palettes swallowed the approved `wood` and
+`red` ramps whole. Minimising an average is not the same as extending a palette.
+The pool is warm-only.
+
+**Scoped to the `zone` family by commissioner decision.** Applied globally the
+same four colours also rewrote all twelve approved Batch B collectibles by up to
+39% — a re-approval event, not a defect fix. The extension is **additive and
+never replaces a shared colour**, which is the property that makes every other
+family byte-identical. Six assets change, all `zone`; Tony and every collectible
+do not.
+
+**62.3% of the finished shell is now one of the four**, which is the size of the
+gap rather than the size of the change. And counting the finished asset rather
+than the source turns up the stronger version of the argument: `paper` is **5.6%
+of the room before and after**, while the quantizer routes 0.1% of the source
+there either way — because every cream pixel in the old room was
+`clean-parlor-surfaces.ts` painting the Tonight board's face after the fact. None
+of it was the palette reaching the walls.
+
+### Re-deriving the shell's two corrections is where the real defects were
+
+The shell carries two one-time corrections keyed to colours the requantization
+moves. Re-deriving them **exposed three defects, none of them caused by this
+slice**:
+
+1. **The ceiling has two field tones and the cleanup wrote one constant.** A
+   constant fill would have replaced a smear inside a shaded tile with a bright
+   patch. It now fills from the field tone already around each pixel.
+2. **One morphological opening only shrinks a thick blob by a ring.** The
+   mechanism was written against smears thin enough to clear in one pass, so
+   nothing had ever revealed it was not a fixed point. It iterates to convergence
+   now — **idempotency was always the claim; it is now the behaviour**.
+3. **The back-wall despeckle overlaps the ceiling rectangle by eight rows and ran
+   after it**, so a lone-pixel filter was partly re-dashing the ceiling's careful
+   opening and two runs produced different images. Despeckle runs first. This is
+   the oldest of the three and predates the extension.
+
+Three test fixtures held colour literals that had moved. One had spoiled a
+coordinate that had **stopped being probed**, so it was passing while checking
+nothing.
+
+**And the measuring instrument had the same class of defect.**
+`palette-study.mts`'s `loadPalette` never gained the `family` parameter
+`process-art.ts` has, so for one commit every number it printed was silently the
+shared 32 — a before-picture presented as an after. `palette-report.mts` now
+prints the shared table and the **shipped, per-family** table side by side,
+unconditionally rather than behind a flag, because a flag nobody passes
+reproduces the failure exactly.
+
+`docs/PALETTE_FIDELITY_BOUNDARY.md` is the canonical account.
+`docs/evidence/palette-fidelity/` is the pictures, regenerable from git with
+`scripts/palette-evidence.mts`.
+
+### The two other slices this session, both closed by measurement
+
+- **The economy ruling** (`2a757c5`, #66) — box price 50 → 200 from the canonical
+  config, two seasonal free-box grants with no third cron, the reward-bearing
+  week band 35–55% → 35–60%, and duplicate salvage. The 50-season simulation
+  selected 200 within the bounded tuning authority: 10.0 boxes, 2.26% legendary,
+  2.8 legendaries league-wide, 57.1% reward weeks, 2.00 grants.
+- **Tony's glow-off clip** (`4178187`, #67) — reported as *"when Tony's glow ends,
+  part of his body still clips."* Treated as a fresh report and it was real, and
+  it was **not** the entrance defect closed as visual debt 13. The `filter`
+  transition promotes a compositing layer, and tearing it down re-rasterizes a
+  fractional-size sprite on a different pixel grid: 27 / 320 / 90 darker pixels at
+  the three widths, zero after `will-change: filter`. `checkTonySteady` reads
+  `getBoundingClientRect` and was **structurally unable to see it** — no rectangle
+  ever changed. `checkGlowLeavesTonyAlone` samples compositor frames over CDP
+  instead.
+
+### Actions conservation, and what a session may not claim
+
+Two commissioner directions landed on 2026-08-05. The morning one withdrew the
+one-PR-per-slice authorization outright — 1,800 of 2,000 included minutes are
+spent. The afternoon one added that there is **no local machine until next week**,
+so nothing may be handed off as *"run these when you get back."*
+
+Remote feature branches are usable as **storage**, and that was verified rather
+than assumed three ways: the workflow files, thirty runs of history, and the
+experiment — `list_workflow_runs` for `claude/homepage-palette-fidelity` returns
+`total_count: 0`.
+
+**`docs/PHONE_ONLY_HANDOFF.md` is the merge queue and its price.** One PR, ~25
+minutes of the ~200 remaining. `AUTONOMY.md §4` carries the rule.
+
+**Nothing is verified in production**, because nothing has been merged. Every
+gate ran locally, in full, on a production build against a fresh database — which
+is a true and much smaller claim.
+
+### Verified
+
+| | |
+|---|---|
+| `npm run typecheck`, `npm run lint` | clean |
+| `npm run test` | **1368 passed / 84 files**, 2 skipped |
+| `npm run build` | clean |
+| `npm run art:validate` | clean |
+| `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed — twice**, zero hydration sightings in both; the second run carried the two driver repairs — see below |
+| Evidence | `docs/evidence/palette-fidelity/`, twelve PNGs and a README, regenerable from git |
+
+### The `#418` came back, and item 12's account was one claim too strong
+
+A sweep of this branch failed on **two** React `#418`s — `/admin/slice/<version>`
+@375 and `/` @360, 96ms and 164ms after navigation, on a branch that changes only
+PNG bytes, `art/palette.json` and the art scripts. Nothing in the React tree.
+
+**It is not deterministic and it is not this slice**: the same commit swept clean
+before it and twice after. Four sweeps is **1,056 captures and 2 sightings,
+roughly 1 per 528** — expected 0.5 per sweep, so about a **40% chance any given
+sweep trips on it**. Item 12 ran at 1 per 209, so `caret: 'initial'` was a real
+cause and cut the rate by more than half — but the closure's *"this accounts for
+every recorded property"* was too strong, and the residual is now **visual debt
+16**.
+
+**The one new thing established is a negative result about the instrument.** The
+hydration census exists to distinguish *a component that renders differently*
+from *a boundary spliced in mid-hydration*, and measured against ordinary loads
+of the same routes it **cannot**: a normal `/` has `div, div, script × 10` in
+`<body>` and the sighting has `script × 10, div, div`. The scripts and the divs
+have swapped ends, which is the document **after** React discarded the server's
+tree and rebuilt it — `console.error` runs after the regeneration `#418`'s own
+text promises. The census photographs the recovery, not the mismatch.
+
+**So the reporter takes two now**, and the earliest one carries the timestamp it
+was taken at, because one of the sightings fired while the document was still
+parsing and there is no moment guaranteed to be both after the body exists and
+before React could touch it. It stops sampling as soon as it has a reading — a
+whole-document observer left running would fire on every parsed node, in a
+harness whose other gates measure motion frame by frame. Two censuses are a diff.
+A diff says *where*; only a dev build says *what*. `docs/VISUAL_DEBT.md` carries
+the measurement.
+
+**The gate was not weakened and nothing was quarantined.** `QUARANTINE` is still
+empty, and re-adding a row on two sightings would be muting a defect on thinner
+evidence than the one that earned the mechanism in the first place.
+
+### And the glow gate could take the whole sweep down
+
+Found by running `--state=tony-steady` alone, which in a full sweep is state two
+of eighty-eight and never has this timing. `Page.screencastFrame` keeps arriving
+until Chromium has processed `stopScreencast`, so a frame is normally still in
+flight when `detach()` runs; acking on a detached session rejects; the ack was
+`void`ed, which makes it an **unhandled** rejection, and Node kills the process
+on one. The sweep died with `cdpSession.send: Target page, context or browser has
+been closed` — a message about the harness where a reader is looking for one
+about the room, and **no gate result at all**.
+
+Collection stops when the session closes and the ack's rejection is caught. The
+gate itself is unchanged: same window, same discriminator, same counts.
+`docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md §11`.
 
 ---
 
