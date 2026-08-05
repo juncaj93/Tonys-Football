@@ -29,6 +29,17 @@ if (process.env['CI'] === 'true' && !hasDatabase) {
 
 const db = hasDatabase ? getDb() : null;
 
+/*
+ * Where a salvage would be paid, if one happened.
+ *
+ * `null` in these tests on purpose: none of them fills a whole tier, so no
+ * opening below can reach `16 §8`'s conversion — and passing a season that is
+ * never used would suggest otherwise. The salvage path has its own tests, which
+ * build the collection that makes it reachable.
+ */
+const seasonId: string | null = null;
+
+
 afterAll(async () => {
   if (hasDatabase) await closePool();
 });
@@ -67,7 +78,7 @@ describe.skipIf(!hasDatabase)('what is true right now', () => {
     const box = await ownedBox(db!, nick.id);
 
     setFixedRoll(0);
-    await openBox(db!, { userId: nick.id, boxId: box!.id });
+    await openBox(db!, { userId: nick.id, boxId: box!.id, seasonId });
     clearRandomSource();
 
     // The negative state is the *absence* of the tag, not a tag of its own.
@@ -80,7 +91,7 @@ describe.skipIf(!hasDatabase)('what is true right now', () => {
     await grantBox(db!, { userId: nick.id, grantKey: 'welcome', source: 'seed' });
     const first = await ownedBox(db!, nick.id);
     setFixedRoll(0);
-    await openBox(db!, { userId: nick.id, boxId: first!.id });
+    await openBox(db!, { userId: nick.id, boxId: first!.id, seasonId });
     clearRandomSource();
 
     await grantBox(db!, { userId: nick.id, grantKey: 'second', source: 'purchase' });
@@ -134,7 +145,7 @@ describe.skipIf(!hasDatabase)('what is true right now', () => {
 
     const box = await ownedBox(db!, nick.id);
     setFixedRoll(0);
-    await openBox(db!, { userId: nick.id, boxId: box!.id });
+    await openBox(db!, { userId: nick.id, boxId: box!.id, seasonId });
     clearRandomSource();
 
     // Same Eastern day, so the cache would hand back the same entry — but the

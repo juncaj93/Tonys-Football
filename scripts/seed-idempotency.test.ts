@@ -137,19 +137,26 @@ describe.skipIf(!hasDatabase)('the deploy seed', () => {
     expect(secondContent).toBe(firstContent);
   });
 
-  it('grants no second welcome box', async () => {
+  it('grants no second box for any occasion it has already granted', async () => {
     /*
      * The most expensive thing a non-idempotent seed could do.
      *
      * `box_openings.box_id UNIQUE` stops a box being *opened* twice; nothing
      * stops one being *granted* twice except the grant being idempotent. A
-     * duplicate welcome box on every deploy would be free loot proportional to
-     * how often anybody merged.
+     * duplicate box on every deploy would be free loot proportional to how often
+     * anybody merged.
+     *
+     * Grouped by `(user_id, source)` rather than by manager alone, because the
+     * seed now hands out **two** boxes: the welcome box, once ever, and the
+     * season-opening box from the 2026-08-04 economy ruling, once a season. Two
+     * boxes from two different occasions is the correct state; two from the same
+     * occasion is the failure, and this is the assertion that can tell them
+     * apart.
      */
     const result = await db!.execute<{ n: number }>(
       sql.raw(
         `select count(*)::int as n from (
-           select user_id from loot_boxes group by user_id having count(*) > 1
+           select user_id, source from loot_boxes group by user_id, source having count(*) > 1
          ) duplicated`,
       ),
     );

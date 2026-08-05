@@ -435,6 +435,68 @@ options mutate nothing, **and** the default does — so it fails on the pre-fix
 behaviour rather than restating the code.
 
 
+### The economy gate passes — commissioner ruling, 2026-08-04
+
+`16 §8`'s release gate exists (`docs/ECONOMY_SIMULATION.md`), it did not pass, and
+the commissioner's ruling closed it.
+
+**The finding was one thing seen four ways.** A median manager earned up to 550
+tokens a week against a 50-token box, so boxes came out at **31.5 a season**
+against a 6–12 range and legendaries at **8 league-wide** against 2–3. The
+**legendary rate per opening was inside its range the whole time** — the rate was
+right and the number of openings was wrong, so the ruling moved the price and
+**left the rarity table alone**.
+
+| | from | to |
+|---|---|---|
+| Standard box price | 50 | **200** |
+| Seasonal free-box grants | none | **exactly 2** |
+| Reward-bearing week range | 35–55% | **35–60%** |
+| Duplicate salvage | unbuilt | **approved** — 20 / 40 / 70 / 120 by rarity |
+
+**The sweep found a defect in the gate, not just a price.** At five seasons, 225
+showed *more* legendaries than 200 despite buying fewer boxes — impossible from a
+price, so the sample was measuring luck. At 10 managers × 5 seasons a league opens
+~580 boxes, and a 2% rate gives ~2.3 legendaries a season with a Poisson spread
+**wider than the 2–3 range itself**; across six seeds at 200 the gate passed on
+three, every failure a legendary metric. **The gate now runs at 50 seasons**,
+which `16 §8`'s "≥5" permits. A release gate that flips on a seed is not a gate.
+
+At 50 seasons all of 175, 200 and 225 pass. **200 selected** — the commissioner's
+value and closest to 200 by definition. Measured: 10.0 boxes, 2.26% legendary
+rate, 2.8 legendaries league-wide, 2.00 grants.
+
+**Shipped in this slice:** the price, the salvage values, the revised ranges, and
+the gate that now passes and **fails on drift** (halving the price back to 50 puts
+it red). Three places still said "50" and all three now derive it — the demo
+tests, the preview fixtures, and `weeklyLineStakeTokens`' rationale, which was
+"a fifth of a box" and is now stale; **the value is deliberately unchanged**
+because the ruling moved one price and Tony's Line is flag-gated shut.
+
+**The grants and the salvage shipped with it**, so the whole ruling is in the
+product rather than only in the gate. `docs/ECONOMY_RULING_BOUNDARY.md` is the
+canonical account; the three things worth carrying forward are:
+
+- **The grants are owed to a seat.** `loot_boxes.grant_key UNIQUE` on
+  `season-grant:<season>:<milestone>:<manager>` is the entire idempotency
+  mechanism — no `already_granted` read exists anywhere — and `milestonesDue` is
+  **monotonic**, which is what makes a manager seated in week 9 receive both
+  boxes rather than be told they missed two that were never conditional on
+  anything.
+- **Salvage needed a fourth lock.** `openBox`'s three existing locks are all
+  scoped to a *box*; choosing an unowned item reads the *collection*, so two
+  boxes opened at once by one manager would both hand over the same item. A
+  transaction-scoped **advisory lock on the manager**, taken before the row lock,
+  is what serializes them. There is no `UNIQUE (user_id, slug)` underneath it,
+  and the reason is recorded in `0014`: every database that opened a box since M2
+  legitimately holds duplicates, and `collectibles_undeletable` makes clearing
+  them impossible on purpose.
+- **A schema comment was wrong, not merely outdated.** *"Duplicates are an
+  ordinary outcome of a weighted table"* contradicted `16 §8` from the day it was
+  written. Five tests asserted the same thing and every one of them was rewritten
+  to assert the rule instead — including a demo state whose premise had become
+  unreachable while still passing.
+
 ### Next executable task, in order
 
 The art queue that used to sit here is closed (`#55`) and this replaces it.

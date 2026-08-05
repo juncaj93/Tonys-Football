@@ -393,6 +393,7 @@ function Revealed({
           */}
         <p className={`rarity-word ${TYPE.eyebrow}`}>
           {reveal.rarity}
+          {reveal.salvageTokens !== null && <span className="text-ink-700/60"> · spare</span>}
           {reveal.replayed && <span className="text-ink-700/60"> · already yours</span>}
         </p>
 
@@ -415,13 +416,21 @@ function Revealed({
           *
           * Three cases, and the first one is the one that matters most: the very
           * first collectible anybody ever owns should be told it is the first.
+          *
+          * A **spare** is a fourth, and it takes precedence over all of them
+          * because the other three would all be lies: nothing went on the shelf.
+          * `16 §8` only converts once a whole tier is owned, so the sentence can
+          * say *why* — which is the difference between "you got tokens" and "you
+          * have finished the commons".
           */}
         <p className={`mt-1.5 ${TYPE.bodyCompact} text-ink-700`}>
-          {reveal.distinct === 1
-            ? 'The first thing on your shelf. It stays there.'
-            : reveal.distinct === reveal.total
-              ? `That is all ${String(reveal.total)}. The whole shelf.`
-              : `${String(reveal.distinct)} of ${String(reveal.total)} on your shelf.`}
+          {reveal.salvageTokens !== null
+            ? `You have every ${reveal.rarity}. Tony gives you ${String(reveal.salvageTokens)} for the spare.`
+            : reveal.distinct === 1
+              ? 'The first thing on your shelf. It stays there.'
+              : reveal.distinct === reveal.total
+                ? `That is all ${String(reveal.total)}. The whole shelf.`
+                : `${String(reveal.distinct)} of ${String(reveal.total)} on your shelf.`}
         </p>
 
         {/*
@@ -493,7 +502,9 @@ function Revealed({
             href="/counter/collection"
             className={`flex min-h-[26px] items-center ${TYPE.eyebrow} text-ink-700/80 underline decoration-ink-700/30 underline-offset-2 active:translate-y-px`}
           >
-            Put it on the shelf
+            {/* Nothing went on the shelf when a spare was converted, so the
+                link says where it goes rather than what just happened. */}
+            {reveal.salvageTokens === null ? 'Put it on the shelf' : 'Look at the shelf'}
           </Link>
 
           {reveal.offer !== null && (
@@ -515,7 +526,11 @@ function Revealed({
       <button
         type="button"
         onClick={onDone}
-        aria-label={`${reveal.name}, ${reveal.rarity}. Put it away.`}
+        aria-label={
+          reveal.salvageTokens === null
+            ? `${reveal.name}, ${reveal.rarity}. Put it away.`
+            : `${reveal.name}, ${reveal.rarity}, a spare worth ${String(reveal.salvageTokens)} tokens. Put it away.`
+        }
         style={place(spec.rect)}
         className="room-shape absolute z-30 outline-none"
         {...roomObjectAttributes(spec)}

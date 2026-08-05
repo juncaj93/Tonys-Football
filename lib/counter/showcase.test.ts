@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
 import { closePool, getDb } from '@/lib/db';
-import { seasonMemberships, seasons, users } from '@/lib/db/schema';
+import { collectibles, seasonMemberships, seasons, users } from '@/lib/db/schema';
 import { PG_ERROR, expectPgError, resetDatabase } from '@/lib/db/test-helpers';
 
 import { ensureRewardTable, grantBox, openBox, ownedBox } from './boxes';
@@ -32,6 +32,17 @@ if (process.env['CI'] === 'true' && !hasDatabase) {
 }
 
 const db = hasDatabase ? getDb() : null;
+
+/*
+ * Where a salvage would be paid, if one happened.
+ *
+ * `null` in these tests on purpose: none of them fills a whole tier, so no
+ * opening below can reach `16 §8`'s conversion — and passing a season that is
+ * never used would suggest otherwise. The salvage path has its own tests, which
+ * build the collection that makes it reachable.
+ */
+const seasonId: string | null = null;
+
 
 describe.skipIf(!hasDatabase)('the showcase', () => {
   beforeEach(async () => {
@@ -82,7 +93,7 @@ describe.skipIf(!hasDatabase)('the showcase', () => {
     await grantBox(db!, { userId, grantKey: key, source: 'test' });
     const box = await ownedBox(db!, userId);
     setFixedRoll(roll);
-    const result = await openBox(db!, { userId, boxId: box!.id });
+    const result = await openBox(db!, { userId, boxId: box!.id, seasonId });
     if (result.status !== 'opened') throw new Error('the test box did not open');
     const choices = await showcaseChoices(db!, userId);
     return choices[choices.length - 1]!.collectibleId;
@@ -180,12 +191,33 @@ describe.skipIf(!hasDatabase)('the showcase', () => {
       expect(await showcaseChoices(db!, alex.id)).toEqual([]);
     });
 
+    /*
+     * A second copy, written directly.
+     *
+     * `0014` made `openBox` incapable of producing one, but the schema still
+     * permits it and every pre-`0014` database holds some — see the same note in
+     * `collection.test.ts`. These two tests are what those managers' pickers
+     * still render through.
+     */
+    async function secondCopy(userId: string, slug: string, at: string) {
+      await db!.insert(collectibles).values({
+        userId,
+        slug,
+        rarity: 'common',
+        acquiredAt: new Date(at),
+      });
+    }
+
     it('offers one entry per distinct item, not one per copy', async () => {
       // Two identical options is a worse picker than one, and "the second parmesan
       // shaker" is not a choice anybody wants to make.
       const alex = await manager('Alex');
       await pull(alex.id, 0, 'a');
-      await pull(alex.id, 0, 'b');
+      const [held] = await db!
+        .select()
+        .from(collectibles)
+        .where(eq(collectibles.userId, alex.id));
+      await secondCopy(alex.id, held!.slug, '2026-07-30T12:00:00Z');
 
       const choices = await showcaseChoices(db!, alex.id);
       expect(choices).toHaveLength(1);
@@ -195,8 +227,11 @@ describe.skipIf(!hasDatabase)('the showcase', () => {
       const alex = await manager('Alex');
       setFixedClock('2026-07-01T00:00:00Z');
       const first = await pull(alex.id, 0, 'a');
-      setFixedClock('2026-07-20T00:00:00Z');
-      await pull(alex.id, 0, 'b');
+      const [held] = await db!
+        .select()
+        .from(collectibles)
+        .where(eq(collectibles.userId, alex.id));
+      await secondCopy(alex.id, held!.slug, '2026-07-20T00:00:00Z');
 
       const choices = await showcaseChoices(db!, alex.id);
       expect(choices[0]!.collectibleId).toBe(first);

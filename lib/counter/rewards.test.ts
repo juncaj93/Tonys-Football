@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { CATALOG_SIZE, RARITIES, catalog, catalogItem } from './catalog';
-import { resolveRoll, standardRewardTable } from './rewards';
+import { CATALOG_SIZE, RARITIES, type Rarity, catalog, catalogItem } from './catalog';
+import { resolveRoll, selectAward, standardRewardTable } from './rewards';
 
 /**
  * The reward table is a pure function of the catalog, so it can be asserted
@@ -158,6 +158,125 @@ describe('resolving a roll', () => {
 
     expect(resolveRoll(table, table.totalWeight - legendaryMass).rarity).toBe('legendary');
     expect(resolveRoll(table, table.totalWeight - legendaryMass - 1).rarity).not.toBe('legendary');
+  });
+});
+
+describe('what a box hands over', () => {
+  /*
+   * `16 §8`'s duplicate rule, as a pure function. The database tests prove it is
+   * wired up; these prove it is right.
+   */
+  const table = standardRewardTable();
+
+  const tierOf = (rarity: Rarity): readonly string[] =>
+    table.entries.filter((entry) => entry.rarity === rarity).map((entry) => entry.slug);
+
+  /** The lowest roll that resolves to `slug` — `rollForSlug`, inlined. */
+  function rollFor(slug: string): number {
+    let cursor = 0;
+    for (const entry of table.entries) {
+      if (entry.slug === slug) return cursor;
+      cursor += entry.weight;
+    }
+    throw new Error(`no entry for ${slug}`);
+  }
+
+  it('hands over the rolled item when it is unowned', () => {
+    const slug = tierOf('common')[0]!;
+    expect(selectAward(table, rollFor(slug), new Set())).toEqual({
+      kind: 'item',
+      slug,
+      rarity: 'common',
+    });
+  });
+
+  it('never rerolls the rarity — only the item inside the tier', () => {
+    /*
+     * The commissioner's §1: do not make individual boxes less exciting. A
+     * legendary roll must stay legendary however much of the catalog is owned,
+     * so the redirect is tested against a collection holding *everything else*.
+     */
+    const legendaries = tierOf('legendary');
+    const everythingElse = new Set(
+      catalog().map((item) => item.slug).filter((slug) => slug !== legendaries[1]),
+    );
+
+    const award = selectAward(table, rollFor(legendaries[0]!), everythingElse);
+    expect(award).toEqual({ kind: 'item', slug: legendaries[1], rarity: 'legendary' });
+  });
+
+  it('redirects to an unowned item in the same tier', () => {
+    const commons = tierOf('common');
+    const award = selectAward(table, rollFor(commons[0]!), new Set([commons[0]!]));
+    expect(award.kind).toBe('item');
+    expect(award.rarity).toBe('common');
+    expect(award.slug).not.toBe(commons[0]);
+    expect(commons).toContain(award.slug);
+  });
+
+  it('walks forward from where the roll landed, and wraps', () => {
+    /*
+     * Not merely "an unowned one": *which* unowned one is a product decision.
+     * Starting the walk at the top of the tier would make the first common the
+     * answer to nearly every redirect, and a manager filling a set would receive
+     * it in alphabetical order.
+     */
+    const commons = tierOf('common');
+    const owned = new Set(commons.slice(0, 3));
+
+    // Rolled the first; the next unowned going forward is the fourth.
+    expect(selectAward(table, rollFor(commons[0]!), owned)).toMatchObject({ slug: commons[3] });
+
+    // Rolled the last, which is unowned — no redirect at all.
+    expect(selectAward(table, rollFor(commons.at(-1)!), owned)).toMatchObject({
+      slug: commons.at(-1),
+    });
+
+    // Rolled the second, owning everything from the second to the end: it wraps.
+    const wrapping = new Set(commons.slice(1));
+    expect(selectAward(table, rollFor(commons[1]!), wrapping)).toMatchObject({ slug: commons[0] });
+  });
+
+  it('salvages only when the whole tier is owned', () => {
+    const commons = tierOf('common');
+    const nearly = new Set(commons.slice(0, commons.length - 1));
+    expect(selectAward(table, rollFor(commons[0]!), nearly).kind).toBe('item');
+
+    const all = new Set(commons);
+    expect(selectAward(table, rollFor(commons[0]!), all)).toEqual({
+      kind: 'salvage',
+      slug: commons[0],
+      rarity: 'common',
+    });
+  });
+
+  it('salvages the tier that was rolled, not the one that is full', () => {
+    // A completed common tier must not make a rare roll salvage.
+    const commons = tierOf('common');
+    const rare = tierOf('rare')[0]!;
+    expect(selectAward(table, rollFor(rare), new Set(commons))).toEqual({
+      kind: 'item',
+      slug: rare,
+      rarity: 'rare',
+    });
+  });
+
+  it('is a pure function of the table, the roll and the owned set', () => {
+    const owned = new Set(tierOf('common').slice(0, 4));
+    const roll = rollFor(tierOf('common')[0]!);
+    expect(selectAward(table, roll, owned)).toEqual(selectAward(table, roll, owned));
+  });
+
+  it('salvages every tier once the catalog is complete', () => {
+    const everything = new Set(catalog().map((item) => item.slug));
+    for (const rarity of RARITIES) {
+      const slug = tierOf(rarity)[0]!;
+      expect(selectAward(table, rollFor(slug), everything)).toEqual({
+        kind: 'salvage',
+        slug,
+        rarity,
+      });
+    }
   });
 });
 

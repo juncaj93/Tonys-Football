@@ -1,10 +1,15 @@
-import { and, asc, desc, eq, isNotNull, sql } from 'drizzle-orm';
+import { and, asc, desc, eq, isNotNull, like, sql } from 'drizzle-orm';
 
 import { DEFAULT_CONFIGURATION } from '@/lib/character/composite';
 import { characterFor, grantWearable, ownedWearables, saveCharacter } from '@/lib/character/service';
 import { now } from '@/lib/clock';
 import { type Database } from '@/lib/db';
-import { fantasyMatchups, lootBoxes, seasons } from '@/lib/db/schema';
+import {
+  fantasyMatchups,
+  lootBoxes,
+  seasons,
+  tokenTransactions,
+} from '@/lib/db/schema';
 import { RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
 import { ensureRewardTable, grantBox, openBox, purchaseBox } from '@/lib/counter/boxes';
 import { collectionFor } from '@/lib/counter/collection';
@@ -211,6 +216,57 @@ async function spendDownTo(db: Database, seat: DemoSeat, target: number): Promis
 }
 
 /**
+ * Top the tab up to `target`, if it is short.
+ *
+ * The mirror of {@link spendDownTo}, and it exists because a demo state that
+ * promises *"tokens to spend"* has to keep that promise at whatever the box
+ * costs. `openTab` grants the season's opening balance **once, ever**, so a seat
+ * that has already bought something is never refilled — which was invisible
+ * while a 250-token opening bought five 50-token boxes, and broke the moment the
+ * commissioner's ruling moved the box to 200 and the same balance bought one.
+ *
+ * A `COMMISSIONER_ADJUSTMENT` rather than a balance write, for the reason
+ * `spendDownTo` gives: there is no balance write to make.
+ *
+ * **The key counts the top-ups**, and getting there took two wrong answers worth
+ * recording. Keying on the *target* raises the second time the seat needs a
+ * different sum to reach it, because `apply_token_delta` refuses a key already
+ * recorded with a different delta. Keying on the *amount* then silently no-ops
+ * when the same sum is needed twice — which is exactly what happens when three
+ * screen widths each buy a box from one seat.
+ *
+ * Two legitimate top-ups of the same size are two events, so the key says which
+ * one it is. A genuine re-apply never reaches the key at all: it short-circuits
+ * on `held.balance >= target` above.
+ */
+async function topUpTo(db: Database, seat: DemoSeat, target: number): Promise<number> {
+  const held = await wallet(db, { userId: seat.userId, seasonId: seat.seasonId });
+  if (held === null) throw new DemoRefused('the demo seat has no wallet; ensureDemoSeat failed');
+  if (held.balance >= target) return held.balance;
+
+  const [prior] = await db
+    .select({ n: sql<number>`count(*)::int` })
+    .from(tokenTransactions)
+    .where(
+      and(
+        eq(tokenTransactions.seasonMembershipId, held.membershipId),
+        like(tokenTransactions.idempotencyKey, `${key(seat, 'top-up')}%`),
+      ),
+    );
+
+  await applyTokenDelta(db, {
+    userId: seat.userId,
+    seasonId: seat.seasonId,
+    amount: target - held.balance,
+    reason: 'COMMISSIONER_ADJUSTMENT',
+    description: 'Tony puts enough on the tab for the demo to buy something.',
+    idempotencyKey: key(seat, `top-up-${String(prior?.n ?? 0)}`),
+  });
+
+  return target;
+}
+
+/**
  * Put `count` boxes on the tray, granted once each, ever.
  *
  * Each box's grant key carries its index, so a box is addressable by *which* box
@@ -274,6 +330,15 @@ function firstOfRarity(rarity: Rarity): string {
   return found.slug;
 }
 
+/** Every catalog slug of a rarity, in the table's stable order. */
+function allOfRarity(rarity: Rarity): readonly string[] {
+  const found = catalog().filter((item) => item.rarity === rarity).map((item) => item.slug);
+  if (found.length === 0) {
+    throw new DemoRefused(`the catalog holds no ${rarity} item to demo`);
+  }
+  return found;
+}
+
 /**
  * Grant the demo's *n*th box and open it, forcing the roll that yields `slug`.
  *
@@ -298,7 +363,13 @@ async function pull(
   seat: DemoSeat,
   index: number,
   slug: string,
-): Promise<{ slug: string; rarity: string; replayed: boolean; boxId: string }> {
+): Promise<{
+  slug: string;
+  rarity: string;
+  replayed: boolean;
+  salvageTokens: number | null;
+  boxId: string;
+}> {
   await grantBoxes(db, seat, index + 1);
 
   const boxId = await boxAt(db, seat, index);
@@ -306,7 +377,11 @@ async function pull(
 
   setFixedRoll(rollForSlug(slug));
   try {
-    const result = await openBox(db, { userId: seat.userId, boxId });
+    const result = await openBox(db, {
+      userId: seat.userId,
+      boxId,
+      seasonId: seat.seasonId,
+    });
     if (result.status !== 'opened') {
       throw new DemoRefused(`opening the demo box returned ${result.status}`);
     }
@@ -375,8 +450,16 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
    * "absence" state should have.
    */
   'no-box': async (db, seat) => {
-    const opening = await openTab(db, seat);
-    return { evidence: { unopenedBoxes: await unopenedCount(db, seat), balance: opening } };
+    /*
+     * *"An empty tray with **tokens to spend**"* — so the tab has to be able to
+     * buy a box, whatever a box costs. The opening balance alone was enough
+     * while boxes were 50 and is exactly one box at 200, and a seat that has
+     * already spent is never refilled by `openTab`, which grants once ever.
+     */
+    await openTab(db, seat);
+    const { values } = await economyFor(db, seat.seasonId);
+    const balance = await topUpTo(db, seat, values.standardBoxPriceTokens);
+    return { evidence: { unopenedBoxes: await unopenedCount(db, seat), balance } };
   },
 
   'one-box': async (db, seat) => {
@@ -430,29 +513,48 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
   'pull-whipped-cream': pullSlug('collectible_reddiwip'),
 
   /**
-   * The same item twice.
+   * A spare, and what Tony gives you for it.
    *
-   * Two boxes, both forced to one slug, so the second reveal is a genuine
-   * duplicate rather than a duplicate flag set by hand. `collectionFor` counts
-   * copies, so the evidence records the count it actually produced.
+   * ## The old version of this state is now unreachable, which is the point
+   *
+   * It used to open two boxes forced to the same slug and photograph the second
+   * copy. `16 §8` — implemented in `0014` — redirects a roll that lands on
+   * something owned to an unowned item in the same tier, so there is no longer
+   * any sequence of boxes that produces two of one thing. Keeping the old
+   * applier would have meant a demo asserting a rule the product had stopped
+   * following, and it would have kept passing: the second pull simply returns a
+   * different common.
+   *
+   * So the state moved to the outcome that replaced it. Every legendary is
+   * pulled first — the smallest tier, so this costs three boxes rather than
+   * eleven — and the next legendary roll has nowhere to go and converts.
+   *
+   * The salvage is **rolled, never set**: the applier forces the roll and reads
+   * back what the server decided, exactly as every other reveal state does.
    */
   'pull-duplicate': async (db, seat) => {
     await openTab(db, seat);
-    const slug = firstOfRarity('common');
+    const tier = allOfRarity('legendary');
 
-    const first = await pull(db, seat, 0, slug);
-    const second = await pull(db, seat, 1, slug);
+    for (const [index, slug] of tier.entries()) {
+      await pull(db, seat, index, slug);
+    }
+
+    const spare = await pull(db, seat, tier.length, tier[0] ?? '');
 
     const collection = await collectionFor(db, seat.userId);
-    const entry = collection.entries.find((candidate) => candidate.slug === slug);
 
     return {
       evidence: {
-        slug,
-        firstRarity: first.rarity,
-        secondRarity: second.rarity,
-        count: entry?.count ?? 0,
+        slug: spare.slug,
+        rarity: spare.rarity,
+        // Zero would be a lie about a salvage and is impossible for one —
+        // `box_openings_salvage_is_positive` refuses it — so it reads as "this
+        // state did not salvage" without needing a second field to say so.
+        salvageTokens: spare.salvageTokens ?? 0,
+        tierSize: tier.length,
         distinct: collection.distinct,
+        balance: (await wallet(db, { userId: seat.userId, seasonId: seat.seasonId }))?.balance ?? 0,
       },
     };
   },
@@ -501,7 +603,11 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
     await openTab(db, seat);
     const first = await pull(db, seat, 0, firstOfRarity('rare'));
 
-    const again = await openBox(db, { userId: seat.userId, boxId: first.boxId });
+    const again = await openBox(db, {
+      userId: seat.userId,
+      boxId: first.boxId,
+      seasonId: seat.seasonId,
+    });
     if (again.status !== 'opened') {
       throw new DemoRefused(`re-opening the demo box returned ${again.status}`);
     }

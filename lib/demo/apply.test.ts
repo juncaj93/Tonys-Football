@@ -10,7 +10,12 @@ import { collectionFor } from '@/lib/counter/collection';
 import { standardRewardTable } from '@/lib/counter/rewards';
 import { clearRandomSource } from '@/lib/counter/rng';
 import { leagueShowcase, showcaseFor } from '@/lib/counter/showcase';
-import { applyTokenDelta, ensureEconomyConfig, wallet } from '@/lib/counter/tokens';
+import {
+  PROVISIONAL_ECONOMY,
+  applyTokenDelta,
+  ensureEconomyConfig,
+  wallet,
+} from '@/lib/counter/tokens';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import { tonightBoard } from '@/lib/parlor/tonight';
 import { traverseChain } from '@/lib/sleeper/chain';
@@ -295,8 +300,15 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
       seasonId: b.seat.seasonId,
     });
 
-    expect(brokeBalance?.balance).toBe(49);
-    expect(richBalance?.balance).toBe(250);
+    /*
+     * Derived, never restated. "Broke" means *one token short of a box*, so the
+     * number is a function of the price — and when the commissioner moved the
+     * box from 50 to 200 these assertions were the only thing in the repository
+     * still saying 50. A test that hard-codes a price is a second source of
+     * truth for it (`03 §11`).
+     */
+    expect(brokeBalance?.balance).toBe(PROVISIONAL_ECONOMY.standardBoxPriceTokens - 1);
+    expect(richBalance?.balance).toBe(PROVISIONAL_ECONOMY.seasonStartTokens);
   });
 
   /* --- honesty -------------------------------------------------------- */
@@ -339,12 +351,22 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
     expect(outcome.evidence['rewardTable']).toBe(standardRewardTable().version);
   });
 
-  it('makes a duplicate a second copy rather than a second item', async () => {
+  it('converts a spare from a completed tier rather than handing over a copy', async () => {
+    /*
+     * This asserted the opposite until `0014` — *"a duplicate is a second copy
+     * rather than a second item"* — and the rule it was pinning was never the
+     * approved one. `16 §8` reads **roll rarity → pick an unowned item in that
+     * tier → if exhausted, salvage tokens**, so the state fills the legendary
+     * tier and photographs what the next legendary roll becomes.
+     */
     const outcome = await applyDemoState(db!, 'pull-duplicate', ALLOWED);
     const collection = await collectionFor(db!, outcome.seat.userId);
 
-    expect(collection.distinct).toBe(1);
+    // Both legendaries, one each — no copies anywhere.
+    expect(collection.distinct).toBe(2);
     expect(collection.copies).toBe(2);
+    expect(outcome.evidence['rarity']).toBe('legendary');
+    expect(outcome.evidence['salvageTokens']).toBe(120);
   });
 
   it('replays an opened box to the same item instead of rolling again', async () => {
@@ -362,14 +384,16 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
 
   it('reaches "broke" by spending through the ledger, never by writing a balance', async () => {
     const outcome = await applyDemoState(db!, 'broke', ALLOWED);
-    expect(outcome.evidence['balance']).toBe(49);
-    expect(outcome.evidence['price']).toBe(50);
+    expect(outcome.evidence['balance']).toBe(
+      PROVISIONAL_ECONOMY.standardBoxPriceTokens - 1,
+    );
+    expect(outcome.evidence['price']).toBe(PROVISIONAL_ECONOMY.standardBoxPriceTokens);
 
     const held = await wallet(db!, {
       userId: outcome.seat.userId,
       seasonId: outcome.seat.seasonId,
     });
-    expect(held?.balance).toBe(49);
+    expect(held?.balance).toBe(PROVISIONAL_ECONOMY.standardBoxPriceTokens - 1);
   });
 
   it('leaves nothing behind when a purchase is refused', async () => {
@@ -483,7 +507,9 @@ describe.skipIf(!hasDatabase)('retiring demo seats', () => {
 
     // The ledger is append-only for everyone, demos included. A retire that
     // could erase it would be no evidence that a manager's cannot.
-    expect(membership?.tokenBalance).toBe(200);
+    expect(membership?.tokenBalance).toBe(
+      PROVISIONAL_ECONOMY.seasonStartTokens - PROVISIONAL_ECONOMY.standardBoxPriceTokens,
+    );
   });
 
   it('never retires a real manager', async () => {

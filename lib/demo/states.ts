@@ -83,7 +83,13 @@ export const DEMO_STATES: readonly DemoState[] = [
     reach: 'arranged',
     route: '/',
   },
-  { key: 'pull-duplicate', shows: 'a second copy of something owned', reach: 'arranged', route: '/' },
+  /*
+   * It used to say "a second copy of something owned", and that state no longer
+   * exists: `16 §8` redirects a roll onto an unowned item in the tier, so a
+   * second copy is unreachable and salvage is what a spare becomes. The demo
+   * changed with the rule rather than being kept as a photograph of the old one.
+   */
+  { key: 'pull-duplicate', shows: 'a spare from a completed tier, converted to tokens', reach: 'arranged', route: '/' },
 
   {
     key: 'reveal-interrupted',

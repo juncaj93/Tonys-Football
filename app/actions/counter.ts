@@ -48,6 +48,16 @@ export interface RevealPayload {
    */
   readonly replayed: boolean;
 
+  /**
+   * Tokens paid instead of the item, or null when the item was kept.
+   *
+   * `16 §8`: a roll landing in a tier the manager has completed has no unowned
+   * item to hand over, so the spare converts. `slug`, `name` and `asset` still
+   * describe what came out of the box — the plate shows the object and says what
+   * happened to it, because "your box contained nothing" would be false.
+   */
+  readonly salvageTokens: number | null;
+
   /*
    * What the pull *means*, which is not the same as what it is.
    *
@@ -156,7 +166,23 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
   // 500 for what is really just a bad request.
   if (!/^[0-9a-f-]{36}$/i.test(boxId)) return { ok: false };
 
-  const result = await openBox(getDb(), { userId: user.id, boxId });
+  const db = getDb();
+
+  /*
+   * The season a salvage would be paid into.
+   *
+   * Resolved here rather than inside `openBox`, for the reason every seasonal
+   * input in this project is injected. `null` is a real answer — the books are
+   * shut everywhere — and `openBox` answers `salvage_unavailable` and leaves the
+   * box alone rather than opening it for nothing.
+   */
+  const season = await openSeason(db);
+
+  const result = await openBox(db, {
+    userId: user.id,
+    boxId,
+    seasonId: season?.id ?? null,
+  });
   if (result.status !== 'opened') return { ok: false };
 
   const { reveal } = result;
@@ -168,7 +194,6 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
    * somebody's property, and a price the client picked would be a price the
    * client could change.
    */
-  const db = getDb();
   const collection = await collectionFor(db, user.id);
 
   /*
@@ -208,6 +233,7 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
       rarity: reveal.rarity,
       asset: resolveAsset(reveal.slug),
       replayed: reveal.replayed,
+      salvageTokens: reveal.salvageTokens,
       distinct: collection.distinct,
       total: collection.total,
       offer,
