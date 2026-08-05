@@ -64,7 +64,9 @@ Measured on the shipped shell:
 | distinct colours in the asset | 26 | 30 | **90** |
 | file size | 19 KB | 19 KB | 60 KB |
 
-Tony's mean error goes **30.3 → 14.5**.
+Tony's mean error goes **30.3 → 14.5**, and he is 40 distinct colours against 26.
+**His isolated-pixel rate goes up too — 11.1% → 16.0%** — for the reason below:
+at the shared 32 his face was flat because it had four tans to be flat in.
 
 **Only the two painterly families change.** Seven files in total: six `zone`
 assets and Tony. All twelve approved Batch B collectibles are byte-identical,

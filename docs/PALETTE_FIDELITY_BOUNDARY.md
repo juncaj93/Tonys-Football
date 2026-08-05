@@ -178,11 +178,18 @@ his yellow-orange; his jersey blue and apron cream were served no better. Sixtee
 colours take his error from 30.3 to 14.5.
 
 **Sixteen and not thirty-two**, and the reason is the one the ruling asks for:
-past sixteen his **isolated-pixel rate keeps climbing** (11.1% → 16.0% → 17.6% →
-20.5%) without the face looking better. His shading stops being contiguous and
-starts being speckle, which is exactly what *"clean and intentional shading"*
-rules out. Nothing about his geometry, placement, layering, glow or entrance is
-touched.
+past sixteen his **isolated-pixel rate keeps climbing** — 11.1% at the shared 32,
+16.0% at +16, then 17.6% and 20.5% — without the face looking better. His shading
+stops being contiguous and starts being speckle, which is exactly what *"clean
+and intentional shading"* rules out.
+
+The rate rising **from** 11.1% **to** 16.0% is the cost of the change and is
+stated rather than buried: at the shared 32 his face was flat because it had four
+tans to be flat in. He is 40 distinct colours now against 26, and the shading
+those colours draw is the source's. §6 is why the number is the wrong way round
+here.
+
+Nothing about his geometry, placement, layering, glow or entrance is touched.
 
 ## 6. The isolated-pixel rate is the wrong instrument here, and it is worth saying so
 
