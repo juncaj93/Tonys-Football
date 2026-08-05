@@ -33,6 +33,7 @@
     "art:prepare-incoming": "tsx scripts/prepare-incoming.ts",
     "art:validate": "tsx scripts/validate-collectible.ts",
     "visual:qa": "tsx scripts/visual-qa.mts",
+    "visual:tony-glow": "tsx scripts/tony-glow-probe.mts && tsx scripts/tony-glow-frames.mts",
     "art:batch": "tsx scripts/art-batch.ts"
   },
   "overrides": {

@@ -46,6 +46,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { chromium, type Browser, type Page } from 'playwright';
+import sharp from 'sharp';
 
 import { TYPE_FLOOR_PX } from '../lib/design/type.ts';
 import { QUARANTINE_CEILING, quarantineFor } from './visual-qa-quarantine.ts';
@@ -1517,6 +1518,21 @@ function tonySampler(ms: number): string {
  * evaluated to a function nobody called, and every "first visit" in this gate
  * was silently a return visit with no entrance and no reveal to sample.
  */
+/**
+ * The drawn sprite's rectangle in CSS pixels, or null.
+ *
+ * A string rather than a function, like every other injected snippet here: tsx
+ * compiles with `keepNames`, which references a `__name` helper that does not
+ * exist in the page.
+ */
+const TONY_RECT = `(() => {
+  const mark = document.querySelector('.tony-mark');
+  if (mark === null) return null;
+  const drawn = mark.querySelector('img') || mark;
+  const b = drawn.getBoundingClientRect();
+  return { x: b.left, y: b.top, width: b.width, height: b.height };
+})()`;
+
 const FORGET_ARRIVAL = `(() => { try { sessionStorage.removeItem('tonys:arrived'); } catch (e) {} })()`;
 
 /**
@@ -1605,6 +1621,148 @@ function assertSteady(
  * mid-ramp at a third of a pixel. The gate was run against the old CSS before
  * the repair was kept, and reported `dy moved 2.00px`.
  */
+
+/**
+ * The glow may add light. It may not move him.
+ *
+ * ## Why this is not `checkTonySteady` with a longer window
+ *
+ * `checkTonySteady` samples `getBoundingClientRect` on the sprite and on the
+ * counter layer every animation frame, and it is the right gate for the defect
+ * it was built for — the entrance keyframe dropping him 62px behind the counter.
+ * It is **structurally incapable** of seeing the commissioner's 2026-08-05
+ * report, because the rectangle does not change: what moved was where the sprite
+ * landed on the device's pixel grid, one device pixel, only while the filter
+ * transition had him promoted to his own compositing layer.
+ *
+ * So this gate reads the glass instead of the DOM, off the compositor's own
+ * frames.
+ *
+ * ## The test is exact, and needs no authored mask
+ *
+ * `drop-shadow` composites a blurred copy of the alpha **behind** the element,
+ * so every pixel it touches gets brighter and none gets darker. Therefore:
+ *
+ *   - brighter than the settled frame is the glow, and expected;
+ *   - **darker** than the settled frame cannot be the glow. It is the sprite
+ *     covering something it does not cover once the room has settled.
+ *
+ * A threshold-free discriminator matters here because the first version of this
+ * measurement masked by *"pixels the first frame changed"*, and the first
+ * screencast frame turned out not to represent the whole glowing period — the
+ * mask leaked and reported hundreds of glow pixels as movement. This one has no
+ * such freedom.
+ *
+ * On the build before the fix it reports **320 differing pixels at 375, 90 at
+ * 360 and 27 at 390**; after `will-change: filter` pins the layer, zero at all
+ * three.
+ */
+async function checkGlowLeavesTonyAlone(page: Page, width: number): Promise<void> {
+  const REVEAL_FOR = 3300;
+  const RAMP = 260;
+
+  await page.evaluate(FORGET_ARRIVAL);
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+
+  const geo = (await page.evaluate(TONY_RECT)) as
+    | { x: number; y: number; width: number; height: number }
+    | null;
+  if (geo === null) {
+    fail('tony-glow', `@${String(width)} the homepage has no .tony-mark to measure`);
+    return;
+  }
+
+  try {
+    await page.waitForSelector('.showing-taps', { timeout: 6000 });
+  } catch {
+    /*
+     * No reveal on this load. Not a failure of *this* gate — `checkTonySteady`
+     * owns the arrival's schedule and will say so — and a silent pass here would
+     * be worse than either.
+     */
+    fail('tony-glow', `@${String(width)} the glow never appeared, so it could not be measured`);
+    return;
+  }
+
+  const lit = (await page.evaluate('performance.now()')) as number;
+
+  const cdp = await page.context().newCDPSession(page);
+  const frames: Buffer[] = [];
+  cdp.on('Page.screencastFrame', (frame) => {
+    frames.push(Buffer.from(frame.data, 'base64'));
+    void cdp.send('Page.screencastFrameAck', { sessionId: frame.sessionId });
+  });
+
+  const waitUntilPageTime = async (target: number): Promise<void> => {
+    const now = (await page.evaluate('performance.now()')) as number;
+    if (target > now) await page.waitForTimeout(target - now);
+  };
+
+  // Opened just before the class is removed and closed once everything has
+  // settled, so the window contains the last glowing frame, the whole ramp and
+  // the frame the layer is torn down on.
+  await waitUntilPageTime(lit + REVEAL_FOR - 200);
+  await cdp.send('Page.startScreencast', { format: 'png', everyNthFrame: 1 });
+  await waitUntilPageTime(lit + REVEAL_FOR + RAMP + 350);
+  await cdp.send('Page.stopScreencast');
+  await cdp.detach();
+
+  if (frames.length < 4) {
+    fail('tony-glow', `@${String(width)} only ${String(frames.length)} frames across the fade`);
+    return;
+  }
+
+  const decode = async (png: Buffer): Promise<{ data: Buffer; width: number; height: number }> => {
+    const { data, info } = await sharp(png).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    return { data, width: info.width, height: info.height };
+  };
+
+  const settled = await decode(frames.at(-1)!);
+  const scale = settled.width / width;
+  // Widened by the glow's reach so a halo that spills past his alpha is inside
+  // the region rather than silently outside it.
+  const reach = 12;
+  const left = Math.max(0, Math.floor((geo.x - reach) * scale));
+  const top = Math.max(0, Math.floor((geo.y - reach) * scale));
+  const right = Math.min(settled.width, Math.ceil((geo.x + geo.width + reach) * scale));
+  const bottom = Math.min(settled.height, Math.ceil((geo.y + geo.height + reach) * scale));
+
+  const luma = (d: Buffer, p: number): number =>
+    0.299 * (d[p] ?? 0) + 0.587 * (d[p + 1] ?? 0) + 0.114 * (d[p + 2] ?? 0);
+
+  let worst = 0;
+  let worstAt = -1;
+
+  for (const [index, png] of frames.entries()) {
+    const frame = await decode(png);
+    if (frame.width !== settled.width || frame.height !== settled.height) continue;
+
+    let darker = 0;
+    for (let y = top; y < bottom; y += 1) {
+      for (let x = left; x < right; x += 1) {
+        const p = (y * settled.width + x) * 4;
+        // 8 of 255 is far above compositor noise and far below a one-pixel edge
+        // move on this art, which swings by a hundred or more.
+        if (luma(frame.data, p) - luma(settled.data, p) < -8) darker += 1;
+      }
+    }
+    if (darker > worst) {
+      worst = darker;
+      worstAt = index;
+    }
+  }
+
+  if (worst > 0) {
+    fail(
+      'tony-glow',
+      `@${String(width)} frame ${String(worstAt)} of ${String(frames.length)} draws Tony ` +
+        `${String(worst)} pixels darker than the settled room. A glow only adds light, so ` +
+        'the sprite moved, was clipped, or was rasterized differently while the filter ' +
+        'transition had it on its own compositing layer.',
+    );
+  }
+}
+
 async function checkTonySteady(page: Page, width: number): Promise<void> {
   /*
    * The arrival timeline, from `arrival.tsx`. Duplicated deliberately: a gate
@@ -3348,6 +3506,7 @@ async function run(): Promise<void> {
            */
           if (state === 'tony-steady') {
             await checkTonySteady(page, width);
+            await checkGlowLeavesTonyAlone(page, width);
           }
 
           /*

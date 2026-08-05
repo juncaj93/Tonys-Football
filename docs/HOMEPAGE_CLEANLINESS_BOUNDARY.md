@@ -449,3 +449,99 @@ the only movement in the room that puts his bottom half behind the counter.** If
 the symptom survives this, the next report should say whether the room had
 finished loading first — that one detail separates the two remaining
 explanations.
+
+---
+
+## 11. The glow *did* move him, one device pixel, and §10 was right not to claim otherwise
+
+**Commissioner report, 2026-08-05:** *"When Tony's glow ends, part of his body
+still clips through or behind the counter."*
+
+§10 closed the entrance drop and said in as many words that it was **not**
+claiming to be the whole of what was seen — *"if the symptom survives this, the
+next report should say whether the room had finished loading first."* It
+survived. This is the rest of it, and it is a different mechanism on the same
+sprite.
+
+### The gates could not have caught it, and that is the finding
+
+`checkTonySteady` samples `getBoundingClientRect` on the sprite and on the
+counter layer every animation frame. It is the right gate for §10's defect — a
+keyframe translating him 62px — and it is **structurally incapable** of seeing
+this one, because **no rectangle changes**. What changes is where the sprite
+lands on the device's pixel grid.
+
+Every mechanism §10 scoped is still eliminated. Nothing here contradicts it.
+
+### What actually happens
+
+A `filter` transition makes Chromium promote the element to its own compositing
+layer **for the duration of the animation only**. A promoted layer is rasterized
+separately from the page. Tony's layout size is fractional — **84.375 × 230.109
+CSS at 375** — so `image-rendering: pixelated` maps his 88 source columns onto
+device pixels unevenly, and the two rasterizations disagree by one device pixel.
+
+So when `.showing-taps` is removed and `transition: filter 260ms ease-out` runs,
+the layer appears, his edges step one pixel, and when the layer is torn down they
+step back. Against the counter that cuts him, one pixel is exactly *"clips
+through or behind"*.
+
+### The evidence, off the compositor's own frames
+
+`npm run visual:tony-glow` clears the arrival latch, waits for the glow, and
+records the compositor's frames across the fade with `Page.startScreencast`.
+The discriminator needs no authored mask: **`drop-shadow` composites a blurred
+copy of the alpha behind the element, so it can only ever add light.** A pixel
+*brighter* than the settled room is the glow. A pixel **darker** cannot be.
+
+| | 390 | 375 | 360 |
+|---|---|---|---|
+| before | 27 px darker | **320 px darker** | 90 px darker |
+| after | **0** | **0** | **0** |
+
+The darker pixels are a one-pixel outline along his hairline, moustache, collar,
+shoulder seams and apron edge — the signature of a sprite resampled onto a
+different grid, not of a body part emerging from behind a counter. So the honest
+answer to *"does he move, is he clipped, or is he occluded"* is **none of the
+three in layout terms**: he is *redrawn*, and the redraw lands one pixel over.
+
+Two false starts are recorded because both would have produced a confident wrong
+answer. The first masked by *"pixels the first frame changed"*, and the first
+screencast frame does not represent the whole glowing period, so the mask leaked
+and reported hundreds of glow pixels as movement. The second mistook `tony-talks`
+— his **deliberate** one-pixel speaking step, which `globals.css` already argues
+is safe — for the defect; the state trace puts speaking at 1252–2585ms and the
+fade at 5002–5269ms, which separates them.
+
+### The fix
+
+`will-change: filter` on `.tony-mark`. The promotion becomes permanent, so **one**
+rasterization applies before, during and after the glow.
+
+Nothing else moves: no geometry, no z-order, no hit region, no keyframe, no
+entrance behaviour. The cost is one composited layer for one sprite.
+
+**Not fixed by rounding his size to whole pixels.** His position is derived from
+the room's aspect ratio and every other overlay shares that arithmetic, so
+pinning Tony alone would put him out of register with the counter he is measured
+against — which is the invariant `objects.ts` calls load-bearing.
+
+**Not fixed by leaving the glow on, moving him up, removing the counter
+foreground, or hiding the transition.** All four were ruled out by the
+commissioner and none of them is the cause anyway.
+
+### The regression gate
+
+`checkGlowLeavesTonyAlone`, in the driver, on the `tony-steady` state at all
+three widths — so it runs in CI beside every other gate. It fails on the pre-fix
+build with the counts in the table above.
+
+### What is left open
+
+**The same mechanism is visible on the newspaper rack**, which is a Door and
+therefore also glows on a filter transition. It was measured in the same sweep
+and is a one-pixel step on its own edges. It is **not** fixed here: the
+commissioner's report is about Tony, the rack is not cut by a foreground layer so
+the step has nothing to read against, and widening this slice to every glowing
+overlay is a change to the room's shared affordance rather than a defect repair.
+Recorded so it is a decision rather than an oversight.

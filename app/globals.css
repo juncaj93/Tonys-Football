@@ -737,6 +737,41 @@ body[data-parlor-focus] .tony-line * {
  */
 .tony-mark {
   transition: filter 260ms ease-out;
+
+  /*
+   * **The layer is pinned, and that is what stops Tony moving.**
+   *
+   * Commissioner report, 2026-08-05: *"when Tony's glow ends, part of his body
+   * still clips through or behind the counter."* It is a real, separate defect
+   * from the entrance drop that `HOMEPAGE_CLEANLINESS_BOUNDARY §10` closed, and
+   * every gate the room already had was structurally unable to see it —
+   * `checkTonySteady` samples `getBoundingClientRect`, and **no rectangle
+   * changes here**.
+   *
+   * What changes is where the sprite lands on the device's pixel grid. A `filter`
+   * transition makes Chromium promote the element to its own compositing layer
+   * **for the duration of the animation only**, and a promoted layer is
+   * rasterized separately from the page. Tony's layout size is fractional —
+   * 84.375 x 230.109 CSS at 375 — so `image-rendering: pixelated` maps his 88
+   * source columns onto device pixels unevenly, and the two rasterizations
+   * disagree by one device pixel. Measured off the compositor's own frames: his
+   * hairline, moustache, collar, shoulder seams and apron edge all step one pixel
+   * when the layer appears and step back when it is torn down. **320 pixels at
+   * 375, 90 at 360, 27 at 390**, present only in the frames around the
+   * transition. Against the counter that cuts him, one pixel is exactly the
+   * *"clips through or behind"* a manager sees.
+   *
+   * `will-change: filter` makes the promotion permanent, so **one** rasterization
+   * applies before, during and after the glow. Nothing else moves: no geometry,
+   * no z-order, no hit region, no keyframe. The cost is one composited layer for
+   * one sprite, which is what the property is for.
+   *
+   * It is deliberately not fixed by rounding his size to whole pixels — his
+   * position is derived from the room's aspect ratio and every other overlay
+   * shares that arithmetic, so pinning Tony alone would put him out of register
+   * with the counter he is measured against.
+   */
+  will-change: filter;
 }
 
 .showing-taps .tony-mark {
