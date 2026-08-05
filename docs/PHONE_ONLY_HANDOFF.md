@@ -38,16 +38,19 @@ Verified after the fact rather than assumed: `list_workflow_runs` filtered to
 | Open PR | **none, deliberately** |
 | Workflow runs created | **0**, confirmed from GitHub after each push |
 
-Six commits:
+It is **one slice in two passes**, and the second supersedes the first inside the
+branch. Described rather than listed by SHA, so this section does not go stale
+every time a commit lands:
 
-| SHA | What |
+| pass | what |
 |---|---|
-| `6b8fc78` | The four measurement scripts. They change nothing and are what any future palette argument is made from |
-| `4a36244` | `docs/PALETTE_FIDELITY_BOUNDARY.md` — the diagnosis, the mechanism, the candidate, the scoping decision |
-| `b4815a1` | The palette extension itself: `art/palette.json`, six reprocessed `zone` assets, and the re-derived shell corrections |
-| `c85dda7` | The evidence, and repairs to two instruments that were reporting confidently and wrongly — see §4 |
-| `9550bb3` | The fourth sweep, and the rate that falls out of it |
-| *(this session)* | **Typed family palettes.** `zone` gets 64 colours and `character` 16, each derived from that family's own art. The four-colour pass above is superseded by the same mechanism at a measured size |
+| **the audit** | four measurement scripts, and `docs/PALETTE_FIDELITY_BOUNDARY.md` — where the colour is lost, proved by rendering the pipeline's own intermediate stage |
+| **the four-colour extension** | `familyExtensions.zone` with four colours. Correct mechanism, guessed size. Superseded below, and **kept in history on purpose**: the evidence set uses it as its middle column |
+| **the instrument repairs** | two tools that were reporting confidently and wrongly — the study script could not see the palette that had shipped, and the glow gate could kill a sweep with an unhandled rejection |
+| **typed family palettes** | what merges. `zone` 64 colours and `character` 16, each derived from that family's own art, plus the repair script the change made unnecessary |
+
+`git log --oneline origin/main..claude/homepage-palette-fidelity` is the
+authoritative list.
 
 **This branch supersedes the designated branch.**
 `claude/text-surface-tuesday-slice-fouqq1` is two commits ahead of `main`
@@ -189,5 +192,8 @@ Recorded so it is visible rather than quietly absent:
 |---|---|
 | **The isolated-pixel rate** | The palette extension does not improve it and measurably makes it slightly worse — more colours mean more decision boundaries. *"Fewer isolated noisy pixels"* needs a spatial-coherence remedy, which is a different mechanism and a separate decision |
 | **Tony** | Untouched by design. His coverage was always fine; his 11.06% isolated rate is the thing a palette cannot fix |
-| **Visual debt 9 — the ceiling** | Already closed by `clearCeilingScorch`. This slice did not reopen it: the requantization moved every colour the mechanism keys on, so the whole opening was re-derived, and that re-derivation is where the three defects in `PALETTE_FIDELITY_BOUNDARY.md §7a` came from |
+| **Visual debts 8 and 9 — the wall and the ceiling** | Still closed, and now closed by the *cause* going rather than by a repair. `clean-parlor-surfaces.ts` is deleted with its thirty-four tests; the surfaces are correct with no filter run over them |
+| **Visual debt 16 — the residual `#418`** | Untouched, and deliberately not investigated further on this branch. The census instrumentation stays |
 | **Visual debt 1, 2, 11, 14** | Unchanged, and none is touched by this slice. See `docs/VISUAL_DEBT.md` |
+| **Tony's inherent detail at 88 px** | Not a defect and not fixed. If a future report is about his *sharpness* rather than his colour, the lever is a higher-resolution asset and `PALETTE_FIDELITY_BOUNDARY.md §4`'s option D has the numbers |
+| **Collectibles inside a 96-colour room** | They still quantize against the shared 32 by commissioner decision. Nothing in the evidence shows them clashing, but only a real screen answers it |
