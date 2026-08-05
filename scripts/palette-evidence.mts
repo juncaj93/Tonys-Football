@@ -53,29 +53,74 @@ const SHELL = 'public/assets/zone/zone_parlor_shell.png';
 interface Crop {
   readonly name: string;
   readonly file: string;
+  /**
+   * The approved painting this asset comes from, and its shipped canvas.
+   *
+   * The 2026-08-06 ruling asks for *"Tony source versus old production versus
+   * proposed production"* by name, so the benchmark is a **column** here rather
+   * than a claim in prose. It is produced by the pipeline's own downscale with
+   * the quantizer left out — which is the only honest way to render a 941 × 1672
+   * painting at 320 units — so the comparison isolates exactly one step.
+   */
+  readonly source?: { readonly incoming: string; readonly canvas: readonly [number, number] };
   /** Omitted means the whole asset. In source units, not device pixels. */
   readonly rect?: { left: number; top: number; width: number; height: number };
   readonly scale: number;
 }
 
 const TONY = 'public/assets/character/character_tony_neutral.png';
+const SHELL_SRC = { incoming: 'art/incoming/zone_parlor_shell.png', canvas: [320, 569] } as const;
+const TONY_SRC = {
+  incoming: 'art/incoming/character_tony_neutral_02.png',
+  canvas: [88, 240],
+} as const;
 
 const CROPS: readonly Crop[] = [
   // The headline, at 1:1 — the size the room is actually drawn at.
-  { name: 'shell-whole', file: SHELL, scale: 1 },
-  { name: 'tony-whole', file: TONY, scale: 2 },
+  { name: 'shell-whole', file: SHELL, source: SHELL_SRC, scale: 1 },
+  { name: 'tony-whole', file: TONY, source: TONY_SRC, scale: 2 },
   // His face is the commissioner's named fidelity reference.
-  { name: 'tony-face', file: TONY, rect: { left: 13, top: 0, width: 62, height: 68 }, scale: 6 },
-  { name: 'ceiling', file: SHELL, rect: { left: 40, top: 0, width: 200, height: 70 }, scale: 4 },
+  {
+    name: 'tony-face',
+    file: TONY,
+    source: TONY_SRC,
+    rect: { left: 13, top: 0, width: 62, height: 68 },
+    scale: 6,
+  },
+  {
+    name: 'ceiling',
+    file: SHELL,
+    source: SHELL_SRC,
+    rect: { left: 40, top: 0, width: 200, height: 70 },
+    scale: 4,
+  },
   {
     name: 'wall-behind-tony',
     file: SHELL,
+    source: SHELL_SRC,
     rect: { left: 50, top: 165, width: 110, height: 100 },
     scale: 4,
   },
-  { name: 'floor', file: SHELL, rect: { left: 40, top: 460, width: 200, height: 100 }, scale: 4 },
-  { name: 'booths', file: SHELL, rect: { left: 180, top: 260, width: 140, height: 120 }, scale: 4 },
-  { name: 'counter-front', file: 'public/assets/zone/zone_counter_front.png', scale: 2 },
+  {
+    name: 'floor',
+    file: SHELL,
+    source: SHELL_SRC,
+    rect: { left: 40, top: 460, width: 200, height: 100 },
+    scale: 4,
+  },
+  {
+    name: 'booths',
+    file: SHELL,
+    source: SHELL_SRC,
+    rect: { left: 180, top: 260, width: 140, height: 120 },
+    scale: 4,
+  },
+  {
+    name: 'counter-front',
+    file: 'public/assets/zone/zone_counter_front.png',
+    source: { incoming: 'art/incoming/zone_counter_front_01.png', canvas: [320, 278] },
+    scale: 2,
+  },
 ];
 
 const OUT = process.argv[2] ?? 'docs/evidence/palette-fidelity';
@@ -94,6 +139,16 @@ async function write(buf: Buffer, crop: Crop, out: string): Promise<void> {
 }
 
 for (const crop of CROPS) {
+  if (crop.source !== undefined) {
+    const [w, h] = crop.source.canvas;
+    const benchmark = await sharp(crop.source.incoming)
+      .ensureAlpha()
+      .resize(w, h, { kernel: 'lanczos3', fit: 'fill' })
+      .png()
+      .toBuffer();
+    await write(benchmark, crop, path.join(OUT, `${crop.name}-source.png`));
+  }
+
   for (const stage of STAGES) {
     let source: Buffer;
     try {

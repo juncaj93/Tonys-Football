@@ -92,6 +92,11 @@ seven files change and every collectible is byte-identical.
 | busiest single colour | 35.8% | 35.8% | **4.2%** |
 | distinct colours in the asset | 26 | 30 | **90** |
 
+The single measurement that says it best: on the lit wall beside the Tonight
+board, the shared 32 drew **8 colours, 39% of them from the `wood` ramp** —
+brown, on a wall, because nothing warmer was in range. It is 27 graded warm tones
+now.
+
 ### The isolated-pixel rate is the wrong instrument, and one nearly shipped as a gate
 
 The shell's isolated-pixel rate went **2.23% → 13.46%** while the picture became

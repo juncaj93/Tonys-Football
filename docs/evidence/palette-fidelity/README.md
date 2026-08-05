@@ -6,20 +6,26 @@ homepage, including Tony, does not preserve the visual quality of the original
 approved art."* Both were right, and these are the pictures that show why the
 first answer was not enough.
 
-**Three columns, not two.** A before/after pair would let a reader conclude the
-first attempt had simply been too timid. The middle column is what shows that
-*more of the same* was not the answer.
+**Four columns, and two of them exist to stop a wrong reading.** A plain
+before/after would let a reader conclude the first attempt had simply been too
+timid — `-plus4` shows that more of the same was not the answer. And without
+`-source` there is nothing to be faithful *to*, only two productions to prefer
+between.
 
 | suffix | state | shell mean error¹ |
 |---|---|---|
+| `-source` | **the approved painting**, reduced to the shipped canvas and *not quantized* — the benchmark | 0 by definition |
 | `-before` | the shared 32 (`4a36244`) | 35.0 |
 | `-plus4` | the shared 32 + four `zone` colours (`b4815a1`) | 21.6 |
 | `-after` | each painterly family quantized against **its own** palette | **5.9** |
 
 ¹ against the approved source, out of a possible 441.
 
-All three are read out of git rather than off disk, so the comparison cannot
-drift with a working tree. Regenerate with `npx tsx scripts/palette-evidence.mts`.
+The three production columns are read out of git rather than off disk, so the
+comparison cannot drift with a working tree; `-source` is produced by the
+pipeline's own downscale with the quantizer left out, so exactly one step
+separates it from `-after`. Regenerate with
+`npx tsx scripts/palette-evidence.mts`.
 Enlargements are **nearest-neighbour** — smoothing them would blur the one thing
 being compared.
 
