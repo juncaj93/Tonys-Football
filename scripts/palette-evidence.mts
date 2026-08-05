@@ -29,13 +29,24 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 /**
- * The commit immediately before `art/palette.json` grew `familyExtensions`.
+ * The three states of the room, pinned by commit.
  *
  * Pinned rather than computed as `HEAD~1`: this file outlives the branch it was
  * written on, and a relative ref would silently start comparing the wrong pair
  * the first time anything landed on top of it.
+ *
+ * Three rather than two, because the middle one is the argument. `+4` was a real
+ * improvement on every metric the study had — mean error 35.0 to 21.6 — and it
+ * was still visibly orange and posterized at phone size. A two-way before/after
+ * would let the reader believe the first attempt had simply been too timid; the
+ * middle column is what shows that *more of the same* was not the answer, and
+ * that the shared palette was the wrong shape rather than the wrong size.
  */
-const BEFORE_REF = '4a36244';
+const STAGES = [
+  { key: 'before', ref: '4a36244', what: 'the shared 32' },
+  { key: 'plus4', ref: 'b4815a1', what: 'the shared 32 + 4' },
+  { key: 'after', ref: 'HEAD', what: "the zone family's own 64" },
+] as const;
 
 const SHELL = 'public/assets/zone/zone_parlor_shell.png';
 
@@ -47,9 +58,14 @@ interface Crop {
   readonly scale: number;
 }
 
+const TONY = 'public/assets/character/character_tony_neutral.png';
+
 const CROPS: readonly Crop[] = [
   // The headline, at 1:1 — the size the room is actually drawn at.
   { name: 'shell-whole', file: SHELL, scale: 1 },
+  { name: 'tony-whole', file: TONY, scale: 2 },
+  // His face is the commissioner's named fidelity reference.
+  { name: 'tony-face', file: TONY, rect: { left: 13, top: 0, width: 62, height: 68 }, scale: 6 },
   { name: 'ceiling', file: SHELL, rect: { left: 40, top: 0, width: 200, height: 70 }, scale: 4 },
   {
     name: 'wall-behind-tony',
@@ -78,15 +94,21 @@ async function write(buf: Buffer, crop: Crop, out: string): Promise<void> {
 }
 
 for (const crop of CROPS) {
-  const before = execFileSync('git', ['show', `${BEFORE_REF}:${crop.file}`], {
-    maxBuffer: 64 * 1024 * 1024,
-    encoding: 'buffer',
-  });
-  const after = execFileSync('git', ['show', `HEAD:${crop.file}`], {
-    maxBuffer: 64 * 1024 * 1024,
-    encoding: 'buffer',
-  });
-  await write(before, crop, path.join(OUT, `${crop.name}-before.png`));
-  await write(after, crop, path.join(OUT, `${crop.name}-after.png`));
+  for (const stage of STAGES) {
+    let source: Buffer;
+    try {
+      source = execFileSync('git', ['show', `${stage.ref}:${crop.file}`], {
+        maxBuffer: 64 * 1024 * 1024,
+        encoding: 'buffer',
+      });
+    } catch {
+      // An asset that did not exist at that commit. Skipping it is right: an
+      // empty frame in a three-way comparison is information, an invented one
+      // is not.
+      console.log(`  (${crop.name} has no ${stage.key} — not in ${stage.ref})`);
+      continue;
+    }
+    await write(source, crop, path.join(OUT, `${crop.name}-${stage.key}.png`));
+  }
   console.log(`${crop.name}  ${crop.scale}x  ->  ${OUT}`);
 }

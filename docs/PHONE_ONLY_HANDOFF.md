@@ -38,7 +38,7 @@ Verified after the fact rather than assumed: `list_workflow_runs` filtered to
 | Open PR | **none, deliberately** |
 | Workflow runs created | **0**, confirmed from GitHub after each push |
 
-Four commits:
+Six commits:
 
 | SHA | What |
 |---|---|
@@ -46,6 +46,8 @@ Four commits:
 | `4a36244` | `docs/PALETTE_FIDELITY_BOUNDARY.md` — the diagnosis, the mechanism, the candidate, the scoping decision |
 | `b4815a1` | The palette extension itself: `art/palette.json`, six reprocessed `zone` assets, and the re-derived shell corrections |
 | `c85dda7` | The evidence, and repairs to two instruments that were reporting confidently and wrongly — see §4 |
+| `9550bb3` | The fourth sweep, and the rate that falls out of it |
+| *(this session)* | **Typed family palettes.** `zone` gets 64 colours and `character` 16, each derived from that family's own art. The four-colour pass above is superseded by the same mechanism at a measured size |
 
 **This branch supersedes the designated branch.**
 `claude/text-surface-tuesday-slice-fouqq1` is two commits ahead of `main`
@@ -69,14 +71,23 @@ scoped to the `zone` family by commissioner decision. Additive: they never
 replace a shared colour, which is the property that keeps Tony and all twelve
 approved Batch B collectibles **byte-identical**. Six assets change, all `zone`.
 
-Measured on the incoming source art, the way production quantizes it:
+**Superseded within the branch, and the second pass is what merges.** Four
+colours halved the error and left a room still visibly orange on a phone. The
+2026-08-06 ruling asked for the page to be judged at true phone size, and at
+true phone size four was not enough.
 
-| asset | mean error | `amber` share |
-|---|---|---|
-| shell | 35.0 → **21.6** | 27.3% → 20.7% |
-| counter-front | 36.4 → **20.1** | 14.1% → 12.8% |
-| newspaper-rack | 28.4 → **23.1** | 1.5% → 0.2% |
-| tony, and the collectibles | unchanged, by design | unchanged |
+What ships is **typed family palettes sized by measurement**: `zone` 64 colours,
+`character` 16, each derived by weighted k-means from that family's own art.
+
+| shipped shell | shared 32 | +4 | **now** |
+|---|---|---|---|
+| mean quantization error | 35.0 | 21.6 | **5.9** |
+| lamp-glow (`amber`) share | 27.3% | 20.7% | **0.9%** |
+| busiest single colour | 35.8% | 35.8% | **4.2%** |
+| file size | 19 KB | 19 KB | 60 KB |
+
+Tony's error goes 30.3 → **14.5**. Every collectible is byte-identical; seven
+files change in total.
 
 The single sentence that says what it is for: **the room stopped being three
 colours.** Its three largest were one brown, one crimson and one gold — 66%
@@ -84,8 +95,18 @@ between them, holding up walls, ceiling, floor, furniture and counter alike. The
 ceiling on its own was **68% a single colour**.
 
 Full reasoning: `docs/PALETTE_FIDELITY_BOUNDARY.md`.
-Pictures: `docs/evidence/palette-fidelity/` — twelve PNGs and a README,
-regenerable with `npx tsx scripts/palette-evidence.mts`.
+
+Pictures, and the second set is the one to look at first:
+
+- `docs/evidence/homepage-fidelity/` — **the whole page** at 390 / 375 / 360,
+  before and after, at device resolution and at 1:1. The 2026-08-06 ruling asks
+  for the composition rather than crops, and this is it.
+- `docs/evidence/palette-fidelity/` — asset crops, **three-way**: the shared 32,
+  the four-colour pass, and what ships. The middle column is the argument — it
+  shows that more of the same was not the answer.
+
+Both regenerable: `scripts/palette-evidence.mts` reads its inputs out of git, and
+`scripts/homepage-shot.mts` drives a local production server.
 
 ---
 

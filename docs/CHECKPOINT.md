@@ -33,6 +33,97 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Where the product is — 2026-08-06 (sixteenth session)
+
+### The homepage was being drawn in a palette that served 2% of it
+
+**Commissioner, 2026-08-06:** Tony's clipping is confirmed fixed and closed. The
+remaining concern is broader — *"the entire homepage, including Tony, does not
+preserve the visual quality of the original approved art"* — with the ruling that
+**visual fidelity at true phone size is the acceptance criterion** and that mean
+error, palette usage and isolated-pixel rate are explicitly *not* sufficient.
+
+**The 2026-08-05 four-colour pass was the right diagnosis at the wrong scale.** It
+halved the shell's mean error, 35.0 → 21.6, and left a room that is still visibly
+orange and posterized on a phone. Growing it was not the answer either; the shape
+was wrong.
+
+### The source art is not pixel art, and that is the finding
+
+| | dimensions | distinct colours | blockiness |
+|---|---|---|---|
+| `zone_parlor_shell.png` | 941 × 1672 | **153,738** | 2.9% |
+| `character_tony_neutral_02.png` | 480 × 1315 | **72,004** | 5.7% |
+
+These are continuous-tone paintings. **The pixel-art look is manufactured by the
+pipeline**, which downscales the shell 2.94:1 and then snaps 153,738 colours onto
+32 — a palette chosen for 46 × 46 collectibles generated in independent batches,
+where a shared palette is what stops batch four looking like a different game.
+The room is not that, and **the count was a convention rather than a
+measurement**.
+
+The room is also drawn at **1170 device pixels from a 320-pixel file** — a 3.66×
+upscale at 390 — so every artifact is magnified three to four times before
+anybody sees it. Comparing 320-pixel files to each other flatters the pipeline,
+so every comparison in the evidence renders *through* that upscale.
+
+### Typed family palettes — option B, sized by measurement
+
+All four architectures in the ruling were measured. **A** (a better shared
+palette) is rejected by the same number that justifies B: the `zone` extension
+now carries **97.93%** of the room and the shared ramps carry 2.07% between them.
+**C** (skip quantization) is visually the benchmark and costs 406 KB against
+60 KB, and gives up palette closure. **D** (higher resolution) is **not needed** —
+the *unquantized* 320 render is already close to the source, so resolution is
+second-order and this slice does not pull it.
+
+| family | extension | mean error | derived from |
+|---|---|---|---|
+| `zone` | **64** | 35.0 → **5.9** | all six `zone` sources |
+| `character` | **16** | 30.3 → **14.5** | Tony |
+
+`scripts/derive-family-palette.mts` prints the block; the hexes are literals in
+`palette.json` and are **never recomputed at build time**. Additive as before, so
+seven files change and every collectible is byte-identical.
+
+| shipped shell | shared 32 | +4 | **now** |
+|---|---|---|---|
+| lamp-glow (`amber`) share | 27.3% | 20.7% | **0.9%** |
+| busiest single colour | 35.8% | 35.8% | **4.2%** |
+| distinct colours in the asset | 26 | 30 | **90** |
+
+### The isolated-pixel rate is the wrong instrument, and one nearly shipped as a gate
+
+The shell's isolated-pixel rate went **2.23% → 13.46%** while the picture became
+far more faithful. The metric counts pixels differing from all four neighbours,
+which on an honestly rendered gradient is most of them — so it rewards flat
+posterized fields. A second proxy failed the same way and is recorded because it
+was one commit from being a test: an all-dark-3×3 scan of the ceiling reports
+**593 blocks on the faithful ceiling against 18 on the posterized one**, because
+the faithful one has continuous grout lines where the posterized one had broken
+dashes. **A gate that prefers the worse picture is not a gate.**
+
+### A repair script retired, because its cause is gone
+
+`clean-parlor-surfaces.ts`, its thirty-four tests and `measure-ceiling.mts` are
+**deleted**. It repaired a dithered board face, a speckled alcove and a scorched
+ceiling, and it said in its own header that all three *"are created by the
+downscale and the palette snap, not present in [the painting]"*. Keeping it would
+be worse than dead code — it **overpaints the approved art**, replacing the
+board's face with a flat fill the painting does not have. Visual debts 8 and 9
+stay closed by the cause going rather than by the repair.
+
+`shift-tonight-board.ts` stays: it is *geometric*. Two constants re-measured
+rather than relaxed — `FRAME_PROFILE` for the third time (it used to contain
+`skin-4` on a wooden frame), and `LIT_WALL` became a **set of three**, because
+the wall has depth again and a scan for one exact colour stopped on the first row.
+
+`docs/PALETTE_FIDELITY_BOUNDARY.md` is the canonical account.
+`docs/evidence/homepage-fidelity/` is the full page at 390 / 375 / 360, before and
+after, at device resolution and 1:1.
+
+---
+
 ## Where the product is — 2026-08-05 (fifteenth session)
 
 ### The room got four colours it never had, and that was a *cause* fix

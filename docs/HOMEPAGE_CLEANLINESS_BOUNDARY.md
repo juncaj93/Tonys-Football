@@ -287,6 +287,19 @@ as `shift-tonight-board.ts`: measured, integrity-checked, idempotent, and pinned
 by `scripts/clean-parlor-surfaces.test.ts` so a reprocess that reverts them fails
 the suite by name.
 
+> **Superseded 2026-08-06.** Every row of the table above that names *source
+> artwork* or *deterministic replacement* has been **deleted**, and the surfaces
+> are correct without it. All three were repairs to damage the **quantizer** was
+> doing — this document said so itself, one section up: the board's face was a
+> dithered vignette because thirty-two colours had three ambers to spend on a
+> smooth gradient. The `zone` family palette carries the painting's own values,
+> so the face is the painting's cream rather than a fill and the alcove is the
+> painting's own value step. `scripts/clean-parlor-surfaces.ts` and its
+> thirty-four tests are gone; `scripts/shell-surfaces.test.ts` pins the
+> *properties* they used to produce. The mechanism for these three surfaces is
+> now **"do not damage it in the first place."**
+> `docs/PALETTE_FIDELITY_BOUNDARY.md §7`.
+
 Neither can introduce a colour. The replacement paints two palette values; the
 despeckle only ever assigns a colour already dominant among a pixel's own
 neighbours.
