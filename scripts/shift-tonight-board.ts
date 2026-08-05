@@ -58,18 +58,30 @@ const BOARD_WIDTH = BOARD.right - BOARD.left + 1;
 
 /**
  * The frame's colour sequence reading inward from its last column, at a row
- * well inside the board. Amber lip, dark bevel, red face, shadow, inner tan.
+ * well inside the board. Amber lip, ochre, ember bevel, brick face, ember, tan.
  *
  * This is the integrity check. The right edge below says *where* the board is;
  * this says the thing found there is actually the board.
+ *
+ * ## Re-measured when the `zone` palette extension landed
+ *
+ * These are colours of the shell, so they moved when it was requantized
+ * (2026-08-05, `docs/PALETTE_FIDELITY_BOUNDARY.md`). The old sequence read
+ * `#C97A22 #C97A22 #4A2E1C #8C1F22 #8C1F22 #5E3A25 #A9713F` — note `#5E3A25`,
+ * which is `skin-4`, on a wooden board frame. That was the coverage gap showing
+ * through: with nothing better in range, a frame's shadow landed on a *skin*
+ * colour. The frame now reads as one material, which is the change working.
+ *
+ * Re-measured rather than relaxed. A profile that tolerated any colour would stop
+ * being an integrity check the moment it was convenient.
  */
-const FRAME_PROFILE = [
+export const FRAME_PROFILE = [
   '#C97A22',
-  '#C97A22',
-  '#4A2E1C',
-  '#8C1F22',
-  '#8C1F22',
-  '#5E3A25',
+  '#B46110',
+  '#661505',
+  '#A02F02',
+  '#A02F02',
+  '#661505',
   '#A9713F',
 ] as const;
 const PROFILE_ROW = 128;

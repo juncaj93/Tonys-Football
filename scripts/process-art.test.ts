@@ -160,8 +160,18 @@ describe('the processed batch', () => {
     expect(violet, `${((violet / count) * 100).toFixed(2)}% of the shell`).toBe(0);
   });
 
-  it.each(OUTPUTS)('closes %s over the palette', async (file) => {
-    const entries = new Set(palette.map((c) => hex(c)));
+  /**
+   * The family an output belongs to, from its path.
+   *
+   * Closure is a per-family question now: a `zone` asset legitimately holds the
+   * four colours of its family extension, and a `character` asset legitimately
+   * does not. Asserting every output against the shared 32 would have been right
+   * before 2026-08-05 and is now a test of the wrong contract.
+   */
+  const familyOf = (file: string): string => file.split('/')[2] ?? '';
+
+  it.each(OUTPUTS)('closes %s over its family palette', async (file) => {
+    const entries = new Set(loadPalette(familyOf(file)).map((c) => hex(c)));
     const { data } = await pixels(file);
     const seen = new Set<string>();
 
@@ -234,9 +244,145 @@ describe('the shell ramp share', () => {
     );
     console.log('shell ramp share (%):', JSON.stringify(pct));
 
-    const warm = (pct['wood'] ?? 0) + (pct['red'] ?? 0) + (pct['skin'] ?? 0) + (pct['amber'] ?? 0);
+    /*
+     * The `zone` extension counts as warm, because it is.
+     *
+     * Its four colours were chosen by weighted k-means over the room's own warm
+     * pixels and they now carry most of the wall, ceiling, floor and counter —
+     * which is the point of them. Leaving them out made this read 25.18% and
+     * fail, while describing a room that had become *more* faithfully warm.
+     */
+    const zoneExtra = new Set(
+      loadPalette('zone')
+        .slice(loadPalette().length)
+        .map((c) => hex(c)),
+    );
+    let extension = 0;
+    for (let i = 0; i < data.length; i += info.channels) {
+      if (zoneExtra.has(hex([data[i]!, data[i + 1]!, data[i + 2]!]))) extension += 1;
+    }
+    const extensionPct = (extension / total) * 100;
+    console.log(`shell zone-extension share: ${extensionPct.toFixed(2)}%`);
+
+    const warm =
+      (pct['wood'] ?? 0) + (pct['red'] ?? 0) + (pct['skin'] ?? 0) + (pct['amber'] ?? 0) +
+      extensionPct;
     expect(warm, 'a pizza parlor is mostly wood, red and warm light').toBeGreaterThan(60);
     expect(pct['violet'] ?? 0, 'violet').toBe(0);
-    expect(Math.max(...Object.values(pct)), 'no family has eaten the room').toBeLessThan(70);
+    expect(
+      Math.max(extensionPct, ...Object.values(pct)),
+      'no family has eaten the room',
+    ).toBeLessThan(70);
+  });
+});
+
+/**
+ * The `zone` family extension, and the property that makes it safe.
+ *
+ * The homepage-fidelity audit measured the defect it closes: the shell used the
+ * `paper` ramp for 0.1% of its pixels and the `amber` (lamp-glow) ramp for
+ * 27.3%, at a mean quantization error of 35 out of a possible 441 — which is why
+ * the room rendered orange while the source and the downscale were both clean.
+ *
+ * These pin the *mechanism*, not one PNG. A hash per asset would fail on any
+ * legitimate future art revision and say nothing about whether the colour is
+ * right; `docs/PALETTE_FIDELITY_BOUNDARY.md` records why fidelity properties are
+ * the thing worth protecting here.
+ */
+describe('the zone palette extension', () => {
+  const shellPath = path.join(ROOT, 'public/assets/zone/zone_parlor_shell.png');
+
+  it('is additive — every shared colour is still in the zone palette', () => {
+    /*
+     * The load-bearing property. An extension that *replaced* a shared colour
+     * would silently make one family a different world, and the guarantee that
+     * every other family is byte-identical would quietly stop being true.
+     */
+    const shared = loadPalette();
+    const zone = loadPalette('zone');
+    for (const colour of shared) {
+      expect(zone, `${hex(colour)} must survive into the zone palette`).toContainEqual(colour);
+    }
+    expect(zone.length).toBeGreaterThan(shared.length);
+  });
+
+  it('gives a family with no extension exactly the shared palette', () => {
+    // Collectibles were deliberately excluded (commissioner, 2026-08-05), and
+    // this is what keeps them excluded when somebody adds the next extension.
+    expect(loadPalette('collectible')).toEqual(loadPalette());
+    expect(loadPalette('character')).toEqual(loadPalette());
+    expect(loadPalette()).toHaveLength(32);
+  });
+
+  it('no longer maps the room onto lamp-glow colours', async () => {
+    const { data, info } = await sharp(shellPath).raw().toBuffer({ resolveWithObject: true });
+    const total = info.width * info.height;
+    const amber = ramp('amber');
+
+    let lit = 0;
+    for (let i = 0; i < data.length; i += info.channels) {
+      if (amber.has(hex([data[i]!, data[i + 1]!, data[i + 2]!]))) lit += 1;
+    }
+
+    const pct = (lit / total) * 100;
+    console.log(`shell amber share: ${pct.toFixed(1)}%`);
+    // It was 27.3%. A room lit by its own lamp colours is the defect; the
+    // threshold is loose enough that a re-lit source does not fail it.
+    expect(pct, 'the amber ramp is lamp light, not wall paint').toBeLessThan(20);
+  });
+
+  it('keeps the room measurably closer to its source than the shared palette can', async () => {
+    /*
+     * The claim the extension exists to make, measured end to end rather than
+     * asserted: quantizing the real source against the shared 32 is worse than
+     * against the zone palette, on the same pixels.
+     */
+    const source = path.join(ROOT, 'art/incoming/zone_parlor_shell.png');
+    if (!existsSync(source)) return;
+
+    const { data, info } = await sharp(source)
+      .ensureAlpha()
+      .resize(320, 569, { kernel: 'lanczos3', fit: 'fill' })
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+
+    const meanError = (palette: readonly (readonly [number, number, number])[]): number => {
+      let sum = 0;
+      let n = 0;
+      for (let i = 0; i < info.width * info.height; i += 1) {
+        const p = i * 4;
+        if (data[p + 3]! < 128) continue;
+        let best = Number.POSITIVE_INFINITY;
+        for (const c of palette) {
+          const d =
+            (c[0] - data[p]!) ** 2 + (c[1] - data[p + 1]!) ** 2 + (c[2] - data[p + 2]!) ** 2;
+          if (d < best) best = d;
+        }
+        sum += Math.sqrt(best);
+        n += 1;
+      }
+      return sum / n;
+    };
+
+    const shared = meanError(loadPalette());
+    const zone = meanError(loadPalette('zone'));
+    console.log(`shell mean error: shared ${shared.toFixed(1)} → zone ${zone.toFixed(1)}`);
+
+    // Measured at 35.0 → 21.6. A quarter off is the improvement the four colours
+    // were chosen to deliver; less means they no longer serve the source.
+    expect(zone).toBeLessThan(shared * 0.75);
+  });
+
+  it('leaves the shell closed over the zone palette', async () => {
+    // Including after both one-time corrections have run over it, which is the
+    // state that actually ships.
+    const zone = new Set(loadPalette('zone').map((c) => hex(c)));
+    const { data, info } = await sharp(shellPath).raw().toBuffer({ resolveWithObject: true });
+    const strays = new Set<string>();
+    for (let i = 0; i < data.length; i += info.channels) {
+      const colour = hex([data[i]!, data[i + 1]!, data[i + 2]!]);
+      if (!zone.has(colour)) strays.add(colour);
+    }
+    expect([...strays], 'every pixel is a palette colour').toEqual([]);
   });
 });

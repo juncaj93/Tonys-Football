@@ -1,9 +1,8 @@
 {
-  "$comment": "Tony's Pizza Fantasy — locked palette. 32 colors. Every generated asset is quantized to exactly these values during processing; this file is the mechanism that keeps independently generated batches looking like one world. Do not add, remove, or edit a color without regenerating every affected asset.",
+  "$comment": "Tony's Pizza Fantasy \u2014 locked palette. 32 shared colours, plus a narrowly typed per-family extension. Every generated asset is quantized to these values during processing; this file is the mechanism that keeps independently generated batches looking like one world. Do not add, remove, or edit a color without regenerating every affected asset.",
   "version": "1.0",
-  "status": "PROVISIONAL — locked on approval of art test batch B0",
+  "status": "PROVISIONAL \u2014 locked on approval of art test batch B0",
   "totalColors": 32,
-
   "ramps": {
     "ink": {
       "role": "Outlines, text, shadow anchors. Warm-biased so it never reads as pure black.",
@@ -88,24 +87,34 @@
       }
     }
   },
-
+  "familyExtensions": {
+    "$comment": "Colours available to ONE asset family only. The shared 32 stay shared; a family extension is how a measured coverage gap gets closed without rewriting art that does not have the gap. See docs/PALETTE_FIDELITY_BOUNDARY.md.",
+    "zone": {
+      "$comment": "The room's own four. `zone_*` assets are large painterly interiors whose dominant surfaces \u2014 walls, ceiling, floor, counter \u2014 live in a warm mid range the shared 32 do not reach: measured, the shell used the paper ramp for 0.1% of its pixels and the amber (lamp-glow) ramp for 27.3%, at a mean quantization error of 35 of a possible 441. These four were chosen by weighted k-means over the worst-served warm pixels, not by eye. They take the shell to 21.6 and the counter front from 36.4 to 20.1. Scoped to `zone` by commissioner decision 2026-08-05: applied globally they also rewrote all twelve approved Batch B collectibles by up to 39%, which is a re-approval event rather than a defect fix.",
+      "colors": {
+        "zone-foliage": "#455806",
+        "zone-ember": "#661505",
+        "zone-brick": "#A02F02",
+        "zone-ochre": "#B46110"
+      }
+    }
+  },
   "semantic": {
     "$comment": "Semantic roles map to ramp entries. Never introduce a new hex for a semantic role.",
     "outline": "ink-900",
-    "shadowRule": "one step darker within the same ramp — never ink-900, never pure black",
+    "shadowRule": "one step darker within the same ramp \u2014 never ink-900, never pure black",
     "keyLight": "amber-glow",
     "ambientFill": "blue-mid",
     "pageBackground": "paper-mid",
     "bodyText": "ink-700",
     "rarity": {
-      "$comment": "Rarity must never be communicated by color alone. These reinforce the frame geometry and label required by 06 §8.",
+      "$comment": "Rarity must never be communicated by color alone. These reinforce the frame geometry and label required by 06 \u00a78.",
       "common": "ink-300",
       "rare": "blue-light",
       "epic": "magenta-neon",
       "legendary": "amber-glow"
     }
   },
-
   "prohibited": {
     "$comment": "Never sample or introduce these, regardless of what a generation returns.",
     "pureBlack": "#000000",

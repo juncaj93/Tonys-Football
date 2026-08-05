@@ -7,6 +7,7 @@ import {
   BACKSPLASH,
   CEILING,
   CEILING_FIELD,
+  CEILING_PROBE,
   CEILING_SCORCH,
   CEILING_TONES,
   FACE,
@@ -475,11 +476,19 @@ describe('the committed shell — the ceiling', () => {
      * The grid is what is *left* in the scorch colours after the opening. The
      * range is wide enough that a legitimate change to the operator does not
      * break it and narrow enough to be a real claim: erasing the grid gives ~0,
-     * and skipping the clean entirely gives ~3,973.
+     * and skipping the clean entirely gives ~3,437.
+     *
+     * Re-derived for the `zone` palette extension, which redistributed the
+     * ceiling's browns — most of what was `#7A4A2A` now lands on `zone-ember`, so
+     * the uncleaned total fell from ~3,973 to ~3,437 and the cleaned grid with
+     * it. The bounds are the same *fractions* of the uncleaned surface they were
+     * before, roughly 38% to 60%, which is the claim that was actually being
+     * made; the old absolute numbers described a quantization that no longer
+     * exists.
      */
     const grid = scorchCount(pixels, width);
-    expect(grid, `${REAPPLY} — or the grid was eroded`).toBeGreaterThan(1500);
-    expect(grid, 'more brown than the grid alone — is the scorch back?').toBeLessThan(2400);
+    expect(grid, `${REAPPLY} — or the grid was eroded`).toBeGreaterThan(1150);
+    expect(grid, 'more brown than the grid alone — is the scorch back?').toBeLessThan(2100);
   });
 
   it('keeps the beam, the sign and the fittings byte-identical', async () => {
@@ -525,10 +534,19 @@ describe('clearCeilingScorch', () => {
   /** A canvas of ceiling field, with the probe points the integrity check reads. */
   function canvas(): Buffer {
     const px = Buffer.alloc(W * H * 4);
+    /*
+     * Filled from `CEILING_FIELD` rather than a literal.
+     *
+     * It was `#C97A22` written out in hex, which stopped being the ceiling's
+     * field the moment the `zone` palette extension landed — every one of these
+     * canvases then failed the probe check for a reason that had nothing to do
+     * with the transform under test.
+     */
+    const [r, g, b] = [1, 3, 5].map((at) => Number.parseInt(CEILING_FIELD.slice(at, at + 2), 16));
     for (let i = 0; i < W * H; i += 1) {
-      px[i * 4] = 0xc9;
-      px[i * 4 + 1] = 0x7a;
-      px[i * 4 + 2] = 0x22;
+      px[i * 4] = r!;
+      px[i * 4 + 1] = g!;
+      px[i * 4 + 2] = b!;
       px[i * 4 + 3] = 255;
     }
     return px;
@@ -644,8 +662,16 @@ describe('clearCeilingScorch', () => {
   });
 
   it('refuses a surface that is not this ceiling', () => {
+    /*
+     * Poked at a **current** probe point rather than a remembered coordinate.
+     *
+     * This used to spoil `(55, 2)`, which stopped being probed the moment the
+     * probes were re-derived — so the test went on passing while checking
+     * nothing. Reading `CEILING_PROBE` means it follows every re-derivation.
+     */
     const px = canvas();
-    set(px, 55, 2, '#1A1214');
+    const probe = CEILING_PROBE[0]!;
+    set(px, probe.x, probe.y, '#1A1214');
     expect(() => clearCeilingScorch(px, W)).toThrow(/not the shell/);
   });
 });

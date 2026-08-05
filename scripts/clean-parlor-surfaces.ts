@@ -187,7 +187,20 @@ const SHADED_TILE = '#5E3A25';
  * Everything the alcove is made of. Anything else there means the rectangle has
  * moved or the asset has been redrawn, and either way this must not paint.
  */
-const ALCOVE_TONES = new Set(['#4A2E1C', '#5E3A25', '#7A4A2A', '#1A1214', '#2E2226', '#8C1F22']);
+const ALCOVE_TONES = new Set([
+  '#4A2E1C',
+  '#5E3A25',
+  '#7A4A2A',
+  '#1A1214',
+  '#2E2226',
+  '#8C1F22',
+  // `zone-ember` and `zone-ochre`, from the family extension. The alcove is warm
+  // dark wood, exactly the range those two were added to serve — so they appear
+  // here for the same reason the rest of the room improved. Extended by
+  // measurement of the requantized asset, not by relaxing the check.
+  '#661505',
+  '#B46110',
+]);
 
 export type AlcoveAction = 'shaded' | 'already-shaded';
 
@@ -309,13 +322,21 @@ const SURFACES: readonly Surface[] = [
 const CEILING: Rect = { left: 0, right: 319, top: 0, bottom: 62 };
 
 /**
- * The ceiling's own field colour — the amber the tiles are painted in.
+ * The tones the tiles themselves are painted in.
  *
- * The only value this mechanism ever writes, and it is already the dominant
- * colour of the surface it writes onto: 12,780 of the rectangle's ~20,000
- * pixels. Nothing new enters the palette.
+ * **Two, not one, and that is the `zone` palette extension showing through.**
+ * Before it the ceiling was a single flat field — `#C97A22` over 12,780 of the
+ * rectangle's ~20,000 pixels — because nothing in the shared 32 sat between that
+ * amber and the browns. It now reads as lit and unlit tile: `#B46110` 45.2% and
+ * `#C97A22` 31.5%, measured by `scripts/measure-ceiling.mts`.
+ *
+ * That gradient is the improvement, so the cleanup must not flatten it. See
+ * {@link fieldToneNear}.
  */
-const CEILING_FIELD = '#C97A22';
+const CEILING_FIELD_TONES = ['#B46110', '#C97A22'] as const;
+
+/** The most common field tone, for a last-resort fill. */
+const CEILING_FIELD = CEILING_FIELD_TONES[0];
 
 /**
  * The two browns the scorch is made of — **and the grid too**.
@@ -326,10 +347,10 @@ const CEILING_FIELD = '#C97A22';
  * line and the smear. A filter that asks "what colour is this pixel" is asking a
  * question with no answer.
  */
-const CEILING_SCORCH = new Set(['#7A4A2A', '#9C6640']);
+const CEILING_SCORCH = new Set(['#661505', '#A02F02', '#7A4A2A', '#9C6640']);
 
 /** Everything the ceiling is allowed to be made of. Anything else is structure. */
-const CEILING_TONES = new Set([CEILING_FIELD, ...CEILING_SCORCH]);
+const CEILING_TONES = new Set([...CEILING_FIELD_TONES, ...CEILING_SCORCH]);
 
 /**
  * Four samples of ceiling field, well inside the rectangle and away from the
@@ -344,12 +365,15 @@ const CEILING_TONES = new Set([CEILING_FIELD, ...CEILING_SCORCH]);
  * file rather than by reading a zoomed screenshot — the first four were picked by
  * eye and one of them landed on `#5E3A25`, which is what this check is for.
  */
-const CEILING_PROBE = [
-  { x: 55, y: 2 },
-  { x: 141, y: 3 },
-  { x: 210, y: 26 },
-  { x: 280, y: 13 },
+export const CEILING_PROBE = [
+  { x: 4, y: 2 },
+  { x: 95, y: 12 },
+  { x: 213, y: 30 },
+  { x: 315, y: 42 },
 ] as const;
+
+/** Eight passes is far past where this converges — three; it is a runaway guard. */
+const MAX_PASSES = 8;
 
 export type ScorchAction = 'cleared' | 'already-clean';
 
@@ -397,12 +421,48 @@ export type ScorchAction = 'cleared' | 'already-clean';
  * There is no state and no threshold that drifts.
  */
 export function clearCeilingScorch(pixels: Buffer, width: number): ScorchAction {
+  /*
+   * Iterated to convergence, because one opening is not enough any more.
+   *
+   * An opening removes a ring from a blob: erosion leaves the interior, dilation
+   * puts one ring back. A blob thicker than three units therefore survives a
+   * single pass as a smaller blob, and the surface only settles after as many
+   * passes as its thickest smear has rings.
+   *
+   * That never showed before the `zone` palette extension because the old
+   * ceiling's smears were drawn in `#7A4A2A` at two or three units. The new
+   * quantization resolves them mostly into `zone-ember`, in thicker patches — so
+   * the first run left a rim, the second cleared it, and "idempotent by
+   * construction" quietly stopped being true.
+   *
+   * The loop is the same idiom the despeckle already uses, with the same bound
+   * and the same refusal to pretend it converged when it did not.
+   */
+  let cleared = false;
+  for (let pass = 0; pass < MAX_PASSES; pass += 1) {
+    if (clearCeilingScorchOnce(pixels, width) === 'already-clean') {
+      return cleared ? 'cleared' : 'already-clean';
+    }
+    cleared = true;
+  }
+  throw new Error(
+    `zone_parlor_shell: the ceiling did not settle in ${String(MAX_PASSES)} passes. ` +
+      'Either the scorch is thicker than this operator can open, or a tone set is wrong — ' +
+      'see scripts/measure-ceiling.mts.',
+  );
+}
+
+/** One opening. See {@link clearCeilingScorch} for why it is called in a loop. */
+function clearCeilingScorchOnce(pixels: Buffer, width: number): ScorchAction {
   for (const { x, y } of CEILING_PROBE) {
     const found = hexAt(pixels, width, x, y);
-    if (found !== CEILING_FIELD) {
+    // Either tile tone. The ceiling has two since the `zone` extension, and a
+    // probe that insisted on the dominant one would be asserting a flat ceiling
+    // that no longer exists — it would fail on a lit tile for being lit.
+    if (!(CEILING_FIELD_TONES as readonly string[]).includes(found)) {
       throw new Error(
-        `expected ceiling field ${CEILING_FIELD} at ${String(x)},${String(y)} but found ${found} — ` +
-          `this is not the shell clearCeilingScorch was written against.`,
+        `expected ceiling field ${CEILING_FIELD_TONES.join(' or ')} at ${String(x)},${String(y)} ` +
+          `but found ${found} — this is not the shell clearCeilingScorch was written against.`,
       );
     }
   }
@@ -479,8 +539,54 @@ export function clearCeilingScorch(pixels: Buffer, width: number): ScorchAction 
   }
 
   if (doomed.length === 0) return 'already-clean';
-  for (const { x, y } of doomed) paint(pixels, width, x, y, CEILING_FIELD);
+
+  /*
+   * Filled from the neighbourhood, not from a constant.
+   *
+   * The original wrote one colour everywhere, which was right when the ceiling
+   * *was* one colour. It now has a lit and an unlit tile tone, and painting a
+   * blotch in the middle of a shaded tile with the lit tone would replace a smear
+   * with a bright patch — trading one artefact for another.
+   *
+   * Every doomed pixel is resolved against the **original** buffer, read before
+   * any of them are painted, so the result does not depend on the order they are
+   * visited in.
+   */
+  const before = Buffer.from(pixels);
+  for (const { x, y } of doomed) {
+    paint(pixels, width, x, y, fieldToneNear(before, width, x, y));
+  }
   return 'cleared';
+}
+
+/**
+ * The field tone that already surrounds a pixel.
+ *
+ * Widening rings, nearest first, so a blotch inside a shaded tile fills with the
+ * shaded tone and one inside a lit tile fills with the lit tone. A blotch thicker
+ * than the search finds nothing and takes the dominant tone, which is the old
+ * behaviour and the honest fallback.
+ */
+function fieldToneNear(pixels: Buffer, width: number, x: number, y: number): string {
+  for (let radius = 1; radius <= 6; radius += 1) {
+    const votes = new Map<string, number>();
+    for (let dy = -radius; dy <= radius; dy += 1) {
+      for (let dx = -radius; dx <= radius; dx += 1) {
+        if (Math.max(Math.abs(dx), Math.abs(dy)) !== radius) continue;
+        const px = x + dx;
+        const py = y + dy;
+        if (px < CEILING.left || px > CEILING.right) continue;
+        if (py < CEILING.top || py > CEILING.bottom) continue;
+        const hex = hexAt(pixels, width, px, py);
+        if ((CEILING_FIELD_TONES as readonly string[]).includes(hex)) {
+          votes.set(hex, (votes.get(hex) ?? 0) + 1);
+        }
+      }
+    }
+    const best = [...votes.entries()].sort((a, b) => b[1] - a[1])[0];
+    if (best !== undefined) return best[0];
+  }
+  return CEILING_FIELD;
 }
 
 /** Kept as the old name for the rectangle, so existing references still read. */
@@ -511,8 +617,6 @@ const EXCLUDED_CEILING = { x0: CEILING.left, y0: CEILING.top, x1: CEILING.right,
 const MAX_SAME = 0;
 const MIN_MODAL = 3;
 
-/** Eight passes is far past where this converges — three; it is a runaway guard. */
-const MAX_PASSES = 8;
 
 function packed(pixels: Buffer, i: number): number {
   return ((pixels[i] ?? 0) << 16) | ((pixels[i + 1] ?? 0) << 8) | (pixels[i + 2] ?? 0);
@@ -622,9 +726,23 @@ export function cleanSurfaces(
    * despeckle's surfaces do not reach row 62. Order is stated rather than
    * assumed because the next surface added might.
    */
-  const ceiling = clearCeilingScorch(pixels, width);
+  /*
+   * The despeckle runs **before** the ceiling, so the ceiling has the last word
+   * on its own rectangle.
+   *
+   * `back-wall` spans y 55–185 and the ceiling spans y 0–62, so the two overlap
+   * for eight rows. With the ceiling going first, the despeckle could then assign
+   * a scorch-coloured dominant neighbour inside those rows — and the ceiling's
+   * next run would want to clear it again. That is what made the whole script
+   * non-idempotent: two runs, then a third, each clearing a little more.
+   *
+   * The ordering states the existing intent rather than changing it. `SURFACES`
+   * deliberately excludes the ceiling because it has its own mechanism; that is
+   * only true if its mechanism is the one that finishes.
+   */
   const despeckled: Record<string, number> = {};
   for (const surface of SURFACES) despeckled[surface.name] = despeckle(pixels, width, surface);
+  const ceiling = clearCeilingScorch(pixels, width);
   return { face, alcove, ceiling, despeckled };
 }
 
