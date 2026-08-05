@@ -51,6 +51,10 @@ being compared.
   `amber-mid` is 14.5% of the band in every column. What changed is the dark
   half, which was crimson `red-dark` *and* brown `wood-dark` rendering one tile.
   The tiles read cleaner because their surround stopped being two unrelated hues.
+- **The wall** answers the ruling's *"do the walls remain cream rather than
+  amber"* directly. Measured on the lit wall beside the board, the shared 32 drew
+  it in **8 colours, 39% of them from the `wood` ramp** — brown, on a wall,
+  because nothing warmer was in range. It is 27 graded warm tones now.
 
 ## The numbers
 
