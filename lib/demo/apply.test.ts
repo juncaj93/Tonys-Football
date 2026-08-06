@@ -284,15 +284,26 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
        * and reported the second run as a duplicate mint.
        *
        * That is the assertion being wrong rather than the product, but the
-       * property it was checking is real for both — so both are checked, each by
-       * the key that actually guards it. An awarded item's key is
-       * `(user_id, slug)`, from `collectibles_one_wearable_each`.
+       * property it was checking is real for all of them — so each is checked by
+       * the key that actually guards it, and the keys are not the same:
+       *
+       *  - a **pulled** item is guarded by `source_opening_id UNIQUE`;
+       *  - a **wearable** by `collectibles_one_wearable_each`, which is partial —
+       *    `WHERE slug LIKE 'wear\_%'` — and so has only ever covered wearables;
+       *  - a **championship ring** by `grant_key UNIQUE`, and emphatically *not*
+       *    by slug. One ring asset serves every championship, so a repeat
+       *    champion legitimately holds two rows with the same slug. Keying
+       *    awarded items by slug would have called that a duplicate mint and
+       *    forced the product to forget a title to satisfy a test.
        */
       const pulled = items.filter((item) => item.sourceOpeningId !== null);
       const awarded = items.filter((item) => item.sourceOpeningId === null);
+      const wearables = awarded.filter((item) => item.slug.startsWith('wear_'));
+      const earned = awarded.filter((item) => item.grantKey !== null);
 
       expect(pulled.length).toBe(new Set(pulled.map((item) => item.sourceOpeningId)).size);
-      expect(awarded.length).toBe(new Set(awarded.map((item) => item.slug)).size);
+      expect(wearables.length).toBe(new Set(wearables.map((item) => item.slug)).size);
+      expect(earned.length).toBe(new Set(earned.map((item) => item.grantKey)).size);
     },
   );
 

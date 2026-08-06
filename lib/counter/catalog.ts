@@ -53,8 +53,25 @@ export interface CatalogItem {
  */
 export const CATALOG_SIZE = 24;
 
-/** `item_championship_ring` is earned, never pulled, so it is not in the box. */
-const NOT_IN_BOXES = new Set(['item_championship_ring']);
+/**
+ * Earned items are separated by the **registry**, not by a list kept here.
+ *
+ * This was `NOT_IN_BOXES = new Set(['item_championship_ring'])` — a hardcoded
+ * slug beside a `systemLayer: true` flag in `art/assets.inventory.json` that the
+ * registry parsed, exposed, and **nothing ever read**. Two declarations of the
+ * same fact, one of them dead, and the dead one was the one the art pipeline
+ * writes.
+ *
+ * Now there is one. `systemLayer` means *this collectible is granted by the
+ * system rather than pulled from a box*, and because every acquisition path in
+ * the product reads `catalog()` — the reward table, the reveal pool, duplicate
+ * salvage, the demo appliers — excluding it here excludes it from all of them at
+ * once. Adding a second earned item is an art-registry row, not a code change,
+ * which is the property `ASSET_PIPELINE.md` asks of every asset.
+ */
+function isSystemGranted(record: { readonly systemLayer?: boolean }): boolean {
+  return record.systemLayer === true;
+}
 
 function isRarity(value: string | undefined): value is Rarity {
   return value !== undefined && (RARITIES as readonly string[]).includes(value);
@@ -71,7 +88,7 @@ function isRarity(value: string | undefined): value is Rarity {
 export function catalog(): readonly CatalogItem[] {
   const items = assetRegistry
     .byFamily('collectible')
-    .filter((record) => !NOT_IN_BOXES.has(record.slug))
+    .filter((record) => !isSystemGranted(record))
     .filter((record) => {
       // A collectible with no rarity is not a catalog entry. `placeholder_pizza_box`
       // is the universal stand-in art, not a thing you can own.
@@ -98,4 +115,25 @@ export function catalogItem(slug: string): CatalogItem {
     throw new Error(`no catalog entry for slug ${slug}`);
   }
   return found;
+}
+
+/**
+ * The earned items — granted by the system, never pulled, never bought.
+ *
+ * The complement of `catalog()`, from the same registry read, so the two cannot
+ * drift into disagreeing about which side an item is on.
+ */
+export function systemCatalog(): readonly CatalogItem[] {
+  return Object.freeze(
+    assetRegistry
+      .byFamily('collectible')
+      .filter((record) => isSystemGranted(record))
+      .filter((record) => isRarity(record.rarity))
+      .map((record) => ({
+        slug: record.slug,
+        name: record.alt,
+        rarity: record.rarity as Rarity,
+      }))
+      .sort((a, b) => a.slug.localeCompare(b.slug)),
+  );
 }

@@ -1230,8 +1230,37 @@ export const collectibles = pgTable(
     sourceOpeningId: uuid('source_opening_id')
       .unique()
       .references(() => boxOpenings.id, { onDelete: 'restrict' }),
+
+    /**
+     * The season this was earned for, when it was earned rather than pulled.
+     *
+     * The **fact**, not the guard. It is what the Collection reads to print the
+     * year, and it is why a manager who wins twice holds two rows: a repeat
+     * championship that collapsed into "owns a ring" would be the product
+     * forgetting something that happened.
+     */
+    sourceSeasonId: uuid('source_season_id').references(() => seasons.id, {
+      onDelete: 'restrict',
+    }),
+
+    /**
+     * The occasion, and the whole of the idempotency.
+     *
+     * UNIQUE, and the same mechanism `loot_boxes.grant_key` already uses for the
+     * seasonal free boxes — `lib/counter/grants.ts` carries the argument and it
+     * holds here unchanged. There is no `SELECT ... WHERE already_granted` in
+     * the ring path: that check is a race with a comfortable-looking body, and
+     * the unique index is what actually saves it.
+     *
+     * A database CHECK requires it whenever `source_season_id` is set, so an
+     * earned row cannot exist without the key that makes re-granting free.
+     */
+    grantKey: text('grant_key').unique(),
   },
-  (table) => [index('collectibles_user_idx').on(table.userId, table.acquiredAt)],
+  (table) => [
+    index('collectibles_user_idx').on(table.userId, table.acquiredAt),
+    index('collectibles_season_idx').on(table.sourceSeasonId),
+  ],
 );
 
 // ---------------------------------------------------------------------------
