@@ -30,6 +30,23 @@ jobs:
     name: Typecheck · Lint · Test · Build
     runs-on: ubuntu-latest
 
+    # A spend cap, not a performance target.
+    #
+    # Nothing here set a limit, so GitHub's default applied: **360 minutes**.
+    # On a metered private allowance (`AUTONOMY.md §4`) one stuck job could
+    # therefore bill six hours, and this workflow plus `visual-qa.yml` twelve —
+    # far more than the account has ever had spare. That was true from the day
+    # the file was written and nobody had noticed.
+    #
+    # It surfaced on 2026-08-06, and honestly it surfaced by mistake: a session
+    # believed both jobs had run 46 minutes and cancelled them, when the real
+    # elapsed time was four and a half and both were healthy. The reading was
+    # wrong; the exposure it went looking for was real, and unbounded.
+    #
+    # Fifteen is roughly four times this job's 4-minute median: clear of a slow
+    # runner, and a genuine hang is caught in minutes rather than hours.
+    timeout-minutes: 15
+
     # Integration tests assert real database constraints, so they need a real
     # database. `identity.test.ts` throws if DATABASE_URL is unset while CI is
     # true, so a missing service fails loudly instead of silently skipping.
