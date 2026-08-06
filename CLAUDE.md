@@ -53,13 +53,13 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 
 **Removed from the product entirely:** real-money peer side bets · the prop-bet system (replaced by one weekly "Tony's Line" inside the Slice) · roulette · reward claiming · public guest mode · punishment mechanics that cost tokens or require chores · analytics vendors.
 
-**Deferred:** casino (P10) · manager basements (P6, v1.1) · silent auction · seasonal events (P8) · draft night · Season Story · vending machine (P7).
+**Deferred:** casino (P10) · manager basements (P6, v1.1) · silent auction · seasonal events (P8) · draft night · Season Story · vending machine (P7) · **the `league_events` spine (commissioner ruling, 2026-08-06 — deliberately deferred, not missing; see the invariant below and `docs/CHECKPOINT.md`)**.
 
-**In v1:** the event spine · the six-zone Dynamic Pizza Shop · Tonight at Tony's · the Tuesday Slice with Tony's Line, bounties, and the chalkboard prediction · token ledger and weekly rewards · one loot box and a 24-item catalog · wearables and championship rings · the public Showcase · the Timeline · the content engine · historical seasons · persistent login.
+**In v1:** ~~the event spine~~ · the six-zone Dynamic Pizza Shop · Tonight at Tony's · the Tuesday Slice with Tony's Line, bounties, and the chalkboard prediction · token ledger and weekly rewards · one loot box and a 24-item catalog · wearables and championship rings · the public Showcase · the Timeline · the content engine · historical seasons · persistent login.
 
 **Architecture invariants:**
 
-- One `league_events` spine. Shop state, Tonight, Timeline, Season Story, Slice candidates, and unread markers are all *views* over it — never stored state.
+- ~~One `league_events` spine.~~ **Deferred by commissioner ruling, 2026-08-06 — kept here rather than deleted, because half of it survives and governs.** Shop state, Tonight, Timeline, Season Story, Slice candidates and unread markers are still all *views* and **never stored state** — but they are computed from the verified domain tables directly, and **those tables are the source of truth** for matchups, rewards, box transactions, Slice facts, Timeline facts, and current shop and room state. **Do not duplicate those facts into a generalized event log to satisfy this older statement.** Revisit only when a concrete feature needs a unified chronological feed, ordering across heterogeneous event types, per-manager read/unread state, notification delivery, or replay — and then design the spine around that consumer. `docs/CHECKPOINT.md` carries the ruling in full.
 - One content engine (`content_entries`) covers Tony lines, manager lines, NPC events, lore, and shop dressings. Do not add a parallel dialogue or NPC system.
 - All token movement goes through `apply_token_delta` with an idempotency key. Balance is trigger-maintained with `CHECK (balance >= 0)`. No feature gets its own balance-writing path.
 - No database client in the browser. Server-side access only; `anon` privileges revoked.

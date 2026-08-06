@@ -73,25 +73,53 @@ The first capture found one — the sign read **`CHAMPIONS $ HISTORY`**, because
 Silkscreen's ampersand is a bar through a bowl and reads as a dollar sign at
 display size. A pixel face has the glyphs it has; the fix is the word.
 
-### The event spine does not exist, and this did not build one
+### The event spine is deferred — commissioner ruling, 2026-08-06
 
 `16 §4.1` calls `league_events` *"the central design decision"* and `CLAUDE.md`
-lists the spine first in v1 scope. **It has never been built**, and the six
-surfaces that were meant to read it — shop state, Tonight, Timeline, Season
-Story, Slice candidates, unread markers — were built to compute directly from
-the verified domain tables instead.
+listed the spine first in v1 scope. It has never been built, and the six surfaces
+meant to read it — shop state, Tonight, Timeline, Season Story, Slice candidates,
+unread markers — were built to compute directly from the verified domain tables
+instead. That contradiction was reported rather than resolved, and **the
+commissioner has ruled: defer it. Do not build it now.**
 
-That is a **material contradiction and it is reported rather than resolved**
-(`CLAUDE.md`: *"Do not silently resolve material contradictions"*). The argument
-for leaving it: `§4.1`'s own second half says *"Nothing stores 'what the shop
+**It is deliberately deferred — not missing, and not accidentally unbuilt.** This
+section exists so no future session files it as an oversight and starts writing a
+migration.
+
+**The domain tables remain the source of truth** for matchups, rewards, box
+transactions, Slice facts, Timeline facts, and current shop and room state. **Do
+not duplicate those facts into a generalized event log merely to satisfy an older
+architectural statement.** That would create duplicated records, drift risk,
+maintenance burden, and a write-only system with no real consumer — which is
+what `§4.1`'s own second half already forbids: *"Nothing stores 'what the shop
 looks like now.' It is **computed** from current state on every load. No drift,
-no stale rows, no maintenance"* — and a spine duplicating `fantasy_matchups`
-would put two records of one fact in the database, which is the drift the
-invariant exists to prevent. What a spine would uniquely buy is **ordering
-across heterogeneous facts and per-manager watermarks**, and neither has a
-surface asking for it yet. Building it now would be a write-only log.
+no stale rows, no maintenance."*
 
-**A commissioner decision is wanted here**, not a session's preference.
+**What the spine would uniquely provide, and why none of it is wanted yet:**
+ordering across heterogeneous event types · per-manager unread watermarks ·
+possibly a consolidated activity feed. **No current surface requires any of
+them.**
+
+**Revisit condition.** Reopen `league_events` only when a concrete product
+feature requires at least one of:
+
+- a unified chronological activity feed;
+- reliable ordering across heterogeneous event types;
+- per-manager read/unread state;
+- notification delivery;
+- replay or event-driven integrations that cannot be derived safely from the
+  current domain tables.
+
+**When that day comes, design the spine around the consumer** — not around the
+older statement — and decide explicitly whether it stores immutable domain
+events, references to authoritative records, derived presentation events, or
+unread-watermark metadata. Those are four different systems, and the consumer is
+what picks between them.
+
+The invariant in `CLAUDE.md` is **struck through rather than deleted**, per *"do
+not silently remove it from long-term architecture documentation."* The half that
+survives is the half that matters: those surfaces are still views, and still
+never stored state.
 
 ### The "Unresolved" list below is stale in three places
 
@@ -108,7 +136,8 @@ banner about exactly this drift happening before.
 | `npm run check` | **1352 passed / 86 files**, 2 skipped — typecheck, lint, build all clean |
 | `npm run visual:qa` | **89 states × 3 widths, passed**, zero failures and zero hydration sightings, on a production build against a freshly created database |
 | Evidence | `docs/evidence/timeline/` — before and after at 390 / 375 / 360, device resolution and 1:1 |
-| Hosted runs created | **0**, confirmed from GitHub after the push. No open pull request on any branch |
+| Hosted runs created | **0** while the branch was storage, confirmed from GitHub after every push including the two force-pushes |
+| A note on durability | The container's local git state **rolled back twice** during this work — once to a stale `main`, once to an Aug-4 snapshot that had never heard of this branch. Both times the remote was correct and recovery was `git checkout -B <branch> origin/<branch>`. This is `AUTONOMY.md §0` earning its place: **push early, and treat the remote as the record.** A local ref is not a backup |
 | **Production** | **not verified.** Nothing here has been merged or deployed |
 
 That is a **seventh** consecutive clean sweep since visual debt 16's two `#418`
