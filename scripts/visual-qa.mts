@@ -51,6 +51,7 @@ import sharp from 'sharp';
 import { TYPE_FLOOR_PX } from '../lib/design/type.ts';
 import { QUARANTINE_CEILING, quarantineFor } from './visual-qa-quarantine.ts';
 import { CAPTURE } from './visual-qa-capture';
+import { demoPin } from '../lib/demo/seat.ts';
 
 /**
  * The only `data-environmental-type` this product declares.
@@ -63,7 +64,7 @@ const ENVIRONMENTAL_TYPE = 'banner-year';
 
 const BASE = process.env['VISUAL_QA_BASE'] ?? 'http://localhost:3111';
 const OUT = process.env['VISUAL_QA_OUT'] ?? 'visual-qa';
-const PIN = '461902';
+const PIN = process.env['VISUAL_QA_PIN'] ?? demoPin();
 
 /** The widths the room is contracted to work at (`VISUAL_ACCEPTANCE.md §2`). */
 const WIDTHS = [390, 375, 360] as const;

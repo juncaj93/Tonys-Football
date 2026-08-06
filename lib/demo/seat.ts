@@ -1,3 +1,6 @@
+import { randomInt } from 'node:crypto';
+import { readFileSync, writeFileSync } from 'node:fs';
+
 import { and, desc, eq, like } from 'drizzle-orm';
 
 import { hashPin } from '@/lib/auth/pin';
@@ -64,13 +67,59 @@ export const RETIRED_SUFFIX = ':retired';
 export const DEMO_ROSTER_BASE = 900;
 
 /**
- * The PIN every demo seat is claimed with.
+ * The PIN a demo seat is claimed with, for this machine only.
  *
- * Fixed on purpose: a demo whose PIN has to be looked up somewhere is a demo
- * nobody runs. It is safe because a demo seat cannot exist in production —
- * guard 1 refuses to run there and the seed never creates one.
+ * ## Why this is no longer a constant
+ *
+ * It was a fixed six-digit constant, committed, with a note explaining that a
+ * fixed PIN is safe
+ * because a demo seat cannot exist in production. The reasoning held — and it
+ * rested entirely on `lib/demo/guard.ts` being correct. Publishing the source
+ * turns that from an internal assumption into a public one: the PIN becomes
+ * common knowledge, and the only thing between it and a real league is a guard.
+ *
+ * Defence in depth means not needing the guard to be perfect. So the value is
+ * **generated per machine** and never committed.
+ *
+ * ## Why generated rather than required
+ *
+ * Requiring an environment variable would have been simpler and worse: the demo
+ * tooling is how every visual state is reviewed, and a demo you must configure
+ * before you can look at anything is a demo that stops being run — which is how
+ * screens stop being looked at. `DEMO_PIN` may still be set explicitly when a
+ * stable value is wanted; absent one, a random PIN is minted, cached in a
+ * gitignored file beside the other local-only state, and printed by the CLI that
+ * needs it.
+ *
+ * Tests pin it explicitly so they stay deterministic, and the value they use is
+ * obviously synthetic.
  */
-export const DEMO_PIN = '461902';
+const DEMO_PIN_CACHE = '.demo-pin.local';
+
+export function demoPin(): string {
+  const configured = process.env['DEMO_PIN'];
+  if (configured !== undefined && /^\d{6}$/.test(configured)) return configured;
+
+  try {
+    const cached = readFileSync(DEMO_PIN_CACHE, 'utf8').trim();
+    if (/^\d{6}$/.test(cached)) return cached;
+  } catch {
+    // No cache yet on this machine. Mint one below.
+  }
+
+  /*
+   * `randomInt` rather than `Math.random`: this is a credential, however local,
+   * and there is no reason to mint it from a predictable source.
+   */
+  const minted = String(randomInt(0, 1_000_000)).padStart(6, '0');
+  try {
+    writeFileSync(DEMO_PIN_CACHE, `${minted}\n`, { mode: 0o600 });
+  } catch {
+    // A read-only checkout still gets a working demo; it just gets a new PIN
+    // each run, which the CLI prints.
+  }
+  return minted;
+}
 
 export interface DemoSeat {
   readonly userId: string;
@@ -195,7 +244,7 @@ export async function ensureDemoSeat(
   if (existing[0]?.pinHash == null) {
     await db
       .update(users)
-      .set({ pinHash: await hashPin(DEMO_PIN), pinUpdatedAt: at, updatedAt: at })
+      .set({ pinHash: await hashPin(demoPin()), pinUpdatedAt: at, updatedAt: at })
       .where(eq(users.id, userId));
   }
 

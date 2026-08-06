@@ -51,7 +51,18 @@ if (process.env['CI'] === 'true' && !hasDatabase) {
 const db = hasDatabase ? getDb() : null;
 
 /** The environment a demo is allowed in. Passed explicitly; never read from the process. */
-const ALLOWED = { DEMO_FIXTURES: '1' } as const;
+/*
+ * `DATABASE_URL` is part of the permission now, not just of the connection.
+ *
+ * `assertDemoWritesAllowed` refuses any non-local target, and it fails closed —
+ * an absent URL is remote. That is the laptop case `VERCEL_ENV` cannot see, so
+ * these tests state the local target explicitly rather than relying on ambient
+ * environment.
+ */
+const ALLOWED = {
+  DEMO_FIXTURES: '1',
+  DATABASE_URL: 'postgres://tonys:local_dev_only@localhost:5432/tonys_dev',
+} as const;
 
 /** The chain's head. The fixtures walk back to 2024 from here. */
 const LEAGUE_2026 = '1385016656425668608';

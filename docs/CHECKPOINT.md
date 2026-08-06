@@ -3076,7 +3076,7 @@ DEMO_FIXTURES=1 npm run visual:qa -- --state=tray-reveal   # required; buys its 
 **`DEMO_FIXTURES=1` belongs on both processes, and forgetting the server is silent.** `?preview_reveal=` is resolved inside the render by `previewReveal(…, process.env)`, so a server without it answers every preview request with an ordinary parlor page — and the driver photographs a calm room, files it as `390-reveal-legendary.png`, and passes. That is exactly what CI was doing until #40. The `reveal` gate now fails on it, so the mistake announces itself; the line above is still the fix.
 
 Gotchas that have cost time:
-- Sign in as **Alex by name** via `/door`, never by UUID — reseeding regenerates every id. Script PIN is `461902`.
+- Sign in as **Alex by name** via `/door`, never by UUID — reseeding regenerates every id. The script PIN is no longer committed — it comes from `VISUAL_QA_PIN`, or is generated per machine by `demoPin()` and cached in the gitignored `.demo-pin.local` (`lib/demo/seat.ts`).
 - **Never `pkill -f next-server`, and do not trust `pgrep -f next-server` either** — both match this shell's own command line, so `pkill` kills the session (exit 144) and `pgrep` reports a server that is not running. Use `ps -eo pid,args | grep -F next-server | grep -v grep`, and confirm with `ss -ltnp | grep 3111`.
 - A stale `next start` serves old CSS. Confirm the served hash matches `.next/static/css/` on disk.
 - Never run `playwright install` here; use the `PLAYWRIGHT_CHROMIUM` path above.

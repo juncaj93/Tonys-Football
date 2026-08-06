@@ -23,9 +23,10 @@ import path from 'node:path';
 
 import { chromium } from 'playwright';
 import sharp from 'sharp';
+import { demoPin } from '../lib/demo/seat.ts';
 
 const BASE = process.env['VISUAL_QA_BASE'] ?? 'http://localhost:3111';
-const PIN = process.env['VISUAL_QA_PIN'] ?? '461902';
+const PIN = process.env['VISUAL_QA_PIN'] ?? demoPin();
 const WIDTHS = [390, 375, 360];
 
 const out = process.argv[2];
