@@ -1,30 +1,46 @@
-import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
+import { PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
+import { SeasonRecord } from '@/components/league/season-record';
 import { Page } from '@/components/shell';
 import { TYPE } from '@/lib/design/type';
 import { requireUser } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
-import { championBanners } from '@/lib/parlor/champions';
+import { timeline } from '@/lib/league/timeline';
 
 /**
- * Champions & History.
+ * Champions & history.
  *
  * Where a banner's **View season** lands, and the reason the champion's name is
  * not painted on the fabric: a pennant is 18 × 15 logical units, and a name
  * baked into art would have to be regenerated every January and could never be
  * corrected afterwards. The wall carries the year; this carries the record.
  *
- * V1 is deliberately thin — the imported 2024 and 2025 seasons and the current
- * one, oldest first, anchored so a banner can link straight to its year. The
- * Season Story that eventually fills this out is deferred (`16 §13`), and
- * shipping a page that says only what is true beats shipping one that pads.
+ * ## It used to carry only the year
+ *
+ * V1 shipped this as three panels holding a four-digit heading and a champion's
+ * name, with a note calling it *"deliberately thin"* and pointing at the
+ * deferred Season Story. That was the right call when nothing else was
+ * derivable. It is not any more: `lib/stats` has produced verified, ranked,
+ * suppression-aware facts since Stats Intelligence landed, and the page was
+ * showing none of them — a history page that knew the league's biggest win and
+ * its closest finish and printed neither.
+ *
+ * So each season now carries its champion **and** its two headline games, and
+ * says how many more are on record rather than implying there were two.
+ *
+ * ## Newest first, and the anchor still works
+ *
+ * `lib/league/timeline.ts` returns oldest-first because that is the order the
+ * seasons happened in; the wall reverses it because a manager arriving here
+ * wants this year. The `id` is the four-digit year either way, so
+ * `/timeline#2025` from a banner lands on that season.
  */
 
 export const dynamic = 'force-dynamic';
 
 export default async function TimelinePage() {
   await requireUser();
-  const banners = await championBanners(getDb());
+  const seasons = await timeline(getDb());
 
   return (
     <>
@@ -32,53 +48,23 @@ export default async function TimelinePage() {
 
       <Page>
         <div className="mx-auto w-full max-w-[420px] px-4 pt-6 pb-10">
-          <SignPlate>Champions &amp; history</SignPlate>
+          {/*
+            * "and", not "&".
+            *
+            * Silkscreen's ampersand is a vertical bar through a rounded bowl and
+            * at this size it reads as a dollar sign — the sign said
+            * "CHAMPIONS $ HISTORY" in every capture. A pixel display face has
+            * the glyphs it has; the fix is the word.
+            */}
+          <SignPlate>Champions and history</SignPlate>
 
           <div className="mt-6 space-y-4">
-            {banners.length === 0 ? (
-              <p className={`${TYPE.body} text-paper-mid/75`}>
-                No seasons on record yet.
-              </p>
+            {seasons.length === 0 ? (
+              <p className={`${TYPE.body} text-paper-mid/75`}>No seasons on record yet.</p>
             ) : (
-              [...banners].reverse().map((banner) => (
-                // The anchor is the four-digit year, so `/timeline#2025` from a
-                // banner lands on that season rather than at the top.
-                <PixelPanel key={banner.year} className="px-4 py-4">
-                  <div id={String(banner.year)} className="scroll-mt-4">
-                    <PanelHeading>{String(banner.year)}</PanelHeading>
-
-                    {/*
-                      * The champion's name was `text-paper-mid` on a cream
-                      * `PixelPanel` — cream on cream, contrast 1.1:1, so every
-                      * finalized season rendered the word CHAMPION above an
-                      * empty line. It has been that way in production since V1
-                      * and it is the fourth route to ship this exact mistake.
-                      *
-                      * The name is the single most important word on this page,
-                      * so it is now the largest and darkest thing in the panel,
-                      * and the label under it is a caption rather than a
-                      * decoration at 9px in 70% amber.
-                      */}
-                    {banner.champion === null ? (
-                      <>
-                        <p className={`mt-1.5 ${TYPE.subhead} text-ink-500`}>TBD</p>
-                        <p className={`mt-1.5 ${TYPE.bodyCompact} text-ink-700`}>
-                          {banner.current
-                            ? 'Still being played. Nobody has won it yet.'
-                            : 'Not finalized, so there is no champion on record.'}
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <p className={`mt-1.5 ${TYPE.headline} text-ink-900`}>
-                          {banner.champion}
-                        </p>
-                        <p className={`mt-1 ${TYPE.eyebrow} text-wood-mid`}>
-                          Champion
-                        </p>
-                      </>
-                    )}
-                  </div>
+              [...seasons].reverse().map((season) => (
+                <PixelPanel key={season.year} className="px-4 py-4">
+                  <SeasonRecord season={season} />
                 </PixelPanel>
               ))
             )}

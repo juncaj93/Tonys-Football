@@ -177,7 +177,7 @@ request** creates no workflow run. Verified three ways —
 |---|---|
 | the files | `ci.yml` is `push: branches: [main]` + `pull_request:`; `visual-qa.yml` is `pull_request:` + `workflow_dispatch:`; `orchestrator.yml` is `workflow_dispatch:` only |
 | the history | 30 of 30 runs on feature branches were `pull_request`; 30 of 30 `push` runs repository-wide were on `main` |
-| the experiment | after pushing `claude/homepage-palette-fidelity`, `list_workflow_runs` for that branch returns `total_count: 0` |
+| the experiment | after pushing `claude/homepage-palette-fidelity`, `list_workflow_runs` for that branch returns `total_count: 0`. Repeated on `claude/timeline-history` — including a **force-push** after a rebase, which is the case worth having checked, since it is a push that rewrites history rather than adding to it |
 
 **Do not edit a workflow trigger to permit a backup push.** If a push would cost a run, the
 answer is not to push.

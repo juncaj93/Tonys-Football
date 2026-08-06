@@ -26,10 +26,94 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Batch B launch art** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #55 | Nothing. 12 of 24 collectibles plus `object_box_owned` have production art, which is the launch commitment. The remaining twelve draw `placeholder_pizza_box` by design |
 | **Homepage art fidelity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #68 | Nothing. Typed family palettes: `zone` 64 colours and `character` 16, each derived from that family's own art. Both hosted gates green, squashed to `dde6237` |
+| **The Timeline** | `QUEUED_NOT_ACTIVE` — **built** | `claude/timeline-history` | this session | Nothing. Champions *and* each season's biggest win and closest game, derived through `lib/stats`, plus the route's first appearance in the visual gate |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-06 (seventeenth session)
+
+### The Timeline stopped being a list of three names
+
+`/timeline` is where every champion banner's **View season** lands, and it
+shipped in V1 as a year and a name — with a note in the file calling it
+*"deliberately thin"* and pointing at the deferred Season Story.
+
+That was right when nothing else was derivable and stopped being right when
+Stats Intelligence landed. `lib/stats` has produced verified, ranked,
+suppression-aware facts since then and this page showed **none of them**: a
+history page that knew the league's biggest win and its closest finish and
+printed neither.
+
+Each season now carries its champion, its **biggest win** and its **closest
+game** — both scores, both managers, the week — and says *"32 more on record"*
+rather than implying the season had two things worth recording.
+
+### One of each kind, and the defect that taught it
+
+`seasonFacts` publishes up to one largest-margin and one closest-game **per
+week**, so a finalized season offers around thirty-four. The obvious cut — top
+two by selection score — was written first and returned **two blowouts for both
+recorded seasons and no close game at all**, because a margin outranks a
+nail-biter in `scoreOf`.
+
+Every fact was true; the page told one half of the story twice. Invisible
+without real data, which is why the assertion that catches it runs against the
+recorded 2024 and 2025 seasons rather than a hand-written fixture.
+
+### The route had never been photographed
+
+`timeline` is a **new visual-QA state**, and its absence was the same shape as
+`demo-tray-empty`: a v1 surface reachable from the room that the gates had never
+seen, so its type floor, colour fidelity and tap targets were all unverified.
+The first capture found one — the sign read **`CHAMPIONS $ HISTORY`**, because
+Silkscreen's ampersand is a bar through a bowl and reads as a dollar sign at
+display size. A pixel face has the glyphs it has; the fix is the word.
+
+### The event spine does not exist, and this did not build one
+
+`16 §4.1` calls `league_events` *"the central design decision"* and `CLAUDE.md`
+lists the spine first in v1 scope. **It has never been built**, and the six
+surfaces that were meant to read it — shop state, Tonight, Timeline, Season
+Story, Slice candidates, unread markers — were built to compute directly from
+the verified domain tables instead.
+
+That is a **material contradiction and it is reported rather than resolved**
+(`CLAUDE.md`: *"Do not silently resolve material contradictions"*). The argument
+for leaving it: `§4.1`'s own second half says *"Nothing stores 'what the shop
+looks like now.' It is **computed** from current state on every load. No drift,
+no stale rows, no maintenance"* — and a spine duplicating `fantasy_matchups`
+would put two records of one fact in the database, which is the drift the
+invariant exists to prevent. What a spine would uniquely buy is **ordering
+across heterogeneous facts and per-manager watermarks**, and neither has a
+surface asking for it yet. Building it now would be a write-only log.
+
+**A commissioner decision is wanted here**, not a session's preference.
+
+### The "Unresolved" list below is stale in three places
+
+Recorded so the next session does not act on it: salvage **is** built (#66),
+weekly rewards **are** built and the two crons **do** exist, and the P3
+simulation **has** run — the box costs 200. `IMPLEMENTATION_HANDOFF.md` carries a
+banner about exactly this drift happening before.
+
+### Gates
+
+| | |
+|---|---|
+| Branch | `claude/timeline-history`, rebased onto `cc333ec` so #68's checkpoint correction rides in the same pull request |
+| `npm run check` | **1352 passed / 86 files**, 2 skipped — typecheck, lint, build all clean |
+| `npm run visual:qa` | **89 states × 3 widths, passed**, zero failures and zero hydration sightings, on a production build against a freshly created database |
+| Evidence | `docs/evidence/timeline/` — before and after at 390 / 375 / 360, device resolution and 1:1 |
+| Hosted runs created | **0**, confirmed from GitHub after the push. No open pull request on any branch |
+| **Production** | **not verified.** Nothing here has been merged or deployed |
+
+That is a **seventh** consecutive clean sweep since visual debt 16's two `#418`
+sightings. It stays open and unclaimed; nothing here investigated it, and the
+rate estimate is still an order of magnitude off two events rather than a figure.
 
 ---
 
