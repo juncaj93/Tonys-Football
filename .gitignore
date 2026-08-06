@@ -43,3 +43,6 @@ Thumbs.db
 # Visual QA artifacts. Screenshots belong to a workflow run, not to git history.
 /visual-qa/
 /visual-qa-*/
+
+# Hydration-hunt captures. Evidence is promoted into docs/evidence, not kept raw.
+/hydration-hunt/
