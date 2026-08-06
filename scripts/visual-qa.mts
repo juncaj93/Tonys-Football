@@ -138,6 +138,7 @@ type StateName =
    * is the still the passes are about.
    */
   | 'tony-steady'
+  | 'reduced-motion'
   | 'character-empty'
   | 'character-dressed'
   | 'character-equipped'
@@ -554,6 +555,16 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * `six-banners` and the room-transient gates already own. What this state is
      * for is the page.
      */
+    case 'reduced-motion':
+      /*
+       * The room as a manager who asked for less motion sees it. The gate that
+       * runs on this state restores `no-preference` before it returns, so the
+       * states after this one are photographed in the ordinary room.
+       */
+      await page.emulateMedia({ reducedMotion: 'reduce' });
+      await home(page);
+      await dismissTony(page);
+      return;
     case 'timeline':
       await page.goto(`${BASE}/timeline`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
@@ -1227,6 +1238,7 @@ async function reachDemo(page: Page, state: StateName, demoKey: string): Promise
 const ALL_STATES: readonly StateName[] = [
   'idle',
   'tony-steady',
+  'reduced-motion',
   'tony-dialogue',
   'display-over-tony',
   'tonight-board',
@@ -1807,6 +1819,85 @@ async function checkGlowLeavesTonyAlone(page: Page, width: number): Promise<void
         'transition had it on its own compositing layer.',
     );
   }
+}
+
+/**
+ * The reduced-motion promise, verified rather than assumed.
+ *
+ * `globals.css` collapses every animation to `0.01ms` under
+ * `prefers-reduced-motion: reduce`, and three components — `arrival.tsx`,
+ * `spoken-line.tsx`, `counter-tray.tsx` — branch on the same query in
+ * JavaScript. That is a real accessibility promise made in seven places across
+ * **seventeen** keyframe animations, and until this gate existed **nothing
+ * checked that any of it held**.
+ *
+ * ## It measures the browser, not the stylesheet
+ *
+ * `document.getAnimations()` is the set of animations the compositor is actually
+ * running. A CSS audit cannot see an animation started by `element.animate()`,
+ * and the Web Animations API is precisely what `animation-duration: !important`
+ * **cannot** suppress — so a future regression is far likelier to be invisible
+ * to a stylesheet scan than to this.
+ *
+ * ## The control is the load-bearing half
+ *
+ * Asserting "nothing is animating under reduce" passes trivially if the room
+ * stops animating at all — a gate that cannot fail is not a gate. So it samples
+ * the same page **twice**: motion allowed, where the room must be genuinely
+ * alive, and motion reduced, where it must be still. Measured on the homepage
+ * because that is where the room breathes: two haze drifts and the sign's sway,
+ * all infinite, none of which any other state carries.
+ *
+ * It restores `no-preference` before returning, so the states after it are
+ * photographed in the ordinary room.
+ */
+async function checkStillUnderReducedMotion(page: Page, width: number): Promise<void> {
+  const running = async (): Promise<{ count: number; names: string }> => {
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+    // Long enough for the entrance and its timers to finish; what is left
+    // running after this is running for good.
+    await page.waitForTimeout(3200);
+    return page.evaluate(() => {
+      const live = document.getAnimations().filter((a) => a.playState === 'running');
+      return {
+        count: live.length,
+        names: live
+          .map((a) => {
+            const effect = a.effect as KeyframeEffect | null;
+            const target = effect?.target as Element | null;
+            const name = (a as unknown as { animationName?: string }).animationName;
+            const cls = target === null ? '?' : String(target.className).split(' ')[0];
+            return `${name ?? 'script-driven'} on .${cls}`;
+          })
+          .join(', '),
+      };
+    });
+  };
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  const allowed = await running();
+  if (allowed.count === 0) {
+    fail(
+      'reduced-motion',
+      `@${String(width)} the control failed: with motion allowed the homepage is running ` +
+        'no animations at all, so the reduced-motion assertion below would pass for the ' +
+        'wrong reason. The room is meant to breathe — two haze drifts and the sign sway.',
+    );
+  }
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const reduced = await running();
+  if (reduced.count > 0) {
+    fail(
+      'reduced-motion',
+      `@${String(width)} ${String(reduced.count)} animation(s) still running under ` +
+        `prefers-reduced-motion: ${reduced.names}. A manager who asked for less motion is ` +
+        'getting it anyway. CSS cannot suppress an animation started from JavaScript, so ' +
+        'check for element.animate() before reaching for a stylesheet fix.',
+    );
+  }
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
 }
 
 async function checkTonySteady(page: Page, width: number): Promise<void> {
@@ -3622,6 +3713,8 @@ async function run(): Promise<void> {
             await checkTonySteady(page, width);
             await checkGlowLeavesTonyAlone(page, width);
           }
+
+          if (state === 'reduced-motion') await checkStillUnderReducedMotion(page, width);
 
           /*
            * The owned tray is the second state where every room object is
