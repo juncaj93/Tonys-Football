@@ -26,7 +26,7 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Batch B launch art** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #55 | Nothing. 12 of 24 collectibles plus `object_box_owned` have production art, which is the launch commitment. The remaining twelve draw `placeholder_pizza_box` by design |
 | **Homepage art fidelity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #68 | Nothing. Typed family palettes: `zone` 64 colours and `character` 16, each derived from that family's own art. Both hosted gates green, squashed to `dde6237` |
-| **The Timeline** | `QUEUED_NOT_ACTIVE` — **built** | `claude/timeline-history` | this session | Nothing. Champions *and* each season's biggest win and closest game, derived through `lib/stats`, plus the route's first appearance in the visual gate |
+| **The Timeline** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #69 (`b0f7143`) | Nothing. Champions *and* each season's biggest win and closest game, derived through `lib/stats`, plus the route's first appearance in the visual gate. **`main` CI is red on the squash commit and it is not the code** — see below |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
@@ -175,11 +175,49 @@ than no harness.**
 | Evidence | `docs/evidence/timeline/` — before and after at 390 / 375 / 360, device resolution and 1:1 |
 | Hosted runs created | **0** while the branch was storage, confirmed from GitHub after every push including the two force-pushes |
 | A note on durability | The container's local git state **rolled back twice** during this work — once to a stale `main`, once to an Aug-4 snapshot that had never heard of this branch. Both times the remote was correct and recovery was `git checkout -B <branch> origin/<branch>`. This is `AUTONOMY.md §0` earning its place: **push early, and treat the remote as the record.** A local ref is not a backup |
-| **Production** | **not verified.** Nothing here has been merged or deployed |
+| Hosted, round 1 (`882ec08`) | CI **green** 4m07s · Screenshots **failed** 15m39s on two debt-16 sightings |
+| Hosted, round 3 (`4115b69`) | CI **green** 4m11s · Screenshots **green** 16m12s. The quarantine held |
+| **Merged** | **`b0f7143`**, squash, 30 files, +1023 / −94 |
+| **Production** | **not verified.** Merged and deployed to preview; nobody has looked at the hosted render |
 
-That is a **seventh** consecutive clean sweep since visual debt 16's two `#418`
-sightings. It stays open and unclaimed; nothing here investigated it, and the
-rate estimate is still an order of magnitude off two events rather than a figure.
+That is a **seventh** consecutive clean local sweep since visual debt 16's two
+`#418` sightings. It stays open and unclaimed under the quarantine.
+
+### `main` CI is red on `b0f7143`, and it is not the code
+
+Run **#193** failed **three seconds** after it was created, with **no steps
+recorded, `runner_id: 0` and an empty runner name**. The job never got a
+machine. The identical tree passed CI on the pull request minutes earlier, so
+this is not a typecheck, lint, test or build failure — nothing was run.
+
+**The cause is not established and must not be guessed at in this file.** The
+shape is consistent with the account reaching a metered Actions limit, which is
+the condition `AUTONOMY.md §4` exists for, and it is equally consistent with a
+transient failure to allocate a runner. **The one experiment that would tell them
+apart is a re-run, which is prohibited without authorization and which spends
+money if it succeeds.** So it is reported, not tested.
+
+**Spend this session, from GitHub's own `run_duration_ms`:** round 1 19.8 min ·
+the cancelled round 9.0 · round 3 20.4 · the merge run ~0 (it never started).
+**≈ 49 minutes**, against roughly 175 believed available beforehand.
+
+### The container could not measure time, and it cost nine minutes
+
+Worth recording because it produced a wrong action, not just a wrong number.
+Between the second and third rounds this container's clock **jumped forward
+about forty minutes and back**, and its `sleep` ran compressed against real
+time. Both gates were read as having run 46 minutes without finishing and were
+**cancelled to stop what looked like a runaway spend**. They had run four and a
+half minutes and both were healthy.
+
+Two sound runs were destroyed and about nine minutes bought nothing. The rule
+that follows is narrow and absolute: **inside this container, elapsed time is not
+observable. Judge a hosted job only by GitHub's own timestamps, and never cancel
+a run on a local timing judgement.**
+
+The wrong reading did surface a real exposure — neither workflow set
+`timeout-minutes`, so GitHub's 360-minute default was the only backstop on a
+metered account. Both are capped now, 15 and 35.
 
 ---
 
