@@ -10,6 +10,7 @@ import {
   WarningBlock,
 } from '@/components/scene/text-surface';
 import { TAP_TARGET } from '@/components/shell';
+import { stamp } from '@/lib/design/moment';
 import { TYPE } from '@/lib/design/type';
 import { type ReviewDetail, type ReviewEvent } from '@/lib/slice/publication';
 
@@ -292,6 +293,21 @@ export function PacketPanel({ detail }: { detail: ReviewDetail }) {
  * `08 §22`: *"all edits and approvals must be audit logged."* Append-only in the
  * database, so this list cannot be tidied — which is the point of showing it on
  * the same screen as the decision it records.
+ *
+ * ## It shows *when*, and it did not used to
+ *
+ * Visual debt 11: the record showed the order of decisions and who made them,
+ * and *"when was this approved"* is a real question about an audit trail whose
+ * answer was sitting in `slice_reviews.occurred_at` and never reaching the
+ * screen. Order is not a time — it says one thing followed another, not whether
+ * that was a minute later or a month.
+ *
+ * The stamp is **under** the sentence, not inside it. A reviewer reads the
+ * record for *what happened*; the timestamp is what they come back for when
+ * something is disputed, and putting it in the flow of the sentence would make
+ * every row longer to read for a fact most readings do not need. It is
+ * `TYPE.metadata` for the same reason — the smallest role, tabular, so a column
+ * of stamps lines up down the page.
  */
 export function HistoryPanel({ history }: { history: readonly ReviewEvent[] }) {
   return (
@@ -314,6 +330,9 @@ export function HistoryPanel({ history }: { history: readonly ReviewEvent[] }) {
                 &ldquo;{event.note}&rdquo;
               </span>
             )}
+            <span className={`mt-0.5 block ${TYPE.metadata} text-ink-500`}>
+              {stamp(event.occurredAt)}
+            </span>
           </li>
         ))}
       </ul>
