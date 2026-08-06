@@ -23,6 +23,7 @@ import { eq } from 'drizzle-orm';
 import { now } from '@/lib/clock';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import { ensureRewardTable, grantBox } from '@/lib/counter/boxes';
+import { grantChampionshipRings } from '@/lib/counter/rings';
 import { grantSeasonalBoxes } from '@/lib/counter/grants';
 import { applyTokenDelta, ensureEconomyConfig, openSeason } from '@/lib/counter/tokens';
 import { CATALOG_SIZE } from '@/lib/counter/catalog';
@@ -292,6 +293,26 @@ async function main(): Promise<void> {
     console.log(
       `Tray     ${String(granted)} welcome boxes granted · ` +
         `${String(managers.length - granted)} managers already had theirs`,
+    );
+
+    /*
+     * --- Championship rings ----------------------------------------------
+     *
+     * `16 §368`: historical rings are granted *"once their seasons are verified
+     * through any tier"*, and by this point in the seed they are — the import
+     * above finalized 2024 and 2025.
+     *
+     * Run on every seed, and therefore on every deploy, because that is the
+     * cheapest possible statement of the guarantee: if the backfill is only ever
+     * correct when run once, it is not idempotent, and `collectibles.grant_key`
+     * is UNIQUE precisely so that nobody has to remember whether it has already
+     * happened. A season finalized later is picked up the next time this runs
+     * with no migration and no manual step.
+     */
+    const rings = await grantChampionshipRings(db);
+    console.log(
+      `Rings    ${String(rings.granted)} championship rings granted · ` +
+        `${String(rings.alreadyHeld)} already held · ${String(rings.titles)} verified titles`,
     );
 
     /*

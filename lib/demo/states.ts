@@ -112,6 +112,24 @@ export const DEMO_STATES: readonly DemoState[] = [
     route: '/counter/collection',
   },
   {
+    key: 'rings-none',
+    shows: 'the championship shelf with no titles won',
+    reach: 'arranged',
+    route: '/counter/collection',
+  },
+  {
+    key: 'rings-one',
+    shows: 'one championship ring, with its year',
+    reach: 'arranged',
+    route: '/counter/collection',
+  },
+  {
+    key: 'rings-many',
+    shows: 'a repeat champion holding a ring per season',
+    reach: 'arranged',
+    route: '/counter/collection',
+  },
+  {
     key: 'collection-full',
     shows: 'a well-populated shelf',
     reach: 'arranged',

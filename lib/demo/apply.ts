@@ -7,11 +7,13 @@ import { type Database } from '@/lib/db';
 import {
   fantasyMatchups,
   lootBoxes,
+  seasonMemberships,
   seasons,
   tokenTransactions,
 } from '@/lib/db/schema';
 import { RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
 import { ensureRewardTable, grantBox, openBox, purchaseBox } from '@/lib/counter/boxes';
+import { grantChampionshipRings, ringsFor } from '@/lib/counter/rings';
 import { collectionFor } from '@/lib/counter/collection';
 import { standardRewardTable } from '@/lib/counter/rewards';
 import { clearRandomSource, setFixedRoll } from '@/lib/counter/rng';
@@ -412,6 +414,38 @@ async function unopenedCount(db: Database, seat: DemoSeat): Promise<number> {
  * demonstrate a purchase — `purchase-ok` is its own state and conflating them
  * would make a failure in either look like a failure in both.
  */
+/**
+ * Seat this manager as the champion of one or more finalized seasons.
+ *
+ * League state, not collectible state — the ring itself is granted afterwards by
+ * the real path. The years are far outside the imported league so a demo can
+ * never be mistaken for, or collide with, a season that actually happened.
+ */
+async function crownIn(db: Database, userId: string, years: readonly number[]): Promise<void> {
+  for (const year of years) {
+    const [season] = await db
+      .insert(seasons)
+      .values({
+        year,
+        status: 'ARCHIVED',
+        isHistorical: true,
+        finalizedAt: new Date(`${String(year)}-01-05T00:00:00Z`),
+      })
+      .onConflictDoNothing({ target: seasons.year })
+      .returning({ id: seasons.id });
+
+    const id =
+      season?.id ??
+      (await db.select({ id: seasons.id }).from(seasons).where(eq(seasons.year, year)))[0]?.id;
+    if (id === undefined) continue;
+
+    await db
+      .insert(seasonMemberships)
+      .values({ seasonId: id, userId, rosterId: 1, finalRank: 1 })
+      .onConflictDoNothing();
+  }
+}
+
 function pullState(rarity: Rarity): Applier {
   return async (db, seat) => pullSlug(firstOfRarity(rarity))(db, seat);
 }
@@ -624,6 +658,37 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
   },
 
   /* --- the shelf ------------------------------------------------------- */
+
+  /* --- championship rings ----------------------------------------------
+   *
+   * These stage a **league fact** — a finalized season this seat finished first
+   * in — and then call the real `grantChampionshipRings`. Nothing here inserts a
+   * collectible, which is this file's standing rule and which matters more here
+   * than anywhere else: a demo that minted rings directly would photograph a
+   * shelf the grant path can never actually produce.
+   */
+
+  'rings-none': async (db, seat) => {
+    await openTab(db, seat);
+    const held = await ringsFor(db, seat.userId);
+    return { evidence: { rings: held.length } };
+  },
+
+  'rings-one': async (db, seat) => {
+    await openTab(db, seat);
+    await crownIn(db, seat.userId, [2019]);
+    await grantChampionshipRings(db);
+    const held = await ringsFor(db, seat.userId);
+    return { evidence: { rings: held.length, years: held.map((r) => r.year).join(',') } };
+  },
+
+  'rings-many': async (db, seat) => {
+    await openTab(db, seat);
+    await crownIn(db, seat.userId, [2017, 2018]);
+    await grantChampionshipRings(db);
+    const held = await ringsFor(db, seat.userId);
+    return { evidence: { rings: held.length, years: held.map((r) => r.year).join(',') } };
+  },
 
   'collection-empty': async (db, seat) => {
     const opening = await openTab(db, seat);

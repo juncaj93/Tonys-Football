@@ -192,6 +192,9 @@ type StateName =
   | 'demo-box-waiting'
   | 'demo-welcome-box'
   | 'demo-collection-empty'
+  | 'demo-rings-none'
+  | 'demo-rings-one'
+  | 'demo-rings-many'
   | 'slice'
   | 'slice-offseason'
   | 'slice-preseason'
@@ -331,6 +334,9 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   // and the one state of this route nobody had ever photographed — every seeded
   // manager owns something by the time the driver reaches here.
   'demo-collection-empty': 'collection-empty',
+  'demo-rings-none': 'rings-none',
+  'demo-rings-one': 'rings-one',
+  'demo-rings-many': 'rings-many',
   /*
    * M3's three manager-backed states.
    *
@@ -815,6 +821,19 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForTimeout(1200);
       return;
 
+    /*
+     * The championship shelf, in its three states. Same route as the shelf
+     * below it, because a ring is part of a manager's collection rather than a
+     * separate screen — it is simply the part no box can produce.
+     */
+    case 'demo-rings-none':
+    case 'demo-rings-one':
+    case 'demo-rings-many':
+      await page.goto(`${BASE}/counter/collection`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-championships]', { state: 'attached' });
+      await page.waitForTimeout(600);
+      return;
+
     case 'demo-counter-broke':
       await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1200);
@@ -1260,6 +1279,9 @@ const ALL_STATES: readonly StateName[] = [
   'demo-box-waiting',
   'demo-welcome-box',
   'demo-collection-empty',
+  'demo-rings-none',
+  'demo-rings-one',
+  'demo-rings-many',
   // M3. Manager-backed first (each signs in at its own seat), then the geometry
   // fixtures, which need only the demo guard and no particular manager.
   'character-empty',

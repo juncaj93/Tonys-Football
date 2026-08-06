@@ -8,7 +8,9 @@ import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
 import { RARITIES } from '@/lib/counter/catalog';
+import { Championships } from '@/components/counter/championships';
 import { collectionFor, parseFilter, type CollectionEntry } from '@/lib/counter/collection';
+import { ringsFor } from '@/lib/counter/rings';
 import { getDb } from '@/lib/db';
 
 /**
@@ -56,7 +58,9 @@ export default async function CollectionPage({
   const raw = params['rarity'];
   const filter = parseFilter(typeof raw === 'string' ? raw : undefined);
 
-  const collection = await collectionFor(getDb(), user.id);
+  const db = getDb();
+  const collection = await collectionFor(db, user.id);
+  const rings = await ringsFor(db, user.id);
   const shown =
     filter === 'all'
       ? collection.entries
@@ -69,6 +73,8 @@ export default async function CollectionPage({
       <Page>
         <div className="mx-auto w-full max-w-[420px] px-4 pt-6 pb-10">
           <SignPlate>Your collection</SignPlate>
+
+          <Championships rings={rings} />
 
           <p className={`mt-4 ${TYPE.body} text-paper-mid/80`}>
             {collection.distinct === 0
