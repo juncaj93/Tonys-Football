@@ -53,13 +53,13 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 
 **Removed from the product entirely:** real-money peer side bets · the prop-bet system (replaced by one weekly "Tony's Line" inside the Slice) · roulette · reward claiming · public guest mode · punishment mechanics that cost tokens or require chores · analytics vendors.
 
-**Deferred:** casino (P10) · manager basements (P6, v1.1) · silent auction · seasonal events (P8) · draft night · Season Story · vending machine (P7).
+**Deferred:** casino (P10) · manager basements (P6, v1.1) · silent auction · seasonal events (P8) · draft night · Season Story · vending machine (P7) · **the `league_events` spine (commissioner ruling, 2026-08-06 — deliberately deferred, not missing; see the invariant below and `docs/CHECKPOINT.md`)**.
 
-**In v1:** the event spine · the six-zone Dynamic Pizza Shop · Tonight at Tony's · the Tuesday Slice with Tony's Line, bounties, and the chalkboard prediction · token ledger and weekly rewards · one loot box and a 24-item catalog · wearables and championship rings · the public Showcase · the Timeline · the content engine · historical seasons · persistent login.
+**In v1:** ~~the event spine~~ · the six-zone Dynamic Pizza Shop · Tonight at Tony's · the Tuesday Slice with Tony's Line, bounties, and the chalkboard prediction · token ledger and weekly rewards · one loot box and a 24-item catalog · wearables and championship rings · the public Showcase · the Timeline · the content engine · historical seasons · persistent login.
 
 **Architecture invariants:**
 
-- One `league_events` spine. Shop state, Tonight, Timeline, Season Story, Slice candidates, and unread markers are all *views* over it — never stored state.
+- ~~One `league_events` spine.~~ **Deferred by commissioner ruling, 2026-08-06 — kept here rather than deleted, because half of it survives and governs.** Shop state, Tonight, Timeline, Season Story, Slice candidates and unread markers are still all *views* and **never stored state** — but they are computed from the verified domain tables directly, and **those tables are the source of truth** for matchups, rewards, box transactions, Slice facts, Timeline facts, and current shop and room state. **Do not duplicate those facts into a generalized event log to satisfy this older statement.** Revisit only when a concrete feature needs a unified chronological feed, ordering across heterogeneous event types, per-manager read/unread state, notification delivery, or replay — and then design the spine around that consumer. `docs/CHECKPOINT.md` carries the ruling in full.
 - One content engine (`content_entries`) covers Tony lines, manager lines, NPC events, lore, and shop dressings. Do not add a parallel dialogue or NPC system.
 - All token movement goes through `apply_token_delta` with an idempotency key. Balance is trigger-maintained with `CHECK (balance >= 0)`. No feature gets its own balance-writing path.
 - No database client in the browser. Server-side access only; `anon` privileges revoked.
@@ -188,9 +188,11 @@ Everything a stake knows about football comes through **one Stats boundary** tha
 - **The isolated-pixel rate is the wrong instrument** and it went **2.23% → 13.46%** while the picture got much better. A second proxy nearly shipped as a gate: an all-dark-3×3 ceiling scan reports **593 blocks on the faithful ceiling against 18 on the posterized one**. A gate that prefers the worse picture is not a gate.
 - **`clean-parlor-surfaces.ts` is deleted** with its thirty-four tests. All three of its repairs were undoing quantization damage — its own header said so — and keeping it would **overpaint the approved art**. Visual debts 8 and 9 stay closed by the cause going. `shift-tonight-board.ts` stays because it is *geometric*.
 
-`docs/evidence/homepage-fidelity/` is the full page at 390 / 375 / 360, before and after.
+`docs/evidence/homepage-fidelity/` is the full page at 390 / 375 / 360, before and after. **Shipped as #68** (`dde6237`), both hosted gates green first time.
 
 **Actions conservation is a hard stop right now** (commissioner, 2026-08-05). 1,800 of 2,000 included minutes are spent and there is **no local machine until next week**, so the one-PR-per-slice authorization is withdrawn and nothing may be handed off as *"run these commands when you get back."* Remote feature branches with no open PR are **storage only** — verified, not assumed. Prohibited until explicitly released: opening or merging a pull request · pushing to `main` or to a PR branch · re-running or dispatching a workflow · **setting `CRON_SECRET`** · **claiming production is verified.** `AUTONOMY.md §4` is the rule; `docs/PHONE_ONLY_HANDOFF.md` is the merge queue and its price.
+
+**The event spine is unbuilt, and that is a reported contradiction rather than an oversight.** `16 §4.1` calls `league_events` *"the central design decision"* and it is first in the v1 list above — but the six surfaces meant to read it were built to compute from the verified domain tables instead, which is what the *same section* asks for (*"Nothing stores… It is **computed** from current state on every load"*). A spine duplicating `fantasy_matchups` would put two records of one fact in the database. What it would uniquely buy is ordering across heterogeneous facts and per-manager watermarks; neither has a surface asking for it yet. **A commissioner decision is wanted before it is built or struck.**
 
 **Next assignment:** see `docs/CHECKPOINT.md` for the durable state and the ordered queue.
 

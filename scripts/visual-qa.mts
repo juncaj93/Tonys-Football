@@ -161,6 +161,16 @@ type StateName =
   | 'banner-completed'
   | 'banner-current-tbd'
   | 'rack'
+  /*
+   * Champions & history, and the reason it is on this list at all.
+   *
+   * `/timeline` is a v1 surface reachable from every champion banner's *View
+   * season*, and the driver had **never photographed it** — the same shape of
+   * gap as `demo-tray-empty`, where the box-free parlor turned out never to
+   * have been captured. A route the gates have never seen is a route where the
+   * type floor, the colour fidelity and the tap targets are all unverified.
+   */
+  | 'timeline'
   | 'prediction'
   | 'receipt'
   | 'counter'
@@ -534,6 +544,19 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await dismissTony(page);
       await page.getByRole('link', { name: /rack/i }).click({ force: true });
       await page.waitForTimeout(1500);
+      return;
+
+    /*
+     * Reached by URL rather than by tapping a banner.
+     *
+     * The banner rail opens a champion panel first and *its* action is the link,
+     * so a click path here would be photographing the rail's interaction — which
+     * `six-banners` and the room-transient gates already own. What this state is
+     * for is the page.
+     */
+    case 'timeline':
+      await page.goto(`${BASE}/timeline`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
       return;
     /*
      * `/counter`, reached directly rather than by tapping the tray.
@@ -1210,6 +1233,7 @@ const ALL_STATES: readonly StateName[] = [
   'banner-completed',
   'banner-current-tbd',
   'rack',
+  'timeline',
   'prediction',
   'receipt',
   'counter',

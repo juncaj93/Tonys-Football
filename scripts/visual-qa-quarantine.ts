@@ -65,20 +65,56 @@ export interface QuarantineEntry {
 export const QUARANTINE_CEILING = 2;
 
 /**
- * **Empty, and that is the point.**
+ * **One entry, for visual debt 16, armed on commissioner approval 2026-08-06.**
  *
- * The one entry this table ever held was visual debt 12 — an intermittent
- * hydration mismatch with no reproduction and no cause in application code.
- * There was none to find: the driver's own screenshot was writing
+ * The one entry this table previously held was visual debt 12, and it turned out
+ * not to be a product defect at all: the driver's own screenshot was writing
  * `caret-color: transparent` into the page while React hydrated it. The camera
- * was the defect (`docs/VISUAL_DEBT.md` 12, `scripts/visual-qa-capture.ts`).
+ * was the defect (`docs/VISUAL_DEBT.md` 12, `scripts/visual-qa-capture.ts`), the
+ * entry was deleted, and the table sat empty.
  *
- * The mechanism stays because the next time a gate goes intermittent it should
- * be *counted and printed* rather than muted or deleted — that is what made this
- * one solvable. But it stays empty until something earns a row, and the test
- * beside it still refuses more than one.
+ * **Debt 16 is the residual that survived that fix**, and it is a different
+ * thing: rarer, still unexplained, and — unlike debt 12 — it has never been
+ * reproduced anywhere but a GitHub runner. What earned it this row is that on PR
+ * #69 it failed the gate twice, once on `/timeline` and once on `/` during
+ * `banner-completed`, and **that pull request changed no file that renders `/`**.
+ * That is the header's own test of a gate that has stopped protecting anything:
+ * a failure with nothing to do with the change under review.
+ *
+ * What is known, and it is deliberately little:
+ *
+ * - **Hosted:** 4 sightings across roughly 2,100 captures, never twice in the
+ *   same place.
+ * - **Local, unthrottled:** 0 in ~2,400 captures over seven sweeps.
+ * - **Local, 8× CPU throttle against the same production build the runner
+ *   uses:** 0 in 180 captures, every response asserted 200. So *slowness alone
+ *   does not cause it* — which is the obvious explanation, now eliminated.
+ * - The production bundle names no element, and the census is taken after
+ *   React's recovery, so only a **dev build** can say where. That sighting has
+ *   never been had, which is why the dev message must never be tolerated.
+ *
+ * This row is meant to be deleted, and deleting it is the point of `docs/`
+ * VISUAL_DEBT.md`'s entry 16 staying open.
  */
-export const QUARANTINE: readonly QuarantineEntry[] = [];
+export const QUARANTINE: readonly QuarantineEntry[] = [
+  {
+    debt: 16,
+    why:
+      'Visual debt 16: an intermittent, unexplained React #418 structural mismatch. ' +
+      'Reproduced only on hosted runners; 0 in 180 local captures at 8x CPU throttle. ' +
+      'Counted and printed, never muted — more than the ceiling still fails the run.',
+    /*
+     * Narrow on purpose, and every clause is load-bearing:
+     *
+     * - `Minified` — a dev build's message names the element it choked on, and
+     *   that is the one sighting this defect has never had. It must stay loud.
+     * - `#418` — `#419`–`#425` are different errors.
+     * - `args[]=HTML` — `args[]=text` is a *content* mismatch, a different
+     *   defect. The tree changed, or the sentence did; not both.
+     */
+    shape: /Minified React error #418\b[\s\S]*args\[\]=HTML/,
+  },
+];
 
 /** The entry that tolerates this message, if any. */
 export function quarantineFor(text: string): QuarantineEntry | undefined {

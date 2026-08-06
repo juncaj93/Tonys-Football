@@ -1,7 +1,7 @@
 /**
  * The homepage, whole, at the three supported widths.
  *
- *   npx tsx scripts/homepage-shot.mts <outDir> [label]
+ *   npx tsx scripts/homepage-shot.mts <outDir> [label] [route]
  *
  * The visual driver photographs states; this photographs the **composition**,
  * which is what the 2026-08-06 fidelity ruling asks to be judged: *"inspect the
@@ -31,6 +31,14 @@ const WIDTHS = [390, 375, 360];
 const out = process.argv[2];
 if (out === undefined) throw new Error('usage: homepage-shot.mts <outDir> [label]');
 const label = process.argv[3] ?? '';
+/*
+ * The route, because a slice's evidence is of whatever surface it touched.
+ *
+ * Defaults to the homepage, which is what this was written for. `/timeline` was
+ * the first caller to need anything else, and hard-coding `/` had quietly made
+ * "capture the page at three widths" a homepage-only capability.
+ */
+const route = process.argv[4] ?? '/';
 mkdirSync(out, { recursive: true });
 
 const browser = await chromium.launch({
@@ -65,8 +73,10 @@ try {
      * and go. A homepage photographed mid-entrance is a picture of an animation,
      * not of the room, and the fidelity question is about the room.
      */
-    await page.goto(BASE, { waitUntil: 'networkidle' });
-    await page.waitForTimeout(6000);
+    await page.goto(`${BASE}${route}`, { waitUntil: 'networkidle' });
+    // Long enough for the homepage's arrival to finish. A static page is settled
+    // far sooner and pays only the wait.
+    await page.waitForTimeout(route === '/' ? 6000 : 800);
 
     const name = label === '' ? String(width) : `${String(width)}-${label}`;
     const file = path.join(out, `${name}.png`);

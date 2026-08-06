@@ -25,11 +25,161 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 | **Text surfaces & typography** | `QUEUED_NOT_ACTIVE` — **built** | branch | this session | Nothing. Six sizes, one type case, two enforcement halves, the printed vocabulary, and the Slice and press desk actually using them. `docs/TEXT_SURFACE_BOUNDARY.md` |
 | **Homepage cleanliness** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #52 | Nothing in scope. The ceiling is visual debt 9 and needs a targeted regeneration, not a filter; `.affordance-on-request` is visual debt 10 and needs a `RoomDisplay` decision |
 | **Batch B launch art** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #55 | Nothing. 12 of 24 collectibles plus `object_box_owned` have production art, which is the launch commitment. The remaining twelve draw `placeholder_pizza_box` by design |
-| **Homepage art fidelity** | `QUEUED_NOT_ACTIVE` — **built, waiting to merge** | `claude/homepage-palette-fidelity` | this session | Nothing buildable. Four `zone`-scoped palette colours, six reprocessed assets, the shell's two corrections re-derived. **It is waiting on Actions minutes, not on work** — `docs/PHONE_ONLY_HANDOFF.md` is the merge queue and its price |
+| **Homepage art fidelity** | `QUEUED_NOT_ACTIVE` — **shipped** | `main` | #68 | Nothing. Typed family palettes: `zone` 64 colours and `character` 16, each derived from that family's own art. Both hosted gates green, squashed to `dde6237` |
+| **The Timeline** | `QUEUED_NOT_ACTIVE` — **built** | `claude/timeline-history` | this session | Nothing. Champions *and* each season's biggest win and closest game, derived through `lib/stats`, plus the route's first appearance in the visual gate |
 
 **No fresh specialist session is required right now.** Every SW change to date has been tightly coupled to the branch in flight, small enough that a handoff would cost more context than it saved, and visually verifiable in the same loop — which is exactly the condition the ruling names for implementing directly. When that stops being true the trigger is a durable GitHub task carrying branch, scope, authoritative Markdown, assets, prohibited regressions, required screenshots, acceptance criteria, what not to redesign, and where to stop — then one concise ask.
 
 **Stats independence is satisfied by the acceptable alternative, not by assertion.** `lib/stats/independent-verification.test.ts` recomputes scores, margins, winners, roster attribution and the largest margin **from the raw fixture JSON**, sharing no code with the pipeline — it does not call `traverseChain`, `derivePairings`, `toCents`, `reconcileSeason` or anything in `lib/stats/`. `facts.test.ts` pins values, which is good and is not the same thing: those numbers came off the pipeline's own output, so a consistent bias would have been recorded rather than caught. The one gap is stated in that file: if both implementations are wrong the same way, neither catches it.
+
+---
+
+## Where the product is — 2026-08-06 (seventeenth session)
+
+### The Timeline stopped being a list of three names
+
+`/timeline` is where every champion banner's **View season** lands, and it
+shipped in V1 as a year and a name — with a note in the file calling it
+*"deliberately thin"* and pointing at the deferred Season Story.
+
+That was right when nothing else was derivable and stopped being right when
+Stats Intelligence landed. `lib/stats` has produced verified, ranked,
+suppression-aware facts since then and this page showed **none of them**: a
+history page that knew the league's biggest win and its closest finish and
+printed neither.
+
+Each season now carries its champion, its **biggest win** and its **closest
+game** — both scores, both managers, the week — and says *"32 more on record"*
+rather than implying the season had two things worth recording.
+
+### One of each kind, and the defect that taught it
+
+`seasonFacts` publishes up to one largest-margin and one closest-game **per
+week**, so a finalized season offers around thirty-four. The obvious cut — top
+two by selection score — was written first and returned **two blowouts for both
+recorded seasons and no close game at all**, because a margin outranks a
+nail-biter in `scoreOf`.
+
+Every fact was true; the page told one half of the story twice. Invisible
+without real data, which is why the assertion that catches it runs against the
+recorded 2024 and 2025 seasons rather than a hand-written fixture.
+
+### The route had never been photographed
+
+`timeline` is a **new visual-QA state**, and its absence was the same shape as
+`demo-tray-empty`: a v1 surface reachable from the room that the gates had never
+seen, so its type floor, colour fidelity and tap targets were all unverified.
+The first capture found one — the sign read **`CHAMPIONS $ HISTORY`**, because
+Silkscreen's ampersand is a bar through a bowl and reads as a dollar sign at
+display size. A pixel face has the glyphs it has; the fix is the word.
+
+### The event spine is deferred — commissioner ruling, 2026-08-06
+
+`16 §4.1` calls `league_events` *"the central design decision"* and `CLAUDE.md`
+listed the spine first in v1 scope. It has never been built, and the six surfaces
+meant to read it — shop state, Tonight, Timeline, Season Story, Slice candidates,
+unread markers — were built to compute directly from the verified domain tables
+instead. That contradiction was reported rather than resolved, and **the
+commissioner has ruled: defer it. Do not build it now.**
+
+**It is deliberately deferred — not missing, and not accidentally unbuilt.** This
+section exists so no future session files it as an oversight and starts writing a
+migration.
+
+**The domain tables remain the source of truth** for matchups, rewards, box
+transactions, Slice facts, Timeline facts, and current shop and room state. **Do
+not duplicate those facts into a generalized event log merely to satisfy an older
+architectural statement.** That would create duplicated records, drift risk,
+maintenance burden, and a write-only system with no real consumer — which is
+what `§4.1`'s own second half already forbids: *"Nothing stores 'what the shop
+looks like now.' It is **computed** from current state on every load. No drift,
+no stale rows, no maintenance."*
+
+**What the spine would uniquely provide, and why none of it is wanted yet:**
+ordering across heterogeneous event types · per-manager unread watermarks ·
+possibly a consolidated activity feed. **No current surface requires any of
+them.**
+
+**Revisit condition.** Reopen `league_events` only when a concrete product
+feature requires at least one of:
+
+- a unified chronological activity feed;
+- reliable ordering across heterogeneous event types;
+- per-manager read/unread state;
+- notification delivery;
+- replay or event-driven integrations that cannot be derived safely from the
+  current domain tables.
+
+**When that day comes, design the spine around the consumer** — not around the
+older statement — and decide explicitly whether it stores immutable domain
+events, references to authoritative records, derived presentation events, or
+unread-watermark metadata. Those are four different systems, and the consumer is
+what picks between them.
+
+The invariant in `CLAUDE.md` is **struck through rather than deleted**, per *"do
+not silently remove it from long-term architecture documentation."* The half that
+survives is the half that matters: those surfaces are still views, and still
+never stored state.
+
+### The "Unresolved" list below is stale in three places
+
+Recorded so the next session does not act on it: salvage **is** built (#66),
+weekly rewards **are** built and the two crons **do** exist, and the P3
+simulation **has** run — the box costs 200. `IMPLEMENTATION_HANDOFF.md` carries a
+banner about exactly this drift happening before.
+
+### The gate went red on a page this branch does not touch
+
+`Screenshots · gates` failed PR #69 with **two** React `#418` sightings —
+`/timeline` @390 and **`/` during `banner-completed` @360**. The branch changes
+seven non-documentation files and **not one of them renders `/`**, so the second
+sighting cannot be its doing. CI was green and the seventh local sweep was clean.
+
+That is visual debt 16, and `scripts/visual-qa-quarantine.ts` was built for
+exactly this shape of problem — its header says an intermittent `#418` against a
+267-capture sweep gives the gate *"better-than-even odds of failing any pull
+request for a reason that had nothing to do with it"*, and *"a gate that fails a
+coin flip regardless of the change is not protecting anything."* The table had
+been emptied when debt 12 turned out to be the camera.
+
+**The commissioner approved arming it for debt 16 on 2026-08-06**, and the row is
+deliberately narrow: minified `#418` with `args[]=HTML` only. `args[]=text` is a
+content mismatch, `#419`–`#425` are different errors, and **a dev build's message
+still fails on sight** — that sighting names the element and is the entire
+remaining route to a cause. The ceiling stays **2**, so a newly introduced
+deterministic mismatch, which fires once per width, still fails on its first
+appearance. Nothing is muted; every sighting is recorded, counted and printed.
+
+**One new fact came out of the investigation, and it is a negative.** The obvious
+explanation was that hosted runners are slow. Driving the *same production build*
+at **8× CPU throttle** for **180 captures**, with every response asserted 200,
+produced **zero** sightings — against seven unthrottled sweeps that also produced
+zero. Slowness alone is not the cause. Debt 16 has still never been reproduced
+outside a hosted runner.
+
+**A methodological note worth keeping**, because it nearly became a false result:
+a first attempt appeared to reproduce the defect fourteen times, and every one was
+worthless. A concurrent `npm run build` had rewritten `.next/` under the running
+dev server, so every response was a 500 and Next.js's own error page hydrates with
+a mismatch. The harness now asserts a 200 on every navigation and aborts
+otherwise. **A harness that cannot tell a defect from its own wreckage is worse
+than no harness.**
+
+### Gates
+
+| | |
+|---|---|
+| Branch | `claude/timeline-history`, rebased onto `cc333ec` so #68's checkpoint correction rides in the same pull request |
+| `npm run check` | **1354 passed / 86 files**, 2 skipped — typecheck, lint, build all clean. Two of those tests are new and both are about the quarantine |
+| `npm run visual:qa` | **89 states × 3 widths = 267 captures, passed** — 0 failures, **0 quarantined**, 0 hydration sightings, on a production build against a freshly created database. The quarantine tolerated nothing locally, because locally there is nothing to tolerate |
+| Evidence | `docs/evidence/timeline/` — before and after at 390 / 375 / 360, device resolution and 1:1 |
+| Hosted runs created | **0** while the branch was storage, confirmed from GitHub after every push including the two force-pushes |
+| A note on durability | The container's local git state **rolled back twice** during this work — once to a stale `main`, once to an Aug-4 snapshot that had never heard of this branch. Both times the remote was correct and recovery was `git checkout -B <branch> origin/<branch>`. This is `AUTONOMY.md §0` earning its place: **push early, and treat the remote as the record.** A local ref is not a backup |
+| **Production** | **not verified.** Nothing here has been merged or deployed |
+
+That is a **seventh** consecutive clean sweep since visual debt 16's two `#418`
+sightings. It stays open and unclaimed; nothing here investigated it, and the
+rate estimate is still an order of magnitude off two events rather than a figure.
 
 ---
 
@@ -138,12 +288,17 @@ after, at device resolution and 1:1.
 | `npm run visual:qa`, production build, fresh database | **88 states × 3 widths, passed**, zero failures and zero hydration sightings |
 | Full-page evidence | `docs/evidence/homepage-fidelity/` |
 | Asset evidence | `docs/evidence/palette-fidelity/` — four columns: the approved source, the shared 32, the four-colour pass, and what ships |
-| **Production** | **not verified.** Nothing has been merged or deployed |
+| **Production** | **merged as #68** (`dde6237`), both hosted gates green. The hosted *render* was not reviewed by eye from this session — the Vercel preview is unreachable through the agent proxy and the visual-QA artifact is not downloadable here, so that half rests on the gate rather than on a person |
 
 That is **five consecutive clean sweeps** of this branch since the two `#418`
 sightings, so visual debt 16's rate estimate drops again — 1,584 captures and 2
 sightings, roughly 1 per 792. It stays open and unclaimed; nothing here
 investigated it.
+
+**The hosted sweep makes it six.** `Screenshots · gates` on #68 passed with no
+hydration sighting — 1,848 captures against 2, roughly 1 per 924. The rate
+estimate has fallen with every clean run, which is what an estimate off two
+events does: read the order of magnitude, not the figure.
 
 ---
 

@@ -29,6 +29,17 @@ jobs:
     name: Screenshots · gates
     runs-on: ubuntu-latest
 
+    # A spend cap. See the note in `ci.yml` — same exposure, same reasoning,
+    # including the part about how it was found.
+    #
+    # This job's median is **16 minutes**: it builds, seeds, and drives 89 states
+    # at three widths. With no limit set, GitHub's 360-minute default was the
+    # only backstop it had.
+    #
+    # Thirty-five is a little over twice the median — enough headroom that a slow
+    # runner or a few more states never trips it, and far short of an hour.
+    timeout-minutes: 35
+
     services:
       postgres:
         image: postgres:17-alpine

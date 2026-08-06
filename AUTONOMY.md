@@ -177,7 +177,7 @@ request** creates no workflow run. Verified three ways —
 |---|---|
 | the files | `ci.yml` is `push: branches: [main]` + `pull_request:`; `visual-qa.yml` is `pull_request:` + `workflow_dispatch:`; `orchestrator.yml` is `workflow_dispatch:` only |
 | the history | 30 of 30 runs on feature branches were `pull_request`; 30 of 30 `push` runs repository-wide were on `main` |
-| the experiment | after pushing `claude/homepage-palette-fidelity`, `list_workflow_runs` for that branch returns `total_count: 0` |
+| the experiment | after pushing `claude/homepage-palette-fidelity`, `list_workflow_runs` for that branch returns `total_count: 0`. Repeated on `claude/timeline-history` — including a **force-push** after a rebase, which is the case worth having checked, since it is a push that rewrites history rather than adding to it |
 
 **Do not edit a workflow trigger to permit a backup push.** If a push would cost a run, the
 answer is not to push.
@@ -187,6 +187,15 @@ commissioner explicitly releases it: opening or reopening a pull request · merg
 pushing to `main` · pushing to a branch that has an open PR · re-running any workflow ·
 `workflow_dispatch` · empty or documentation-only commits made to trigger CI · **setting
 `CRON_SECRET`** · **claiming production is verified.**
+
+
+
+**2026-08-06 — one PR authorized, spent, and mode resumed.** The commissioner
+authorized a single hosted pull request for the homepage-fidelity slice and no
+more. It merged as **#68** for **~25 minutes** — CI 4m30s + Screenshots 16m00s on
+the PR, plus CI on the push to `main`. Both gates were green first time; nothing
+was re-run. **Conservation mode is active again from that merge**, with the same
+prohibited list as above, and a further hosted run needs a new authorization.
 
 The last two are not Actions rules and are listed here because they are the two things a
 session under this mode is most likely to get wrong. `CRON_SECRET` activates *both* crons at

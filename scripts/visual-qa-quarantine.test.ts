@@ -22,25 +22,42 @@ const REAL =
   'additional helpful warnings.';
 
 describe('the known-defect quarantine', () => {
-  it('is empty', () => {
+  it('holds exactly one entry', () => {
     /*
-     * **The load-bearing assertion**, and it now asserts *nothing is tolerated*.
+     * **The load-bearing assertion.** One entry, never two.
      *
-     * The one entry this table ever held was debt 12, and it turned out not to
-     * be a product defect at all: the driver's own screenshot was writing
-     * `caret-color: transparent` into the page while React hydrated it
-     * (`scripts/visual-qa-capture.ts`). With the camera fixed there is nothing
-     * left to tolerate.
+     * The table held debt 12, which turned out not to be a product defect at all
+     * — the driver's own screenshot was writing `caret-color: transparent` into
+     * the page while React hydrated it (`scripts/visual-qa-capture.ts`) — so the
+     * entry was deleted and this line asserted zero.
      *
-     * A first entry is now as deliberate an act as a second one was: it changes
-     * this line and has to explain itself.
+     * It now holds **debt 16**, the residual that survived that fix, armed on
+     * commissioner approval 2026-08-06 after it failed PR #69 twice including
+     * once on a page that pull request did not touch.
+     *
+     * A *second* entry is not a thing to accumulate quietly. It is a signal the
+     * gate has stopped being trusted, and it should force a conversation rather
+     * than an append — which is what changing this number requires.
      */
-    expect(QUARANTINE).toHaveLength(0);
+    expect(QUARANTINE).toHaveLength(1);
+    expect(QUARANTINE[0]?.debt).toBe(16);
   });
 
-  it('tolerates nothing, including the error it was built for', () => {
-    // The exact production text that opened debt 12. It fails the gate again.
-    expect(quarantineFor(REAL)).toBeUndefined();
+  it('tolerates the exact production text, and only because a person said so', () => {
+    // The text CI printed on PR #59 and again, twice, on PR #69.
+    expect(quarantineFor(REAL)?.debt).toBe(16);
+  });
+
+  it('names the debt it tolerates, so the run output can be traced to a record', () => {
+    /*
+     * A tolerated error whose message does not say *what* is being tolerated is
+     * indistinguishable from a mute by the time anyone reads the log.
+     */
+    const entry = quarantineFor(REAL);
+    expect(entry?.why).toContain('16');
+    // The debt register lists open items as table rows, so this is the row.
+    const debt = readFileSync(path.join(ROOT, 'docs', 'VISUAL_DEBT.md'), 'utf8');
+    expect(debt, 'debt 16 must still be an open row').toMatch(/^\|\s*16\s*\|/m);
   });
 
   it('does not tolerate a content mismatch', () => {
@@ -59,7 +76,10 @@ describe('the known-defect quarantine', () => {
     /*
      * The production bundle says `HTML` and names nothing. A dev build prints
      * the element it choked on, and that sighting is the entire recorded next
-     * step for visual debt 12 — it has to be as loud as the harness can make it.
+     * step for visual debt 16 — it has to be as loud as the harness can make it.
+     *
+     * This is the assertion that stops the quarantine from closing the only
+     * route to a cause.
      */
     const dev =
       "Hydration failed because the server rendered HTML didn't match the client. " +
@@ -107,14 +127,26 @@ describe('the known-defect quarantine', () => {
 
   it('leaves the mechanism described where the defect was recorded', () => {
     /*
-     * This used to assert that the *open* debt-12 entry pointed at the
-     * quarantine. Debt 12 is closed and the table is empty, so what is worth
-     * holding is the account of **why the mechanism exists and how it ended** —
-     * a quarantine that quietly loses its story is how the next one gets added
-     * without a conversation.
+     * Both halves of the story have to survive: how the mechanism ended last
+     * time (debt 12 — the camera was the defect) and why it is armed now (debt
+     * 16). A quarantine that quietly loses its story is how the next one gets
+     * added without a conversation.
      */
     const debt = readFileSync(path.join(ROOT, 'docs', 'VISUAL_DEBT.md'), 'utf8');
     expect(debt).toContain('Quarantine entry removed');
     expect(debt).toContain('visual-qa-capture.ts');
+    expect(debt, 'debt 16 must say it is quarantined').toContain('visual-qa-quarantine.ts');
+  });
+
+  it('still fails the run when the tolerated error stops being rare', () => {
+    /*
+     * The quarantine tolerates a *rate*, not an error. Asserted here as well as
+     * in the driver because this is the property that makes the row honest: if
+     * debt 16 ever became deterministic it would clear the ceiling on its first
+     * appearance and the gate would go red again with no code change.
+     */
+    const driver = readFileSync(path.join(ROOT, 'scripts', 'visual-qa.mts'), 'utf8');
+    expect(driver).toContain('quarantined.length > QUARANTINE_CEILING');
+    expect(QUARANTINE_CEILING).toBe(2);
   });
 });

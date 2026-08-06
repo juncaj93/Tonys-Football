@@ -1,5 +1,25 @@
 # Handoff — what is waiting, and what it will cost to land
 
+> **Spent, 2026-08-06.** The slice this document was written for merged as
+> **#68** (`dde6237`). It cost **~25 minutes** of hosted Actions: CI 4m30s +
+> Screenshots 16m00s on the pull request, plus CI again on the push to `main`.
+> Both gates were green first time and nothing was re-run.
+>
+> Conservation mode is **active again** — `AUTONOMY.md §4`. §1's arithmetic is
+> what stays useful; §2 and §3 describe the slice that spent the money and are
+> kept as the worked example of what a queued branch should carry.
+>
+> **Waiting now:** the Timeline slice on **`claude/timeline-history`**, which is
+> rebased onto `cc333ec` so the checkpoint correction for #68 is a commit in its
+> history rather than a second thing to remember. **One PR, ~25 minutes** on §1's
+> arithmetic — unchanged, because the branch adds no workflow and no job.
+> **0 workflow runs** created by pushing it, confirmed from GitHub afterwards.
+> See `docs/CHECKPOINT.md`'s seventeenth-session entry.
+>
+> The checkpoint correction is **not** getting a run of its own — `AUTONOMY.md
+> §4` and the 2026-08-06 ruling both refuse a documentation-only pull request a
+> gate. It rides in whichever slice lands next, which is this one.
+
 **Written 2026-08-05, under the phone-only Actions-conservation mode**
 (`AUTONOMY.md §4`). The commissioner has no machine until the following week, so
 this document assumes **nothing can be run locally by the reader**. Every claim
