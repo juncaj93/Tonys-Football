@@ -20,6 +20,29 @@
 > §4` and the 2026-08-06 ruling both refuse a documentation-only pull request a
 > gate. It rides in whichever slice lands next, which is this one.
 
+> ---
+>
+> **Allowance exhausted, 2026-08-06 (commissioner).** Hosted Actions are gone
+> until next month and the post-merge failure on `main` is treated as
+> unavailable capacity, not a code defect — the same commit passed both gates on
+> the pull request minutes earlier. **Nothing hosted may be spent.** Three
+> branches are queued, each verified at `total_count: 0`:
+>
+> | order | branch | head | what |
+> |---|---|---|---|
+> | 1 | `claude/slice-review-timestamps` | `daa161f` | the Slice review record says *when*, via `lib/design/moment.ts` |
+> | 2 | `claude/next-slice` | `afd4e2a` | the reduced-motion promise, verified by a gate with a control |
+> | 3 | `claude/hydration-residual` | `48948d5` | debt-16 instrumentation and a measured negative — **no fix** |
+>
+> **Recommended grouping: 1 and 2 in one pull request, 3 separately.** They are
+> small, touch different areas and stay independently reviewable, which halves
+> the hosted cost to about 25 minutes for both. Item 3 carries no product change
+> and can wait or ride along; it is a script and two documents.
+>
+> Each pull request costs **~25 minutes** — CI ~4.5 + Screenshots ~16 on the PR,
+> CI ~4.5 again on the merge. The reduced-motion state adds 3 captures, about 11
+> seconds.
+
 **Written 2026-08-05, under the phone-only Actions-conservation mode**
 (`AUTONOMY.md §4`). The commissioner has no machine until the following week, so
 this document assumes **nothing can be run locally by the reader**. Every claim
