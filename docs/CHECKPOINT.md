@@ -128,13 +128,50 @@ weekly rewards **are** built and the two crons **do** exist, and the P3
 simulation **has** run — the box costs 200. `IMPLEMENTATION_HANDOFF.md` carries a
 banner about exactly this drift happening before.
 
+### The gate went red on a page this branch does not touch
+
+`Screenshots · gates` failed PR #69 with **two** React `#418` sightings —
+`/timeline` @390 and **`/` during `banner-completed` @360**. The branch changes
+seven non-documentation files and **not one of them renders `/`**, so the second
+sighting cannot be its doing. CI was green and the seventh local sweep was clean.
+
+That is visual debt 16, and `scripts/visual-qa-quarantine.ts` was built for
+exactly this shape of problem — its header says an intermittent `#418` against a
+267-capture sweep gives the gate *"better-than-even odds of failing any pull
+request for a reason that had nothing to do with it"*, and *"a gate that fails a
+coin flip regardless of the change is not protecting anything."* The table had
+been emptied when debt 12 turned out to be the camera.
+
+**The commissioner approved arming it for debt 16 on 2026-08-06**, and the row is
+deliberately narrow: minified `#418` with `args[]=HTML` only. `args[]=text` is a
+content mismatch, `#419`–`#425` are different errors, and **a dev build's message
+still fails on sight** — that sighting names the element and is the entire
+remaining route to a cause. The ceiling stays **2**, so a newly introduced
+deterministic mismatch, which fires once per width, still fails on its first
+appearance. Nothing is muted; every sighting is recorded, counted and printed.
+
+**One new fact came out of the investigation, and it is a negative.** The obvious
+explanation was that hosted runners are slow. Driving the *same production build*
+at **8× CPU throttle** for **180 captures**, with every response asserted 200,
+produced **zero** sightings — against seven unthrottled sweeps that also produced
+zero. Slowness alone is not the cause. Debt 16 has still never been reproduced
+outside a hosted runner.
+
+**A methodological note worth keeping**, because it nearly became a false result:
+a first attempt appeared to reproduce the defect fourteen times, and every one was
+worthless. A concurrent `npm run build` had rewritten `.next/` under the running
+dev server, so every response was a 500 and Next.js's own error page hydrates with
+a mismatch. The harness now asserts a 200 on every navigation and aborts
+otherwise. **A harness that cannot tell a defect from its own wreckage is worse
+than no harness.**
+
 ### Gates
 
 | | |
 |---|---|
 | Branch | `claude/timeline-history`, rebased onto `cc333ec` so #68's checkpoint correction rides in the same pull request |
-| `npm run check` | **1352 passed / 86 files**, 2 skipped — typecheck, lint, build all clean |
-| `npm run visual:qa` | **89 states × 3 widths, passed**, zero failures and zero hydration sightings, on a production build against a freshly created database |
+| `npm run check` | **1354 passed / 86 files**, 2 skipped — typecheck, lint, build all clean. Two of those tests are new and both are about the quarantine |
+| `npm run visual:qa` | **89 states × 3 widths = 267 captures, passed** — 0 failures, **0 quarantined**, 0 hydration sightings, on a production build against a freshly created database. The quarantine tolerated nothing locally, because locally there is nothing to tolerate |
 | Evidence | `docs/evidence/timeline/` — before and after at 390 / 375 / 360, device resolution and 1:1 |
 | Hosted runs created | **0** while the branch was storage, confirmed from GitHub after every push including the two force-pushes |
 | A note on durability | The container's local git state **rolled back twice** during this work — once to a stale `main`, once to an Aug-4 snapshot that had never heard of this branch. Both times the remote was correct and recovery was `git checkout -B <branch> origin/<branch>`. This is `AUTONOMY.md §0` earning its place: **push early, and treat the remote as the record.** A local ref is not a backup |
