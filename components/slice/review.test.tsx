@@ -61,4 +61,32 @@ describe('the review record', () => {
     expect(markup).toContain('Alex');
     expect(markup).toContain('reads straight');
   });
+
+  it('says when, in the league zone, with the offset named', () => {
+    /*
+     * Visual debt 11. The record showed *who* and *in what order* and the answer
+     * to *"when was this approved"* sat unread in `slice_reviews.occurred_at`.
+     *
+     * Asserted on the rendered page rather than on `stamp()` — `lib/design/
+     * moment.test.ts` already pins the format, and what this adds is that the
+     * value actually reaches the markup. A formatter nothing calls is not a
+     * feature.
+     */
+    const markup = renderToStaticMarkup(
+      <HistoryPanel history={[{ action: 'approved', actorName: 'Alex', note: null, occurredAt: at }]} />,
+    );
+
+    // Noon UTC on 1 August is 8:00 AM in Michigan, in daylight time.
+    expect(markup).toContain('1 Aug 2026, 8:00 AM EDT');
+  });
+
+  it('stamps every row, so no decision in the record is undated', () => {
+    const actions: ReviewEvent['action'][] = ['generated', 'submitted', 'approved'];
+    const markup = renderToStaticMarkup(<HistoryPanel history={history(...actions)} />);
+
+    // One stamp per row. A record that dates some of its entries is worse than
+    // one that dates none, because the gaps look like facts.
+    const stamps = markup.match(/1 Aug 2026, 8:00 AM EDT/g) ?? [];
+    expect(stamps).toHaveLength(actions.length);
+  });
 });
