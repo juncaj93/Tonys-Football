@@ -83,15 +83,26 @@ export const QUARANTINE_CEILING = 2;
  *
  * What is known, and it is deliberately little:
  *
- * - **Hosted:** 4 sightings across roughly 2,100 captures, never twice in the
- *   same place.
- * - **Local, unthrottled:** 0 in ~2,400 captures over seven sweeps.
- * - **Local, 8× CPU throttle against the same production build the runner
- *   uses:** 0 in 180 captures, every response asserted 200. So *slowness alone
- *   does not cause it* — which is the obvious explanation, now eliminated.
- * - The production bundle names no element, and the census is taken after
- *   React's recovery, so only a **dev build** can say where. That sighting has
- *   never been had, which is why the dev message must never be tolerated.
+ * - **Hosted, production build:** 4 sightings across roughly 2,100 captures,
+ *   never twice in the same place.
+ * - **Local, production build:** 2 sightings in one 267-capture sweep, on a run
+ *   with zero failures — so the server was healthy and these are not the
+ *   wreckage of a broken one. Roughly **1 per 130**, comparable to hosted.
+ * - **Local, development build: 0 in 600 captures** across five routes and three
+ *   widths, every response asserted 200 (`scripts/hydration-hunt.mts`). At the
+ *   rate above that expects about 4.6 sightings, so **P(zero) ≈ 1%**. The
+ *   development build does not reproduce it.
+ *
+ * That last line is the expensive one, and it closes a door. The production
+ * bundle names no element and the census is taken after React's recovery, so a
+ * **dev build was the only thing left that could say where** — and it will not
+ * produce the fault to be photographed. Whatever this is, it depends on
+ * something the production build does that `next dev` does not: different
+ * chunking, different streaming of the RSC payload, or the minified runtime
+ * itself.
+ *
+ * The dev message must still never be tolerated. It stays the loudest thing the
+ * harness can report, because if one ever *does* appear it is the whole answer.
  *
  * This row is meant to be deleted, and deleting it is the point of `docs/`
  * VISUAL_DEBT.md`'s entry 16 staying open.
@@ -101,7 +112,8 @@ export const QUARANTINE: readonly QuarantineEntry[] = [
     debt: 16,
     why:
       'Visual debt 16: an intermittent, unexplained React #418 structural mismatch. ' +
-      'Reproduced only on hosted runners; 0 in 180 local captures at 8x CPU throttle. ' +
+      'Reproduces on production builds, hosted and local, at roughly 1 per 130 captures; ' +
+      '0 in 600 development-build captures, so a dev build cannot be used to name the element. ' +
       'Counted and printed, never muted — more than the ceiling still fails the run.',
     /*
      * Narrow on purpose, and every clause is load-bearing:
