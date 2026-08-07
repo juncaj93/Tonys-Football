@@ -402,24 +402,35 @@ reproduces the failure exactly.
   ever changed. `checkGlowLeavesTonyAlone` samples compositor frames over CDP
   instead.
 
-### Actions conservation, and what a session may not claim
+### Actions conservation — lifted 2026-08-07 by temporary public mode
 
-Two commissioner directions landed on 2026-08-05. The morning one withdrew the
-one-PR-per-slice authorization outright — 1,800 of 2,000 included minutes are
-spent. The afternoon one added that there is **no local machine until next week**,
-so nothing may be handed off as *"run these when you get back."*
+**Superseded.** Two commissioner directions landed on 2026-08-05: the morning one
+withdrew the one-PR-per-slice authorization outright (1,800 of 2,000 included
+minutes spent), and the afternoon one added that there was no local machine, so
+nothing could be handed off as *"run these when you get back."* Under that mode
+remote feature branches were **storage**, verified three ways rather than assumed.
 
-Remote feature branches are usable as **storage**, and that was verified rather
-than assumed three ways: the workflow files, thirty runs of history, and the
-experiment — `list_workflow_runs` for `claude/homepage-palette-fidelity` returns
-`total_count: 0`.
+**That mode ended when the repository went public**, and the mechanism matters:
+the allowance was never made larger — a public repository's standard
+`ubuntu-latest` runners simply do not draw on it. The merge queue is open again on
+the ordinary rule: one coherent PR per completed slice, both required gates, merge
+on green.
 
-**`docs/PHONE_ONLY_HANDOFF.md` is the merge queue and its price.** One PR, ~25
-minutes of the ~200 remaining. `AUTONOMY.md §4` carries the rule.
+**`docs/PHONE_ONLY_HANDOFF.md` is history, not the current queue.**
+`docs/PUBLIC_MODE.md` is the public-mode record and `AUTONOMY.md §4`'s 2026-08-07
+entry is the full sequence, including the two blocks that had to come off and why
+the first one hid the second.
 
-**Nothing is verified in production**, because nothing has been merged. Every
-gate ran locally, in full, on a production build against a fresh database — which
-is a true and much smaller claim.
+**What did not change, because none of it was ever about minutes:** only
+`ubuntu-latest` · no larger runners · no paid services · no paid AI · the retired
+orchestrator stays retired · no rerunning green or unchanged commits ·
+**`CRON_SECRET` is still the commissioner's step** · no outside contribution may
+be merged while the repository is public. Budgets sit at **`$1` as a safety
+ceiling, not a spending authorization.**
+
+**Production demo-seat status: UNVERIFIED — commissioner accepted temporary
+public exposure risk.** The query in `docs/PUBLIC_MODE.md` has still never been
+run and must be, when secure production access exists. Do not record it as passed.
 
 ### Verified
 

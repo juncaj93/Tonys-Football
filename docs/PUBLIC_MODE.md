@@ -1,8 +1,15 @@
 # Temporary public mode — the record
 
-**Status: NOT YET PUBLIC.** The repository is private. This file exists so that
-the decision, the accepted risk, and the restore path are recorded before
-anything changes, rather than reconstructed afterwards.
+**Status: PUBLIC since 2026-08-06.** This file was written while the repository
+was still private, so that the decision, the accepted risk, and the restore path
+were recorded *before* anything changed rather than reconstructed afterwards.
+That is why it reads forwards; only this status line moves as the state does.
+
+The transition itself is complete: the visibility change was made manually, the
+hardening in `#70` merged as `e4b56cb`, and both required gates plus the
+post-merge `main` CI ran on standard public `ubuntu-latest` runners. **Nothing
+below is superseded** — the accepted risk, the contribution policy and the
+return-to-private path all still govern.
 
 ## Production demo-seat status: UNVERIFIED
 
