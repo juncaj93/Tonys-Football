@@ -29,8 +29,8 @@ import {
 import { type Edition } from '@/lib/slice/render';
 import { validateEdition } from '@/lib/slice/validate';
 
-import { DemoRefused, assertDemoAllowed, assertDemoSeat } from './guard';
-import { DEMO_PIN, type DemoSeat, ensureDemoSeat } from './seat';
+import { DemoRefused, assertDemoSeat, assertDemoWritesAllowed } from './guard';
+import { type DemoSeat, demoPin, ensureDemoSeat } from './seat';
 import { BLOCKED_ON_M3, DEMO_STATES, type DemoState, demoState } from './states';
 
 /**
@@ -114,7 +114,7 @@ export async function applyDemoState(
    */
   blocked: readonly string[] = BLOCKED_ON_M3,
 ): Promise<DemoOutcome> {
-  assertDemoAllowed(env);
+  assertDemoWritesAllowed(env);
 
   const state = demoState(key);
   if (blocked.includes(state.key)) {
@@ -154,7 +154,7 @@ export async function applyDemoState(
     seat,
     doorPath: `/door/${seat.userId}`,
     viewPath: state.route,
-    pin: DEMO_PIN,
+    pin: demoPin(),
     evidence: applied.evidence,
     browserSteps: applied.browserSteps ?? [],
   };

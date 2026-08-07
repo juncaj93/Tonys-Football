@@ -43,3 +43,6 @@ Thumbs.db
 # Visual QA artifacts. Screenshots belong to a workflow run, not to git history.
 /visual-qa/
 /visual-qa-*/
+
+# The local demo PIN. Generated per machine, never committed.
+.demo-pin.local

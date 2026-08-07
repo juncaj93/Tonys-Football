@@ -7,6 +7,17 @@ import { resetDatabase } from '@/lib/db/test-helpers';
 import { listDoorManagers } from '@/lib/auth/service';
 import { leagueShowcase } from '@/lib/counter/showcase';
 import { applyDemoState } from '@/lib/demo/apply';
+
+/*
+ * The demo write guard reads the env record it is handed, not `process.env`, and
+ * it refuses any non-local `DATABASE_URL` — an absent one included. Stating the
+ * local target here keeps these cases exercising membership rather than the
+ * guard.
+ */
+const DEMO_ENV = {
+  DEMO_FIXTURES: '1',
+  DATABASE_URL: 'postgres://tonys:local_dev_only@localhost:5432/tonys_dev',
+} as const;
 import { featuredMatchup } from '@/lib/stats/board';
 import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
@@ -128,7 +139,7 @@ describe.skipIf(!hasDatabase)('who the product says is in this league', () => {
      * In production the two are identical, because a demo seat cannot be created
      * there at all.
      */
-    const applied = await applyDemoState(db!, 'one-box', { DEMO_FIXTURES: '1' });
+    const applied = await applyDemoState(db!, 'one-box', DEMO_ENV);
 
     const door = await listDoorManagers(db!);
     expect(door.some((m) => m.id === applied.seat.userId)).toBe(true);
@@ -144,7 +155,7 @@ describe.skipIf(!hasDatabase)('who the product says is in this league', () => {
     // Owning things is the argument that lost. A retired manager may hold a
     // welcome box and a collectible from an earlier season; neither is
     // membership.
-    await applyDemoState(db!, 'collection-full', { DEMO_FIXTURES: '1' });
+    await applyDemoState(db!, 'collection-full', DEMO_ENV);
     expect(await everyNameOnShow()).not.toContain('Armen');
   });
 

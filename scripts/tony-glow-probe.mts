@@ -23,10 +23,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 
 import { chromium, type Page } from 'playwright';
+import { demoPin } from '../lib/demo/seat.ts';
 
 const BASE = process.env['VISUAL_QA_BASE'] ?? 'http://localhost:3111';
 const OUT = 'visual-qa/glow-probe';
-const PIN = '461902';
+const PIN = process.env['VISUAL_QA_PIN'] ?? demoPin();
 
 const widthArg = process.argv.find((a) => a.startsWith('--width='));
 const WIDTHS = widthArg === undefined ? [390, 375, 360] : [Number(widthArg.split('=')[1])];
