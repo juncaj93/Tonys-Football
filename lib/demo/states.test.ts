@@ -76,7 +76,28 @@ describe('the demo catalog', () => {
      */
     const PRESS_DESK = 6;
 
-    expect(DEMO_STATES.length).toBe(REQUIRED.length + CARRIED_BEYOND_THE_LIST + PRESS_DESK);
+    /*
+     * Championship rings, added when the ring stopped being unobtainable.
+     *
+     * The mandate's list predates the grant: `item_championship_ring` sat in the
+     * registry excluded from the only acquisition path there was, so there was
+     * nothing to demo. Three, because the shelf has three genuinely different
+     * shapes and the middle one does not imply the third:
+     *
+     *  - **none** — what almost every manager sees, and the state a shelf is
+     *    most often reviewed *without*. It has to say the right thing about a
+     *    thing you cannot chase.
+     *  - **one** — a single title, where the year has to read as the name of the
+     *    thing rather than as metadata.
+     *  - **many** — a repeat champion. One ring asset serves every championship
+     *    forever, so two titles are distinguishable *only* by their years, and
+     *    this is the state that proves they are.
+     */
+    const CHAMPIONSHIPS = 3;
+
+    expect(DEMO_STATES.length).toBe(
+      REQUIRED.length + CARRIED_BEYOND_THE_LIST + PRESS_DESK + CHAMPIONSHIPS,
+    );
   });
 
   it('gives every state a stable key, a route, and a sentence', () => {
