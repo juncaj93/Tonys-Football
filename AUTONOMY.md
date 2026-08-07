@@ -205,6 +205,47 @@ claim than *verified*.
 
 ---
 
+### 2026-08-07 — temporary public mode, and conservation lifted
+
+**The allowance was never made larger. The repository moved to where it does not apply.**
+A public repository's standard `ubuntu-latest` runners do not draw on the private-repository
+allowance, so making `juncaj93/Tonys-Football` public is what released the queue — not a
+budget increase, and not the monthly reset.
+
+The transition is worth recording because **two separate blocks had to come off, and the
+first one hid the second.**
+
+| | |
+|---|---|
+| private, allowance spent | a run object **was** created and died in ~3s with `runner_id: 0` — the exhausted-allowance signature |
+| public, Actions still disabled | **no run object was created at all** for PR #70. Different failure, and the absence *was* the finding: no failed run, no annotation, no message to quote |
+| public, Actions enabled, still blocked | both gates queued at `21:56:11Z` and were cancelled together at `22:11:14Z`, `runner_id: 0`, job logs **HTTP 404**, check-run output empty. CI's cap is 15 minutes and Visual QA's is 35, so a per-job timeout **cannot** end both on the same second — a single external event did |
+| public, budget ceiling raised to `$1` | both gates ran on `GitHub Actions 1000000824` / `…825`, and post-merge `main` on `…826`. Green |
+
+**`$1` is a safety ceiling, not a spending authorization.** It exists so that an
+account-level zero-budget block cannot stop otherwise-free public runners from starting. If
+ordinary Tony's CI ever consumes it, **stop and report** the product/SKU charged, the amount,
+the workflow and runner type, and the repository visibility at the time.
+
+**What is released:** opening and merging pull requests, pushing to `main` through a merged
+PR, the ordinary one-coherent-PR-per-slice rule, and both required gates running hosted.
+
+**What is unchanged, and none of it was ever about minutes:** only `ubuntu-latest` · no
+larger runners · no paid services · no paid AI · **the retired orchestrator stays retired**
+(`docs/RETIRED_WORKFLOWS.md`) · no rerunning green or unchanged commits · no workflow
+triggered for its own sake · **`CRON_SECRET` is still the commissioner's step** · and no
+outside contribution may be merged while the repository is public.
+
+**Elapsed time is still not observable inside a session container.** The clock-drift incident
+that cost two healthy jobs on #69 is the reason: judge a hosted job only by GitHub's own
+timestamps, and never cancel a run on a local timing judgement.
+
+`docs/PUBLIC_MODE.md` is the public-mode record — the accepted risk, the contribution policy
+and the return-to-private checklist. `docs/PHONE_ONLY_HANDOFF.md` is **history**; it is not
+the current queue.
+
+---
+
 ## 5. Rules that bind every actor
 
 - **Never expose a secret** in code, logs, issue text, PR comments or screenshots. Secrets live in GitHub Actions secrets and are read only by workflows.
