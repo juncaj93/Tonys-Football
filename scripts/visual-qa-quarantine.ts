@@ -85,10 +85,18 @@ export const QUARANTINE_CEILING = 2;
  *
  * - **Hosted:** 4 sightings across roughly 2,100 captures, never twice in the
  *   same place.
- * - **Local, unthrottled:** 0 in ~2,400 captures over seven sweeps.
+ * - **Local, unthrottled:** was 0 in ~2,400 captures over seven sweeps, and
+ *   **that is no longer true.** A 279-capture local production sweep on
+ *   2026-08-08 produced one, which is the first local sighting this defect has
+ *   ever had. *"Reproduced only on hosted runners"* was the load-bearing claim
+ *   in the entry below and it is now retired: the environment is not the
+ *   variable. The rate is unchanged in order of magnitude, so nothing here is
+ *   reopened — but a false reason in a guard's justification is worse than a
+ *   thin one.
  * - **Local, 8× CPU throttle against the same production build the runner
  *   uses:** 0 in 180 captures, every response asserted 200. So *slowness alone
- *   does not cause it* — which is the obvious explanation, now eliminated.
+ *   does not cause it* — which is the obvious explanation, now eliminated. The
+ *   local sighting above was **unthrottled**, which is consistent with that.
  * - The production bundle names no element, and the census is taken after
  *   React's recovery, so only a **dev build** can say where. That sighting has
  *   never been had, which is why the dev message must never be tolerated.
@@ -101,7 +109,7 @@ export const QUARANTINE: readonly QuarantineEntry[] = [
     debt: 16,
     why:
       'Visual debt 16: an intermittent, unexplained React #418 structural mismatch. ' +
-      'Reproduced only on hosted runners; 0 in 180 local captures at 8x CPU throttle. ' +
+      'Hosted and, since 2026-08-08, local: 1 in a 279-capture local production sweep, ' +
       'Counted and printed, never muted — more than the ceiling still fails the run.',
     /*
      * Narrow on purpose, and every clause is load-bearing:
