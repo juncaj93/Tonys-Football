@@ -84,7 +84,7 @@
  *
  * ## Six became seven, once, on purpose — commissioner ruling 2026-08-08
  *
- * **35 exists for one surface: the Tonight board's headline.** The guard did
+ * **37 exists for one surface: the Tonight board's headline.** The guard did
  * its job here rather than being weakened; it forced the decision to be made
  * and measured, which is what the paragraph above asks for.
  *
@@ -94,27 +94,39 @@
  * `WEEK ONE` can be while still fitting that. Measured in a browser, per face,
  * at the largest size that fits:
  *
- * | face | largest fitting size | cap height |
- * |---|---|---|
- * | Silkscreen (incumbent, at 20) | 20 | 13 |
- * | Barlow Condensed | 31 | 21 |
- * | Oswald | 29 | 24 |
- * | Saira Extra Condensed | 36 | 25 |
- * | **Big Shoulders Display** | **35** | **28** |
+ * | face | largest fitting size | cap height | pixel face |
+ * |---|---|---|---|
+ * | Silkscreen (incumbent, at 20) | 20 | 13 | yes |
+ * | Silkscreen 700 | 17 | 11 | yes |
+ * | Jacquard 12 | 25 | 15 | yes, blackletter |
+ * | Pixelify Sans 700 | 25 | 16 | yes |
+ * | **Micro 5** | **37** | **17** | **yes** |
+ * | Handjet 700 | 38 | 25 | yes, but one-pixel strokes |
+ * | Big Shoulders Display | 35 | 28 | **no** |
+ *
+ * **A smooth condensed face measured better and was rejected.** Big Shoulders
+ * gives 28px capitals in the same width, and the board built with it read as a
+ * modern poster pasted into a pixel-art room — commissioner ruling, 2026-08-08.
+ * Handjet is the tallest genuine pixel face but draws in one-pixel strokes, so
+ * it is tall and *thin*, which is the opposite of dominant. Micro 5 is the
+ * heaviest condensed pixel face that fits.
  *
  * **26 was not enough and that is arithmetic, not taste.** The existing top of
- * the scale is `masthead`/`headlineLoud` at 26, which in Big Shoulders gives 21px
- * capitals — still shorter than the countdown line needs to be subordinate to,
- * and a headline that does not dominate is the defect being fixed. Going the
- * other way is worse: Silkscreen cannot exceed 20 here at all without `WEEK ONE`
- * running into the frame, which is precisely how the board ended up quiet.
+ * the scale is `masthead`/`headlineLoud` at 26, which in Micro 5 gives 12px
+ * capitals — *shorter than the incumbent Silkscreen it replaces*. Going the
+ * other way is worse: Silkscreen cannot exceed 20 here without `WEEK ONE`
+ * running into the frame, which is how the board ended up quiet.
  *
- * 35 is therefore the largest size that fits the *worst* string the runtime can
- * produce (`WEEK ONE`, 115.8px against a 118px budget) in the face that fits the
- * most letter into it. It is a token rather than an inline escape hatch so the
- * next surface that wants to be this loud has to come here and argue for it.
+ * **37 rather than 39, and the difference is slack.** Micro 5 is a bitmap-grid
+ * face, so its widths step rather than scale: 37 sets `WEEK ONE` at 111.0px and
+ * 39 at 119.1px, into a field of 120.4. Thirty-nine buys **one pixel** of cap
+ * height for **eight pixels** of margin, on the narrowest phone, in a field that
+ * clips. Thirty-seven leaves 9.4px.
+ *
+ * It is a token rather than an inline escape hatch so the next surface that
+ * wants to be this loud has to come here and argue for it.
  */
-export const TYPE_SIZES = [13, 15, 17, 19, 22, 26, 35] as const;
+export const TYPE_SIZES = [13, 15, 17, 19, 22, 26, 37] as const;
 
 /**
  * The floor, in pixels, for any text this product renders.
@@ -145,33 +157,40 @@ export const TYPE = {
   /**
    * The Tonight board's headline — the loudest thing in the product.
    *
-   * The only role set in `font-board`, and the only one at 35. Both facts are
-   * the same decision: the board is a **printed sign inside the room**, not part
-   * of the room's artwork, so it is allowed an editorial voice the pixel shell
-   * is not, and it has to carry across a field 120px wide on the narrowest
-   * phone. See `TYPE_SIZES` for the measurement that chose the face and size.
+   * The only role set in `font-board`, and the only one at 37.
    *
-   * `leading-[0.92]` is tight on purpose: a display face at 35px with normal
-   * leading reserves space above the capitals that nothing occupies, and the
-   * board's field is only 92px tall. Optical, not arbitrary — the cap height is
-   * 28 of the 35.
+   * `font-board` is **Micro 5** — still a pixel face, because the board hangs in
+   * a pixel-art room and a smooth condensed face read as a modern poster pasted
+   * into it (commissioner ruling, 2026-08-08). What it is not is Silkscreen: at
+   * the only size Silkscreen fits here it gives 13px capitals, and the board was
+   * quiet because of it. See `TYPE_SIZES` for the faces measured and rejected.
+   *
+   * `leading-[0.92]` is tight on purpose: at 37px the face reserves space above
+   * the capitals that nothing occupies, and the board's field is only 85px tall
+   * at 360. Optical, not arbitrary — the cap height is 17 of the 37.
+   *
+   * **No weight class.** Micro 5 ships one weight; asking for `font-bold` would
+   * have the browser synthesise it and smear a pixel face, which is the defect
+   * `typography.test.ts` guards against on VT323.
    */
-  boardHero: 'font-board font-bold text-[35px] leading-[0.92] tracking-[0.01em] uppercase',
+  boardHero: 'font-board text-[37px] leading-[0.92] tracking-[0.01em] uppercase',
 
   /**
    * The one fact under the board's headline — a countdown, or a matchup.
    *
-   * Same face, **19 rather than 35 and 500 rather than 700**, so the hierarchy
-   * is carried by weight and size instead of by a second typeface. It stays on
-   * an existing size deliberately: one new size was authorised and it was spent
-   * on the headline.
+   * Same face at 19 against the headline's 37, so the hierarchy is carried by
+   * size alone — Micro 5 has one weight, and a second typeface here would make
+   * the board look assembled rather than printed. It stays on an existing size
+   * deliberately: one new size was authorised and it was spent on the headline.
    *
-   * 19 is the largest existing size at which the *longest* thing this line can
-   * say still fits on one line — `Matty B v Nathan` measures 103px against the
-   * 118px budget. `33 days out` is 69px, so the common case sits comfortably
-   * inside it rather than only just fitting.
+   * **19 rather than 22, and a matchup is why.** This line is usually a
+   * countdown but it is also where `lib/stats/board.ts` puts the matchup of the
+   * week, and `Matty B v Nathan` measures **123.5px at 22** against a 120.4px
+   * field that clips — so the size that looked best against `33 days out` is the
+   * size that would have truncated a manager's name. At 19 it is 106px, and
+   * `33 days out` is 73px.
    */
-  boardDetail: 'font-board font-medium text-[19px] leading-[1.1] tracking-[0.01em]',
+  boardDetail: 'font-board text-[19px] leading-[1.1] tracking-[0.01em]',
 
   /**
    * A newspaper's nameplate. The one thing on the page allowed to be this big.

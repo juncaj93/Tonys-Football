@@ -15,30 +15,29 @@ import type { Metadata, Viewport } from 'next';
  * to keep its columns, and it is a terminal face rather than a UI face, so a
  * paragraph of it reads as something a machine in the corner printed.
  *
- * **Big Shoulders Display** is the Tonight board, and it is the one place in
- * this product deliberately *not* set in a pixel face. The board is a printed
- * sign hanging in the room rather than part of the room's artwork, so it takes
- * the Slice's editorial logic instead of the shell's.
+ * **Micro 5** is the Tonight board, and choosing it was two decisions in a row.
  *
- * It was chosen by measurement against the board's real field, not by eye. The
- * field is 107 units — **120.4 CSS px at 360**, the narrowest phone supported —
- * and the question is how tall `WEEK ONE` can be while still fitting it:
+ * The board needed far more letter than Silkscreen can give it. Its text field
+ * is 107 shell units — **120.4 CSS px at 360** — and Silkscreen is drawn on a
+ * grid that spends its width on air: at the only size `WEEK ONE` fits, it gives
+ * **13px capitals**, which is why the board read as the quietest object in the
+ * room.
  *
- * | face | largest fitting size | cap height |
- * |---|---|---|
- * | Silkscreen (incumbent) | 20 | 13 |
- * | Barlow Condensed | 31 | 21 |
- * | Oswald | 29 | 24 |
- * | Saira Extra Condensed | 36 | 25 |
- * | **Big Shoulders Display** | **35** | **28** |
+ * A smooth condensed face measured much better and was **rejected on sight**.
+ * Big Shoulders Display gives 28px capitals in the same width, and the board
+ * built with it looked like a modern poster pasted into a pixel-art room —
+ * commissioner ruling, 2026-08-08: Slice-level hierarchy, executed in Tony's
+ * pixel-art language.
  *
- * Silkscreen is drawn on a grid and spends its width on air; at the only size
- * that fits it gives 13px capitals, which is why the board read as quiet. Big
- * Shoulders gives **28px capitals in the same 120px** — more than twice the
- * letter, same board.
+ * So the search was re-run over pixel faces only. Handjet is the tallest at 25px
+ * capitals but draws in one-pixel strokes — tall and *thin*, the opposite of
+ * dominant. Pixelify Sans wraps `WEEK ONE` onto two lines before it gets big
+ * enough. Jacquard 12 is blackletter. Micro 5 is the heaviest condensed pixel
+ * face that fits: **17px capitals at 37px**, a third taller than the incumbent
+ * and far heavier in stroke, and unmistakably native to the room.
  *
- * **500 and 700 only.** The board sets exactly two lines, one weight each;
- * shipping the other seven would be shipping bytes nothing renders.
+ * **One weight, and that is the whole file.** Micro 5 ships a single weight, so
+ * there is nothing to choose and nothing to synthesise.
  *
  * All three faces are OFL and installed from npm rather than fetched from a
  * CDN: the files are bundled and served from this origin, so there is no
@@ -46,15 +45,13 @@ import type { Metadata, Viewport } from 'next';
  * font loads from somewhere else.
  */
 /*
- * **No `.css` on these two, and that is the package rather than a slip.**
- * `@fontsource/big-shoulders-display` maps `"./*"` to `"./*.css"` and — unlike
- * `silkscreen` and `vt323` — declares no `"./*.css"` entry beside it, so the
- * spelling used on the lines below resolves to `500.css.css` and fails the
- * build. Adding the extension back for consistency is the obvious edit and it
- * does not compile.
+ * **No `.css` on this one, and that is the package rather than a slip.**
+ * `@fontsource/micro-5` maps `"./*"` to `"./*.css"` and — unlike `silkscreen`
+ * and `vt323` — declares no `"./*.css"` entry beside it, so the spelling used on
+ * the lines below resolves to `index.css.css` and fails the build. Making it
+ * consistent with its neighbours is the obvious edit and it does not compile.
  */
-import '@fontsource/big-shoulders-display/500';
-import '@fontsource/big-shoulders-display/700';
+import '@fontsource/micro-5';
 import '@fontsource/silkscreen/400.css';
 import '@fontsource/silkscreen/700.css';
 import '@fontsource/vt323/400.css';

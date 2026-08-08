@@ -206,8 +206,8 @@ describe('bold', () => {
         if (isProse(line)) continue;
         if (!/\bfont-(bold|semibold|medium|extrabold|black)\b/.test(line)) continue;
         if (line.includes('font-display')) continue;
-        // `font-board` loads real 500 and 700 files, so a weight on it is drawn
-        // rather than synthesised — the next case pins it to those two.
+        // `font-board` is checked by the next case instead, which is stricter:
+        // Micro 5 ships one weight, so the board may ask for none at all.
         if (line.includes('font-board')) continue;
         breaches.push(`${relative}:${String(index + 1)} ${line.trim()}`);
       }
@@ -215,33 +215,35 @@ describe('bold', () => {
 
     expect(
       breaches,
-      'A font weight was requested without naming `font-display` or `font-board`. ' +
-        'Those are the only faces this product loads extra weights for; on VT323 ' +
-        'the browser fakes it and smears a pixel font. Name the face, or carry ' +
-        'the emphasis with ink instead.',
+      'A font weight was requested without naming `font-display`. Silkscreen is ' +
+        'the only face this product loads a bold for; on VT323 the browser fakes ' +
+        'it and smears a pixel font. Name the face, or carry the emphasis with ' +
+        'ink instead.',
     ).toEqual([]);
   });
 
-  it('asks the board face for only the two weights that are loaded', () => {
+  it('asks the board face for no weight at all, because it ships one', () => {
     /*
-     * The rule above lets `font-board` carry a weight because the files exist.
-     * That is only true of **500 and 700** — `app/layout.tsx` imports those two
-     * and no others, deliberately, so the board ships two files instead of nine.
+     * `font-board` is Micro 5, and Micro 5 has a single weight. The rule above
+     * lets `font-board` past the weight scan, so this is what stops that from
+     * becoming a hole: a `font-bold` on the board would be **synthesised** by the
+     * browser and smear a pixel face, which is exactly the defect the VT323 rule
+     * exists to prevent, arriving through the new door.
      *
-     * `font-semibold` (600) or `font-black` (900) would look right in a browser
-     * that has them and be synthesised everywhere else, which is the same defect
-     * the VT323 rule exists to prevent, arriving through the new face.
+     * Asserted against `app/layout.tsx` rather than a constant, so importing a
+     * second weight and using it is a conversation rather than an accident.
      */
     const layout = readFileSync(path.join(ROOT, 'app', 'layout.tsx'), 'utf8');
-    const loaded = [...layout.matchAll(/big-shoulders-display\/(\d+)/g)].map((m) => m[1]);
-    expect(loaded.sort()).toEqual(['500', '700']);
+    const imports = [...layout.matchAll(/@fontsource\/micro-5(\/\S*?)?['"]/g)];
+    expect(imports.length, 'the board face must be imported').toBe(1);
 
-    const allowed = new Set(['font-medium', 'font-bold']);
     for (const [name, role] of Object.entries(TYPE)) {
       if (!role.includes('font-board')) continue;
-      for (const weight of role.match(/\bfont-(bold|semibold|medium|extrabold|black)\b/g) ?? []) {
-        expect(allowed.has(weight), `${name} asks for ${weight}, which is not loaded`).toBe(true);
-      }
+      expect(
+        role,
+        `${name} asks for a weight, but Micro 5 ships only one and the browser ` +
+          'would synthesise it',
+      ).not.toMatch(/\bfont-(bold|semibold|medium|extrabold|black)\b/);
     }
   });
 });
@@ -278,7 +280,7 @@ describe('the size vocabulary', () => {
      *
      * The guard worked exactly as its own comment says it should: the Tonight
      * board's headline needed a size that was not on the list, so somebody had
-     * to come here and decide whether the vocabulary should grow. It did, at 35,
+     * to come here and decide whether the vocabulary should grow. It did, at 37,
      * for one role on one surface, chosen by browser measurement against the
      * board's real 120.4px field rather than by eye — the table is in
      * `TYPE_SIZES`.
@@ -292,12 +294,12 @@ describe('the size vocabulary', () => {
 
   it('keeps the new display size to the one surface it was added for', () => {
     /*
-     * 35 was authorised for the board headline specifically. If a second role
+     * 37 was authorised for the board headline specifically. If a second role
      * reaches for it, the vocabulary has quietly grown a general "very large"
      * size — which is how sixteen sizes happened the first time.
      */
-    const at35 = Object.entries(TYPE).filter(([, role]) => role.includes('text-[35px]'));
-    expect(at35.map(([name]) => name)).toEqual(['boardHero']);
+    const at37 = Object.entries(TYPE).filter(([, role]) => role.includes('text-[37px]'));
+    expect(at37.map(([name]) => name)).toEqual(['boardHero']);
   });
 
   it('sets the board’s two roles in the board face, and nothing else in it', () => {
