@@ -232,6 +232,36 @@ function collectPeople(seasonList: readonly ImportedSeason[]): Map<string, strin
  * derived months later reads one boolean instead of re-running a
  * reconciliation — and cannot forget to.
  */
+/**
+ * A scheduled game nobody has played yet.
+ *
+ * Sleeper publishes the whole season's schedule the moment a league drafts, and
+ * a week that has not happened comes back as ordinary matchup rows with
+ * `points: 0` on both sides. Nothing in the payload says *"not yet"* — no
+ * kickoff time, no status field; `lib/sleeper/endpoints.ts` is the whole surface
+ * this product talks to and none of its eight endpoints carries an NFL schedule.
+ * Both scores being exactly zero is the only signal there is.
+ *
+ * **Why it has to be caught here rather than by reading fewer weeks.** The
+ * in-season sync reads through one week past what it holds, so between the draft
+ * and the opener it asks for week 1 every Tuesday. Without this, the first of
+ * those Tuesdays would store five 0.00–0.00 ties, `finalizeWeek` would close the
+ * week on them, and `week_finalizations` is append-only — so week 1's *real*
+ * result could never be recorded, and the paper would have printed a week that
+ * did not happen. That is the "never fabricate" rule (`16 §12`) failing in the
+ * one direction that cannot be undone.
+ *
+ * **What it costs, stated rather than implied.** A genuine 0.00–0.00 game would
+ * be dropped, and there is no way to tell the two apart from this payload. In
+ * this league that needs twenty starters — defenses included, no kickers — to
+ * score exactly nothing between them; `persist.test.ts` asserts it has never
+ * happened across the 162 recorded games of 2024 and 2025, so the rule is
+ * measured against the league's own history rather than assumed.
+ */
+function isUnplayed(pairing: { readonly pointsA: number; readonly pointsB: number }): boolean {
+  return toCents(pairing.pointsA) === 0 && toCents(pairing.pointsB) === 0;
+}
+
 async function persistWeeks(
   tx: Queryable,
   input: {
@@ -270,6 +300,15 @@ async function persistWeeks(
     if (!isScoredWeek(week.type)) continue;
 
     for (const pairing of week.pairings) {
+      if (isUnplayed(pairing)) {
+        /*
+         * A fixture, not a result. See `isUnplayed` — this is the one thing
+         * standing between the in-season sync and a finalized week of ties that
+         * were never played, and a finalized week cannot be reopened.
+         */
+        continue;
+      }
+
       const disputed =
         season.reconciliation !== null &&
         isPairingDisputed(season.reconciliation, week.week, pairing.rosterAId, pairing.rosterBId);
@@ -542,6 +581,45 @@ export async function persistChain(
         const wasFinalized =
           existingSeason !== undefined && existingSeason.finalizedAt !== null;
 
+        /*
+         * Is this read **older** than the one already stored?
+         *
+         * Finalization protects a closed season. Nothing protected an *open*
+         * one, and an open season has two writers: the Tuesday job, reading
+         * Sleeper live, and `npm run db:seed`, reading the recorded fixtures on
+         * every single deploy (`vercel-build`). The fixtures were captured
+         * before the season started, so without this the second writer walks
+         * over the first — a merge to `main` in week 9 silently resets every
+         * standing to 0–0 and reports it as *"1 records changed"*.
+         *
+         * That is not hypothetical; it is reproducible in four commands and it
+         * is what this guard was written against.
+         *
+         * `snapshot_captured_at` is the right clock because it already means
+         * exactly this: *when we last looked*. Live reads carry real time,
+         * fixtures carry their recording time, and `fetchDecoded` has stamped
+         * both since the transport was written.
+         *
+         * **Older, not merely different.** A re-read of the same capture is
+         * equal and proceeds — that is what keeps a re-run of the seed a no-op
+         * rather than a refusal. And a fresh database has no stored capture at
+         * all, so a first import can never be stale.
+         */
+        const staleCapture =
+          existingSeason !== undefined &&
+          existingSeason.snapshotCapturedAt !== null &&
+          season.capturedAt !== null &&
+          season.capturedAt.getTime() < existingSeason.snapshotCapturedAt.getTime();
+
+        if (staleCapture) {
+          conflicts.push(
+            `${String(season.year)} was read from a source captured ` +
+              `${season.capturedAt?.toISOString() ?? 'at an unknown time'}, which is older than ` +
+              `the stored capture (${existingSeason.snapshotCapturedAt?.toISOString() ?? 'unknown'}). ` +
+              `The stored record is fresher and stands; no standings or games were written.`,
+          );
+        }
+
         const existingMemberships = await tx
           .select({
             id: seasonMemberships.id,
@@ -642,6 +720,13 @@ export async function persistChain(
               continue;
             }
 
+            if (staleCapture) {
+              // A read older than the stored one. The season-level conflict
+              // above says why once; a line per roster would bury it.
+              recordsSkipped++;
+              continue;
+            }
+
             // An open season: the record is supposed to move week to week.
             await tx
               .update(seasonMemberships)
@@ -669,12 +754,18 @@ export async function persistChain(
         //
         // Before finalization, for the same reason the memberships are: a
         // season frozen earlier in this pass would refuse its own rows.
-        const games = await persistWeeks(tx, {
-          season,
-          seasonId,
-          finalized: wasFinalized,
-          conflicts,
-        });
+        //
+        // A stale capture writes no games for the same reason it writes no
+        // standings: a July fixture that reports week 9 as unplayed is not new
+        // information about week 9.
+        const games = staleCapture
+          ? { inserted: 0, updated: 0, unchanged: 0, refused: 0 }
+          : await persistWeeks(tx, {
+              season,
+              seasonId,
+              finalized: wasFinalized,
+              conflicts,
+            });
         recordsChanged += games.inserted + games.updated;
         recordsSkipped += games.refused;
 
@@ -691,9 +782,15 @@ export async function persistChain(
           recordsChanged++;
         }
 
-        // The scoring snapshot moves upstream even when the official record
-        // does not, so record when we last looked regardless of finalization.
-        if (
+        /*
+         * The scoring snapshot moves upstream even when the official record
+         * does not, so record when we last looked regardless of finalization.
+         *
+         * **Forward only.** This column is the guard's own clock: letting a
+         * stale read stamp its older time here would make the *next* stale read
+         * look fresh, and the deploy seed would win on the second attempt.
+         */
+        if (!staleCapture &&
           season.capturedAt !== null &&
           existingSeason !== undefined &&
           existingSeason.snapshotCapturedAt?.getTime() !== season.capturedAt.getTime()

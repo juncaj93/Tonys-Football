@@ -8,6 +8,78 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+> **`docs/OPEN_ITEMS.md` is now the canonical open-items ledger.** This file
+> stays the narrative record of how the product got here; that one is the answer
+> to *"what is actually left."* When they disagree, the ledger is newer.
+
+---
+
+## Where the product is — 2026-08-08 (eighteenth session)
+
+### The season could not have got into the database
+
+A reconciliation of the whole project against `main` found one thing that was not
+polish. `16 §4.3` specifies the Tuesday job as **sync → finalize → …**, and the
+**sync had never been built** — `runTuesday` began at `finalizeWeek`.
+
+Nothing else in the deployed application writes `fantasy_matchups`. The deploy
+seed reads recorded fixtures captured 2026-07-28 and the 2026 recording has **no
+matchups directory at all**; the Sunday cron reads Sleeper live but writes only
+its photograph, deliberately a different table.
+
+So on the first live Tuesday the cron would have found zero publishable games in
+week 1, declined, and gone on declining until January — no rewards, no
+settlements, no paper, no Timeline movement, with the whole downstream chain
+working perfectly on nothing. **The failure had no error in it**, which is why it
+survived: *"week 1 holds no publishable game"* is the truth in July.
+
+### Two more, and both write wrong data rather than none
+
+- **Every deploy took the season back out.** `vercel-build` runs `db:seed`, so a
+  merge in week 9 re-imported July over a live season and reset every record to
+  0–0. Reproduced in four commands, and it reported `1 records changed · status
+  SUCCEEDED`.
+- **A drafted-but-unplayed week is ten rows at zero points.** Sleeper publishes
+  the schedule the moment a league drafts and nothing in the payload says *"not
+  yet"*. The sync asks for one week past what it holds, so between the draft and
+  the opener it asks for week 1 every Tuesday — and the first of those would have
+  stored five 0.00–0.00 ties and **finalized** the week on them. `week_finalizations`
+  is append-only, so week 1's real result could never have been recorded.
+
+### The measurement that shaped it
+
+A full 18-week live traverse of one season took **45 seconds**, which is exactly
+what `16 §4.3`'s *"chunked and resumable against Hobby's function duration
+ceiling"* is about. Three bounds, each load-bearing rather than an optimisation:
+one season · **no transactions** (nothing persists or reads them, and they were
+half of every week's budget) · weeks 1..N. The range must **start at 1** or
+`reconcileSeason` compares a partial snapshot against full standings and marks
+real games `disputed`.
+
+`maxDuration = 60` on both cron routes. The framework default is 10s.
+
+### One sequencing correction that would not have shown until week 2
+
+The route computed the week from `max(stored week)` **before** the job ran. After
+a sync exists that is last week — so week 1 would have closed every Tuesday until
+January and no other week ever. `runTuesday` resolves its own week now, and
+`week` on the input is the commissioner's override rather than the instruction.
+
+### Verified
+
+| | |
+|---|---|
+| `npm run check` | **1458 passed / 92 files**, 2 skipped — typecheck, lint, full suite against a real Postgres, production build. Exit 0 |
+| Fails on the old build | checked by reverting each mechanism in turn: without the staleness guard 3 of 6 assertions fail; without the sync step 6 of 7 |
+| `npm run visual:qa` | see the pull request. No rendered surface is touched — the diff is two cron routes, `lib/sleeper/` and `lib/slice/tuesday.ts` |
+| **Production** | **not verified.** `CRON_SECRET` is still unset, so both jobs remain scheduled and inert |
+
+`docs/IN_SEASON_SYNC_BOUNDARY.md` is the canonical account.
+`docs/DEPLOYMENT.md §2` now carries the one-time `CRON_SECRET` activation
+runbook — generate, set, redeploy, verify without exposing the value, roll back.
+
+---
+
 ## Execution status — who is actually doing what
 
 **Commissioner ruling, 2026-07-30:** a workstream is only *running* if an actor is implementing it. An issue, a label, a role contract or an `IMPLEMENTATION TASK` comment is **not** execution. Nothing sits in an ambiguous "assigned" state.

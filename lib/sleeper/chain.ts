@@ -446,6 +446,28 @@ export interface ImportSeasonOptions {
    */
   readonly includeWeeks?: boolean;
   readonly maxWeek?: number;
+  /**
+   * Fetch each week's transactions alongside its matchups. Default true.
+   *
+   * **Nothing persists or reads them.** `persistWeeks` writes `fantasy_matchups`
+   * and nothing else; there is no `fantasy_transactions` table and no consumer
+   * of `ImportedWeek.transactions` outside this file, where only its *warnings*
+   * are collected. They are half of every week's request budget, and a weekly
+   * cron running under a serverless duration ceiling (`16 §4.3`) is the caller
+   * that cannot afford them.
+   *
+   * The default stays `true` so the recorded-fixture path — the historical
+   * import, the manifest, and the replay harness — is unchanged. Turning it off
+   * is a request-budget decision made by one caller, not a change to what an
+   * import means.
+   *
+   * One behaviour moves with it, and it moves in the right direction. The
+   * end-of-season test is *"neither matchups nor moves"*; with transactions off
+   * it becomes *"no matchups"*, which is the stronger signal — a week with
+   * waiver activity and no games is not a scored week, and importing it as one
+   * would be the mistake.
+   */
+  readonly includeTransactions?: boolean;
 }
 
 async function fetchDecoded<T>(
@@ -490,6 +512,7 @@ export async function importSeason(
   options: ImportSeasonOptions = {},
 ): Promise<ImportedSeason> {
   const includeWeeks = options.includeWeeks ?? true;
+  const includeTransactions = options.includeTransactions ?? true;
   const maxWeek = options.maxWeek ?? MAX_WEEK;
   const warnings: string[] = [];
 
@@ -636,14 +659,18 @@ export async function importSeason(
         (payload, key) => decodeMatchups(payload, key),
         () => [] as readonly SleeperMatchupEntry[],
       );
-      const transactions = await fetchDecoded(
-        source,
-        { kind: 'transactions', leagueId, week },
-        (payload, key) => decodeTransactions(payload, week, key),
-        () => [] as readonly SleeperTransaction[],
-      );
+      const transactions = includeTransactions
+        ? await fetchDecoded(
+            source,
+            { kind: 'transactions', leagueId, week },
+            (payload, key) => decodeTransactions(payload, week, key),
+            () => [] as readonly SleeperTransaction[],
+          )
+        : { value: [] as readonly SleeperTransaction[], warnings: [], error: null };
 
       // A week with neither matchups nor moves is past the end of the season.
+      // With transactions off there is only one term, which is the stronger
+      // test — see `includeTransactions`.
       if (matchups.value.length === 0 && transactions.value.length === 0) continue;
 
       const {

@@ -2,8 +2,8 @@ import { now } from '@/lib/clock';
 import { openSeason } from '@/lib/counter/tokens';
 import { cronAuthorized, cronJson, cronNotFound } from '@/lib/cron/secret';
 import { getDb } from '@/lib/db';
-import { suggestedDraftWeek } from '@/lib/slice/publication';
 import { runTuesday } from '@/lib/slice/tuesday';
+import { createLiveSource } from '@/lib/sleeper/transport';
 
 /**
  * The Tuesday job's door.
@@ -30,16 +30,35 @@ import { runTuesday } from '@/lib/slice/tuesday';
  *
  * ## Which week it runs
  *
- * The open season's most recent week with results — the week that has just been
- * played, which is what a Tuesday is about. Overridable by `?week=` **only** with
- * the same secret, because a commissioner re-running a missed Tuesday should not
- * need a deploy, and because every operation underneath is idempotent so a
- * repeated week is a read.
+ * The job decides, **after** it has synced — the most recent week with results,
+ * which is the week that has just been played. It is not decided here, and that
+ * is a correction rather than a preference: reading it before the sync answers
+ * with the week that arrived *last* Tuesday, so the same week would close every
+ * week for the whole season.
+ *
+ * Overridable by `?week=` **only** with the same secret, because a commissioner
+ * re-running a missed Tuesday should not need a deploy, and because every
+ * operation underneath is idempotent so a repeated week is a read.
+ *
+ * ## It reads Sleeper, once
+ *
+ * `16 §4.3` names `sync` as this job's first step. `createLiveSource()` is
+ * constructed here rather than inside the job so the job stays testable
+ * offline — the same shape as the Sunday route.
  */
 
 export const runtime = 'nodejs';
 // A cached cron response would be a job that appears to run and does not.
 export const dynamic = 'force-dynamic';
+/*
+ * The sync is bounded but not free: one league payload, users, rosters, both
+ * brackets, and one matchups request per week played so far — around twenty
+ * requests by the end of a season, serialized with a courtesy gap
+ * (`transport.ts`). `16 §4.3` warns that this job must fit under Hobby's
+ * duration ceiling, and 60s is that ceiling. The default of 10s would time out
+ * mid-season with no signal beyond a truncated response.
+ */
+export const maxDuration = 60;
 
 export async function GET(request: Request): Promise<Response> {
   if (!cronAuthorized(request, process.env)) return cronNotFound();
@@ -61,13 +80,24 @@ export async function GET(request: Request): Promise<Response> {
 
   const requested = new URL(request.url).searchParams.get('week');
   const parsed = requested === null ? null : Number.parseInt(requested, 10);
-  const week =
+  /*
+   * Absent rather than guessed. The job resolves the week after its sync, and a
+   * `week` key holding `undefined` is not the same thing as no key at all under
+   * `exactOptionalPropertyTypes` — the spread is what makes the override
+   * genuinely optional.
+   */
+  const override =
     parsed !== null && Number.isInteger(parsed) && parsed >= 1 && parsed <= 18
-      ? parsed
-      : await suggestedDraftWeek(db, season.year);
+      ? { week: parsed }
+      : {};
 
   try {
-    const report = await runTuesday(db, { season: season.year, week, at: now() });
+    const report = await runTuesday(db, {
+      season: season.year,
+      ...override,
+      at: now(),
+      sleeper: createLiveSource(),
+    });
 
     /*
      * A step that **threw** is a failure even though the chain finished around

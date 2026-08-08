@@ -42,6 +42,12 @@ import { createLiveSource } from '@/lib/sleeper/transport';
 export const runtime = 'nodejs';
 // A cached cron response would be a job that appears to run and does not.
 export const dynamic = 'force-dynamic';
+/*
+ * Two Sleeper requests and one insert, so this has headroom the Tuesday job does
+ * not. Declared anyway, and equal to it: a retry policy that differs between two
+ * jobs behind the same door is a difference somebody has to remember.
+ */
+export const maxDuration = 60;
 
 export async function GET(request: Request): Promise<Response> {
   if (!cronAuthorized(request, process.env)) return cronNotFound();

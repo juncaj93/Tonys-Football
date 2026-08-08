@@ -90,7 +90,81 @@ anything without the secret.
 include Monday scoring. `docs/SUNDAY_SNAPSHOT_BOUNDARY.md §4` is why that is a
 constraint and a trigger rather than a convention.
 
+**Tuesday reads Sleeper before it closes anything.** `16 §4.3`'s first step. One
+league payload, users, rosters, both brackets and one matchups request per week
+played so far — around twenty requests by January, and `maxDuration = 60` is
+declared on both routes because the framework default of 10s would time out
+mid-season. `docs/IN_SEASON_SYNC_BOUNDARY.md` is the account.
+
 **Pooled, not direct.** Neon shows two connection strings. Use the one whose host contains `-pooler`. Serverless functions open a pool per instance; the direct endpoint runs out of connections under even this league's tiny load.
+
+### Turning the jobs on — the one-time activation
+
+**This is the only step in the whole product that a person has to do, and until
+it is done both jobs are scheduled and inert.** They answer `404` to everything,
+including Vercel's own scheduler, because `lib/cron/secret.ts` treats an unset
+`CRON_SECRET` as *shut* rather than as *open*.
+
+Nothing below is time-critical before the season's first Tuesday. Doing it early
+is free: with no week played, the job reads an empty week and reports
+`ran: true` with nothing done.
+
+**1 — generate a value.** On any machine, in a terminal:
+
+```
+openssl rand -base64 32
+```
+
+32 bytes of entropy. Anything shorter, memorable, or reused from another service
+is not acceptable: this single value is the entire authorization for closing a
+week, paying tokens and photographing a game.
+
+**2 — set it in Vercel.** Project → Settings → Environment Variables.
+
+| Field | Value |
+|---|---|
+| Name | `CRON_SECRET` |
+| Value | the generated string |
+| Environments | **Production only** |
+
+**Production only is not a nicety.** A preview deploy is public-by-URL on Hobby
+and points at the sandbox database; a preview holding this secret could close a
+week or photograph a game in an environment nobody is watching.
+
+**3 — redeploy.** Environment variables are read at runtime, but Vercel only
+applies a new one to deployments created after it was set. Redeploy `main` from
+the Vercel dashboard, or merge anything.
+
+**4 — verify, without exposing the value.**
+
+```
+curl -s -o /dev/null -w '%{http_code}\n' https://<host>/api/cron/tuesday
+# expect 404 — no secret, no door
+
+curl -s -H "Authorization: Bearer $CRON_SECRET" https://<host>/api/cron/tuesday | head -c 400
+# expect 200 and a JSON report
+```
+
+Read `$CRON_SECRET` from your shell environment rather than typing it inline, so
+it does not land in shell history. **Never paste the value into a commit, an
+issue, a pull request, a screenshot or a chat message.** It appears in no log:
+both routes read it through `cronAuthorized` and neither ever prints it, and both
+jobs send failure detail to the runtime log rather than into a response body
+precisely because that body is readable by whoever holds the secret.
+
+**What success looks like.** A JSON body naming the season and the week, with
+`ran: true`. Before the season starts the honest answer is a report whose
+`skipped` list says the week holds no publishable game — that is the job working,
+not failing. Vercel's own scheduled invocations then appear under
+Project → Observability → Crons.
+
+**Rollback.** Delete the variable and redeploy. Both jobs return to answering
+`404` and nothing else changes — no data is written or unwritten by the flip, and
+every operation either job performs is idempotent, so turning it back on later
+picks up from wherever the data is.
+
+**Rotation.** Same procedure with a new value. There is no revocation list and
+none is needed: the old value stops working the moment the new one is deployed.
 
 ---
 
