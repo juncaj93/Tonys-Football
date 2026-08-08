@@ -516,6 +516,28 @@ async function signOut(page: Page): Promise<void> {
 const TAKEN = /taken/i;
 
 /**
+ * Leave the browser signed out, with at least one manager holding a PIN.
+ *
+ * Both facts are needed and neither can be assumed. `door` and `door-return`
+ * want a board that shows both tag states, and on a freshly seeded database
+ * nobody has ever set a PIN — but by the time a *full sweep* reaches these
+ * states the page is signed in, and `signIn` begins by navigating to `/door`,
+ * which redirects a signed-in visitor straight back to the parlor. So the naive
+ * "sign in, then sign out" worked in a single-state run and timed out at the end
+ * of the sweep, waiting for a link that was never going to render.
+ *
+ * Signing out **first** removes the difference between the two cases, and the
+ * claim is then skipped entirely when the board already shows a `taken` tag —
+ * which is what makes this idempotent rather than merely ordered.
+ */
+async function ensureClaimedManager(page: Page): Promise<void> {
+  await signOut(page);
+  if ((await page.locator('main li a').filter({ hasText: TAKEN }).count()) > 0) return;
+  await signIn(page);
+  await signOut(page);
+}
+
+/**
  * The states that must **not** carry a session.
  *
  * Named as a set rather than inferred from the `door-` prefix, so a future
@@ -538,8 +560,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * which is the more useful picture anyway.
      */
     case 'door':
-      await signIn(page);
-      await signOut(page);
+      await ensureClaimedManager(page);
       return;
 
     /*
@@ -570,8 +591,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * again under this name. `signIn` claims Alex if needed and is idempotent.
      */
     case 'door-return': {
-      await signIn(page);
-      await signOut(page);
+      await ensureClaimedManager(page);
       const claimed = page.locator('main li a').filter({ hasText: TAKEN }).first();
       if ((await claimed.count()) === 0) throw new Error('no claimed manager on the door');
       await claimed.click();
