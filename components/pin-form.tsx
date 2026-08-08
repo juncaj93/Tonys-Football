@@ -112,7 +112,21 @@ function PinField({
 }) {
   return (
     <label className="block">
-      <span className={`${TYPE.eyebrow} text-ink-100`}>
+      {/*
+        * `text-balance`, because the confirm label orphans a word without it.
+        *
+        * *"Again, so Tony knows you meant it"* is thirty-three characters, and
+        * `eyebrow` is Silkscreen — uppercase, letterspaced, and half again as
+        * wide per character as the body face. At 360 the browser broke it after
+        * `MEANT` and left `IT` alone on the second line, which is the first
+        * thing the eye lands on above the field it labels.
+        *
+        * Balancing rather than shortening: the sentence is the product's voice,
+        * and the defect is the line break rather than the words. Found the day
+        * these screens were first photographed — they had never been in the
+        * visual gate, which is the point of this slice.
+        */}
+      <span className={`block text-balance ${TYPE.eyebrow} text-ink-100`}>
         {label}
       </span>
       <input
