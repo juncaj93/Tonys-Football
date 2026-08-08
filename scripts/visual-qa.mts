@@ -52,6 +52,11 @@ import { TYPE_FLOOR_PX } from '../lib/design/type.ts';
 import { QUARANTINE_CEILING, quarantineFor } from './visual-qa-quarantine.ts';
 import { CAPTURE } from './visual-qa-capture';
 import { demoPin } from '../lib/demo/seat.ts';
+import {
+  HarnessRefusal,
+  assertServerIsOurBuild,
+  assertVisualDatabaseIsolated,
+} from './harness.ts';
 
 /**
  * The only `data-environmental-type` this product declares.
@@ -3569,6 +3574,18 @@ async function run(): Promise<void> {
   const states = only === undefined ? ALL_STATES : ALL_STATES.filter((s) => s === only);
   if (states.length === 0) throw new Error(`unknown --state=${String(only)}`);
 
+  /*
+   * Before a single pixel. Both of these have already cost a sweep, and both
+   * failed in a way that looked like a product defect rather than a harness one
+   * — see `scripts/harness.ts`, which is written against those two incidents.
+   *
+   * The database check comes first because it is the cheaper of the two and
+   * because the sweep's *first* action is to shell out to the demo CLI, which
+   * writes.
+   */
+  assertVisualDatabaseIsolated(process.env);
+  await assertServerIsOurBuild(BASE);
+
   mkdirSync(OUT, { recursive: true });
   const palette = paletteHexes();
   if (palette.size === 0) fail('palette', 'palette.json parsed to zero colours');
@@ -3910,4 +3927,17 @@ async function run(): Promise<void> {
   );
 }
 
-await run();
+try {
+  await run();
+} catch (error: unknown) {
+  /*
+   * A refusal is a message to a person, not a crash. Printing a stack above it
+   * buries the one line that says what to do — and these two refusals exist
+   * precisely because the previous failures were hard to read.
+   */
+  if (error instanceof HarnessRefusal) {
+    console.error(`\nVisual QA refused to start.\n\n  ${error.message}\n`);
+    process.exit(1);
+  }
+  throw error;
+}

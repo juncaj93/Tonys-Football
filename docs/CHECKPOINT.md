@@ -3088,8 +3088,11 @@ DEMO_FIXTURES=1 npm run visual:qa -- --state=tray-reveal   # required; buys its 
 
 Gotchas that have cost time:
 - Sign in as **Alex by name** via `/door`, never by UUID — reseeding regenerates every id. The script PIN is no longer committed — it comes from `VISUAL_QA_PIN`, or is generated per machine by `demoPin()` and cached in the gitignored `.demo-pin.local` (`lib/demo/seat.ts`).
-- **Never `pkill -f next-server`, and do not trust `pgrep -f next-server` either** — both match this shell's own command line, so `pkill` kills the session (exit 144) and `pgrep` reports a server that is not running. Use `ps -eo pid,args | grep -F next-server | grep -v grep`, and confirm with `ss -ltnp | grep 3111`.
-- A stale `next start` serves old CSS. Confirm the served hash matches `.next/static/css/` on disk.
+- **Three of the gotchas below are now enforced rather than remembered** (`scripts/harness.ts`). `npm run check` refuses to start without a reachable database; the sweep refuses a database the test suite truncates; and the sweep refuses a server that is not this tree's build. Each one had already produced a confident wrong answer.
+- **The sweep and the test suite get different databases**, exactly as `ci.yml` (`tonys_test`) and `visual-qa.yml` (`tonys_visual`) always have. `npm run db:visual` provisions it. Sharing one is how `resetDatabase()` truncated the tables a sweep was about to photograph, leaving orphaned rows and an unseated Alex.
+- **Never `pkill -f next-server`, and do not trust `pgrep -f next-server` either** — both match this shell's own command line, so `pkill` kills the session (exit 144) and `pgrep` reports a server that is not running. **`pkill -f "next start"` is worse: it matches nothing at all**, because the running process is named `next-server`. Kill by port — `fuser -k -n tcp 3111` — and confirm with `ss -ltnp | grep 3111`.
+- A stale `next start` serves old CSS, and **a page still returns 200** while doing it, which is why readiness alone never caught it. The guard compares `.next/BUILD_ID` against `/_next/static/<id>/_ssgManifest.js`; a different build answers 404 there.
+- **`npm run test` may legitimately skip the database suites; `npm run check` may not.** Vitest does not read `.env.local`, so `DATABASE_URL` must be exported in the shell. A run that skips 483 tests and exits 0 is not a verification.
 - Never run `playwright install` here; use the `PLAYWRIGHT_CHROMIUM` path above.
 - `visual-qa-*/` and `visual-qa/` are gitignored. Screenshots belong to a workflow run, not to git history.
 - `capturing tray-reveal consumes the box.` Restore with:
