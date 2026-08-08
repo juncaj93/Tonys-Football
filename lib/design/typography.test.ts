@@ -206,17 +206,43 @@ describe('bold', () => {
         if (isProse(line)) continue;
         if (!/\bfont-(bold|semibold|medium|extrabold|black)\b/.test(line)) continue;
         if (line.includes('font-display')) continue;
+        // `font-board` loads real 500 and 700 files, so a weight on it is drawn
+        // rather than synthesised — the next case pins it to those two.
+        if (line.includes('font-board')) continue;
         breaches.push(`${relative}:${String(index + 1)} ${line.trim()}`);
       }
     }
 
     expect(
       breaches,
-      'A font weight was requested without naming `font-display`. Silkscreen is ' +
-        'the only face this product loads a bold for; on VT323 the browser fakes ' +
-        'it and smears a pixel font. Name the face, or carry the emphasis with ' +
-        'ink instead.',
+      'A font weight was requested without naming `font-display` or `font-board`. ' +
+        'Those are the only faces this product loads extra weights for; on VT323 ' +
+        'the browser fakes it and smears a pixel font. Name the face, or carry ' +
+        'the emphasis with ink instead.',
     ).toEqual([]);
+  });
+
+  it('asks the board face for only the two weights that are loaded', () => {
+    /*
+     * The rule above lets `font-board` carry a weight because the files exist.
+     * That is only true of **500 and 700** — `app/layout.tsx` imports those two
+     * and no others, deliberately, so the board ships two files instead of nine.
+     *
+     * `font-semibold` (600) or `font-black` (900) would look right in a browser
+     * that has them and be synthesised everywhere else, which is the same defect
+     * the VT323 rule exists to prevent, arriving through the new face.
+     */
+    const layout = readFileSync(path.join(ROOT, 'app', 'layout.tsx'), 'utf8');
+    const loaded = [...layout.matchAll(/big-shoulders-display\/(\d+)/g)].map((m) => m[1]);
+    expect(loaded.sort()).toEqual(['500', '700']);
+
+    const allowed = new Set(['font-medium', 'font-bold']);
+    for (const [name, role] of Object.entries(TYPE)) {
+      if (!role.includes('font-board')) continue;
+      for (const weight of role.match(/\bfont-(bold|semibold|medium|extrabold|black)\b/g) ?? []) {
+        expect(allowed.has(weight), `${name} asks for ${weight}, which is not loaded`).toBe(true);
+      }
+    }
   });
 });
 
@@ -245,9 +271,43 @@ describe('the size vocabulary', () => {
     expect(unused, 'TYPE_SIZES declares a size no role uses').toEqual([]);
   });
 
-  it('holds the reduction: six sizes, where there were sixteen', () => {
-    expect(TYPE_SIZES.length).toBe(6);
-    expect(new Set(sizes).size).toBe(6);
+  it('holds the reduction: seven sizes, where there were sixteen', () => {
+    /*
+     * **This number moved once, from six to seven, and the movement is the
+     * point rather than a relaxation.**
+     *
+     * The guard worked exactly as its own comment says it should: the Tonight
+     * board's headline needed a size that was not on the list, so somebody had
+     * to come here and decide whether the vocabulary should grow. It did, at 35,
+     * for one role on one surface, chosen by browser measurement against the
+     * board's real 120.4px field rather than by eye — the table is in
+     * `TYPE_SIZES`.
+     *
+     * Seven is still an assertion, not a ceiling being lifted. An eighth is the
+     * same conversation again, which is the whole mechanism.
+     */
+    expect(TYPE_SIZES.length).toBe(7);
+    expect(new Set(sizes).size).toBe(7);
+  });
+
+  it('keeps the new display size to the one surface it was added for', () => {
+    /*
+     * 35 was authorised for the board headline specifically. If a second role
+     * reaches for it, the vocabulary has quietly grown a general "very large"
+     * size — which is how sixteen sizes happened the first time.
+     */
+    const at35 = Object.entries(TYPE).filter(([, role]) => role.includes('text-[35px]'));
+    expect(at35.map(([name]) => name)).toEqual(['boardHero']);
+  });
+
+  it('sets the board’s two roles in the board face, and nothing else in it', () => {
+    /*
+     * `font-board` is a third typeface admitted for one printed object inside
+     * the room. Every other surface is pixel art or set in the pixel faces, and
+     * a display face leaking outwards would undo that distinction quietly.
+     */
+    const board = Object.entries(TYPE).filter(([, role]) => role.includes('font-board'));
+    expect(board.map(([name]) => name).sort()).toEqual(['boardDetail', 'boardHero']);
   });
 
   it('sets nothing below the floor', () => {
@@ -267,8 +327,10 @@ describe('the size vocabulary', () => {
 
 describe('the roles themselves', () => {
   it('names a face for every role', () => {
+    // `font-board` joined the list for the Tonight board — a printed sign inside
+    // the room, and the one surface allowed a face that is not pixel art.
     for (const [name, role] of Object.entries(TYPE)) {
-      expect(role, `${name} must name its face`).toMatch(/\bfont-(display|sans|mono)\b/);
+      expect(role, `${name} must name its face`).toMatch(/\bfont-(display|sans|mono|board)\b/);
     }
   });
 

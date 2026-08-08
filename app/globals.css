@@ -26,6 +26,20 @@
   --font-sans: 'VT323', ui-monospace, monospace;
   --font-mono: 'VT323', ui-monospace, monospace;
 
+  /*
+   * A third face, for exactly one surface.
+   *
+   * The Tonight board is a *printed sign* hanging in the room rather than part
+   * of the room's artwork, so it is allowed the condensed editorial voice the
+   * Slice already uses and the shell is not. The fallback is the generic
+   * condensed stack, then plain sans — a board in a degraded room should still
+   * be a board.
+   *
+   * `font-board` is deliberately narrow in scope. If a second surface ever
+   * wants it, that is a design conversation, not an import.
+   */
+  --font-board: 'Big Shoulders Display', 'Arial Narrow', ui-sans-serif, sans-serif;
+
   --color-ink-900: #1a1214;
   --color-ink-700: #2e2226;
   --color-ink-500: #4a3b3f;

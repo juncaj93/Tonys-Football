@@ -77,12 +77,44 @@
  * The whole size vocabulary, as numbers, so a test can assert the count.
  *
  * Exported for `lib/design/type.test.ts`, which fails the build if a role
- * introduces a seventh size. That is the guard that keeps this from drifting
- * back — the roles can be renamed and re-purposed freely, but the moment one of
- * them needs a size that is not on this list, somebody has to decide whether the
- * vocabulary really should grow.
+ * introduces an undeclared size. That is the guard that keeps this from
+ * drifting back — the roles can be renamed and re-purposed freely, but the
+ * moment one of them needs a size that is not on this list, somebody has to
+ * decide whether the vocabulary really should grow.
+ *
+ * ## Six became seven, once, on purpose — commissioner ruling 2026-08-08
+ *
+ * **35 exists for one surface: the Tonight board's headline.** The guard did
+ * its job here rather than being weakened; it forced the decision to be made
+ * and measured, which is what the paragraph above asks for.
+ *
+ * The board is the largest object in an idle room and the room is what a
+ * manager sees most. Its text field is 107 shell units — **120.4 CSS px at
+ * 360**, the narrowest phone supported — and the honest question was how tall
+ * `WEEK ONE` can be while still fitting that. Measured in a browser, per face,
+ * at the largest size that fits:
+ *
+ * | face | largest fitting size | cap height |
+ * |---|---|---|
+ * | Silkscreen (incumbent, at 20) | 20 | 13 |
+ * | Barlow Condensed | 31 | 21 |
+ * | Oswald | 29 | 24 |
+ * | Saira Extra Condensed | 36 | 25 |
+ * | **Big Shoulders Display** | **35** | **28** |
+ *
+ * **26 was not enough and that is arithmetic, not taste.** The existing top of
+ * the scale is `masthead`/`headlineLoud` at 26, which in Big Shoulders gives 21px
+ * capitals — still shorter than the countdown line needs to be subordinate to,
+ * and a headline that does not dominate is the defect being fixed. Going the
+ * other way is worse: Silkscreen cannot exceed 20 here at all without `WEEK ONE`
+ * running into the frame, which is precisely how the board ended up quiet.
+ *
+ * 35 is therefore the largest size that fits the *worst* string the runtime can
+ * produce (`WEEK ONE`, 115.8px against a 118px budget) in the face that fits the
+ * most letter into it. It is a token rather than an inline escape hatch so the
+ * next surface that wants to be this loud has to come here and argue for it.
  */
-export const TYPE_SIZES = [13, 15, 17, 19, 22, 26] as const;
+export const TYPE_SIZES = [13, 15, 17, 19, 22, 26, 35] as const;
 
 /**
  * The floor, in pixels, for any text this product renders.
@@ -109,6 +141,37 @@ export const TYPE_FLOOR_PX = 13;
  */
 export const TYPE = {
   /* --- The loud end ------------------------------------------------------ */
+
+  /**
+   * The Tonight board's headline — the loudest thing in the product.
+   *
+   * The only role set in `font-board`, and the only one at 35. Both facts are
+   * the same decision: the board is a **printed sign inside the room**, not part
+   * of the room's artwork, so it is allowed an editorial voice the pixel shell
+   * is not, and it has to carry across a field 120px wide on the narrowest
+   * phone. See `TYPE_SIZES` for the measurement that chose the face and size.
+   *
+   * `leading-[0.92]` is tight on purpose: a display face at 35px with normal
+   * leading reserves space above the capitals that nothing occupies, and the
+   * board's field is only 92px tall. Optical, not arbitrary — the cap height is
+   * 28 of the 35.
+   */
+  boardHero: 'font-board font-bold text-[35px] leading-[0.92] tracking-[0.01em] uppercase',
+
+  /**
+   * The one fact under the board's headline — a countdown, or a matchup.
+   *
+   * Same face, **19 rather than 35 and 500 rather than 700**, so the hierarchy
+   * is carried by weight and size instead of by a second typeface. It stays on
+   * an existing size deliberately: one new size was authorised and it was spent
+   * on the headline.
+   *
+   * 19 is the largest existing size at which the *longest* thing this line can
+   * say still fits on one line — `Matty B v Nathan` measures 103px against the
+   * 118px budget. `33 days out` is 69px, so the common case sits comfortably
+   * inside it rather than only just fitting.
+   */
+  boardDetail: 'font-board font-medium text-[19px] leading-[1.1] tracking-[0.01em]',
 
   /**
    * A newspaper's nameplate. The one thing on the page allowed to be this big.

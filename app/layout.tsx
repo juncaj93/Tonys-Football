@@ -15,11 +15,46 @@ import type { Metadata, Viewport } from 'next';
  * to keep its columns, and it is a terminal face rather than a UI face, so a
  * paragraph of it reads as something a machine in the corner printed.
  *
- * Both are OFL and installed from npm rather than fetched from a CDN: the
- * files are bundled and served from this origin, so there is no third-party
- * request, nothing to block, and no flash of a fallback while a font loads
- * from somewhere else.
+ * **Big Shoulders Display** is the Tonight board, and it is the one place in
+ * this product deliberately *not* set in a pixel face. The board is a printed
+ * sign hanging in the room rather than part of the room's artwork, so it takes
+ * the Slice's editorial logic instead of the shell's.
+ *
+ * It was chosen by measurement against the board's real field, not by eye. The
+ * field is 107 units — **120.4 CSS px at 360**, the narrowest phone supported —
+ * and the question is how tall `WEEK ONE` can be while still fitting it:
+ *
+ * | face | largest fitting size | cap height |
+ * |---|---|---|
+ * | Silkscreen (incumbent) | 20 | 13 |
+ * | Barlow Condensed | 31 | 21 |
+ * | Oswald | 29 | 24 |
+ * | Saira Extra Condensed | 36 | 25 |
+ * | **Big Shoulders Display** | **35** | **28** |
+ *
+ * Silkscreen is drawn on a grid and spends its width on air; at the only size
+ * that fits it gives 13px capitals, which is why the board read as quiet. Big
+ * Shoulders gives **28px capitals in the same 120px** — more than twice the
+ * letter, same board.
+ *
+ * **500 and 700 only.** The board sets exactly two lines, one weight each;
+ * shipping the other seven would be shipping bytes nothing renders.
+ *
+ * All three faces are OFL and installed from npm rather than fetched from a
+ * CDN: the files are bundled and served from this origin, so there is no
+ * third-party request, nothing to block, and no flash of a fallback while a
+ * font loads from somewhere else.
  */
+/*
+ * **No `.css` on these two, and that is the package rather than a slip.**
+ * `@fontsource/big-shoulders-display` maps `"./*"` to `"./*.css"` and — unlike
+ * `silkscreen` and `vt323` — declares no `"./*.css"` entry beside it, so the
+ * spelling used on the lines below resolves to `500.css.css` and fails the
+ * build. Adding the extension back for consistency is the obvious edit and it
+ * does not compile.
+ */
+import '@fontsource/big-shoulders-display/500';
+import '@fontsource/big-shoulders-display/700';
 import '@fontsource/silkscreen/400.css';
 import '@fontsource/silkscreen/700.css';
 import '@fontsource/vt323/400.css';
