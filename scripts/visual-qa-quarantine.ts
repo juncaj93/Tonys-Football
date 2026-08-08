@@ -74,8 +74,8 @@ export const QUARANTINE_CEILING = 2;
  * entry was deleted, and the table sat empty.
  *
  * **Debt 16 is the residual that survived that fix**, and it is a different
- * thing: rarer, still unexplained, and — unlike debt 12 — it has never been
- * reproduced anywhere but a GitHub runner. What earned it this row is that on PR
+ * thing: rarer, still unexplained, and for its first two days apparently
+ * hosted-only — a claim 2026-08-08 retired, see below. What earned it this row is that on PR
  * #69 it failed the gate twice, once on `/timeline` and once on `/` during
  * `banner-completed`, and **that pull request changed no file that renders `/`**.
  * That is the header's own test of a gate that has stopped protecting anything:
@@ -109,7 +109,7 @@ export const QUARANTINE: readonly QuarantineEntry[] = [
     debt: 16,
     why:
       'Visual debt 16: an intermittent, unexplained React #418 structural mismatch. ' +
-      'Hosted and, since 2026-08-08, local: 1 in a 279-capture local production sweep, ' +
+      'Hosted, and since 2026-08-08 local too: 1 in a 279-capture production sweep. ' +
       'Counted and printed, never muted — more than the ceiling still fails the run.',
     /*
      * Narrow on purpose, and every clause is load-bearing:
