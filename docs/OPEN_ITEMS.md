@@ -67,10 +67,10 @@ historical seasons, and persistent login.
 
 ## C — High-value pre-launch polish
 
-### C1 · Three reachable routes have never been photographed
+### C1 · Three reachable routes had never been photographed — **fixed**
 
-`/profile`, `/rooms` and `/admin` are in `ALL_STATES` nowhere. Every other v1
-surface is: the parlor, the rack, the Timeline, the counter, the collection, the
+`/profile`, `/rooms` and `/admin` were in `ALL_STATES` nowhere. Every other v1
+surface was: the parlor, the rack, the Timeline, the counter, the collection, the
 showcase, the back hall, the character screen, the press desk and — since #75 —
 the front door.
 
@@ -79,18 +79,28 @@ Timeline's sign read `CHAMPIONS $ HISTORY` (#69) and the door's PIN label broke
 `IT` onto its own line at 360 (#75). A route the gate has never seen has an
 unverified type floor, colour fidelity, tap targets and reduced-motion promise.
 
-`/rooms` is the most exposed of the three, for the reason
-`lib/backhall/driver-coverage.test.ts` already gives about the back hall: nobody
-will open it for a year, so nobody would notice it looking wrong.
+Closed with the guard that stops it recurring: `scripts/route-coverage.test.ts`
+enumerates `app/**/page.tsx` and fails for any route no state reaches, with one
+declared exemption carrying its reason. It **fails on the pre-fix driver naming
+all three**. 99 states x 3 widths.
 
-### C2 · One greeting pair still shares a line
+### C2 · `/profile`'s destructive control is never photographed
 
-SuggMyNick and cheeseking both made the 2025 playoffs without a title and A21 is
-the only Group A line keyed to it. Two lines of markdown, no code, and
-`lib/content/greeting.test.ts` already asserts the collision so adding a line
-shows up as a change. The material exists and is verified.
+Found by the first capture of `/profile`, which is what C1 was for. *"Change the
+locks everywhere"* — the one destructive control on any manager-facing page —
+renders only when `devices.length > 1`, and the driver holds exactly one session,
+so the gate photographs the page without it every time.
 
-Carried from `IMPLEMENTATION_HANDOFF.md`. Still true.
+It is **red on cream**, which is precisely the contrast class that has produced
+visual debt here before: `LEGENDARY` at 2.24:1 on the reveal plate, and Common's
+rarity word at 3.42:1, both on the same ground.
+
+Left open rather than built because it is the first state that needs the driver
+to hold **two** sessions at once, and its session model is one context signed in
+lazily. That is a real change to the harness for one screen, and it should be
+made deliberately rather than folded into a route-coverage slice.
+
+The copy item that was here is **D3** — the line is the commissioner's to write.
 
 ---
 
@@ -124,14 +134,30 @@ deploy log.
 Documented in `docs/DEPLOYMENT.md §2`. Recorded here because nothing in this
 session could observe production, and *"probably set"* is not a launch check.
 
-### D3 · Production demo-seat verification — still UNVERIFIED
+### D3 · One greeting pair still shares a line, and the line is the commissioner's to write
+
+SuggMyNick and cheeseking both made the 2025 playoffs without a title and A21 is
+the only Group A line keyed to it, so both hear the same sentence. Two lines of
+markdown and no code, and `lib/content/greeting.test.ts` already asserts the
+collision so adding a line shows up as a change. The material exists and is
+verified — cheeseking went 1–13 in 2024 and 9–5 with a third-place finish in
+2025; SuggMyNick had the second-best record in 2025 at 10–4.
+
+**Not written here on purpose.** `CLAUDE.md` limits generative AI to the Slice
+and requires ordinary Tony dialogue to be *curated content*; Group A was approved
+as a set and Group B is explicitly waiting on approval. A session adding a line
+in Tony's voice would be authoring unapproved content on the one surface the
+league reads as him. `IMPLEMENTATION_HANDOFF.md` files it under *"Open, and for
+the commissioner"*, and that is where it belongs.
+
+### D4 · Production demo-seat verification — still UNVERIFIED
 
 The read-only query is in `docs/PUBLIC_MODE.md` and has never been run. This is a
 **commissioner risk acceptance, not a finding that the count is zero.** Do not
 record it as passed. If a `demo:` seat with `is_admin = true` is ever found in
 production it is an authentication incident, not a cleanup task.
 
-### D4 · Nobody has looked at production in a browser
+### D5 · Nobody has looked at production in a browser
 
 `*.vercel.app` is unreachable through the agent proxy, so every claim about
 production in this repository rests on GitHub's gate results and Vercel's own
@@ -147,7 +173,31 @@ status. Carried since #23 and still true.
 surface needs them, so this is a note rather than a task — recorded so a future
 session does not read the absence as an oversight and start writing migrations.
 
-### E2 · `derivePairings` does not filter an unplayed game
+### E2 · The harness probed the server with an unbounded `fetch` — **fixed**
+
+`assertServerIsOurBuild` waited on the platform default, so a server that
+accepted the connection and then wedged would have hung the preflight rather than
+refused it — and **no answer is the one outcome `scripts/harness.ts` exists to
+make impossible**. Its two `psql` probes had carried `timeout: 15_000` since they
+were written; the asymmetry was the defect rather than the number.
+
+### E3 · A late stat correction can move a game a reward was already paid on
+
+Found while tracing the sync, and recorded as a **known behaviour rather than a
+defect**, because every part of it is already deliberate. The sync re-reads weeks
+1..N every Tuesday, which is how NFL stat corrections reach games that were
+already stored — that is what `reconcile.ts` exists for. A correction that
+flipped a winner after `awardWeek` had paid would leave the 150 tokens with the
+manager who won on the day.
+
+Nothing double-pays (`weekly_rewards_once_per_manager_per_reason`) and nothing is
+rewritten behind anybody's back: a moved fact makes `generateDraft` produce a
+**new version** rather than editing a published one, which is exactly what
+`docs/SLICE_REVIEW_BOUNDARY.md` specifies. Clawing a reward back would be a new
+product rule about a league that has already read the result, and it is not one
+this session should invent.
+
+### E4 · `derivePairings` does not filter an unplayed game
 
 The guard added this session sits at the **write** boundary (`persistWeeks`),
 which is the right place: it protects the seed, the historical import and the

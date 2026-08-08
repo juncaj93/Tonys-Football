@@ -254,7 +254,7 @@ function collectPeople(seasonList: readonly ImportedSeason[]): Map<string, strin
  * **What it costs, stated rather than implied.** A genuine 0.00–0.00 game would
  * be dropped, and there is no way to tell the two apart from this payload. In
  * this league that needs twenty starters — defenses included, no kickers — to
- * score exactly nothing between them; `persist.test.ts` asserts it has never
+ * score exactly nothing between them; `weekly.test.ts` asserts it has never
  * happened across the 162 recorded games of 2024 and 2025, so the rule is
  * measured against the league's own history rather than assumed.
  */

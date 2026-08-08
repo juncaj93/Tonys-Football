@@ -191,6 +191,24 @@ type StateName =
    * type floor, the colour fidelity and the tap targets are all unverified.
    */
   | 'timeline'
+  /**
+   * The three v1 routes the gate had never looked at, added together because
+   * the gap was one gap.
+   *
+   * `/profile` is the key ring — the device list and *sign out everywhere*, the
+   * only place in the product a manager can end a session they no longer
+   * control. `/rooms` is the chained basement door, which nobody will open for a
+   * year, so nobody would notice it looking wrong. `/admin` is the office.
+   *
+   * A route the driver has never reached has an unverified type floor, colour
+   * fidelity, tap targets and reduced-motion promise — and this exact shape has
+   * produced a real defect on **first capture**, twice: the Timeline's sign read
+   * `CHAMPIONS $ HISTORY` (#69) and the door's PIN label broke `IT` onto its own
+   * line at 360 (#75).
+   */
+  | 'profile'
+  | 'rooms'
+  | 'office'
   | 'prediction'
   | 'receipt'
   | 'counter'
@@ -385,6 +403,8 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'review-held': 'review-held',
   // The detail screen, reached by opening the queue's one waiting draft.
   'review-draft': 'review-waiting',
+  // The office. Borrowed for the commissioner's keys — see `reach`.
+  office: 'review-empty',
 };
 
 interface DemoApplied {
@@ -670,6 +690,44 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await dismissTony(page);
       await page.getByRole('link', { name: /rack/i }).click({ force: true });
       await page.waitForTimeout(1500);
+      return;
+
+    /*
+     * The key ring. Reached directly rather than through the room, because it
+     * hangs off the utility bar rather than off a parlor object — `18 §3` gives
+     * the homepage eight interactive objects and this is not one of them.
+     */
+    case 'profile':
+      await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * The chained basement door.
+     *
+     * Navigated to rather than reached through the Back Hall on purpose: the
+     * door *there* is flag-gated and shut in v1, but `/rooms` itself only
+     * requires a session, so this is the page as any manager who guesses the URL
+     * would find it. `back-hall-rooms-open` already photographs the doorway.
+     */
+    case 'rooms':
+      await page.goto(`${BASE}/rooms`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * The office.
+     *
+     * Demo-backed for the seat and nothing else: `requireAdmin()` answers
+     * `notFound()`, so an ordinary manager photographs a 404 and files it under
+     * this state's name — the false green the nine reveal states shipped. It
+     * borrows `review-empty` rather than adding a demo state of its own, because
+     * the office needs a commissioner's keys and **nothing arranged**, and
+     * `review-empty` is exactly "a commissioner seat with nothing waiting."
+     */
+    case 'office':
+      await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
       return;
 
     /*
@@ -1384,6 +1442,8 @@ const ALL_STATES: readonly StateName[] = [
   'banner-current-tbd',
   'rack',
   'timeline',
+  'profile',
+  'rooms',
   'prediction',
   'receipt',
   'counter',
@@ -1490,6 +1550,8 @@ const ALL_STATES: readonly StateName[] = [
   'review-approved',
   'review-published',
   'review-held',
+  // The office, last of the commissioner-seated states for the same reason.
+  'office',
 
   /*
    * Last, and that is load-bearing: `reach` signs *out* to get here, so any
