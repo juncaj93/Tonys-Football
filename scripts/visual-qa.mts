@@ -136,6 +136,19 @@ const BANNED_IN_CHROME = ['#3B2050', '#3b2050'];
 /* ------------------------------------------------------------------ states -- */
 
 type StateName =
+  /*
+   * The front door, signed out — the three screens every manager meets before
+   * the product has any state about them, and the only V1 surfaces that had
+   * never been photographed. They carry the PIN form, which is the one place in
+   * the product with text inputs, so they are also the only place the 16px
+   * iOS-zoom floor and the tap-target rule were unmeasured.
+   *
+   * They sit **last** in `ALL_STATES` because reaching them means signing out,
+   * and every other state needs a session.
+   */
+  | 'door'
+  | 'door-claim'
+  | 'door-return'
   | 'idle'
   /*
    * The settled room, photographed *after* the arrival's reveal has come and
@@ -485,8 +498,88 @@ async function enterPin(page: Page, doorUrl: string, pin: string): Promise<void>
   throw new Error(`could not sign in at ${doorUrl}; stuck at ${page.url()}`);
 }
 
+/**
+ * Put the browser back outside the shop.
+ *
+ * Clearing cookies rather than hitting a sign-out route: the session is a
+ * cookie, the door is what an unauthenticated visitor sees, and this reproduces
+ * a first-ever visit rather than a logout — which is the state these three
+ * screens are actually for.
+ */
+async function signOut(page: Page): Promise<void> {
+  await page.context().clearCookies();
+  await page.goto(`${BASE}/door`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(250);
+}
+
+/** The tag text the door prints for a manager who has set a PIN. */
+const TAKEN = /taken/i;
+
+/**
+ * The states that must **not** carry a session.
+ *
+ * Named as a set rather than inferred from the `door-` prefix, so a future
+ * `door-something` that genuinely needs a session is a decision here rather than
+ * a surprise at capture time.
+ */
+const SIGNED_OUT = new Set<StateName>(['door', 'door-claim', 'door-return']);
+
 async function reach(page: Page, state: StateName): Promise<void> {
   switch (state) {
+    /*
+     * The key board. Ten names, and whether each key is on its hook.
+     *
+     * It signs in first and then signs out so that **one** manager is always
+     * claimed. Without that the board's content depends on what ran before it:
+     * a full sweep reaches here after sign-in and photographs a `taken` tag, a
+     * `--state=door` run on a fresh database photographs ten identical `on the
+     * hook` rows, and the two artifacts carry the same name. One sign-in makes
+     * the state deterministic *and* puts both tag variants in the same frame,
+     * which is the more useful picture anyway.
+     */
+    case 'door':
+      await signIn(page);
+      await signOut(page);
+      return;
+
+    /*
+     * **New key** — a manager who has never signed in. Red plate, two fields,
+     * and the six-digits paragraph.
+     *
+     * Found by tag rather than by name or index: which managers are claimed
+     * depends on what ran before this in the sweep, and a hardcoded name would
+     * photograph the *other* screen the day that changed.
+     */
+    case 'door-claim': {
+      await signOut(page);
+      const unclaimed = page.locator('main li a').filter({ hasNotText: TAKEN }).first();
+      if ((await unclaimed.count()) === 0) throw new Error('no unclaimed manager on the door');
+      await unclaimed.click();
+      await page.waitForURL(/\/door\/[0-9a-f-]{36}/, { timeout: 20_000 });
+      await page.waitForTimeout(300);
+      return;
+    }
+
+    /*
+     * **Welcome back** — the same route for a manager who already has a PIN.
+     * Blue plate, one field, no explanation.
+     *
+     * It signs in first and then signs out, because a claimed manager is not a
+     * fixture: on a freshly seeded database nobody has a PIN, so asking for this
+     * screen without making one would silently photograph the claim screen
+     * again under this name. `signIn` claims Alex if needed and is idempotent.
+     */
+    case 'door-return': {
+      await signIn(page);
+      await signOut(page);
+      const claimed = page.locator('main li a').filter({ hasText: TAKEN }).first();
+      if ((await claimed.count()) === 0) throw new Error('no claimed manager on the door');
+      await claimed.click();
+      await page.waitForURL(/\/door\/[0-9a-f-]{36}/, { timeout: 20_000 });
+      await page.waitForTimeout(300);
+      return;
+    }
+
     case 'tony-dialogue':
       await home(page);
       return;
@@ -1377,6 +1470,16 @@ const ALL_STATES: readonly StateName[] = [
   'review-approved',
   'review-published',
   'review-held',
+
+  /*
+   * Last, and that is load-bearing: `reach` signs *out* to get here, so any
+   * state after these would find itself at the door instead of where it meant
+   * to be. `--state=` selects exactly one state, so a single-state run is
+   * unaffected either way.
+   */
+  'door',
+  'door-claim',
+  'door-return',
 ];
 
 /* ------------------------------------------------------------------- gates -- */
@@ -3648,10 +3751,22 @@ async function run(): Promise<void> {
       });
       await ctx.addInitScript(HYDRATION_REPORTER);
 
-      await signIn(page);
+      /*
+       * **Signed in lazily**, because three states need the opposite.
+       *
+       * This used to sign in unconditionally before the loop. The door states
+       * are what an unauthenticated visitor sees, so a session is the one thing
+       * they must not have — and `--state=door` on its own would otherwise have
+       * signed in, redirected to the parlor, and photographed the room.
+       */
+      let signedIn = false;
 
       for (const state of states) {
         capturing = state;
+        if (!SIGNED_OUT.has(state) && !signedIn) {
+          await signIn(page);
+          signedIn = true;
+        }
         const demoKey = DEMO_BACKED[state];
         if (demoKey === undefined) await reach(page, state);
         else await reachDemo(page, state, demoKey);
