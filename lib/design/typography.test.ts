@@ -206,6 +206,9 @@ describe('bold', () => {
         if (isProse(line)) continue;
         if (!/\bfont-(bold|semibold|medium|extrabold|black)\b/.test(line)) continue;
         if (line.includes('font-display')) continue;
+        // `font-board` is checked by the next case instead, which is stricter:
+        // Micro 5 ships one weight, so the board may ask for none at all.
+        if (line.includes('font-board')) continue;
         breaches.push(`${relative}:${String(index + 1)} ${line.trim()}`);
       }
     }
@@ -217,6 +220,31 @@ describe('bold', () => {
         'it and smears a pixel font. Name the face, or carry the emphasis with ' +
         'ink instead.',
     ).toEqual([]);
+  });
+
+  it('asks the board face for no weight at all, because it ships one', () => {
+    /*
+     * `font-board` is Micro 5, and Micro 5 has a single weight. The rule above
+     * lets `font-board` past the weight scan, so this is what stops that from
+     * becoming a hole: a `font-bold` on the board would be **synthesised** by the
+     * browser and smear a pixel face, which is exactly the defect the VT323 rule
+     * exists to prevent, arriving through the new door.
+     *
+     * Asserted against `app/layout.tsx` rather than a constant, so importing a
+     * second weight and using it is a conversation rather than an accident.
+     */
+    const layout = readFileSync(path.join(ROOT, 'app', 'layout.tsx'), 'utf8');
+    const imports = [...layout.matchAll(/@fontsource\/micro-5(\/\S*?)?['"]/g)];
+    expect(imports.length, 'the board face must be imported').toBe(1);
+
+    for (const [name, role] of Object.entries(TYPE)) {
+      if (!role.includes('font-board')) continue;
+      expect(
+        role,
+        `${name} asks for a weight, but Micro 5 ships only one and the browser ` +
+          'would synthesise it',
+      ).not.toMatch(/\bfont-(bold|semibold|medium|extrabold|black)\b/);
+    }
   });
 });
 
@@ -245,9 +273,43 @@ describe('the size vocabulary', () => {
     expect(unused, 'TYPE_SIZES declares a size no role uses').toEqual([]);
   });
 
-  it('holds the reduction: six sizes, where there were sixteen', () => {
-    expect(TYPE_SIZES.length).toBe(6);
-    expect(new Set(sizes).size).toBe(6);
+  it('holds the reduction: seven sizes, where there were sixteen', () => {
+    /*
+     * **This number moved once, from six to seven, and the movement is the
+     * point rather than a relaxation.**
+     *
+     * The guard worked exactly as its own comment says it should: the Tonight
+     * board's headline needed a size that was not on the list, so somebody had
+     * to come here and decide whether the vocabulary should grow. It did, at 37,
+     * for one role on one surface, chosen by browser measurement against the
+     * board's real 120.4px field rather than by eye — the table is in
+     * `TYPE_SIZES`.
+     *
+     * Seven is still an assertion, not a ceiling being lifted. An eighth is the
+     * same conversation again, which is the whole mechanism.
+     */
+    expect(TYPE_SIZES.length).toBe(7);
+    expect(new Set(sizes).size).toBe(7);
+  });
+
+  it('keeps the new display size to the one surface it was added for', () => {
+    /*
+     * 37 was authorised for the board headline specifically. If a second role
+     * reaches for it, the vocabulary has quietly grown a general "very large"
+     * size — which is how sixteen sizes happened the first time.
+     */
+    const at37 = Object.entries(TYPE).filter(([, role]) => role.includes('text-[37px]'));
+    expect(at37.map(([name]) => name)).toEqual(['boardHero']);
+  });
+
+  it('sets the board’s two roles in the board face, and nothing else in it', () => {
+    /*
+     * `font-board` is a third typeface admitted for one printed object inside
+     * the room. Every other surface is pixel art or set in the pixel faces, and
+     * a display face leaking outwards would undo that distinction quietly.
+     */
+    const board = Object.entries(TYPE).filter(([, role]) => role.includes('font-board'));
+    expect(board.map(([name]) => name).sort()).toEqual(['boardDetail', 'boardHero']);
   });
 
   it('sets nothing below the floor', () => {
@@ -267,8 +329,10 @@ describe('the size vocabulary', () => {
 
 describe('the roles themselves', () => {
   it('names a face for every role', () => {
+    // `font-board` joined the list for the Tonight board — a printed sign inside
+    // the room, and the one surface allowed a face that is not pixel art.
     for (const [name, role] of Object.entries(TYPE)) {
-      expect(role, `${name} must name its face`).toMatch(/\bfont-(display|sans|mono)\b/);
+      expect(role, `${name} must name its face`).toMatch(/\bfont-(display|sans|mono|board)\b/);
     }
   });
 

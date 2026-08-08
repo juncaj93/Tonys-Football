@@ -26,6 +26,23 @@
   --font-sans: 'VT323', ui-monospace, monospace;
   --font-mono: 'VT323', ui-monospace, monospace;
 
+  /*
+   * A third face, for exactly one surface.
+   *
+   * The Tonight board carries the room's loudest words, and neither existing
+   * face can. Silkscreen gives 13px capitals at the only size that fits the
+   * board's 120px field; Micro 5 gives 17 in a heavier, condensed pixel letter.
+   * It is still a **pixel** face — the board hangs in a pixel-art room, and a
+   * smooth condensed face read as a poster pasted into it.
+   *
+   * Silkscreen is the fallback rather than a generic stack: if the woff2 fails,
+   * the board should degrade to the room's other pixel face, not to Helvetica.
+   *
+   * `font-board` is deliberately narrow in scope. If a second surface ever
+   * wants it, that is a design conversation, not an import.
+   */
+  --font-board: 'Micro 5', 'Silkscreen', ui-monospace, monospace;
+
   --color-ink-900: #1a1214;
   --color-ink-700: #2e2226;
   --color-ink-500: #4a3b3f;

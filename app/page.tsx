@@ -25,6 +25,7 @@ import {
   COUNTER_EDGE,
   ROOM,
   PREDICTION_SLATE,
+  TONIGHT_CREAM,
   TONIGHT_FIELD,
   TONY,
   place,
@@ -415,16 +416,87 @@ export default async function ParlorPage({
               * gradient now, so an average would not be the question. Neither
               * ink needs help.
               */}
+            {/*
+              * The paper, drawn rather than photographed.
+              *
+              * The board's face is baked into `zone_parlor_shell`, and what was
+              * baked is the defect: an amber, mottled ground with a dark
+              * vignette pulled in from every edge — commissioner, 2026-08-08,
+              * *"burnt / distressed-looking perimeter"*. It is amber rather than
+              * cream because the shell was quantized against a palette that had
+              * three creams and spent 27.3% of the room on lamp glow; the
+              * `zone`-family palette fixed the walls but the board kept the
+              * vignette, which is painted into the source art rather than
+              * introduced by the pipeline.
+              *
+              * **So this covers it instead of repainting the shell.** Repainting
+              * would mean editing an approved asset to fix one rectangle inside
+              * it, and every other object on that sheet is correct. An opaque
+              * cream rectangle over `TONIGHT_CREAM` — the *measured* extent of
+              * the paper, where the cream stops and the painted frame begins —
+              * replaces exactly the surface that is wrong and touches nothing
+              * else. The warm wooden frame around it is baked, untouched, and
+              * wanted.
+              *
+              * `inset-shadow` rather than a border: the paper should sit *in*
+              * the frame with a hairline of shade where they meet, which is what
+              * a mounted board does. A border would draw a second frame line
+              * beside the painted one, which is the nested-frame look the
+              * direction bans.
+              */}
+            <div
+              aria-hidden="true"
+              className="pointer-events-none absolute bg-paper-white shadow-[inset_0_0_0_1px_rgba(74,46,28,0.28)]"
+              style={place(TONIGHT_CREAM)}
+            >
+              {/*
+                * The one red rule that runs all the way round.
+                *
+                * A printed sign has a keyline; it is what separates *paper with
+                * words on it* from *a printed thing*. One, though — the old
+                * board carried a painted outline **and** a frame line **and** a
+                * vignette, and the direction bans nested frames precisely
+                * because at 130px wide they stop reading as separate lines and
+                * start reading as a dirty edge.
+                *
+                * Inset 3px rather than a unit count: it wants to be a hairline
+                * at every width, and a unit-derived inset would scale with the
+                * board and stop being one. `border` gives a true rectangle with
+                * a gap of cream outside it, which an inset box-shadow cannot.
+                */}
+              <div className="absolute inset-[3px] border border-red-dark/50" />
+            </div>
+
+            {/*
+              * The words, and one red rule.
+              *
+              * Three things and no fourth: a headline, a separator, a fact. The
+              * direction is explicit that nothing else earns a place here — no
+              * ornament, no plaque, no season label — and the board has been the
+              * room's most over-decorated object twice already.
+              *
+              * The red rule is `border-t` on the detail rather than its own
+              * element, so it cannot exist when there is nothing under it. A
+              * separator floating above empty paper is the tell of a board that
+              * was designed with the offseason string in it and never seen in
+              * any other state.
+              *
+              * `justify-center` with the rule between them keeps the composition
+              * optically centred whether the detail is present or not, which is
+              * the difference between an idle board and an unloaded one.
+              */}
             <div
               aria-hidden="true"
               className="pointer-events-none absolute flex flex-col items-center justify-center overflow-hidden text-center"
               style={place(TONIGHT_FIELD)}
             >
-              <p className={`${TYPE.headlineQuiet} tracking-[0.02em] text-red-dark`}>
-                {face.hero}
-              </p>
+              <p className={`${TYPE.boardHero} text-red-dark`}>{face.hero}</p>
               {face.detail !== null && (
-                <p className={`mt-1.5 ${TYPE.bodyCompact} text-wood-dark`}>{face.detail}</p>
+                <p
+                  className={`mt-[7px] w-full border-t border-red-dark/65 pt-[6px] ${TYPE.boardDetail} text-wood-dark`}
+                >
+                  {face.detail}
+                </p>
               )}
             </div>
 
