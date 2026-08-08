@@ -13,6 +13,7 @@ import {
 import { resetDatabase } from '@/lib/db/test-helpers';
 import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
+import { seasonInProgress } from '@/lib/sleeper/test-source';
 import { persistChain } from '@/lib/sleeper/persist';
 
 import { runTuesday } from './tuesday';
@@ -312,5 +313,167 @@ describe.skipIf(!hasDatabase)('the Tuesday job', () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.seasonId).toBe(target?.id);
+  });
+
+  describe('the sync step — `16 §4.3`\'s first', () => {
+    /*
+     * The defect this whole block exists for.
+     *
+     * Every step from `finalize` rightwards was built, idempotent and tested,
+     * and **nothing filled `fantasy_matchups` during a live season.** The deploy
+     * seed reads recorded fixtures — the 2026 recording is a preseason
+     * photograph with no matchups in it at all — and the Sunday cron writes only
+     * its snapshot. So the first live Tuesday would have declined week 1 for
+     * want of a game and gone on declining it until January, with no error
+     * anywhere: *"holds no publishable game"* is the truth in July and looks
+     * exactly the same in October.
+     *
+     * The season is **2026** in this block rather than the finalized 2025 used
+     * above, because a finalized season refuses every write and cannot show a
+     * week arriving.
+     */
+    const OPEN_SEASON = 2026;
+
+    it('closes a week that did not exist in the database when the job started', async () => {
+      const before = await runTuesday(db!, { season: OPEN_SEASON, at: AT });
+      expect(before.games).toBe(0);
+      expect(before.finalized).toBe(false);
+
+      const report = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 1 }),
+      });
+
+      expect(report.sync?.refusal).toBeNull();
+      expect(report.week).toBe(1);
+      expect(report.games).toBeGreaterThan(0);
+      expect(report.finalized).toBe(true);
+      expect(report.failed).toEqual([]);
+    });
+
+    it('closes the week that just finished, not the one it closed last week', async () => {
+      /*
+       * The sequence defect the resolution order was moved for. The week used to
+       * be chosen in the route from `max(stored week)` **before** the sync, which
+       * on the second Tuesday of the season is last week — so week 1 would have
+       * been closed every Tuesday until January and no other week ever.
+       */
+      const first = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 1 }),
+      });
+      const second = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 2 }),
+      });
+
+      expect(first.week).toBe(1);
+      expect(second.week).toBe(2);
+      expect(second.finalized).toBe(true);
+
+      const closed = await db!
+        .select({ week: weekFinalizations.week })
+        .from(weekFinalizations);
+      expect(closed.map((row) => row.week).sort((a, b) => a - b)).toEqual([1, 2]);
+    });
+
+    it('pays the week it just brought in', async () => {
+      await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 1 }),
+      });
+
+      const paid = await db!.select({ amount: weeklyRewards.amount }).from(weeklyRewards);
+
+      // Five games, so five winners, plus one weekly high score.
+      expect(paid.length).toBeGreaterThan(0);
+    });
+
+    it('is a read the second time it runs', async () => {
+      const first = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 1 }),
+      });
+      const second = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 1 }),
+      });
+
+      expect(first.finalized).toBe(true);
+      expect(second.finalized).toBe(false);
+      expect(second.sync?.summary?.recordsChanged).toBe(0);
+      expect(second.failed).toEqual([]);
+
+      // And nobody was paid twice for the same week.
+      const paid = await db!
+        .select({
+          seat: weeklyRewards.seasonMembershipId,
+          reason: weeklyRewards.reason,
+          week: weeklyRewards.week,
+        })
+        .from(weeklyRewards);
+      const distinct = new Set(paid.map((row) => `${row.seat}:${row.reason}:${String(row.week)}`));
+      expect(distinct.size).toBe(paid.length);
+    });
+
+    it('still prints the paper when Sleeper cannot be reached', async () => {
+      /*
+       * A Tuesday morning outage must not cost the league everything else the
+       * job does. The sync declines in a sentence and the chain runs on against
+       * what is already stored.
+       */
+      await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 1 }),
+      });
+
+      const report = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: {
+          label: 'dead',
+          fetch: () => Promise.reject(new Error('socket hang up')),
+        },
+      });
+
+      expect(report.sync?.refusal).toBe('unreachable');
+      expect(report.failed).toEqual([]);
+      expect(report.skipped.join(' ')).toContain('Sleeper could not be read');
+      // And the week it already holds is still the week it reports on.
+      expect(report.week).toBe(1);
+    });
+
+    it('records the absence when no source is supplied at all', async () => {
+      const report = await runTuesday(db!, { season: OPEN_SEASON, at: AT });
+
+      expect(report.sync).toBeNull();
+      expect(report.skipped.join(' ')).toContain('No Sleeper source was supplied');
+    });
+
+    it('honours an explicit week over the one it would have resolved', async () => {
+      await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 3 }),
+      });
+
+      // The commissioner catching up a Tuesday that was missed.
+      const report = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        week: 2,
+        at: AT,
+        sleeper: seasonInProgress({ played: 3 }),
+      });
+
+      expect(report.week).toBe(2);
+      expect(report.finalized).toBe(true);
+    });
   });
 });

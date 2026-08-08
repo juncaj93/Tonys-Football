@@ -5,8 +5,8 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { now } from '@/lib/clock';
 import { type Database, type Queryable } from '@/lib/db';
 import { DemoRefused, assertDemoAllowed } from '@/lib/demo/guard';
+import { latestStoredWeek } from '@/lib/sleeper/weekly';
 import {
-  fantasyMatchups,
   seasons,
   sliceIssueVersions,
   sliceIssues,
@@ -833,19 +833,18 @@ export function emptyDeskPreview(
  *
  * Read from `fantasy_matchups` rather than from the clock, because a clock says
  * what day it is and this question is *"what has been played"*.
+ *
+ * The query itself is `latestStoredWeek`, shared with the Tuesday job's sync,
+ * which asks the same question for a different reason. The two differ only in
+ * what they say about a season with nothing stored: this is a form default and
+ * offers week 1; the sync needs to know it holds **zero** weeks so it can go and
+ * fetch the first one.
  */
 export async function suggestedDraftWeek(
   db: Queryable,
   seasonYear: number,
 ): Promise<number> {
-  const [row] = await db
-    .select({ week: sql<number | null>`max(${fantasyMatchups.week})` })
-    .from(fantasyMatchups)
-    .innerJoin(seasons, eq(seasons.id, fantasyMatchups.seasonId))
-    .where(eq(seasons.year, seasonYear));
-
-  const week = row?.week;
-  return week === null || week === undefined ? 1 : Number(week);
+  return Math.max(1, await latestStoredWeek(db, seasonYear));
 }
 
 // ---------------------------------------------------------------------------

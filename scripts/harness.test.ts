@@ -190,6 +190,41 @@ describe('proving the server is the build on disk', () => {
     }
   });
 
+  it('gives up on a wedged server rather than waiting on it forever', async () => {
+    /*
+     * A server that accepts the connection and then never answers. A bare
+     * `fetch` waits on the platform default, which for a preflight is
+     * indistinguishable from forever — and **no answer is the one outcome this
+     * file exists to make impossible.** The two `psql` probes have been bounded
+     * since they were written; this one was not.
+     *
+     * The abort is asserted through the signal the guard actually passes rather
+     * than by waiting fifteen seconds for one.
+     */
+    const cwd = process.cwd();
+    process.chdir(withBuildId('build-abc'));
+    try {
+      let signal: AbortSignal | undefined;
+      vi.stubGlobal('fetch', (_url: string, init?: RequestInit) => {
+        signal = init?.signal ?? undefined;
+        return new Promise<Response>((_resolve, reject) => {
+          // What an aborted fetch does: reject when the signal fires.
+          init?.signal?.addEventListener('abort', () => {
+            reject(new Error('The operation was aborted due to timeout'));
+          });
+        });
+      });
+
+      const refusal = assertServerIsOurBuild('http://localhost:3111');
+      expect(signal, 'the probe was sent with no abort signal').toBeInstanceOf(AbortSignal);
+      signal?.dispatchEvent(new Event('abort'));
+
+      await expect(refusal).rejects.toThrow(HarnessRefusal);
+    } finally {
+      process.chdir(cwd);
+    }
+  });
+
   it('refuses a stale server, which is the failure a 200 could not catch', async () => {
     /*
      * The real incident: the replacement server died on EADDRINUSE, the previous

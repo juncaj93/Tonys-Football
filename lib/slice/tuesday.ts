@@ -3,6 +3,14 @@ import { type Database } from '@/lib/db';
 import { featureFlags } from '@/lib/flags';
 import { awardWeek, type RewardRefusal, type RewardReport } from '@/lib/rewards/service';
 import { generateDraft, type DraftResult } from '@/lib/slice/publication';
+import { type SleeperSource } from '@/lib/sleeper/transport';
+import {
+  latestStoredWeek,
+  syncSeason,
+  weekToReadThrough,
+  type SyncRefusal,
+  type SyncReport,
+} from '@/lib/sleeper/weekly';
 import { finalizeWeek } from '@/lib/stakes/facts';
 import { authorStakesForWeek, settleSeason } from '@/lib/stakes/service';
 
@@ -23,6 +31,17 @@ const REWARD_REFUSALS: Record<RewardRefusal, (week: number) => string> = {
   'nothing-payable': (week) => `Week ${String(week)} had nothing the rules pay for.`,
 };
 
+/** The same, for the sync. The first step, so the most important one to read. */
+const SYNC_REFUSALS: Record<SyncRefusal, (season: number) => string> = {
+  'no-season': (season) => `${String(season)} has not been imported, so there was nothing to sync into.`,
+  'no-league': (season) =>
+    `${String(season)} has no Sleeper league id on record, so there was nothing to read.`,
+  'season-closed': (season) => `${String(season)}'s books are shut, so nothing was read.`,
+  unreachable: () => 'Sleeper could not be read, so no new results came in. The job will retry.',
+  'wrong-season': () =>
+    'Sleeper returned a different season than the one being closed. Nothing was imported — check SLEEPER_LEAGUE_ID.',
+};
+
 /** The same, for the seasonal boxes. Also one sentence, for the same reason. */
 const GRANT_REFUSALS: Record<GrantRefusal, () => string> = {
   'no-season': () => 'That season has not been imported, so no boxes were handed out.',
@@ -35,12 +54,26 @@ const GRANT_REFUSALS: Record<GrantRefusal, () => string> = {
  *
  * ## What it is, and what it deliberately is not
  *
- * `16 §4.3` gives Tuesday a chain: **close the week → settle what was riding on
- * it → author next week's stakes → draft the Slice → notify the commissioner.**
- * Every one of those already existed, idempotent and tested, before this file.
- * What did not exist was the *sequence* — and a sequence is a thing with its own
- * failure modes, so it gets its own module rather than living inside a route
- * handler where it could not be tested without HTTP.
+ * `16 §4.3` gives Tuesday a chain: **sync → close the week → settle what was
+ * riding on it → author next week's stakes → draft the Slice → notify the
+ * commissioner.** Every one of those from `close` rightwards already existed,
+ * idempotent and tested, before this file. What did not exist was the
+ * *sequence* — and a sequence is a thing with its own failure modes, so it gets
+ * its own module rather than living inside a route handler where it could not be
+ * tested without HTTP.
+ *
+ * ## The sync was missing, and it was the step everything else waited on
+ *
+ * The first version of this file started at `finalize`, and every step below it
+ * was correct and **starved**. Nothing else in the deployed application writes
+ * `fantasy_matchups`: the deploy seed imports recorded fixtures captured before
+ * the season began, and the Sunday cron writes only its photograph. So the first
+ * live Tuesday would have found no publishable game, declined, and left the shop
+ * in offseason for the whole year — silently, because *"nothing to close"* is a
+ * legitimate answer in July and looks identical in October.
+ *
+ * `lib/sleeper/weekly.ts` is the step. It runs **first** because everything
+ * after it reads what it writes, which is the order `16 §4.3` states.
  *
  * It **does not publish.** `16 §9` makes commissioner approval mandatory in
  * season one and `docs/SLICE_REVIEW_BOUNDARY.md` makes it permanent, so the last
@@ -58,6 +91,7 @@ const GRANT_REFUSALS: Record<GrantRefusal, () => string> = {
  *
  * | Step | What makes a second run a no-op |
  * |---|---|
+ * | `syncSeason` | `persistChain` compares before it writes: an unchanged week reports `unchanged`, a finalized season is refused, and a capture older than the stored one writes nothing |
  * | `finalizeWeek` | `UNIQUE(season_id, week)` plus an append-only trigger. A closed week cannot be reopened |
  * | `settleSeason` | `stake_resolutions.stake_id UNIQUE`, inserted **before** any token moves. Ten parallel settlements pay once |
  * | `awardWeek` | `token_transactions.idempotency_key UNIQUE` on a key derived from the occasion, plus `weekly_rewards_once_per_manager_per_reason` |
@@ -94,6 +128,8 @@ const GRANT_REFUSALS: Record<GrantRefusal, () => string> = {
 export interface TuesdayReport {
   readonly season: number;
   readonly week: number;
+  /** What came in from Sleeper, or why nothing did. Null when the step threw. */
+  readonly sync: SyncReport | null;
   /** The week was closed by *this* run. False when it was already closed. */
   readonly finalized: boolean;
   /** Publishable games in the week. Zero means it could not be finalized at all. */
@@ -162,13 +198,28 @@ async function attempt<T>(
  * `at` is passed in rather than read from a clock, because `finalizeWeek` stamps
  * it onto the record and this project's one rule about time is that nothing
  * calls `new Date()` where a test cannot reach it (`lib/clock.ts`).
+ *
+ * `sleeper` is injected for the same reason: the test suite never touches the
+ * network, and a job that constructed its own live source could not be run
+ * offline. Omitting it is legitimate — the sync is recorded as skipped and the
+ * rest of the chain runs against whatever is already stored — but the route
+ * always passes one, because a Tuesday that quietly stopped syncing would look
+ * exactly like a quiet week.
+ *
+ * `week` is optional and normally omitted. The week is resolved **after** the
+ * sync, because the only honest answer to *"which week just finished"* is *"the
+ * latest one we now hold results for"*, and before the sync that answer is a
+ * week old. Passing it explicitly is the commissioner's `?week=` override.
  */
 export async function runTuesday(
   db: Database,
   input: {
     readonly season: number;
-    readonly week: number;
+    /** The week to close. Omitted on a scheduled run — resolved after the sync. */
+    readonly week?: number;
     readonly at: Date;
+    /** Where results come from. Omitted only where a test wants no sync at all. */
+    readonly sleeper?: SleeperSource;
     /** The environment, for `tonysLine`. Read once here rather than per step. */
     readonly env?: NodeJS.ProcessEnv;
   },
@@ -176,9 +227,47 @@ export async function runTuesday(
   const skipped: string[] = [];
   const failed: { step: string; why: string }[] = [];
 
-  // --- 1. Close the week ---------------------------------------------------
+  // --- 1. Bring the week in ------------------------------------------------
+  /*
+   * `16 §4.3`'s first step, and the one every other step reads the output of.
+   *
+   * It reads through `stored + 1` rather than through a week number somebody
+   * chose: an unplayed week comes back empty and moves nothing, so the bound is
+   * self-limiting. `lib/sleeper/weekly.ts` carries the reasoning and the request
+   * budget.
+   */
+  const sync = input.sleeper === undefined
+    ? null
+    : await attempt('sync', failed, async () =>
+        syncSeason(db, {
+          source: input.sleeper!,
+          seasonYear: input.season,
+          through: weekToReadThrough(await latestStoredWeek(db, input.season)),
+        }),
+      );
+
+  if (input.sleeper === undefined) {
+    skipped.push('No Sleeper source was supplied, so no new results were read.');
+  } else if (sync !== null && sync.refusal !== null) {
+    skipped.push(SYNC_REFUSALS[sync.refusal](input.season));
+  }
+
+  /*
+   * Which week is being closed.
+   *
+   * After the sync, so a week that arrived thirty seconds ago is the week this
+   * Tuesday is about. Resolving it before would close last week again, every
+   * week, for the whole season — the sequence defect this file exists to hold.
+   *
+   * A season with no stored game at all resolves to week 1, which `finalizeWeek`
+   * then declines. That is the right shape for a July Tuesday: it says *"week 1
+   * holds no publishable game"* rather than inventing a week number.
+   */
+  const week = input.week ?? Math.max(1, await latestStoredWeek(db, input.season));
+
+  // --- 2. Close the week ---------------------------------------------------
   const closed = (await attempt('finalize', failed, () =>
-    finalizeWeek(db, { season: input.season, week: input.week, at: input.at }),
+    finalizeWeek(db, { season: input.season, week, at: input.at }),
   )) ?? { closed: false, games: 0 };
 
   if (closed.games === 0 && failed.length === 0) {
@@ -190,7 +279,7 @@ export async function runTuesday(
      * not a bounty from three weeks ago whose window has just run out.
      */
     skipped.push(
-      `Week ${String(input.week)} holds no publishable game, so it was not closed.`,
+      `Week ${String(week)} holds no publishable game, so it was not closed.`,
     );
   }
 
@@ -223,10 +312,10 @@ export async function runTuesday(
    * would be invisible, because the desk would look merely quiet.
    */
   const rewards = await attempt('reward', failed, () =>
-    awardWeek(db, { season: input.season, week: input.week, at: input.at }),
+    awardWeek(db, { season: input.season, week, at: input.at }),
   );
   if (rewards !== null && rewards.refusal !== null) {
-    skipped.push(REWARD_REFUSALS[rewards.refusal](input.week));
+    skipped.push(REWARD_REFUSALS[rewards.refusal](week));
   }
 
   // --- 4. Hand out the season's free boxes ---------------------------------
@@ -245,7 +334,7 @@ export async function runTuesday(
    * the product, so running it fourteen times a season costs fourteen no-ops.
    */
   const grants = await attempt('grant', failed, () =>
-    grantSeasonalBoxes(db, { seasonYear: input.season, week: input.week }),
+    grantSeasonalBoxes(db, { seasonYear: input.season, week }),
   );
   if (grants !== null && grants.refusal !== null) {
     skipped.push(GRANT_REFUSALS[grants.refusal]());
@@ -262,30 +351,31 @@ export async function runTuesday(
   const authoring = (await attempt('author', failed, () =>
     authorStakesForWeek(db, {
       season: input.season,
-      week: input.week + 1,
+      week: week + 1,
       lineOpen: flags.tonysLine,
     }),
   )) ?? { report: { authored: [], refused: [] }, written: 0 };
   if (authoring.written === 0) {
     skipped.push(
-      `Nothing new to put on the board for week ${String(input.week + 1)}.`,
+      `Nothing new to put on the board for week ${String(week + 1)}.`,
     );
   }
 
   // --- 6. Draft the Slice, and stop at the desk ----------------------------
   const draft = await attempt('draft', failed, () =>
-    generateDraft(db, { season: input.season, week: input.week, submit: true }),
+    generateDraft(db, { season: input.season, week, submit: true }),
   );
   if (draft !== null && draft.outcome === 'refused') {
     skipped.push(
       draft.refusal ??
-        `Week ${String(input.week)} holds no result that may be printed yet.`,
+        `Week ${String(week)} holds no result that may be printed yet.`,
     );
   }
 
   return {
     season: input.season,
-    week: input.week,
+    week,
+    sync,
     finalized: closed.closed,
     games: closed.games,
     settled,

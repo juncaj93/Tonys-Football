@@ -197,7 +197,17 @@ export async function assertServerIsOurBuild(base: string): Promise<void> {
 
   let status: number;
   try {
-    status = (await fetch(probe)).status;
+    /*
+     * Bounded, like every other probe in this file.
+     *
+     * A bare `fetch` waits on the platform default, which is effectively
+     * forever: a server that accepted the connection and then wedged would hang
+     * the preflight rather than refuse it, and **no answer is the one outcome
+     * this file exists to make impossible.** The two `psql` probes have carried
+     * `timeout: 15_000` since they were written; this one did not, and the
+     * asymmetry was the defect rather than the number.
+     */
+    status = (await fetch(probe, { signal: AbortSignal.timeout(15_000) })).status;
   } catch {
     throw new HarnessRefusal(`Nothing is answering on ${base}.\n\n${START_HINT}`);
   }
