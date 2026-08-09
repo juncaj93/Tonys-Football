@@ -116,6 +116,22 @@ describe('the visual driver and the basement agree', () => {
     expect(DRIVER).toContain('furnishRoom');
   });
 
+  it('records whether the painted shell or the stand-in rendered', () => {
+    /*
+     * The room is a painted shell whose art does not exist yet, so every capture
+     * today is the drawn stand-in — and a screenshot cannot say which it is. The
+     * day one theme's shell lands and another's has not, two of those files mean
+     * different things under the same naming, and nothing would notice.
+     *
+     * Read out of the DOM and reported rather than pinned, so the gate goes
+     * green on the better picture rather than failing for having got it.
+     */
+    expect(DRIVER).toContain('data-room-shell');
+    // Both values are acceptable, which is the property being defended: the day
+    // a shell lands, this gate goes green on the better picture.
+    expect(DRIVER).toMatch(/found\.shell !== 'art' && found\.shell !== 'drawn'/);
+  });
+
   it('checks a visited room offers nothing that writes', () => {
     // The authorization is the absence of an operation, and the way it would be
     // lost is a control appearing on that page — so it is read out of the

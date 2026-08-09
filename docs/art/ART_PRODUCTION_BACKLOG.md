@@ -110,13 +110,42 @@ The **selected**, **equipped** and **on-the-shelf** markers stay runtime — the
 
 ---
 
-## Batch D — character identity (M3)
+## Batch D — character identity — **blocked on a decision, not on a brief**
 
-Prepared, not requested. M3 defines the layer set; generating layers before that lands would fix a rig that has not been designed.
+**Corrected 2026-08-09.** This read *"prepared, not requested. M3 defines the layer set; generating layers before that lands would fix a rig that has not been designed."* M3 landed, the rig is designed and closed — six traits, a 64 × 96 canvas, twenty-nine layers — and the constraint that actually blocks this batch is a different one, which nothing had written down.
 
-Base bodies · faces · hair · shirts and jerseys · trousers · shoes · accessories · collectible wearables.
+**Colour is a runtime parameter here, and a PNG cannot carry it.** `composeCharacter` attaches a `Paint` to every layer and resolves it against the chosen ramp at render time — 4 skin × 8 hair × 8 top. A layer that resolves to a PNG **bypasses that entirely** (`pngLayers` draws the file as authored), so the first hair PNG to land silently deletes seven of the eight hair colours.
 
-The one constraint worth recording now: **every layer shares one canvas and one anchor**, so layering is compositing rather than per-item positioning. `attachment_anchors` in the registry already carries that idea.
+Keeping the traits *and* using PNGs is a file per shape **per colour**: 4 + 48 + 32 + 48 = **132 files** before a single wearable, multiplying four ways with every colour added later.
+
+So this batch cannot be briefed until one of two routes is chosen, and both are commissioner decisions:
+
+| | Reaches the approved sprite reference | Costs |
+|---|---|---|
+| **Raise the drawn fidelity in place** — better shapes in `lib/character/art/*.ts` | Closer, not all the way | No art, no pipeline. Ceilinged by hand-authoring |
+| **A tinted-mask pipeline** — 2-tone masks recoloured per ramp at render | Yes, and stays fully customisable | A new rendering path, a mask convention, an acceptance gate, and ~29 authored masks |
+
+`docs/ROOMS_BOUNDARY.md §14` carries the full account. The one constraint still worth recording from the old entry: **every layer shares one canvas and one anchor**, so layering is compositing rather than per-item positioning.
+
+---
+
+## Batch E — the manager's basement — **ready to generate**
+
+Three room shells, briefed in full at [`BATCH_E_BASEMENT_HANDOFF.md`](BATCH_E_BASEMENT_HANDOFF.md).
+
+| Slug | What it is | Canvas |
+|---|---|---|
+| `zone_room_shell_storeroom` | The basement as it is — block, concrete, one pendant lamp. **The default; generate first** | 960 × 1707 |
+| `zone_room_shell_rec_room` | The same room, panelled and carpeted | 960 × 1707 |
+| `zone_room_shell_cold_store` | The same room as a cleared-out walk-in | 960 × 1707 |
+
+Two things make this batch unlike the ones above it.
+
+**The geometry is fixed and the art is drawn to it.** `/rooms` already works — tested, gated, photographed at three widths — so the handoff briefs the shell *to the coordinates the code holds* rather than having them measured off the art afterwards. A shell whose shelf is fifteen units left of the shelf slot produces taps that land beside the thing tapped, and no gate can see it because both halves are individually correct.
+
+**Six places must be drawn empty**: the frame, the shelf plank, the desktop, the pennant rod, the noticeboard and the rug. A manager's own things are composited into them, and anything painted there is covered at runtime and reads as a bug.
+
+Each shell is independently useful — the code resolves per theme, so they can arrive in any order.
 
 ---
 

@@ -3641,6 +3641,7 @@ async function checkRoom(page: Page, width: number, state: string): Promise<void
       .sort(),
     items: document.querySelectorAll('[data-room-item]').length,
     theme: document.querySelector('[data-room-theme]')?.getAttribute('data-room-theme') ?? '',
+    shell: document.querySelector('[data-room-shell]')?.getAttribute('data-room-shell') ?? '',
     panels: document.querySelectorAll('[data-room-panel]').length,
     path: window.location.pathname,
   }));
@@ -3677,6 +3678,24 @@ async function checkRoom(page: Page, width: number, state: string): Promise<void
 
   if (expected.theme !== undefined && found.theme !== expected.theme) {
     fail('room', `${at} is drawn as ${found.theme || 'nothing'}, expected ${expected.theme}`);
+  }
+
+  /*
+   * **Which half of `manager-room.tsx` rendered.**
+   *
+   * The room is a painted shell whose art does not exist yet, so today every
+   * capture is the drawn stand-in. That is a fact a screenshot cannot carry: a
+   * reviewer looking at these files has no way to tell *"this is the room"* from
+   * *"this is what stands in for the room"*, and the moment a shell lands for one
+   * theme and not another, two of these pictures mean different things under the
+   * same naming.
+   *
+   * So it is read out of the DOM and reported. It is deliberately **not** pinned
+   * to `drawn`: the day a shell lands, this gate must go green on the better
+   * picture rather than fail for having got what it was waiting for.
+   */
+  if (found.shell !== 'art' && found.shell !== 'drawn') {
+    fail('room', `${at} declares no shell — expected data-room-shell="art" or "drawn"`);
   }
 
   if (expected.panel === true && found.panels === 0) {
