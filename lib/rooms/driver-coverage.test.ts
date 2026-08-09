@@ -123,3 +123,43 @@ describe('the visual driver and the basement agree', () => {
     expect(DRIVER).toMatch(/would change somebody else's room/);
   });
 });
+
+describe('the flag shuts the feature, not only the door', () => {
+  /*
+   * The two halves of the revert have to agree.
+   *
+   * `18 §6` treats a locked destination as a shut door rather than a missing
+   * page, and while `/rooms` was three lines of *"not yet"* that was the whole
+   * of it: the route rendered a chained door and there was nothing behind it to
+   * reach. There is now. A door with a chain on it and a **working room behind
+   * the address bar** is a state that looks shut and is not, which is the shape
+   * of defect this repository keeps catching.
+   *
+   * Read out of the source because the alternative is a running server: both
+   * routes are `force-dynamic` server components whose first act is
+   * `requireUser()`. The claim being defended is narrow and structural — *the
+   * flag is consulted before anything is rendered* — and a regex over the file
+   * answers exactly that.
+   */
+  const ROUTES = ['app/rooms/page.tsx', 'app/rooms/[userId]/page.tsx'] as const;
+
+  it('refuses both routes when `rooms` is shut', () => {
+    for (const route of ROUTES) {
+      const source = readFileSync(path.join(process.cwd(), route), 'utf8');
+      expect(source, `${route} never reads the flag`).toContain('featureFlags()');
+      expect(source, `${route} does not refuse on a shut flag`).toMatch(
+        /if \(!featureFlags\(\)\.rooms\) notFound\(\);/,
+      );
+    }
+  });
+
+  it('answers `notFound` rather than redirecting', () => {
+    // The same answer `requireAdmin()` gives: a shut feature is
+    // indistinguishable from a route that does not exist, so probing teaches
+    // nothing about what is coming.
+    for (const route of ROUTES) {
+      const source = readFileSync(path.join(process.cwd(), route), 'utf8');
+      expect(source).not.toMatch(/if \(!featureFlags\(\)\.rooms\) redirect/);
+    }
+  });
+});

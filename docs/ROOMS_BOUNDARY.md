@@ -229,10 +229,20 @@ probing addresses teaches nothing about who used to be here.
 **for everyone at once** — which is what a deploy-time flag does, and why this is
 one line rather than a migration.
 
-**Setting it back to `false` shuts the door completely**: the hall draws the
-chain, the stairs stop being an anchor, and the built room is simply unreachable.
-No data is touched and nothing is lost. That reversibility is what made opening
-it the right default rather than a commitment.
+**Setting it back to `false` shuts the feature, not merely the door.** The hall
+draws the chain, the stairs stop being an anchor, **and both routes answer
+`notFound()`**. No data is touched and nothing is lost. That reversibility is
+what made opening it the right default rather than a commitment.
+
+That last clause was not free and is worth stating why. `18 §6` treats a locked
+destination as a shut door rather than a missing page, and while `/rooms` was
+three lines of *"not yet"* that was the whole of it — the route rendered a
+chained door and there was nothing behind it to reach. There is now, and a door
+with a chain on it and a **working room behind the address bar** is a state that
+looks shut and is not. Both routes therefore consult the flag before rendering
+anything, and answer `notFound()` rather than redirecting — the same answer
+`requireAdmin()` gives, so a shut feature is indistinguishable from a route that
+does not exist.
 
 What `18 §6` also asks for is that the opening be **announced**. That is the
 commissioner's act, not a deploy's, and it has not been done.

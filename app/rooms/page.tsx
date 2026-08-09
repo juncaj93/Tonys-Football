@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { ManagerRoomScene } from '@/components/scene/manager-room';
 import { RoomDisplay, RoomDoor } from '@/components/scene/room-object';
@@ -11,6 +12,7 @@ import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
 import { characterFor } from '@/lib/character/service';
 import { getDb } from '@/lib/db';
+import { featureFlags } from '@/lib/flags';
 import { TYPE } from '@/lib/design/type';
 import { MANAGER_ROOM, roomObject, SLOTS } from '@/lib/rooms/objects';
 import { corridor, placeable, roomFor } from '@/lib/rooms/service';
@@ -52,6 +54,25 @@ export const dynamic = 'force-dynamic';
 
 export default async function RoomsPage() {
   const { user } = await requireUser();
+
+  /*
+   * The flag gates the **route**, not only the door.
+   *
+   * `18 §6` treats a locked destination as a shut door rather than a missing
+   * page, and while the basement was three lines of "not yet" that was the
+   * whole of it — `/rooms` rendered a chained door and there was nothing behind
+   * it to reach. There is now, and the two halves of the revert have to agree:
+   * setting `rooms` back to `false` in `lib/flags.ts` must shut the feature,
+   * not merely stop advertising it. A door with a chain on it and a working
+   * room behind the address bar is the shape of defect this repository keeps
+   * catching — a state that looks shut and is not.
+   *
+   * `notFound()` rather than a redirect, and the same answer `requireAdmin()`
+   * gives: a shut feature is indistinguishable from a route that does not
+   * exist, so probing teaches nothing about what is coming.
+   */
+  if (!featureFlags().rooms) notFound();
+
   const db = getDb();
 
   const [room, choices, character, doors] = await Promise.all([
@@ -144,7 +165,7 @@ export default async function RoomsPage() {
               * `03` grants a ring for a verified title and nothing else grants
               * one. Tapping it lists every title with its year — the wall hangs
               * a pennant for each, the panel carries the record, and that is the
-              * same division the parlor.s own banner rail makes.
+              * same division the parlor’s own banner rail makes.
               */}
             <RoomDisplay spec={roomObject('rings')} title="Championships" material="enamel">
               {room.rings.length === 0 ? (

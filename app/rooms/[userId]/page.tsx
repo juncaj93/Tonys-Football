@@ -10,6 +10,7 @@ import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
 import { characterFor } from '@/lib/character/service';
 import { getDb } from '@/lib/db';
+import { featureFlags } from '@/lib/flags';
 import { TYPE } from '@/lib/design/type';
 import {
   MANAGER_ROOM,
@@ -54,6 +55,10 @@ export default async function VisitRoomPage({
   params: Promise<{ userId: string }>;
 }) {
   const { user } = await requireUser();
+
+  // The flag gates the route, not only the door. See `app/rooms/page.tsx`.
+  if (!featureFlags().rooms) notFound();
+
   const { userId } = await params;
   const db = getDb();
 
