@@ -117,11 +117,44 @@ describe('the two shut doors', () => {
 });
 
 describe('feature flags', () => {
-  it('ships v1 with both destinations shut', () => {
+  it('ships with the rooms open and the underground shut', () => {
+    /*
+     * `rooms` was opened on 2026-08-09 when the basement was built
+     * (`docs/ROOMS_BOUNDARY.md`). `18 §6`: a door opens for everyone at once,
+     * which is what a deploy-time flag does.
+     *
+     * The casino is still Phase 10 and `/underground` is still not a route, so
+     * the curtain stays shut — and the whole locked-door mechanism stays
+     * exercised by it rather than becoming untested when the stairs opened.
+     */
     const flags = featureFlags({});
 
-    expect(flags.rooms).toBe(false);
+    expect(flags.rooms).toBe(true);
     expect(flags.underground).toBe(false);
+  });
+
+  it('shuts everything again for `none`, which is what a revert looks like', () => {
+    /*
+     * Shutting `rooms` is one line in `V1`. The state that produces was
+     * unreachable from any parameter the moment the default flipped, and it is
+     * the state where being wrong is least recoverable — so it is photographed.
+     */
+    const flags = featureFlags({ DEMO_FIXTURES: '1' }, 'none');
+
+    expect(flags).toEqual({
+      rooms: false,
+      underground: false,
+      roulette: false,
+      tonysLine: false,
+    });
+  });
+
+  it('will not shut anything in production either', () => {
+    // Symmetry with the opening override: neither direction is reachable from a
+    // URL in production, because what is open is a property of the deploy.
+    expect(featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'none')).toEqual(
+      featureFlags({}),
+    );
   });
 
   it('ships v1 with the market shut, because there is no season to run one on', () => {
@@ -171,24 +204,23 @@ describe('feature flags', () => {
       NODE_ENV: 'production',
       VERCEL_ENV: 'production',
       DEMO_FIXTURES: '1',
-      OPEN_FEATURES: 'rooms,underground',
+      OPEN_FEATURES: 'underground',
     });
 
-    expect(flags.rooms).toBe(false);
     expect(flags.underground).toBe(false);
   });
 
   it('refuses the override without the demo opt-in', () => {
-    const flags = featureFlags({ OPEN_FEATURES: 'rooms,underground' });
+    const flags = featureFlags({ OPEN_FEATURES: 'underground' });
 
-    expect(flags.rooms).toBe(false);
     expect(flags.underground).toBe(false);
   });
 
   it('opens one destination without opening the other', () => {
+    // From the shut floor, so this measures the override rather than the default.
     const flags = featureFlags({
       DEMO_FIXTURES: '1',
-      OPEN_FEATURES: 'rooms',
+      OPEN_FEATURES: 'none,rooms',
     });
 
     expect(flags.rooms).toBe(true);
@@ -211,8 +243,8 @@ describe('feature flags', () => {
       tonysLine: false,
     });
     // Repeated parameters arrive as an array, and a stale one must not throw.
-    expect(featureFlags(demo, ['rooms', 'basement'])).toEqual({
-      rooms: true,
+    expect(featureFlags(demo, ['none', 'basement'])).toEqual({
+      rooms: false,
       underground: false,
       roulette: false,
       tonysLine: false,
@@ -220,9 +252,8 @@ describe('feature flags', () => {
   });
 
   it('refuses the query parameter in production', () => {
-    const flags = featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'rooms,underground');
+    const flags = featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'underground');
 
-    expect(flags.rooms).toBe(false);
     expect(flags.underground).toBe(false);
   });
 
@@ -230,7 +261,7 @@ describe('feature flags', () => {
     // A stale value in an environment variable should not take a preview down.
     const flags = featureFlags({
       DEMO_FIXTURES: '1',
-      OPEN_FEATURES: 'basement, ,vending',
+      OPEN_FEATURES: 'none,basement, ,vending',
     });
 
     expect(flags).toEqual({

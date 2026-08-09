@@ -51,8 +51,26 @@ export const FEATURE_KEYS: readonly FeatureKey[] = [
  * `roulette` is shut permanently.
  */
 const V1: Readonly<Record<FeatureKey, boolean>> = {
-  // Basements are deferred to P6 / v1.1 (`16`).
-  rooms: false,
+  /*
+   * **Open**, 2026-08-09.
+   *
+   * `16 §3` deferred basements to v1.1 / Phase 6 on the grounds that *"the
+   * Showcase carries the social weight at launch"*. The commissioner reopened
+   * the scope and asked for the smallest strong version that makes the space
+   * meaningful; it is built (`docs/ROOMS_BOUNDARY.md`), so the door opens.
+   *
+   * `18 §6`: when a locked door opens it opens **for everyone at once**, which
+   * is what a deploy-time flag does and why this is one line rather than a
+   * migration. **Shutting it again is the same one line** — set this to `false`
+   * and the hall draws the chain, the stairs stop being an anchor, and the
+   * built room is simply unreachable. Nothing is lost and no data is touched,
+   * which is the property that made opening it the right default rather than a
+   * commitment.
+   *
+   * What `18 §6` also asks for is that the opening be *announced*. That is the
+   * commissioner's, not a deploy's, and it is recorded as such.
+   */
+  rooms: true,
   // The casino is P10 and is not in v1 (`16`).
   underground: false,
   // Never. `16`: "Roulette is never built. A reserved feature-flag key is the
@@ -122,7 +140,27 @@ export function featureFlags(
     .map((part) => part.trim())
     .filter((part) => part !== '');
 
-  const flags: Record<FeatureKey, boolean> = { ...V1 };
+  /*
+   * `?open=none` — everything shut, which is the state a **revert** produces.
+   *
+   * The override could only ever add, which was right while `rooms` and
+   * `underground` were both shut in V1: every state above the floor was
+   * reachable and the floor was the default. Opening `rooms` (2026-08-09)
+   * inverted that — the chained stairwell became the state no parameter could
+   * produce, and it is precisely the state Alex gets by setting `rooms` back to
+   * `false`.
+   *
+   * `BACK_HALL_BOUNDARY §5` already argues the general case from the other
+   * direction: *"the state nobody will see for a year… has to look right when
+   * they do."* A state nobody will see **unless something is reverted** has the
+   * same claim, and it is the one where being wrong is least recoverable.
+   *
+   * A sentinel rather than an empty value, because an empty `?open=` is
+   * indistinguishable from an absent one after trimming.
+   */
+  const flags: Record<FeatureKey, boolean> = requested.includes('none')
+    ? { rooms: false, underground: false, roulette: false, tonysLine: false }
+    : { ...V1 };
 
   for (const key of requested) {
     // `roulette` is deliberately unreachable, even here. It is not a feature

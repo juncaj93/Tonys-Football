@@ -2205,3 +2205,167 @@ export const weeklyRewards = pgTable(
 );
 
 export type WeeklyReward = typeof weeklyRewards.$inferSelect;
+
+/* -------------------------------------------------------------------------
+ * Manager rooms — the basement, and the one thing in the product that is
+ * furnished rather than earned
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The three rooms a manager can be given, at the wall-and-floor level.
+ *
+ * `16`'s P6 row asks for **3 themes**, which is itself a resolution: `02 §8`
+ * wanted "5–10" and `15 §9` wanted one, and `16 §A.4` records the contradiction
+ * as settled at three. The names are the shop's, not a taxonomy — a basement
+ * under a pizzeria is a storeroom, somebody eventually put a carpet in it, and
+ * the cold store is the room nobody wants and one manager will pick precisely
+ * because of that.
+ *
+ * **A theme is not earned, bought, or unlocked.** All three are available to
+ * every manager from the first visit. That is not a simplification: `16`
+ * removes achievements, levels, clout and prestige from this product, and a
+ * cosmetic gated behind anything is the same mechanism wearing a different
+ * word. It is also why there is no `unlocked_themes` table — there is nothing
+ * per-manager to record beyond which one is currently up.
+ */
+export const roomTheme = pgEnum('room_theme', ['storeroom', 'rec_room', 'cold_store']);
+
+/**
+ * Where a thing can be put. Curated slots, never coordinates.
+ *
+ * `06 §6.2` is explicit — *"placement is curated and slot-based. Do not
+ * implement unrestricted drag-and-drop furnishing"* — and `00 §11` gives the
+ * reason from the other side: *"no interaction dependent on hover, no complex
+ * free-form placement required for basement use."* This is a phone.
+ *
+ * Four, and each one is a different piece of furniture rather than a different
+ * position on the same one. `04 §10` names shelf slot(s), wall slot(s) and a
+ * special display slot; these are that list with the shelf holding two.
+ *
+ * The names are physical because the panel that opens on them says them out
+ * loud: *"on the shelf, left"* is a place in a room, and `slot_3` is a database
+ * column that leaked.
+ */
+export const roomSlot = pgEnum('room_slot', ['shelf_left', 'shelf_right', 'wall', 'bench']);
+
+/**
+ * One room per manager, forever.
+ *
+ * ## It hangs off `users`, and that is the whole reason it is a table
+ *
+ * `16 §5.1`: *"Permanent things (inventory, basement, rings) FK to `users.id`.
+ * Seasonal things (ledger, stakes) FK to `season_memberships.id`."* A room is
+ * the permanent kind — `14 §5` says basements persist across seasons and `00 §7`
+ * puts *"basement themes and displayed items"* in the preserve-permanently list
+ * beside collectibles and trophies. A manager who sits out a season still has
+ * their room, with their things still in it, when they come back.
+ *
+ * ## `04 §10` calls this `basements` and the product calls it Rooms
+ *
+ * `16 §A.4` renamed the destination — the nav item, the route and the door all
+ * say Rooms — while `04 §10`'s table name predates that rename. The table
+ * follows the product's word, because every other table in this schema does
+ * (`collectibles`, not `inventory`; `weekly_stakes`, not `props`). The fiction
+ * is unchanged: it is still a basement, and the room says so.
+ *
+ * ## Two columns `04 §10` names and this deliberately does not have
+ *
+ * **`equipped entrance animation`** — `00 §10` allows a first-visit
+ * introduction and requires every non-essential animation to be skippable. An
+ * *equipped* entrance animation is a cosmetic with an inventory behind it, and
+ * there is no such inventory in this product. Adding the column now would be a
+ * slot for a feature nobody has designed.
+ *
+ * **`configuration/version`** — there is no configuration to version. What a
+ * room contains is four rows in `room_placements`, each pointing at a
+ * collectible whose existence is already immutable, and the theme is one enum.
+ * A version column that nothing ever reads is a field that goes stale silently.
+ */
+export const rooms = pgTable(
+  'rooms',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    /**
+     * UNIQUE, so a manager cannot end up with two rooms.
+     *
+     * The room is created lazily on first visit rather than by a backfill, so
+     * the uniqueness is doing real work: two tabs opening `/rooms` at the same
+     * moment is an ordinary thing to happen and the second insert has to lose
+     * rather than mint a second basement. `ON CONFLICT DO NOTHING` plus this
+     * constraint is the whole mechanism — there is no `SELECT ... WHERE
+     * already_exists` anywhere in `lib/rooms/`, for the reason
+     * `lib/counter/grants.ts` states: that check is a race with a comfortable
+     * looking body.
+     */
+    userId: uuid('user_id')
+      .notNull()
+      .unique()
+      .references(() => users.id, { onDelete: 'restrict' }),
+
+    theme: roomTheme('theme').notNull().default('storeroom'),
+
+    ...timestamps,
+  },
+  (table) => [index('rooms_user_idx').on(table.userId)],
+);
+
+export type Room = typeof rooms.$inferSelect;
+
+/**
+ * What is in a slot. **Placement, never ownership.**
+ *
+ * `16`'s P6 exit criterion is three words long — *"Inventory ≠ placement"* — and
+ * this table is that sentence. A row here says *this collectible is currently
+ * standing on that shelf*. It says nothing about who owns it, when it was
+ * acquired, or whether it still exists; all of that stays in `collectibles`,
+ * which is append-only and undeletable.
+ *
+ * The consequence worth being explicit about: **taking something off a shelf
+ * deletes a row here and touches nothing else.** Placement is the one genuinely
+ * mutable thing this product has, and it is safe to be mutable precisely
+ * because it is not a record of anything that happened.
+ *
+ * ## Three constraints, and each one refuses a different lie
+ *
+ * - `UNIQUE (room_id, slot)` — one thing per place. Without it a slot holds two
+ *   objects and the room draws whichever the query returned first.
+ * - `UNIQUE (room_id, collectible_id)` — the same object is not in two places
+ *   at once. A manager holding one arcade token cannot have it on the shelf and
+ *   on the bench, which is a thing a room made of independent slots would
+ *   otherwise allow and which reads as a duplicate rather than as a choice.
+ * - **a trigger** — you may only display what you own. A foreign key can say
+ *   *this is a collectible*; it cannot say *this is yours*, and that gap is the
+ *   entire authorization rule for a room the league can walk into. Same
+ *   mechanism and same reasoning as `0006`'s Showcase trigger.
+ */
+export const roomPlacements = pgTable(
+  'room_placements',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    roomId: uuid('room_id')
+      .notNull()
+      .references(() => rooms.id, { onDelete: 'cascade' }),
+
+    slot: roomSlot('slot').notNull(),
+
+    /**
+     * RESTRICT, saying a second time what `collectibles_undeletable` already
+     * says: nothing displayed can be deleted out from under the room pointing
+     * at it.
+     */
+    collectibleId: uuid('collectible_id')
+      .notNull()
+      .references(() => collectibles.id, { onDelete: 'restrict' }),
+
+    placedAt: timestamp('placed_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique('room_placements_one_per_slot').on(table.roomId, table.slot),
+    unique('room_placements_one_place_per_item').on(table.roomId, table.collectibleId),
+    index('room_placements_room_idx').on(table.roomId),
+  ],
+);
+
+export type RoomPlacement = typeof roomPlacements.$inferSelect;

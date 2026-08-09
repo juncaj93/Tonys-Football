@@ -41,6 +41,32 @@ import {
 export const CHARACTER_SCALES = { row: 1, card: 2, customiser: 3, hero: 3 } as const;
 export type CharacterScale = keyof typeof CHARACTER_SCALES;
 
+/**
+ * How the drawing is sized.
+ *
+ * `fixed` is the rule above and the default: a whole multiple of the canvas, in
+ * CSS pixels, chosen by the caller from a list of four.
+ *
+ * `container` exists for **rooms**, where a character stands at a coordinate in
+ * a scene whose own size is a percentage of the viewport. The parlor shell is a
+ * 320-unit image drawn at whatever the phone is wide (`3.66×` at 390, per
+ * `docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md`), so a figure standing in it must
+ * scale with it or it changes size relative to the furniture between one phone
+ * and the next — which is worse than a fractional scale, because it is a
+ * *different picture* rather than a softer one.
+ *
+ * It costs nothing this file was protecting. The rule against fractional scales
+ * is about **resampling a raster**, and there is no raster here: the drawing is
+ * `<rect>`s in an SVG with `shapeRendering="crispEdges"`, which the browser
+ * rasterises directly at whatever size the box turns out to be. The comment on
+ * `imageRendering` below already anticipated this case in so many words — *"if a
+ * future container ever scales this, it scales without smoothing"*.
+ *
+ * A layer with real PNG art still draws as an `<img>` with `imageRendering:
+ * pixelated`, so when art lands it is the same trade the shell already makes.
+ */
+export type CharacterFit = 'fixed' | 'container';
+
 export { describeCharacter };
 
 /**
@@ -60,12 +86,15 @@ function pngLayers(composite: Composite): readonly (CompositeLayer & { path: str
 export function CharacterView({
   composite,
   scale = 'card',
+  fit = 'fixed',
   label,
   className = '',
   idle = false,
 }: {
   composite: Composite;
   scale?: CharacterScale;
+  /** Fixed pixel size from `scale`, or fill whatever box the caller provides. */
+  fit?: CharacterFit;
   /** Overrides the derived description. Use when context already says who this is. */
   label?: string;
   className?: string;
@@ -95,10 +124,12 @@ export function CharacterView({
       aria-label={label ?? describeCharacter(composite)}
       data-character-view=""
       data-character-scale={scale}
+      data-character-fit={fit}
       className={`relative shrink-0 ${idle ? 'character-idle' : ''} ${className}`}
       style={{
-        width: `${String(width * factor)}px`,
-        height: `${String(height * factor)}px`,
+        ...(fit === 'fixed'
+          ? { width: `${String(width * factor)}px`, height: `${String(height * factor)}px` }
+          : { width: '100%', height: '100%' }),
         // Belt and braces with `shapeRendering` below: if a future container ever
         // scales this, it scales without smoothing.
         imageRendering: 'pixelated',

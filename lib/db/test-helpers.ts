@@ -47,6 +47,11 @@ export async function resetDatabase(db: Database): Promise<void> {
       admin_audit_logs,
       auth_attempts,
       sessions,
+      -- Manager rooms. Listed before collectibles because a placement holds a
+      -- RESTRICT reference to one; the cascade would reach it either way, and
+      -- naming it is the rule this list's own header states.
+      room_placements,
+      rooms,
       collectibles,
       box_openings,
       loot_boxes,
