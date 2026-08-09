@@ -214,11 +214,21 @@ describe('RoomPanel', () => {
      * decision. Two panels a manager opens in sequence must land in the same
      * place.
      */
+    /*
+     * Colour is stripped; everything left is geometry.
+     *
+     * `on-paper` is on that list and is the one entry that is not obviously a
+     * colour from its name. It re-points the rarity ink variables at values
+     * mixed for a light ground (`globals.css`, Rarity) — it declares *which
+     * inks apply*, exactly as `text-*` does, and it moves nothing. It arrived on
+     * the paper material when the basement's slot panel became the first paper
+     * panel to print a rarity word, at 1.54:1 against cream.
+     */
     const geometry = (markup: string): string[] =>
       [...markup.matchAll(/class="([^"]*)"/g)]
         .map((m) => m[1] ?? '')
         .filter((c) => /fixed inset-0|max-w-|px-3\.5/.test(c))
-        .map((c) => c.replace(/border-\S+|bg-\S+|text-\S+/g, '').trim());
+        .map((c) => c.replace(/border-\S+|bg-\S+|text-\S+|\bon-paper\b/g, '').trim());
 
     expect(geometry(render({ material: 'paper' }))).toEqual(
       geometry(render({ material: 'enamel' })),

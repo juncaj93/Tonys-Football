@@ -11,13 +11,18 @@ corrections are in **H**.
 
 > ## V1 engineering: FUNCTIONALLY READY
 >
-> **Autonomous product development is stopped.** Every v1 system is built,
-> tested against a real Postgres, and photographed. What remains is five human
-> actions, and `docs/ACTIVATION.md` is the packet for them — written for a phone,
-> ordered, reversible, and the only document Alex needs.
+> Every v1 system is built, tested against a real Postgres, and photographed.
+> What remains is five human actions, and `docs/ACTIVATION.md` is the packet for
+> them — written for a phone, ordered, reversible, and the only document Alex
+> needs. **None of them moved on 2026-08-09** and none of them may be closed by
+> a session.
 >
-> Do not resume Category C polish because capacity exists. Deferred scope stays
-> deferred.
+> **Deferred world-building scope was reopened by the commissioner on
+> 2026-08-09.** Manager rooms are built and the door is open; every other
+> deferred area was reconciled and classified in **G0**, and the Underground has
+> a decision waiting in **G1**. That reopening is specific: it does not reopen
+> Category C polish, and it does not reopen anything G0 marks LATER or DO NOT
+> BUILD.
 
 Every item is in exactly one category:
 
@@ -342,11 +347,72 @@ pennant respectively — and none has new evidence.
 ## G — Deferred, do not execute
 
 `league_events` (commissioner ruling, 2026-08-06 — deferred, with the revisit
-condition written down) · the casino (P10) · manager basements (P6, v1.1) ·
-silent auction · seasonal events (P8) · draft night · Season Story · vending
-machine (P7) · the championship ring ceremony · roulette, never · Rooms and
-Underground content · real-money anything · achievements, levels, clout,
-prestige.
+condition written down) · the casino (P10) · ~~manager basements (P6, v1.1)~~
+**built and open, 2026-08-09 — see G0 below** · silent auction · seasonal events
+(P8) · draft night · Season Story · vending machine (P7) · the championship ring
+ceremony · roulette, never · Underground content · real-money anything ·
+achievements, levels, clout, prestige.
+
+### G0 · Reopened world-building scope, 2026-08-09 — reconciled and classified
+
+The commissioner reopened selected deferred world features for discovery and
+implementation. **Rooms was built and the door is open**; everything else was
+reconciled against what is actually in the repository and classified. The
+reasoning is here so nothing below is re-derived, and so nothing above is read as
+a blanket re-opening.
+
+| Area | | Why |
+|---|---|---|
+| **Rooms / basements** | **NOW — built** | Fully specified by `04 §10`, `06 §6.2`, `14 §5` and `16`'s P6 row; unblocked by data, unblocked by art, and the one thing that gives the 24-item catalog a second reason to exist. `docs/ROOMS_BOUNDARY.md` |
+| **Underground / casino** | **LATER — and it wants a decision, not a session** | See G1. Two commissioner-level sources disagree about what the games are, and no wager can settle before September |
+| **Silent auction** | **LATER** | `16` puts it in a **November** window, and it is a *spend-down* mechanism: it exists to give end-of-season tokens somewhere to go. There are no season tokens yet. Its inventory authority is also genuinely undecided — an auction of collectibles competes with the box for the same 24-item catalog the P3 simulation was just balanced around |
+| **Seasonal events** | **DO NOT BUILD** *(as an engine)* | The mission's own test — *"if a simple seasonal visual state can be expressed through existing architecture without a new abstraction, that is different"* — is already met. `16 §7.2`'s dressing resolver is built and the offseason dressing ships today. A generalized event engine is the speculative framework both the mission and `16 §4.1`'s deferral refuse |
+| **Season Story** | **LATER** | P7 thread detection over a season's results. There is no 2026 season. It is also the surface most likely to want the deferred `league_events` spine, so building it first would decide that question by accident |
+| **Vending machine** | **LATER — gated on an economy simulation** | It does have a distinct purpose (a **deterministic** purchase against the box's random one, which is the anti-frustration valve), so it is not the duplicate surface the mission warns about. But `16 §8`'s seventh range derives vending prices from box EV, and `docs/ECONOMY_SIMULATION.md §115` records that the simulation deliberately does not check them because the feature does not exist. Building it without extending the simulation would put a second token sink beside a box whose price was fixed at 200 four days ago |
+| **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
+| **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
+
+### G1 · The Underground — the decision that is actually wanted
+
+**Nothing was built and nothing should be until this is answered.** The
+reconciliation:
+
+- **`/underground` is deliberately not a route** (`18 §5`, `BACK_HALL_BOUNDARY
+  §0`). It is an inert curtained plate in the Back Hall answering *"Don't worry
+  about it."* — fixed copy, and the joke and the reveal. It shipped as a `<Link>`
+  once, prefetched on hover, 404 on every visit, caught only by the console gate.
+- **The approved games are blackjack and slots** (`03 §14`, `16 §3`, `CLAUDE.md`),
+  Phase 10, explicitly not in v1. Roulette is never built and its reserved flag
+  key is the entire required scaffolding.
+- **The reopening brief asks for the opposite**: *"avoid building slots,
+  roulette, blackjack clone, poker"* and *"prefer a small number of meaningful
+  league-native games."*
+
+That is a **material contradiction between two commissioner-level sources**, and
+`CLAUDE.md` requires it be reported rather than silently resolved.
+
+Underneath it there is also a hard fact: **there is nothing to wager on.** The
+three approved wagering families (`16 §9`) — Tony's Line, bounties, the
+chalkboard prediction — are **all built and all live in the Slice**, which is
+where `16 §9` puts them. Building a second wagering surface in the Underground
+would duplicate the one that exists. And Tony's Line already refuses to author
+itself twice over: `MIN_BASIS_TEAM_WEEKS = 12` returns `thin-basis` structurally,
+and the `tonysLine` flag is shut. Neither should be relaxed — the 2026 season has
+no games at all.
+
+**So the Underground has no honest content until football exists**, whatever the
+games turn out to be. What would be needed to open it:
+
+1. a ruling on whether the Phase 10 games stand (blackjack + slots) or are
+   replaced by league-native ones — and if replaced, **what they are**, because
+   `16 §9` already owns every league-native wager this product has;
+2. a season, or at least twelve team-weeks, for anything settled from football;
+3. an economy simulation for whatever wagering is added, on the same footing as
+   the box's price (`16 §8`).
+
+**Building it early costs the reveal.** An Underground that opens onto an empty
+room spends `18 §5`'s joke for nothing, and `18 §6` says a locked door opens for
+everyone at once as an announced event — so it can only be spent once.
 
 Twelve of twenty-four collectibles stay `placeholder_pizza_box` **by design** —
 that is the number `art/ASSET_PIPELINE.md §5` commits to at launch, not a gap.
@@ -432,11 +498,16 @@ source, local Postgres, hosted CI, hosted visual QA, or inference from a merge.
 That single observation is **not** the smoke test. D5 carries what it does and
 does not settle.
 
-### Autonomous development is stopped here
+### What is left, after the 2026-08-09 reopening
 
-The last justified verification slice is complete. Remaining items are D (human),
-F (monitored, restart conditions unmet) and G (deferred). Category C is empty of
-anything with clear value.
+Remaining items are **D** (human), **F** (monitored, restart conditions unmet)
+and **G** (deferred, now with G0's classification attached). Category C is empty
+of anything with clear value.
 
-Do not resume feature or polish work to fill capacity. Launch readiness is not a
-cleanup budget.
+The reopened scope produced exactly one buildable slice — **Rooms** — and it is
+built. Everything else in G0 is LATER or DO NOT BUILD **for a stated reason**,
+and every one of those reasons is either *there is no season yet* or *a
+commissioner decision is missing*. Neither is fixed by a session.
+
+Do not resume feature or polish work to fill capacity, and do not read G0's
+LATER as an invitation. Launch readiness is not a cleanup budget.

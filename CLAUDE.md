@@ -53,9 +53,11 @@ This is not a Sleeper replacement and should not become a generic fantasy dashbo
 
 **Removed from the product entirely:** real-money peer side bets · the prop-bet system (replaced by one weekly "Tony's Line" inside the Slice) · roulette · reward claiming · public guest mode · punishment mechanics that cost tokens or require chores · analytics vendors.
 
-**Deferred:** casino (P10) · manager basements (P6, v1.1) · silent auction · seasonal events (P8) · draft night · Season Story · vending machine (P7) · **the `league_events` spine (commissioner ruling, 2026-08-06 — deliberately deferred, not missing; see the invariant below and `docs/CHECKPOINT.md`)**.
+**Deferred:** casino (P10) · ~~manager basements (P6, v1.1)~~ **built and open, 2026-08-09** · silent auction · seasonal events (P8) · draft night · Season Story · vending machine (P7) · **the `league_events` spine (commissioner ruling, 2026-08-06 — deliberately deferred, not missing; see the invariant below and `docs/CHECKPOINT.md`)**.
 
-**In v1:** ~~the event spine~~ · the six-zone Dynamic Pizza Shop · Tonight at Tony's · the Tuesday Slice with Tony's Line, bounties, and the chalkboard prediction · token ledger and weekly rewards · one loot box and a 24-item catalog · wearables and championship rings · the public Showcase · the Timeline · the content engine · historical seasons · persistent login.
+**Reopened by commissioner ruling, 2026-08-09.** Selected deferred world features were reopened for discovery and implementation. **Rooms was the one buildable slice and it is built**; every other deferred area is reconciled and classified in `docs/OPEN_ITEMS.md` **G0**, and the Underground has a decision waiting in **G1**. The reopening does not lift any other deferral, and it does not reopen pre-launch polish.
+
+**In v1:** ~~the event spine~~ · the six-zone Dynamic Pizza Shop · Tonight at Tony's · the Tuesday Slice with Tony's Line, bounties, and the chalkboard prediction · token ledger and weekly rewards · one loot box and a 24-item catalog · wearables and championship rings · the public Showcase · the Timeline · the content engine · historical seasons · persistent login · **manager rooms**.
 
 **Architecture invariants:**
 
@@ -220,11 +222,24 @@ The conservation ruling is struck through rather than deleted because **the half
 
 `docs/CHARACTER_CUSTOMISATION_BOUNDARY.md` is the canonical account and `docs/OPEN_ITEMS.md` **A2** carries the closure. **Do not reopen this area** — the six traits, the 64 × 96 canvas, the twenty-nine layers, the account-derived defaults and the two regression guards are the accepted v1 implementation, and no new character artwork is required. More traits, earned wearables, trousers, face shapes, unlocks or any other cosmetic expansion need an explicit commissioner request first.
 
-**V1 engineering is FUNCTIONALLY READY, and autonomous product development is stopped.** Five human actions remain and `docs/ACTIVATION.md` is the packet for them — phone-first, ordered, reversible, with the real deadline for each: `CRON_SECRET` · the commissioner variable · the production demo-seat query · one line of Tony's dialogue · a production smoke test. **Do not resume Category C polish to fill capacity, and leave deferred scope deferred.**
+**Manager rooms — the basement, reopened and built.** `16 §3` deferred basements to v1.1 on the grounds that *"the Showcase carries the social weight at launch"*; the commissioner reopened the scope on 2026-08-09 and asked for the smallest strong version that makes the space meaningful. `16`'s own P6 row is the whole specification — **3 themes, curated slots, visiting, character in-room** — and all four are built.
+
+- **Down the stairs is *your* room, not a lobby.** `18 §7` puts Rooms at two taps and says nothing is deeper; a corridor at the bottom of the stairs would put a manager's own room three taps away and make the first thing they meet a list of names. Visiting is *one tap inside Rooms*, which is exactly the allowance `18 §7` already grants the Counter. `docs/ROOMS_BOUNDARY.md §2` records the reconciliation rather than resolving it silently.
+- **Eight objects**: one Door out, four places to put things, the person standing in it, the door to the corridor, and a **championship rail that is derived and not a slot**. The shelf holds what you chose; the rail holds what you won, and `place()` refuses a ring. The rail is drawn **empty** for the eight managers who have won nothing, because a rail that appeared the day you won would take the meaning out of the day you won.
+- **Inventory ≠ placement**, which is P6's exit criterion and one database rule per lie: one thing per place, one place per thing, and a **trigger** — not a foreign key — saying you may only display what you own. Emptying a room touches the collection not at all, and a test asserts exactly that.
+- **Nothing is earned, priced or scored.** All three themes are free from the first visit, no token moves anywhere in the feature, and the corridor's *"two things out"* can fall. `04 §10`'s category compatibility is **deliberately not implemented** — the shipped catalog has no category axis, and inventing one would cost a manager choices for a rule nobody can see.
+- **No art was required and none is requested.** The room is flat rectangles drawn from the same numbers the hit regions use — the Back Hall's approved placeholder architecture. Two things use real approved art: the twelve Batch B collectibles at 1:1 in the slots, and **`object_champion_banner`** on the rail, the same pennant the parlor hangs.
+- **The door is open** (`lib/flags.ts`, one line), and **shutting it again is the same one line** with nothing lost. `18 §6`'s *announcement* is the commissioner's and has not been made. The shut hall stays photographed via a new `?open=none` sentinel, because it is now the state a revert produces.
+
+Two defects fell out, both found by gates rather than by reading: the driver's own filler **moved one item four times** instead of filling four places, and `RoomPanel`'s paper material had never carried `on-paper`, so the first rarity word ever printed on it measured **1.54:1** against cream — the same defect the Collection shipped, on a second surface, caught by the same gate.
+
+`docs/ROOMS_BOUNDARY.md` is the canonical account.
+
+**V1 engineering is FUNCTIONALLY READY.** Five human actions remain and `docs/ACTIVATION.md` is the packet for them — phone-first, ordered, reversible, with the real deadline for each: `CRON_SECRET` · the commissioner variable · the production demo-seat query · one line of Tony's dialogue · a production smoke test. **None of them moved.** Do not resume Category C polish to fill capacity, and leave deferred scope deferred except where `docs/OPEN_ITEMS.md` **G0** says otherwise.
 
 **`docs/OPEN_ITEMS.md` is the canonical open-items ledger** — everything still open, categorised, reconciled against `main` rather than against the paragraphs claiming it, with what has and has not been *observed in production* stated separately. Read it before picking up work.
 
-**Next assignment:** none autonomous. `docs/ACTIVATION.md` is Alex's. `docs/CHECKPOINT.md` remains the narrative record of how the product got here.
+**Next assignment:** none autonomous. `docs/ACTIVATION.md` is Alex's, and so is the Underground decision in `docs/OPEN_ITEMS.md` **G1** — two commissioner-level sources disagree about what the casino's games are, and no wager can settle before September either way. `docs/CHECKPOINT.md` remains the narrative record of how the product got here.
 
 **Previously:** the Back Hall as a room (visual debt 5) — one compact pixel-art scene with two environmental choices, not the three stacked panels `18 §5` forbids. Placeholder architecture is approved and M3 has shown what it looks like: a drawn stand-in at the right size, as geometry data, rather than a sign. `docs/BACK_HALL_BOUNDARY.md` carries the route contracts, the flag-based state boundary, the five asset slots and the five demo states. Stats Intelligence (#26) and M3 (#24) are both shipped.
 

@@ -120,6 +120,13 @@
       "when": 1786100200000,
       "tag": "0016_character_traits",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1786100300000,
+      "tag": "0017_manager_rooms",
+      "breakpoints": true
     }
   ]
 }

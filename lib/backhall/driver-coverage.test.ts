@@ -47,8 +47,18 @@ describe('the visual driver and the back hall agree', () => {
      * When the casino lands in P10 it brings its route, and the state becomes
      * photographable in the same change. Until then a screenshot of it would be
      * a screenshot of a 404.
+     *
+     * ## The pair inverted when the basement shipped, and the count did not
+     *
+     * `back-hall-rooms-open` is gone and `back-hall-shut` replaces it.
+     * `rooms` opened on 2026-08-09, so the *default* hall is now the one with
+     * the stairs open — which is what `back-hall` photographs — and the state
+     * needing a parameter is the one a **revert** produces. Same two flag
+     * combinations, opposite defaults, and the shut hall is still photographed
+     * for the reason it always was: nobody will look at it until the day
+     * somebody needs it.
      */
-    expect([...driverBackHallStates()].sort()).toEqual(['back-hall', 'back-hall-rooms-open']);
+    expect([...driverBackHallStates()].sort()).toEqual(['back-hall', 'back-hall-shut']);
   });
 
   it('declares a case for each of them', () => {

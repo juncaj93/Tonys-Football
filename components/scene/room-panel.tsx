@@ -57,7 +57,23 @@ export type PanelMaterial = 'paper' | 'enamel';
 
 const MATERIAL: Record<PanelMaterial, { readonly panel: string; readonly heading: string; readonly rule: string }> = {
   paper: {
-    panel: 'border-wood-dark bg-paper-mid text-ink-900',
+    /*
+     * `on-paper` re-points the rarity slots at inks mixed for a light ground
+     * (`globals.css`, Rarity), so a `.rarity-*` anywhere inside this panel
+     * inherits them.
+     *
+     * **It was missing, and the visual gate found it the first time a paper
+     * panel ever printed a rarity word** — the basement's slot panel, at
+     * `common`, **1.54:1** against cream. `PixelPanel`'s own `paper` tone has
+     * carried `on-paper` since the Collection shipped an invisible LEGENDARY
+     * row; this panel was written a milestone later and did not, and nothing
+     * noticed because no caller had put a tier in one.
+     *
+     * That is the same defect twice, on two surfaces, found by the same gate —
+     * which is the argument for the gate running everywhere rather than on the
+     * state it was written for.
+     */
+    panel: 'on-paper border-wood-dark bg-paper-mid text-ink-900',
     heading: 'text-ink-700',
     rule: 'bg-amber-mid/45',
   },

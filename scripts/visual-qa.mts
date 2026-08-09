@@ -224,13 +224,44 @@ type StateName =
    * Both states build their own precondition now, so both mean one thing.
    */
   | 'profile-devices'
-  | 'rooms'
+  /*
+   * The basement, and the eight states it needs to mean one thing each.
+   *
+   * `rooms` used to be one state photographing a chained door. The room behind
+   * it is now built, and every one of these **builds its own precondition** —
+   * the theme is set and the four places are emptied or filled through the
+   * product's own controls before the shutter opens.
+   *
+   * That is not decoration. The three widths share a database, so a state that
+   * merely navigated would photograph whatever the previous width left behind:
+   * `room` empty at 390 and furnished at 375, under one name. That is exactly
+   * the defect `profile` shipped and `C2` records, and it is cheaper to refuse
+   * it here than to discover it in a screenshot nobody compares.
+   */
+  | 'room'
+  | 'room-furnished'
+  | 'room-slot'
+  | 'room-corridor'
+  | 'room-rec'
+  | 'room-cold'
+  | 'room-visited'
+  | 'room-empty'
   | 'office'
   | 'prediction'
   | 'receipt'
   | 'counter'
   | 'back-hall'
-  | 'back-hall-rooms-open'
+  /*
+   * The hall with everything shut — **what a revert produces**, not what a
+   * manager sees.
+   *
+   * Until the basement shipped this was the default and needed no state of its
+   * own; `back-hall-rooms-open` was the special case. Opening `rooms` inverted
+   * that, and `BACK_HALL_BOUNDARY §5`'s reasoning survives the inversion
+   * unchanged: the state nobody will see unless something is reverted is
+   * precisely the one where being wrong is least recoverable.
+   */
+  | 'back-hall-shut'
   | 'keyboard-focus'
   | 'six-banners'
   | 'tray-owned-box'
@@ -392,6 +423,31 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'demo-rings-none': 'rings-none',
   'demo-rings-one': 'rings-one',
   'demo-rings-many': 'rings-many',
+  /*
+   * A basement belonging to a manager with nothing to put in it.
+   *
+   * Borrows `collection-empty` rather than adding a demo state of its own,
+   * because the room needs exactly what that seat is — a real manager who has
+   * never pulled anything — and nothing arranged beyond it. It is the state a
+   * manager meets on their first trip downstairs and the only one that can
+   * prove the four empty places say something.
+   */
+  'room-empty': 'collection-empty',
+  /*
+   * The six states of a room somebody actually keeps things in, plus the visit.
+   *
+   * All on one seat, because `demoSleeperId` keys a seat by state key and
+   * generation — so `collection-full` is the *same* manager each time and each
+   * state rebuilds the room from whatever the last one left it as. That is what
+   * makes them fixed points rather than an ordered sequence.
+   */
+  room: 'collection-full',
+  'room-furnished': 'collection-full',
+  'room-slot': 'collection-full',
+  'room-corridor': 'collection-full',
+  'room-rec': 'collection-full',
+  'room-cold': 'collection-full',
+  'room-visited': 'collection-full',
   /*
    * M3's three manager-backed states.
    *
@@ -658,6 +714,119 @@ async function ensureClaimedManager(page: Page): Promise<void> {
  */
 const SIGNED_OUT = new Set<StateName>(['door', 'door-claim', 'door-return']);
 
+/* -------------------------------------------------------------------------
+ * The basement
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Open a room object and wait for its panel.
+ *
+ * The hit regions are transparent and sit under nothing, but Playwright's
+ * actionability check still measures them against a scrim that may be mid-fade,
+ * so `force` skips a wait that has no bearing on whether the tap lands. Same
+ * reasoning the parlor's own states use.
+ */
+async function openRoomObject(page: Page, id: string): Promise<void> {
+  await page.locator(`[data-room-object="${id}"]`).first().click({ force: true });
+  await page.locator('[data-room-panel]').first().waitFor({ timeout: 15_000 });
+  // Past the panel's rise, so the capture is not caught mid-animation.
+  await page.waitForTimeout(500);
+}
+
+/** Take whatever panel is up back down, and wait until nothing is. */
+async function closeRoomPanel(page: Page): Promise<void> {
+  if ((await page.locator('[data-room-panel]').count()) === 0) return;
+  await page.keyboard.press('Escape');
+  await page.locator('[data-room-panel]').first().waitFor({ state: 'detached', timeout: 15_000 });
+}
+
+/**
+ * Put the room into a known state, through the room's own controls.
+ *
+ * ## Why the driver does this rather than the demo CLI
+ *
+ * `MANDATE §8` prefers a state reached by **driving the real system**, and this
+ * is the only place in the sweep that presses `placeInSlotAction`,
+ * `clearSlotAction` and `setThemeAction`. A screenshot of a room proves the room
+ * renders; tapping the controls proves the room *works* — which is the exact
+ * distinction `character-saved` was added for after every Save had been
+ * returning a 500 behind three green gates.
+ *
+ * ## Why it is unconditional
+ *
+ * The three widths share one database and run the full state list each, so a
+ * state that only navigated would photograph whatever the previous width left
+ * behind. `fill: false` empties every place and `fill: true` fills every place,
+ * from whatever the room happened to be in — so both are fixed points and both
+ * mean one thing at all three widths.
+ */
+async function furnishRoom(
+  page: Page,
+  options: { fill: boolean; theme: string },
+): Promise<void> {
+  await page.goto(`${BASE}/rooms`, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(300);
+
+  for (const slot of ROOM_SLOTS) {
+    await openRoomObject(page, slot);
+
+    const here = page.getByRole('button', { name: /^Take .* down$/ });
+    /*
+     * **`Put`, never `Move`**, and that distinction was a real defect in this
+     * helper rather than a nicety.
+     *
+     * The picker lists everything the manager holds, labelled by what tapping it
+     * would do: `Put X here` for something that is nowhere, `Move X here, from
+     * …` for something already on a shelf. Matching both took the first row
+     * every time — which after the first slot was filled was *the item already
+     * in it* — so each place stole the last one's contents and the room ended
+     * with exactly one thing in it, four times over. The gate caught it, which
+     * is the whole reason the gate counts rather than trusting the drive.
+     */
+    const put = page.getByRole('button', { name: /^Put .* here$/ });
+
+    if (options.fill) {
+      // Already holding something? Leave it — refilling would only reshuffle
+      // which item is where, and the state has to be stable across widths.
+      if ((await here.count()) === 0 && (await put.count()) > 0) {
+        await put.first().click();
+        await page.waitForTimeout(900);
+      }
+    } else if ((await here.count()) > 0) {
+      await here.first().click();
+      await page.waitForTimeout(900);
+    }
+
+    await closeRoomPanel(page);
+  }
+
+  // The theme, from the panel that carries the room's own decisions.
+  await openRoomObject(page, 'manager');
+  const choice = page.getByRole('button', { name: new RegExp(options.theme, 'i') });
+  if ((await choice.getAttribute('aria-pressed')) !== 'true') {
+    await choice.click();
+    await page.waitForTimeout(900);
+  }
+  await closeRoomPanel(page);
+
+  /*
+   * Give the focus ring back.
+   *
+   * `RoomPanel` returns focus to the object that opened it, which is correct
+   * behaviour and is what `keyboard-focus` exists to photograph. Here it is an
+   * artefact of how the state was built: every room screenshot came out with a
+   * yellow rectangle round the manager because the theme picker was the last
+   * thing closed. A state must photograph the room, not the driver's last tap.
+   */
+  await page.evaluate(() => {
+    (document.activeElement as HTMLElement | null)?.blur();
+  });
+  await page.waitForTimeout(150);
+}
+
+/** The four places, in the order `lib/rooms/objects.ts` declares them. */
+const ROOM_SLOTS = ['shelf_left', 'shelf_right', 'wall', 'bench'] as const;
+
 async function reach(page: Page, state: StateName): Promise<void> {
   switch (state) {
     /*
@@ -830,9 +999,92 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * requires a session, so this is the page as any manager who guesses the URL
      * would find it. `back-hall-rooms-open` already photographs the doorway.
      */
-    case 'rooms':
-      await page.goto(`${BASE}/rooms`, { waitUntil: 'networkidle' });
+    /* ---- The basement ------------------------------------------------- */
+    /*
+     * Every room state sets the room up **through the product's own controls**
+     * before it photographs it, so the same name means the same screen at all
+     * three widths. See the note on `StateName`.
+     *
+     * It is also the only place in this sweep that exercises
+     * `placeInSlotAction`, `clearSlotAction` and `setThemeAction`. A screenshot
+     * of a room is not a test of the room; pressing the buttons is — the same
+     * argument `character-saved` was added for.
+     */
+    case 'room':
+      await furnishRoom(page, { fill: false, theme: 'The storeroom' });
       await page.waitForTimeout(400);
+      return;
+
+    case 'room-furnished':
+      await furnishRoom(page, { fill: true, theme: 'The storeroom' });
+      await page.waitForTimeout(400);
+      return;
+
+    /* The picker, on a place that already has something on it. */
+    case 'room-slot':
+      await furnishRoom(page, { fill: true, theme: 'The storeroom' });
+      await openRoomObject(page, 'shelf_left');
+      return;
+
+    case 'room-corridor':
+      await furnishRoom(page, { fill: true, theme: 'The storeroom' });
+      await openRoomObject(page, 'corridor');
+      return;
+
+    case 'room-rec':
+      await furnishRoom(page, { fill: true, theme: 'The rec room' });
+      await page.waitForTimeout(400);
+      return;
+
+    case 'room-cold':
+      await furnishRoom(page, { fill: true, theme: 'The cold store' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * Somebody else's room, reached the way a manager reaches it: through the
+     * corridor door, by name. Navigating to a `/rooms/<uuid>` literal would
+     * photograph the same page and prove nothing about how anybody gets there.
+     */
+    case 'room-visited': {
+      await furnishRoom(page, { fill: true, theme: 'The storeroom' });
+      await openRoomObject(page, 'corridor');
+
+      /*
+       * A champion's door, when the corridor has one.
+       *
+       * A visited room is always a **real league manager's**, because demo
+       * seats are excluded from `activeLeagueManagers` and therefore from
+       * `visitable()` — so nobody's room down here has anything on a shelf
+       * yet. What a real manager's room *can* have is a championship, and the
+       * seed grants two from verified titles. Preferring that door means this
+       * state photographs the rail with something on it rather than four empty
+       * places and nothing else.
+       *
+       * Falls back to the first door rather than failing: a database with no
+       * champion is a legitimate state and not this gate's business.
+       */
+      const doors = page.locator('[data-room-panel] a[href^="/rooms/"]');
+      const champion = doors.filter({ hasText: /title/i });
+      const target = (await champion.count()) > 0 ? champion.first() : doors.first();
+
+      await target.click();
+      await page.waitForURL(/\/rooms\/[0-9a-f-]{36}/, { timeout: 20_000 });
+      await page.waitForTimeout(700);
+      return;
+    }
+
+    /*
+     * A manager who owns nothing at all.
+     *
+     * Demo-backed, because every seeded manager owns something by the time the
+     * driver gets here — the same reason `demo-collection-empty` exists. It is
+     * the state a manager meets on their very first trip downstairs, and the one
+     * that has to prove the four empty places say something rather than nothing.
+     */
+    case 'room-empty':
+      await page.goto(`${BASE}/rooms`, { waitUntil: 'networkidle' });
+      await openRoomObject(page, 'bench');
       return;
 
     /*
@@ -977,7 +1229,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForTimeout(1500);
       return;
     /*
-     * The hall with something open beyond it.
+     * The hall with everything shut — **the state a revert produces.**
      *
      * `?open=` is resolved by the **server** (`lib/flags.ts`), behind the demo
      * system's own two guards — so this needs `DEMO_FIXTURES=1` on the server
@@ -987,12 +1239,15 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * `checkBackHall` below fails a state whose doors are not in the state its
      * name claims.
      *
-     * Both of these are states no real manager will see for a year. They are
-     * photographed now precisely because that is true — a room nobody looks at
-     * until the day it ships is a room that ships unreviewed.
+     * The override could only ever *add* until the basement shipped, because
+     * both destinations were shut by default and every state above the floor
+     * was reachable. Opening `rooms` inverted that, and `none` is the sentinel
+     * that keeps the floor photographable. `BACK_HALL_BOUNDARY §5`: a room
+     * nobody looks at until the day it ships is a room that ships unreviewed —
+     * and that applies with more force to the one a revert produces.
      */
-    case 'back-hall-rooms-open':
-      await page.goto(`${BASE}/back-hall?open=rooms`, { waitUntil: 'networkidle' });
+    case 'back-hall-shut':
+      await page.goto(`${BASE}/back-hall?open=none`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1200);
       return;
 
@@ -1611,12 +1866,11 @@ const ALL_STATES: readonly StateName[] = [
   // Directly after, and that order is load-bearing: this one leaves a second
   // session behind, and `profile` is the state that must not have one.
   'profile-devices',
-  'rooms',
   'prediction',
   'receipt',
   'counter',
   'back-hall',
-  'back-hall-rooms-open',
+  'back-hall-shut',
   'keyboard-focus',
   'six-banners',
   'tray-owned-box',
@@ -1641,6 +1895,32 @@ const ALL_STATES: readonly StateName[] = [
   'demo-rings-none',
   'demo-rings-one',
   'demo-rings-many',
+  /*
+   * The basement, and all eight of its states are demo-backed.
+   *
+   * Not a convenience: **Alex owns nothing that can be put on a shelf.** Every
+   * seeded manager holds two unopened boxes and no collectibles, so a
+   * manager-backed `room-furnished` filled zero places and the gate said so on
+   * the first run. Opening Alex's boxes to fix it would have consumed the
+   * fixture `tray-owned-box` depends on — a state paying for another state's
+   * screenshot.
+   *
+   * `collection-full` is a real manager with a real collection, so the four
+   * places have something to hold and every capture drives the real actions.
+   *
+   * `room` is first because it is the one that **empties** the four places, so
+   * every state after it starts from a known position rather than from whatever
+   * the previous state left.
+   */
+  'room',
+  'room-furnished',
+  'room-slot',
+  'room-corridor',
+  'room-rec',
+  'room-cold',
+  'room-visited',
+  // And the first trip downstairs, for somebody who owns nothing at all.
+  'room-empty',
   // M3. Manager-backed first (each signs in at its own seat), then the geometry
   // fixtures, which need only the demo guard and no particular manager.
   'character-empty',
@@ -3003,8 +3283,12 @@ const PARTITIONED = new Set(['banners']);
  * rather than assumed from the URL.
  */
 const BACK_HALL_STATES: Readonly<Record<string, { rooms: boolean; underground: boolean }>> = {
-  'back-hall': { rooms: false, underground: false },
-  'back-hall-rooms-open': { rooms: true, underground: false },
+  // What every manager sees since the basement shipped: the stairs open, the
+  // curtain shut, and the whole locked-door mechanism still exercised by the
+  // curtain rather than becoming untested when the stairs opened.
+  'back-hall': { rooms: true, underground: false },
+  // What setting `rooms` back to `false` produces.
+  'back-hall-shut': { rooms: false, underground: false },
 };
 
 /**
@@ -3310,6 +3594,112 @@ async function checkBoard(page: Page, width: number, state: string): Promise<voi
   }
   if (/\bundefined\b|\bNaN\b|\bnull\b/.test(text)) {
     fail('board', `${at} an unset value reached the page`);
+  }
+}
+
+/**
+ * What each basement state claims to be, checked against what rendered.
+ *
+ * ## Why this is not "the driver navigated, so it must be right"
+ *
+ * Every room state builds its own precondition by pressing the room's own
+ * controls, and a control that silently did nothing would leave the page
+ * looking plausible and the screenshot filed under a name claiming otherwise.
+ * That is the false green nine `reveal-*` states shipped and `checkBoard` was
+ * written against. So the count of things on show, the theme actually rendered
+ * and the presence of the four places are read **out of the DOM**.
+ *
+ * `filled` is a count rather than a list because which item lands where depends
+ * on what the seat happens to own, and that is not a property this gate should
+ * pin — it would fail on a rebalanced reward table for no reason.
+ */
+const ROOM_STATES: Readonly<
+  Record<string, { filled: number; theme?: string; panel?: boolean; visiting?: boolean }>
+> = {
+  room: { filled: 0, theme: 'storeroom' },
+  'room-furnished': { filled: 4, theme: 'storeroom' },
+  'room-slot': { filled: 4, theme: 'storeroom', panel: true },
+  'room-corridor': { filled: 4, theme: 'storeroom', panel: true },
+  'room-rec': { filled: 4, theme: 'rec_room' },
+  'room-cold': { filled: 4, theme: 'cold_store' },
+  // A visited room is somebody else's, so nothing is pinned about its contents.
+  'room-visited': { filled: -1, visiting: true },
+  // A manager who owns nothing. The four places must still be there and empty.
+  'room-empty': { filled: 0 },
+};
+
+async function checkRoom(page: Page, width: number, state: string): Promise<void> {
+  const expected = ROOM_STATES[state];
+  if (expected === undefined) return;
+
+  const at = `@${String(width)} ${state}`;
+
+  const found = await page.evaluate(() => ({
+    objects: [...document.querySelectorAll('[data-room-object]')]
+      .filter((el) => el.getBoundingClientRect().width > 0)
+      .map((el) => el.getAttribute('data-room-object') ?? '')
+      .sort(),
+    items: document.querySelectorAll('[data-room-item]').length,
+    theme: document.querySelector('[data-room-theme]')?.getAttribute('data-room-theme') ?? '',
+    panels: document.querySelectorAll('[data-room-panel]').length,
+    path: window.location.pathname,
+  }));
+
+  /*
+   * The map, on every room state.
+   *
+   * Eight objects, the same eight, whether the room is yours or somebody
+   * else's. A visited room that quietly dropped an object — or gained one —
+   * would be a different room wearing the same geometry, and the whole claim of
+   * `/rooms/<manager>` is that it is the *same* room with nothing that writes.
+   */
+  const wanted = ['bench', 'corridor', 'manager', 'rings', 'shelf_left', 'shelf_right', 'stairs', 'wall'];
+  if (found.objects.join(',') !== wanted.join(',')) {
+    fail('object-map', `${at} the basement is ${found.objects.join(', ') || 'empty'}, expected ${wanted.join(', ')}`);
+    return;
+  }
+
+  if (expected.visiting === true) {
+    if (!/^\/rooms\/[0-9a-f-]{36}$/.test(found.path)) {
+      fail('room', `${at} is on ${found.path}, expected somebody else's room`);
+    }
+  } else if (found.path !== '/rooms') {
+    fail('room', `${at} is on ${found.path}, expected /rooms`);
+  }
+
+  if (expected.filled >= 0 && found.items !== expected.filled) {
+    fail(
+      'room',
+      `${at} has ${String(found.items)} thing(s) on show, expected ${String(expected.filled)} — ` +
+        'the state builds this by pressing the room\'s own controls, so a mismatch means a control did nothing',
+    );
+  }
+
+  if (expected.theme !== undefined && found.theme !== expected.theme) {
+    fail('room', `${at} is drawn as ${found.theme || 'nothing'}, expected ${expected.theme}`);
+  }
+
+  if (expected.panel === true && found.panels === 0) {
+    fail('room', `${at} was meant to have a panel up and has none`);
+  }
+
+  /*
+   * **A visitor has nothing that writes.**
+   *
+   * Read from the rendered page rather than trusted to the absence of an import:
+   * `app/actions/rooms.ts` takes no manager id, so a visitor cannot change
+   * anybody's room — and the way that guarantee would be lost is a control
+   * appearing on this page, not an action gaining a parameter.
+   */
+  if (expected.visiting === true) {
+    const writable = await page.evaluate(() =>
+      [...document.querySelectorAll('[data-room-panel] button')].some((el) =>
+        /put .* here|take .* down|move .* here|the (storeroom|rec room|cold store)/i.test(
+          el.getAttribute('aria-label') ?? el.textContent ?? '',
+        ),
+      ),
+    );
+    if (writable) fail('room', `${at} offers a control that would change somebody else's room`);
   }
 }
 
@@ -4450,6 +4840,16 @@ async function run(): Promise<void> {
             await checkTargets(page, width);
             await checkObjectMap(page, width);
             await checkOnlyTheTrayGlows(page, width);
+          }
+
+          /*
+           * The basement's own map, and whether the room matches the state's
+           * name. The targets are judged on the two states where every object
+           * is simultaneously live and nothing is over them.
+           */
+          if (state.startsWith('room')) {
+            await checkRoom(page, width, state);
+            if (state === 'room' || state === 'room-furnished') await checkTargets(page, width);
           }
 
           // The back hall's own map, and whether the doors match the state's name.
