@@ -5,7 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 
 import { saveCharacterAction } from "@/app/actions/character";
 import { PixelPanel } from "@/components/scene/panel";
-import { COLOUR_TRAITS, STYLE_TRAITS, optionName } from "@/lib/character/catalog";
+import { COLOUR_TRAITS, STYLE_TRAITS } from "@/lib/character/catalog";
 import {
   composeCharacter,
   type CharacterConfiguration,
@@ -508,12 +508,4 @@ function WardrobeOptions({
       ))}
     </div>
   );
-}
-
-/** What the open tab is currently set to, in words. Exported for the tests. */
-export function currentOptionName(
-  configuration: CharacterConfiguration,
-  trait: BaseTrait,
-): string | null {
-  return optionName(trait, configuration[trait]);
 }
