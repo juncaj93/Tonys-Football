@@ -277,6 +277,17 @@ Also just notice:
 **If something looks wrong, a screenshot and one sentence is enough.** Do not try
 to diagnose it.
 
+### Already done, and it does not tick this box
+
+On 2026-08-09 you opened the live site on your iPhone, went into the character
+editor, changed something and saved it, and it worked — which confirmed the fix
+for the server-side exception that used to happen there (`docs/OPEN_ITEMS.md`
+**A2**).
+
+That is real production evidence and it is recorded as such. It is **not** this
+step: character customisation is not one of the eleven above, and the eleven are
+what this step is. The list is unchanged.
+
 ---
 
 ## What is deliberately not on this list
