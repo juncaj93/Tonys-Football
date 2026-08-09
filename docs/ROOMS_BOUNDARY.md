@@ -88,13 +88,22 @@ tapping it. Eight, and most of the room is scenery permanently.
 
 | Object | Kind | What it is |
 |---|---|---|
-| `stairs` | **Door** → `/back-hall` | The way out. The only Door in the room |
+| `stairs` | **Door** → `/back-hall` | The wooden flight in its framed opening — the room's largest feature, and how you got in |
 | `shelf_left` · `shelf_right` | Display | Two places on one plank |
-| `wall` | Display | A nail |
-| `bench` | Display | The workbench — `04 §10`'s "special display slot" |
-| `rings` | Display | The championship rail. **Derived, not a slot** |
-| `manager` | Display | The person standing in it |
-| `corridor` | Display | The door to the other nine rooms |
+| `wall` | Display | The empty frame on the back wall |
+| `bench` | Display | The desk — `04 §10`'s "special display slot" |
+| `rings` | Display | The pennant rail. **Derived, not a slot** |
+| `manager` | Display | The person standing on the rug |
+| `corridor` | Display | The cork noticeboard, with the league pinned to it |
+
+**Three of those metaphors changed on 2026-08-09**, when the room gained an
+approved reference, and each change is the same kind of correction:
+
+| Was | Is | Why |
+|---|---|---|
+| A **nail** in the wall | An empty **frame** | Four units of grey that needed a drawn shadow to be visible at all. An empty frame is the most guessable *"something goes here"* an object can be, and it is the reference's own centrepiece |
+| A **workbench** | A **desk** | The reference has a desk. The stored enum value is still `bench` — migrating four Postgres enum values to rename one label would be a migration bought entirely with vocabulary |
+| A **door** to the corridor | A **noticeboard** | The old version had a manager tap a door and get a list — a door that opens onto a menu. A noticeboard *is* a list, in world, so taking a name off it and walking to that room needs no fiction at all |
 
 **The corridor is a Display rather than a Door** because it has no single
 destination: it opens onto a row of doors with names on them, and a Door with
@@ -255,43 +264,76 @@ reachable, and `back-hall-shut` photographs it at all three widths.
 
 ---
 
-## 10. Art: none is required, and none is requested
+## 10. Art — the room is a painted shell, and the shell is the blocker
 
-**No room art exists and this feature does not ask for any.** There is no
-`zone_room_shell_*` slug in `art/assets.inventory.json` and there was none before
-this change.
+**Superseded 2026-08-09.** This section used to read *"none is required, and none
+is requested"*, and that was true of the room as first built: there was no room
+art, none had ever been briefed, and flat rectangles were the approved
+placeholder architecture. The commissioner's direction of 2026-08-09 supplies an
+approved reference and corrects the direction — *"flat walls, simplistic stairs,
+crude rectangles, under-detailed props, weak atmosphere"* — so the position is
+now the opposite.
 
-`components/scene/manager-room.tsx` draws the room in **flat rectangles in
-palette colours**, which is the placeholder architecture the commissioner
-approved on 2026-07-31 (*"do not block all Back Hall development on final art…
-use deliberate in-world placeholder architecture"*) and which
-`components/scene/back-hall.tsx` is the worked precedent for. It draws from the
-same rectangles the hit regions use, so what a manager sees and what a tap lands
-on cannot drift.
+### 10.1 The architecture
 
-Two things in the room use **real, already-approved art**:
+`/rooms` is **one portrait shell plus transparent hit regions**, exactly as the
+parlor and the hall are. `components/scene/manager-room.tsx` has two halves and
+only one ever renders:
+
+| | |
+|---|---|
+| `zone_room_shell_<theme>` has art | draw it, and nothing else |
+| it does not | draw the geometry, which follows the reference's **composition** at a placeholder's fidelity |
+
+**Resolved per theme, independently.** Three shells can land in any order, none
+is gated on another, and nothing has to ship all-or-nothing. That is the
+art-swap contract applied one room at a time.
+
+The rendered page declares which half drew it (`data-room-shell="art"` /
+`"drawn"`) and the visual gate reads it. Deliberately **not pinned to `drawn`**:
+the day a shell lands the gate must go green on the better picture rather than
+fail for having got what it was waiting for. Without the marker, a reviewer
+looking at a folder of screenshots has no way to tell *"this is the room"* from
+*"this is what stands in for the room"*, and the moment one theme has art and
+another does not, two pictures mean different things under one naming.
+
+### 10.2 The geometry is fixed, and the art is drawn to it
+
+The reverse of how the parlor was done, deliberately. The parlor's art came
+first and its coordinates were measured off it; here the room already works —
+tested, gated, photographed at three widths — so the cheaper thing to move is the
+paint.
+
+`docs/art/BATCH_E_BASEMENT_HANDOFF.md` briefs the three shells **to the numbers
+`lib/rooms/objects.ts` holds**, including six **prepared places** that must be
+drawn empty: the frame, the shelf plank, the desktop, the pennant rod, the
+noticeboard and the rug. Anything painted there is covered by a sprite at runtime
+and reads as a rendering bug. `lib/assets/batches.test.ts` fails the build if the
+document and the registry ever disagree about which slugs exist.
+
+### 10.3 What still uses real approved art, and needs nothing
 
 - **Collectibles** in the four places — the twelve Batch B sprites, at their
-  authored 46 × 46 into a 46 × 46 slot, which is the pipeline's *one art pixel is
-  one room unit*.
+  authored 46 × 46 into a 46 × 46 **art rect**, which is the pipeline's *one art
+  pixel is one room unit*.
 - **Championships** on the rail — `object_champion_banner`, the same 18 × 15
-  pennant the parlor's own rail hangs. A manager who has seen the shop reads a
-  pennant as a title before anything explains it. The alternative,
-  `item_championship_ring`, is still a placeholder and would have drawn a row of
-  identical cartons on a wall rail, which says *storage* — the one thing that
-  rail must not say.
+  pennant the parlor's own rail hangs, at the same 22-unit pitch.
 
-**The pennant carries no year here.** The parlor's does, and that mark is the
-product's one declared exemption from the type floor (10.1 CSS px at 360),
-justified there because the rail is the only place the season is named. Here the
-panel lists every title at body size, so a second exemption would spend the
-rule's one concession to save a tap.
+**No new `object_*` slug is required by this room.** Every interactive thing in
+it is either architecture baked into the shell or a collectible the manager
+already owns.
 
-When room art ever exists, `manager-room.tsx` is deleted and the overlays become
-`AssetView`s. The coordinates, the themes, the flags and the gates are all
-outside it.
+### 10.4 Hit region ≠ art rect
 
----
+New with the reference, and worth stating because collapsing the two is the
+obvious simplification. The frame is 116 × 78 because that is the frame and the
+desk 68 × 58 because that is the desktop — both sized for a thumb — while every
+collectible is drawn at exactly 46 × 46 wherever it goes. Collapsing them would
+either shrink the targets to sprite size or stretch every sprite to its
+furniture, and the second is the fractional resample this whole pipeline exists
+to avoid. `lib/rooms/objects.ts` holds both, so there is still one definition of
+each, and `objects.test.ts` asserts every art rect sits inside the region that
+opens it.
 
 ## 11. Two defects this slice found
 
@@ -320,10 +362,11 @@ was written for.
 
 | Gate | What it catches |
 |---|---|
-| `lib/rooms/objects.test.ts` | eight objects · exactly one Door · no two overlapping · 44 CSS px on the narrowest phone · every slot at the collectible's authored 46 × 46 · no label that is a route or a column name · three themes, each with a full material set · an unknown theme repaired on read |
+| `lib/rooms/objects.test.ts` | eight objects · exactly one Door · no two overlapping · 44 CSS px on the narrowest phone · **every art rect at the collectible's authored 46 × 46 and inside the region that opens it** · **every theme with its own registered 960 × 1707 shell** · **the manager standing on the floor, at the sprite's own aspect, between 26% and 34% of the room** · six pennants fitting the rail at the parlor's pitch · no label that is a route or a column name · an unknown theme repaired on read |
 | `lib/rooms/service.test.ts` | one room per manager under concurrency · the ownership trigger · one thing per place · one place per thing · **emptying a room leaves the collection untouched** · a ring is never furniture · a retired manager is neither in the corridor nor visitable · the corridor's count can fall |
 | `lib/rooms/driver-coverage.test.ts` | every state photographed · every state *checked* · every theme photographed · the whole object map named · the four places driven through the product's own controls |
-| `checkRoom` (visual QA) | the object map on every room state · the room's own path · **how many things are actually on show** · which theme actually rendered · a panel that was meant to be up · **no control on a visited room that would change it** |
+| `checkRoom` (visual QA) | the object map on every room state · the room's own path · **how many things are actually on show** · which theme actually rendered · **whether the painted shell or the stand-in drew it** · a panel that was meant to be up · **no control on a visited room that would change it** |
+| `lib/assets/batches.test.ts` | the basement handoff briefs exactly the three shells the themes resolve, at the canvas the room is authored in, and names all six prepared places |
 
 Eight visual states at three widths: `room` · `room-furnished` · `room-slot` ·
 `room-corridor` · `room-rec` · `room-cold` · `room-visited` · `room-empty`.
@@ -354,3 +397,88 @@ a real manager uses the feature, which is also the first time it would matter.
 - **The basement spotlight** (`08 §17`), which links a Slice story to a manager's
   room. The route it needs now exists; the Slice candidate does not, and adding
   one is a Slice change rather than a room change.
+
+---
+
+## 14. The manager sprite — why Image 2's fidelity is not a swap
+
+**Commissioner direction, 2026-08-09** supplies an approved manager-sprite
+reference and asks that managers *"feel substantially more illustrated"* and
+*"clearly part of the same world as Tony"*. This section records what stands
+between the current sprite and that bar, because it is **not** what it looks
+like, and the obvious plan does not work.
+
+### 14.1 The obvious plan, and why it fails
+
+`components/character/character-view.tsx` already carries a per-layer art-swap
+contract: *"the moment a registry row gains a `path`, that one layer draws its
+PNG and the rest keep drawing themselves."* So the obvious answer is to generate
+PNGs for the twenty-nine layer slugs and drop them in.
+
+**That would destroy the colour system.** Colour in this product is a *runtime
+parameter*, not a property of a drawing:
+
+| Trait | Options | How it is applied |
+|---|---|---|
+| skin | 4 ramps | `paint: { kind: 'skin', index }` resolved at render |
+| hair colour | 8 ramps | `paint: { kind: 'hair', index }` |
+| top colour | 8 ramps | `paint: { kind: 'top', index }` |
+
+`composeCharacter` attaches a `Paint` to every layer and `coloursFor` resolves it
+against `lib/character/palette.ts` — *"resolved from the configuration, never
+stored."* A layer that resolves to a **PNG bypasses that entirely**: `pngLayers`
+draws the file as authored. `avatar_hair_03` as a PNG is one hair colour, and
+the other seven silently stop existing.
+
+Keeping the traits *and* using PNGs means a file per shape **per colour**:
+
+```
+body      1 shape × 4 skins   =   4
+hair      6 shapes × 8 colours =  48
+facial    4 shapes × 8 colours =  32
+tops      6 shapes × 8 colours =  48
+                                 ---
+                                 132 files, before a single wearable
+```
+
+…and every colour added later multiplies four ways. That is not a batch; it is a
+combinatorial explosion standing in for a parameter.
+
+### 14.2 The two ways forward, and what each costs
+
+Both are real, and **this is a commissioner decision rather than an engineering
+one**, because the second one changes an approved pipeline.
+
+**Option A — raise the drawn fidelity in place.** The layers are authored as
+shapes in `lib/character/art/*.ts` against a shared geometry module, with derived
+shading — a real sprite system, not nine rectangles. Anatomy, silhouette,
+shading steps and outline treatment are all properties of that data and can be
+improved without touching a trait, the canvas, the layer order, the editor or
+the defaults.
+
+- **Costs no art and no new pipeline.** Nothing closed is reopened.
+- **Ceilinged by hand-authoring.** It will get closer to the reference; it will
+  not reach a painted sprite, and `art/geometry.ts` already records why —
+  matching Tony's density needs a canvas around 88 × 200 and *"a set of thirty
+  layers at that size is not authorable by hand."*
+
+**Option B — a tinted-mask pipeline.** Author each layer as a **2-tone mask**
+(base, shade, outline) and have the renderer recolour it per ramp, exactly as the
+shape system does today. This is the one route that reaches the reference's
+fidelity **and** keeps 11,520 combinations from ~29 assets.
+
+- **Reaches the bar.** A painted sprite, still fully customisable.
+- **Costs a pipeline.** A mask convention, a recolouring step, and an art batch
+  of ~29 masks generated to it. It is additive to the customiser — the traits,
+  the canvas, the layer order and the stored integers are all untouched — but it
+  is a new rendering path and a new acceptance gate.
+
+### 14.3 What was deliberately not done
+
+**Nothing.** The customiser is `CLOSED — production verified` and this direction
+says explicitly not to reopen it, so no trait, canvas, layer, default or guard
+moved, and no character art was invented. The one character-adjacent change in
+this slice is where the figure *stands*: 29.5% of the room's height, up from
+24%, set from the reference so a manager reads as somebody in the room rather
+than a figure against its back wall. That is a property of the **room**, and
+`objects.test.ts` pins it.

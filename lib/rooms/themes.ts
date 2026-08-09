@@ -50,6 +50,17 @@ export interface ThemeSpec {
   /** One line, in the shop's voice. Never a feature list. */
   readonly line: string;
 
+  /**
+   * The registry slug for this theme's painted shell.
+   *
+   * **Resolved per theme, independently.** A theme whose shell has landed draws
+   * it; a theme whose shell has not draws the geometry below. That is the
+   * art-swap contract applied one room at a time, and it is what makes the
+   * delivery order of three shells irrelevant — no theme is gated on another,
+   * and nothing has to ship all-or-nothing.
+   */
+  readonly shell: string;
+
   /* --- What the scene draws with ---------------------------------------- */
 
   /** The back wall above the rail. */
@@ -72,9 +83,12 @@ export interface ThemeSpec {
    * alpha and the palette does not.
    */
   readonly glow: string;
-  /** The shelf, the bench and the trims cut from them. */
+  /** The shelf, the desk and the trims cut from them. */
   readonly timber: string;
   readonly timberDark: string;
+  /** The rug the manager stands on, and the border woven into it. */
+  readonly rug: string;
+  readonly rugEdge: string;
 }
 
 /**
@@ -87,7 +101,8 @@ export const THEME_SPECS: Readonly<Record<Theme, ThemeSpec>> = {
   storeroom: {
     key: 'storeroom',
     name: 'The storeroom',
-    line: 'Brick, a bare bulb and a concrete floor. What is actually down here.',
+    line: 'Block walls, one hanging lamp and a concrete floor. What is actually down here.',
+    shell: 'zone_room_shell_storeroom',
     wall: 'bg-ink-700',
     wainscot: 'bg-wood-dark',
     rail: 'bg-wood-mid',
@@ -106,12 +121,15 @@ export const THEME_SPECS: Readonly<Record<Theme, ThemeSpec>> = {
     glow: 'rgba(255,217,138,0.40)',
     timber: 'bg-wood-mid',
     timberDark: 'bg-wood-dark',
+    rug: 'bg-red-dark',
+    rugEdge: 'bg-red-mid/60',
   },
 
   rec_room: {
     key: 'rec_room',
     name: 'The rec room',
     line: 'Somebody panelled it and put a carpet down. It is warmer than it needs to be.',
+    shell: 'zone_room_shell_rec_room',
     wall: 'bg-wood-dark',
     wainscot: 'bg-wood-mid',
     rail: 'bg-wood-light',
@@ -121,12 +139,15 @@ export const THEME_SPECS: Readonly<Record<Theme, ThemeSpec>> = {
     glow: 'rgba(255,217,138,0.52)',
     timber: 'bg-wood-light',
     timberDark: 'bg-wood-mid',
+    rug: 'bg-amber-deep',
+    rugEdge: 'bg-red-dark/70',
   },
 
   cold_store: {
     key: 'cold_store',
     name: 'The cold store',
     line: 'The walk-in, cleared out. Tile, steel, and one strip light that hums.',
+    shell: 'zone_room_shell_cold_store',
     wall: 'bg-blue-deep',
     wainscot: 'bg-ink-700',
     rail: 'bg-ink-300',
@@ -137,6 +158,8 @@ export const THEME_SPECS: Readonly<Record<Theme, ThemeSpec>> = {
     glow: 'rgba(127,212,240,0.34)',
     timber: 'bg-ink-500',
     timberDark: 'bg-ink-700',
+    rug: 'bg-blue-mid/70',
+    rugEdge: 'bg-blue-light/40',
   },
 };
 

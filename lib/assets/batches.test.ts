@@ -5,6 +5,8 @@ import { describe, expect, it } from 'vitest';
 
 import { catalog } from '@/lib/counter/catalog';
 
+import { THEMES, THEME_SPECS } from '@/lib/rooms/themes';
+
 import { ART_BATCHES, BATCH_B, BATCH_B2 } from './batches';
 import { assetRegistry } from './registry';
 
@@ -94,5 +96,68 @@ describe('the two batches together', () => {
       [...BATCH_B.slugs, ...BATCH_B2.slugs].map((slug) => items.get(slug)?.rarity),
     );
     expect(rarities.size).toBeGreaterThanOrEqual(4);
+  });
+});
+
+
+/**
+ * Batch E — the basement shells — is briefed but **not in `ART_BATCHES`**, and
+ * that is a decision rather than an omission.
+ *
+ * `ART_BATCHES` is checked by `npm run art:batch`, which is a **collectible**
+ * delivery checker: it looks in `public/assets/collectible/`, and it validates
+ * each file through `inspect()` in `validate-collectible.ts`, which measures a
+ * 46 × 46 sprite with a bottom-centre anchor and a transparent margin. A
+ * 960 × 1707 opaque room shell fails every one of those checks by being what it
+ * is. Generalising that script is a real piece of work and this batch does not
+ * need it — `npm run art:process` already handles shells, and did for
+ * `zone_parlor_shell`.
+ *
+ * What the manifest genuinely buys is that **the document and the registry
+ * cannot drift**, so a slug briefed for generation is a slug the product can
+ * actually resolve. That is the half worth keeping, and it is this.
+ */
+describe('the basement handoff', () => {
+  const HANDOFF = 'docs/art/BATCH_E_BASEMENT_HANDOFF.md';
+  const document = readFileSync(path.join(process.cwd(), HANDOFF), 'utf8');
+
+  it('briefs exactly the three shells the themes resolve', () => {
+    for (const theme of THEMES) {
+      const { shell } = THEME_SPECS[theme];
+      expect(document, `${shell} is not briefed in ${HANDOFF}`).toContain(shell);
+      expect(assetRegistry.get(shell), `${shell} has no registry row`).toBeDefined();
+    }
+
+    // The other direction: a slug briefed and not registered is art that arrives,
+    // is reported as unexpected, and is never processed.
+    const briefed = new Set(
+      [...document.matchAll(/zone_room_shell_[a-z_]+/g)].map((match) => match[0]),
+    );
+    const resolved = new Set(THEMES.map((theme) => THEME_SPECS[theme].shell));
+    expect([...briefed].sort()).toEqual([...resolved].sort());
+  });
+
+  it('briefs them at the canvas the room is authored in', () => {
+    // `960 x 1707` is `320 x 569` at the pipeline's 3x authoring scale. A shell
+    // generated to any other number is resampled into the room and stops being
+    // pixel art — the same defect the collectibles' 32-into-46 slot would have been.
+    expect(document).toContain('960 × 1707');
+
+    for (const theme of THEMES) {
+      expect(assetRegistry.get(THEME_SPECS[theme].shell)?.canvas).toBe('960x1707');
+    }
+  });
+
+  it('tells the generator to leave every prepared place empty', () => {
+    /*
+     * `zone_tile.md §2` calls these *"prepared places"* and the failure mode is
+     * specific: anything painted where a manager's own things go is covered by a
+     * sprite at runtime and reads as a rendering bug. Six of them, and the
+     * handoff has to name every one.
+     */
+    for (const place of ['frame', 'shelf', 'desk', 'pennant', 'noticeboard', 'rug']) {
+      expect(document.toLowerCase(), `${place} is not listed as a prepared place`).toContain(place);
+    }
+    expect(document).toMatch(/drawn as empty|completely empty|drawn completely empty|must be empty/i);
   });
 });

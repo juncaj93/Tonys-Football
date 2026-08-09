@@ -1,264 +1,368 @@
-import { place } from '@/lib/parlor/objects';
-import { HORIZON, MANAGER_ROOM, roomObject } from '@/lib/rooms/objects';
-import { themeSpec, type Theme } from '@/lib/rooms/themes';
+import { AssetView } from '@/lib/assets/placeholder';
+import { resolveAsset } from '@/lib/assets/registry';
+import { place, type RoomObjectSpec } from '@/lib/parlor/objects';
+import { CEILING, HORIZON, MANAGER_ROOM, roomObject } from '@/lib/rooms/objects';
+import { themeSpec, type Theme, type ThemeSpec } from '@/lib/rooms/themes';
 
 /**
- * A manager's basement, drawn.
+ * A manager's basement.
  *
- * ## Why this is geometry rather than a placeholder image
+ * ## The shell is an asset, and this file is what stands in for it
  *
- * The commissioner's ruling of 2026-07-31 — *"do not block all Back Hall
- * development on final art… use deliberate in-world placeholder architecture"* —
- * and `components/scene/back-hall.tsx` is the worked precedent. **No room art
- * exists for this feature and none is requested by it**: there is no
- * `zone_room_shell_*` slug in `art/assets.inventory.json`, and there was none
- * before this change either.
+ * **Commissioner direction, 2026-08-09.** The first version of this room was
+ * flat rectangles and nothing else, and it read as *"flat walls, simplistic
+ * stairs, crude rectangles, under-detailed props, weak atmosphere."* The
+ * correction is not a better set of rectangles — it is that **the room is a
+ * painted shell**, exactly as the parlor is, and rectangles are what is drawn
+ * while that shell does not exist yet.
  *
- * So this is **flat rectangles in palette colours**, the same vocabulary the
- * hall and the pizza box are built from. It is meant to read as *a basement
- * whose fittings are simple*, never as finished art — `MANDATE`'s slot rules
- * forbid *"polished temporary art that may accidentally become canonical"* as
- * firmly as they forbid a broken-image box. No gradients except the one the
- * light needs, no rendering, no detail that could be mistaken for a decision
- * about what a basement looks like.
+ * So this file has two halves and only one of them ever renders:
  *
- * ## It draws from the same numbers the hit regions use
+ *   - `zone_room_shell_<theme>` has art → **draw it and nothing else.**
+ *   - it does not → draw the geometry below, which follows the approved
+ *     reference's *composition* at a placeholder's fidelity.
  *
- * Every object is positioned with `place()` on the rectangle in
- * `lib/rooms/objects.ts`. There is no second copy of the layout, so what a
- * manager sees and what a tap lands on cannot drift.
+ * That resolution is **per theme**, so three shells can land in any order and
+ * none is gated on another. `docs/art/BATCH_E_BASEMENT_HANDOFF.md` is the brief,
+ * and it is written to the same numbers `lib/rooms/objects.ts` fixes — the art
+ * is drawn to the geometry rather than measured off it afterwards.
  *
- * ## Three themes, one geometry
+ * ## What the placeholder is for, and what it is not
  *
- * The furniture does not move between themes — the shelf is the shelf, the bench
- * is the bench, and a manager who changes the room finds their things where they
- * left them. What changes is what the room is *made of* (`lib/rooms/themes.ts`),
- * which is the honest version of a theme and the one that costs no coordinates.
+ * It exists so the room's *composition* can be reviewed, and so every hit region,
+ * gate and state is real before any art arrives. It is deliberately flat: hard
+ * edges, palette colours, no rendering. `MANDATE`'s slot rules forbid *"polished
+ * temporary art that may accidentally become canonical"* as firmly as they forbid
+ * a broken-image box, and this must never be mistaken for the answer.
+ *
+ * It draws from the same rectangles the hit regions use, so what a manager sees
+ * and what a tap lands on cannot drift.
  */
+export function ManagerRoomScene({ theme }: { theme: Theme }) {
+  const shell = resolveAsset(themeSpec(theme).shell);
+
+  if (shell.kind === 'art') {
+    return (
+      <div
+        aria-hidden="true"
+        data-room-theme={theme}
+        data-room-shell="art"
+        className="absolute inset-0 overflow-hidden"
+      >
+        <AssetView resolution={shell} />
+      </div>
+    );
+  }
+
+  return <DrawnBasement theme={theme} />;
+}
+
 /**
- * The six treads, bottom first.
+ * The seven treads, bottom first.
  *
- * Each one is 36 units above the last and eight units narrower, so the flight
- * both climbs and recedes. Six is what fits between the floor and the head of
- * the stairwell at a rise a person could actually walk; five looked like a
- * loading ramp and seven put a tread under the ceiling pipe.
+ * A staircase is not a stack of blocks; it is a series of **lit edges over dark
+ * risers**, and what the eye reads is the alternation. The first version drew
+ * solid treads in one colour separated by a four-unit line and read as a stack
+ * of crates — the same defect the hall's own stairwell hit from the other
+ * direction.
  */
 const STEPS: readonly { y: number; width: number }[] = [
-  { y: 356, width: 78 },
-  { y: 320, width: 70 },
-  { y: 284, width: 62 },
-  { y: 248, width: 54 },
-  { y: 212, width: 46 },
-  { y: 176, width: 38 },
+  { y: 330, width: 84 },
+  { y: 298, width: 78 },
+  { y: 266, width: 72 },
+  { y: 234, width: 66 },
+  { y: 202, width: 60 },
+  { y: 170, width: 54 },
+  { y: 138, width: 48 },
 ];
 
-export function ManagerRoomScene({ theme }: { theme: Theme }) {
+/**
+ * One woven border on the rug — four thin spans rather than a CSS border.
+ *
+ * A `border` is set in pixels and would stay the same width while the room
+ * scales with the viewport, so the rug's border would be twice as heavy
+ * relative to the pattern at 360 as at 430. Four spans placed in room units
+ * scale with everything else.
+ */
+function RugRing({
+  spec,
+  rect,
+  faint = false,
+}: {
+  spec: ThemeSpec;
+  rect: RoomObjectSpec['rect'];
+  faint?: boolean;
+}) {
+  const [x, y, width, height] = rect;
+  const weight = faint ? 2 : 3;
+  const tone = faint ? `${spec.rugEdge} opacity-50` : spec.rugEdge;
+
+  return (
+    <>
+      <span className={`absolute ${tone}`} style={place([x, y, width, weight])} />
+      <span className={`absolute ${tone}`} style={place([x, y + height - weight, width, weight])} />
+      <span className={`absolute ${tone}`} style={place([x, y, weight, height])} />
+      <span className={`absolute ${tone}`} style={place([x + width - weight, y, weight, height])} />
+    </>
+  );
+}
+
+function DrawnBasement({ theme }: { theme: Theme }) {
   const spec = themeSpec(theme);
   const stairs = roomObject('stairs').rect;
-  const corridor = roomObject('corridor').rect;
-
-  /** The dado — where the lower wall stops. Two thirds of the way to the floor. */
-  const DADO = 268;
+  const frame = roomObject('wall').rect;
+  const rail = roomObject('rings').rect;
+  const board = roomObject('corridor').rect;
+  const desk = roomObject('bench').rect;
 
   const pct = (value: number, of: number): string => `${((value / of) * 100).toFixed(3)}%`;
+  /** A room-unit length as a percentage of the room's height. Used by gradients. */
+  const rows = (units: number): number => (units / MANAGER_ROOM.height) * 100;
+  const cols = (units: number): number => (units / MANAGER_ROOM.width) * 100;
 
   return (
     <div
       aria-hidden="true"
       /*
-       * What the room is actually made of, declared in the DOM.
+       * What the room is made of, and which half of this file drew it.
        *
-       * `checkRoom` in `scripts/visual-qa.mts` reads it, because a theme state
-       * that navigated and photographed the wrong walls would look entirely
-       * plausible — the same false green the nine `reveal-*` states shipped, and
-       * the reason every named state in this product asserts its own identity
-       * against the rendered page rather than against the URL.
+       * `checkRoom` in `scripts/visual-qa.mts` reads both. The theme, because a
+       * theme state that navigated and photographed the wrong walls would look
+       * entirely plausible. The shell, because *"the painted room is live"* and
+       * *"the placeholder is standing in"* are two different pictures and a
+       * screenshot cannot tell them apart on its own.
        */
       data-room-theme={theme}
+      data-room-shell="drawn"
       className="absolute inset-0 overflow-hidden"
     >
-      {/* ---- The shell: ceiling, wall, wainscot, floor ------------------- */}
+      {/* ---- The shell: ceiling, block wall, floor ----------------------- */}
       <div
-        className={`absolute inset-x-0 top-0 ${spec.wall}`}
-        style={{ height: pct(DADO, MANAGER_ROOM.height) }}
+        className={`absolute inset-x-0 top-0 ${spec.wainscot}`}
+        style={{ height: pct(CEILING, MANAGER_ROOM.height) }}
       />
+      {/*
+        * Joists across the ceiling.
+        *
+        * One element rather than a dozen spans: a repeating gradient in
+        * percentages scales with the room, where a pixel-valued one would drift
+        * against the artwork on every different phone.
+        */}
       <div
-        className={`absolute inset-x-0 ${spec.wainscot}`}
+        className="absolute inset-x-0 top-0"
         style={{
-          top: pct(DADO, MANAGER_ROOM.height),
-          height: pct(HORIZON - DADO, MANAGER_ROOM.height),
+          height: pct(CEILING, MANAGER_ROOM.height),
+          background: `repeating-linear-gradient(to right, transparent 0 ${cols(30).toFixed(3)}%, rgba(0,0,0,0.30) ${cols(30).toFixed(3)}% ${cols(38).toFixed(3)}%)`,
         }}
       />
-      {/* The rail where the two materials meet, and the skirting at the floor. */}
-      <span className={`absolute ${spec.rail}`} style={place([0, DADO - 4, 320, 4])} />
-      <span className={`absolute ${spec.rail}`} style={place([0, HORIZON - 4, 320, 4])} />
+
+      <div
+        className={`absolute inset-x-0 ${spec.wall}`}
+        style={{
+          top: pct(CEILING, MANAGER_ROOM.height),
+          height: pct(HORIZON - CEILING, MANAGER_ROOM.height),
+        }}
+      />
+      {/*
+        * Courses and joints — the block wall the reference is built from, in two
+        * elements. A flat field of colour is the single loudest thing saying
+        * *"programmer art"* on a wall this large.
+        */}
+      <div
+        className="absolute inset-x-0"
+        style={{
+          top: pct(CEILING, MANAGER_ROOM.height),
+          height: pct(HORIZON - CEILING, MANAGER_ROOM.height),
+          background:
+            `repeating-linear-gradient(to bottom, transparent 0 ${rows(14).toFixed(3)}%, rgba(0,0,0,0.22) ${rows(14).toFixed(3)}% ${rows(16).toFixed(3)}%),` +
+            `repeating-linear-gradient(to right, transparent 0 ${cols(30).toFixed(3)}%, rgba(0,0,0,0.14) ${cols(30).toFixed(3)}% ${cols(32).toFixed(3)}%)`,
+        }}
+      />
 
       <div
         className={`absolute inset-x-0 bottom-0 ${spec.floor}`}
         style={{ height: pct(MANAGER_ROOM.height - HORIZON, MANAGER_ROOM.height) }}
       />
-      {/*
-        * Two seams across the floor.
-        *
-        * The same trick the hall uses: a single flat colour under the horizon
-        * reads as a void rather than as ground somebody is standing on. Two is
-        * enough to say *floor* and few enough that it stays a placeholder.
-        */}
-      <span className={`absolute ${spec.seam}`} style={place([0, 448, 320, 2])} />
-      <span className={`absolute ${spec.seam}`} style={place([0, 512, 320, 2])} />
+      {/* The skirting where the wall meets the floor. */}
+      <span className={`absolute ${spec.rail}`} style={place([0, HORIZON - 5, 320, 5])} />
 
-      {/* ---- The one light ---------------------------------------------- */}
+      {/* ---- Pipes along the ceiling and down the left wall -------------- */}
+      <span className="absolute bg-ink-500/70" style={place([0, 14, 320, 6])} />
+      <span className="absolute bg-ink-500/55" style={place([0, 26, 320, 4])} />
+      <span className="absolute bg-ink-500/60" style={place([278, 20, 6, 40])} />
+
+      {/* ---- The window, high on the left wall --------------------------- */}
+      <span className="absolute bg-ink-700" style={place([32, 54, 48, 30])} />
+      <span className="absolute bg-blue-mid/50" style={place([35, 57, 42, 24])} />
+      <span className="absolute bg-ink-700" style={place([55, 57, 2, 24])} />
+
+      {/* ---- The one hanging lamp ---------------------------------------- */}
       {/*
-        * A basement has one light and it is above you. It is what makes the
-        * corners dark, and its colour is the biggest single difference between
-        * the three themes — the cold store's is blue, and that changes the room
-        * more than the tiling does.
+        * A basement has one light and it is above you. Its colour is the biggest
+        * single difference between the three themes — the cold store's is blue,
+        * and that changes the room more than the tiling does.
         */}
-      <span className="absolute bg-ink-500" style={place([158, 0, 3, 30])} />
-      <span className={`absolute ${spec.fitting}`} style={place([148, 30, 24, 8])} />
+      <span className="absolute bg-ink-500" style={place([189, 0, 3, 30])} />
+      <span className={`absolute ${spec.fitting}`} style={place([174, 30, 34, 12])} />
       <span
         className="absolute rounded-full"
         style={{
-          ...place([104, 32, 112, 68]),
+          ...place([142, 36, 98, 66]),
           background: `radial-gradient(closest-side, ${spec.glow}, transparent)`,
         }}
       />
 
-      {/* ---- Scenery ----------------------------------------------------- */}
-      {/*
-        * `18 §3.6` — most of a room is scenery, permanently. None of this is in
-        * the object map, because nobody could guess where a pipe goes.
-        *
-        * A pipe along the ceiling and a stack of trade boxes in the near corner.
-        * The boxes are on the **right of the floor**, under the bench and clear
-        * of every hit region, which is the corner the layout leaves empty.
-        */}
-      <span className="absolute bg-ink-500/70" style={place([0, 12, 320, 5])} />
-      <span className="absolute bg-ink-500/50" style={place([88, 17, 6, 14])} />
+      {/* ---- The pennant rail -------------------------------------------- */}
+      {/* A rod with two brackets. What hangs from it is drawn by the page. */}
+      <span className="absolute bg-ink-300" style={place([rail[0], rail[1] + 8, rail[2], 4])} />
+      <span className="absolute bg-ink-300" style={place([rail[0], rail[1] + 4, 4, 12])} />
+      <span
+        className="absolute bg-ink-300"
+        style={place([rail[0] + rail[2] - 4, rail[1] + 4, 4, 12])}
+      />
 
-      <span className={`absolute ${spec.timberDark}`} style={place([252, 470, 60, 14])} />
-      <span className={`absolute ${spec.timber} opacity-70`} style={place([258, 484, 56, 12])} />
-      <span className={`absolute ${spec.timberDark}`} style={place([248, 496, 66, 13])} />
+      {/* ---- The framed board on the back wall --------------------------- */}
+      {/*
+        * The room's largest display surface, and the most guessable "something
+        * goes here" an object can be. It replaces a four-unit nail.
+        */}
+      <span className={`absolute ${spec.timberDark}`} style={place(frame)} />
+      <span
+        className={`absolute ${spec.timber}`}
+        style={place([frame[0] + 3, frame[1] + 3, frame[2] - 6, frame[3] - 6])}
+      />
+      <span
+        className="absolute bg-paper-dark"
+        style={place([frame[0] + 8, frame[1] + 8, frame[2] - 16, frame[3] - 16])}
+      />
 
-      {/* ---- The stairs back up ------------------------------------------ */}
+      {/* ---- The shelf under it ------------------------------------------ */}
+      {/* One plank on two brackets, spanning both shelf slots. */}
+      <span className={`absolute ${spec.timber}`} style={place([120, 262, 110, 6])} />
+      <span className="absolute bg-ink-900/55" style={place([128, 268, 6, 12])} />
+      <span className="absolute bg-ink-900/55" style={place([216, 268, 6, 12])} />
+
+      {/* ---- The cork noticeboard, right wall ---------------------------- */}
       {/*
-        * A flight climbing away from the viewer, out of the top of the frame.
-        *
-        * These are the far side of the Back Hall's opening in the floor, seen
-        * from the bottom. The metaphor has to survive being drawn twice, and the
-        * first attempt did not: solid treads in one colour, separated by a
-        * four-unit line, read as **a stack of crates**. That is the same defect
-        * the hall's own stairwell hit from the other direction — *"an ink-900
-        * hole on an ink-900 floor with three tread bars floating in it"* — and
-        * the fix is the same in kind. A staircase is not a series of blocks; it
-        * is a series of **lit edges over dark risers**, and what the eye reads is
-        * the alternation.
-        *
-        * So: a dark stairwell, six bright nosings receding and narrowing, each
-        * with two thirds of its own height of shadow underneath, and light at
-        * the top where the hall is. Nothing about it is a block of timber.
+        * `14 §5` makes basements social destinations without explaining how ten
+        * of them fit under one pizzeria. A board with everybody pinned to it
+        * answers that better than a second door: a noticeboard *is* a list, in
+        * world, so taking a name off it needs no fiction.
         */}
-      <span className="absolute bg-ink-900" style={place(stairs)} />
+      <span className={`absolute ${spec.timberDark}`} style={place(board)} />
+      <span
+        className="absolute bg-wood-light/70"
+        style={place([board[0] + 4, board[1] + 4, board[2] - 8, board[3] - 8])}
+      />
+      {/* Notes pinned to it. Scenery — the names are in the panel. */}
+      <span className="absolute bg-paper-mid" style={place([274, 68, 16, 20])} />
+      <span className="absolute bg-paper-dark" style={place([294, 74, 14, 18])} />
+      <span className="absolute bg-paper-mid" style={place([272, 98, 18, 16])} />
+      <span className="absolute bg-paper-dark" style={place([296, 100, 14, 22])} />
+      <span className="absolute bg-paper-mid" style={place([278, 126, 20, 18])} />
+      <span className="absolute bg-paper-dark" style={place([274, 150, 16, 16])} />
+
+      {/* ---- The desk ----------------------------------------------------- */}
       {/*
-        * Light from the hall, at the head of the flight.
-        *
-        * One patch rather than two: the second sat exactly where the topmost
-        * tread paints over it, so it cost a draw and showed nothing.
+        * The one surface in the room at working height, which is why the thing
+        * put there reads as chosen rather than stored. Its legs are drawn as
+        * shadow: in the storeroom `theme.timberDark` and `theme.wainscot` are the
+        * same tone, so a leg drawn in it was invisible against the wall behind.
         */}
-      <span className="absolute bg-amber-glow/35" style={place([8, 132, 46, 44])} />
+      <span className={`absolute ${spec.timber}`} style={place([desk[0], 264, desk[2], 8])} />
+      <span className="absolute bg-ink-900/55" style={place([desk[0] + 4, 272, 9, 100])} />
+      <span className="absolute bg-ink-900/55" style={place([desk[0] + desk[2] - 13, 272, 9, 100])} />
+      {/* A drawer front, so it reads as a desk rather than as a table. */}
+      <span className={`absolute ${spec.timberDark}`} style={place([desk[0] + 12, 274, 44, 14])} />
+      <span className="absolute bg-ink-100/50" style={place([desk[0] + 30, 280, 10, 3])} />
+
+      {/* ---- The staircase ------------------------------------------------ */}
+      {/*
+        * The room's largest feature, in its own framed opening, rising to a lit
+        * doorway. The reference makes it that big and it is also the honest
+        * scale — it is how you got in, and a narrow ladder against the wall was
+        * the clearest single symptom of "simplistic stairs".
+        */}
+      <span className={`absolute ${spec.timberDark}`} style={place(stairs)} />
+      <span
+        className="absolute bg-ink-900"
+        style={place([stairs[0] + 6, stairs[1] + 6, stairs[2] - 12, stairs[3] - 6])}
+      />
+      {/* Light from the hall, at the head of the flight. */}
+      <span className="absolute bg-amber-glow/35" style={place([16, 98, 54, 44])} />
 
       {STEPS.map(({ y, width }, index) => (
         <span key={y}>
           {/* The nosing: the lit front edge of the tread. */}
           <span
             className={`absolute ${spec.timber}`}
-            style={{ ...place([8, y, width, 9]), opacity: 1 - index * 0.09 }}
+            style={{ ...place([16, y, width, 8]), opacity: 1 - index * 0.07 }}
           />
           {/* The riser under it, in shadow. Three times the nosing's height. */}
-          <span
-            className="absolute bg-ink-900/70"
-            style={place([8, y + 9, width, 27])}
-          />
+          <span className="absolute bg-ink-900/70" style={place([16, y + 8, width, 24])} />
           {/* The banister post at the open edge of that step. */}
           <span
             className={`absolute ${spec.rail}`}
-            style={{ ...place([8 + width - 6, y - 24, 5, 26]), opacity: 1 - index * 0.09 }}
+            style={{ ...place([16 + width - 6, y - 22, 5, 24]), opacity: 1 - index * 0.07 }}
           />
         </span>
       ))}
-
       {/* The handrail, stepping down the open side with the flight. */}
       {STEPS.map(({ y, width }) => (
         <span
           key={`rail-${String(y)}`}
           className={`absolute ${spec.rail}`}
-          style={place([8 + width - 14, y - 26, 14, 5])}
+          style={place([16 + width - 14, y - 24, 14, 5])}
         />
       ))}
 
-      {/* ---- The championship rail --------------------------------------- */}
+      {/* ---- The floor ---------------------------------------------------- */}
       {/*
-        * A steel rail with hooks on it, high on the wall.
+        * Two seams across the concrete. A single flat colour under the horizon
+        * reads as a void rather than as ground somebody is standing on — the
+        * same trick the hall uses, and the reason the first version had them.
+        */}
+      <span className="absolute bg-ink-900/25" style={place([0, 444, 320, 3])} />
+      <span className="absolute bg-ink-900/18" style={place([0, 516, 320, 3])} />
+
+      {/*
+        * The rug, because the reference has one and because it is what tells a
+        * manager where they are standing. It is also the room's safe standing
+        * zone: the figure is centred on it.
         *
-        * Drawn whether or not anything hangs from it — eight of ten managers
-        * have won nothing, and a rail that appeared the day you won would take
-        * the meaning out of the day you won. The rings themselves are drawn by
-        * the page, from verified titles.
+        * **Two woven rings and a weave, not a red rectangle.** The first version
+        * was three nested filled spans and read as a bright slab — the single
+        * loudest thing in the room and the one surface with no detail at all. A
+        * rug is a border, a field and a pattern; the pattern is a repeating
+        * gradient in percentages so it scales with the room rather than
+        * drifting against it on a wider phone.
         */}
-      <span className="absolute bg-ink-300" style={place([100, 60, 140, 4])} />
-      <span className="absolute bg-ink-300" style={place([102, 56, 4, 10])} />
-      <span className="absolute bg-ink-300" style={place([234, 56, 4, 10])} />
+      <span className={`absolute ${spec.rug}`} style={place([76, 396, 190, 150])} />
+      <span
+        className="absolute"
+        style={{
+          ...place([76, 396, 190, 150]),
+          background:
+            `repeating-linear-gradient(to bottom, transparent 0 ${rows(5).toFixed(3)}%, rgba(0,0,0,0.16) ${rows(5).toFixed(3)}% ${rows(6).toFixed(3)}%),` +
+            `repeating-linear-gradient(to right, transparent 0 ${cols(5).toFixed(3)}%, rgba(255,255,255,0.05) ${cols(5).toFixed(3)}% ${cols(6).toFixed(3)}%)`,
+        }}
+      />
+      <RugRing spec={spec} rect={[82, 402, 178, 138]} />
+      <RugRing spec={spec} rect={[98, 418, 146, 106]} faint />
+      {/* The fringe, at both ends, so it reads as laid down rather than painted on. */}
+      <span className="absolute bg-paper-dark/45" style={place([76, 392, 190, 4])} />
+      <span className="absolute bg-paper-dark/45" style={place([76, 546, 190, 4])} />
 
-      {/* ---- The shelf ---------------------------------------------------- */}
-      {/*
-        * One plank on two brackets, spanning both shelf slots.
-        *
-        * The brackets are **shadow, not timber**. In the storeroom
-        * `theme.timberDark` and `theme.wainscot` are the same tone, so a bracket
-        * drawn in it was invisible against the wall behind — and the same was
-        * true of the bench's legs. Anything that is the *underside* of a piece
-        * of furniture is drawn as shadow, which reads on all three themes
-        * because it is darker than every one of them by construction.
-        */}
-      <span className={`absolute ${spec.timber}`} style={place([96, 198, 128, 6])} />
-      <span className="absolute bg-ink-900/55" style={place([104, 204, 6, 12])} />
-      <span className="absolute bg-ink-900/55" style={place([210, 204, 6, 12])} />
+      {/* Flattened boxes and a crate, left of the rug. */}
+      <span className={`absolute ${spec.timberDark}`} style={place([6, 388, 62, 22])} />
+      <span className={`absolute ${spec.timber} opacity-70`} style={place([10, 396, 54, 8])} />
+      <span className="absolute bg-ink-700" style={place([8, 424, 60, 54])} />
+      <span className="absolute bg-ink-500/60" style={place([12, 428, 52, 4])} />
+      <span className="absolute bg-ink-500/40" style={place([12, 448, 52, 4])} />
 
-      {/* ---- The nail in the wall ---------------------------------------- */}
-      {/*
-        * One nail with a shadow under it, so an empty wall slot still says
-        * *something goes here* at arm's length. Four units of grey on its own
-        * was a speck.
-        */}
-      <span className="absolute bg-ink-100" style={place([124, 232, 6, 5])} />
-      <span className="absolute bg-ink-900/45" style={place([124, 237, 6, 3])} />
-
-      {/* ---- The workbench ------------------------------------------------ */}
-      {/*
-        * A top and two legs, against the back wall under the corridor door's
-        * left edge. It is the special display slot from `04 §10` — the one
-        * surface in the room at standing height, which is why the thing put
-        * there reads as chosen rather than stored.
-        */}
-      <span className={`absolute ${spec.timber}`} style={place([186, 336, 58, 8])} />
-      <span className="absolute bg-ink-900/55" style={place([190, 344, 6, 48])} />
-      <span className="absolute bg-ink-900/55" style={place([234, 344, 6, 48])} />
-
-      {/* ---- The door to the corridor ------------------------------------- */}
-      {/*
-        * A plain door in the back wall, on the right. Nothing on it says whose
-        * rooms are through it — the corridor is where the names are, and the
-        * door is a door.
-        *
-        * The strip of light under it is what makes it read as *somewhere else*
-        * rather than as a painted rectangle, and it is the same device the hall's
-        * return door uses.
-        */}
-      <span className={`absolute ${spec.timberDark}`} style={place(corridor)} />
-      <span className={`absolute ${spec.timber}`} style={place([252, 164, 54, 100])} />
-      <span className={`absolute ${spec.timber}`} style={place([252, 272, 54, 112])} />
-      <span className="absolute rounded-full bg-ink-100" style={place([256, 282, 6, 6])} />
-      <span className="absolute bg-amber-glow/45" style={place([248, 386, 62, 4])} />
+      {/* A stack of boxes in the near right corner. */}
+      <span className={`absolute ${spec.timberDark}`} style={place([274, 476, 44, 20])} />
+      <span className={`absolute ${spec.timber} opacity-70`} style={place([280, 496, 40, 18])} />
     </div>
   );
 }

@@ -2,7 +2,7 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 112,
+  "totalSlugs": 115,
   "statusValues": [
     "placeholder",
     "generated",
@@ -350,6 +350,33 @@
         "role": "door",
         "route": "/",
         "alt": "Back to the parlor"
+      }
+    },
+    "_basement_B1": {
+      "$comment": "The manager's basement, reached down the stairs from the Back Hall. One portrait shell per theme plus transparent hit regions -- the same grammar as the parlor and the hall, and NOT a grid of hotspots. Each shell is drawn EMPTY where runtime content goes: the frame, the shelf plank, the desktop and the pennant rail carry a manager's own things, and the rug carries the manager. Geometry is fixed by lib/rooms/objects.ts; the art is drawn to those numbers rather than measured off afterwards. See docs/art/BATCH_C_BASEMENT_HANDOFF.md.",
+      "zone_room_shell_storeroom": {
+        "family": "zone",
+        "canvas": "960x1707",
+        "batch": "B1",
+        "art_status": "placeholder",
+        "role": "scenery",
+        "alt": "A manager's basement, fitted out as a storeroom"
+      },
+      "zone_room_shell_rec_room": {
+        "family": "zone",
+        "canvas": "960x1707",
+        "batch": "B1",
+        "art_status": "placeholder",
+        "role": "scenery",
+        "alt": "A manager's basement, fitted out as a rec room"
+      },
+      "zone_room_shell_cold_store": {
+        "family": "zone",
+        "canvas": "960x1707",
+        "batch": "B1",
+        "art_status": "placeholder",
+        "role": "scenery",
+        "alt": "A manager's basement, fitted out as a cold store"
       }
     },
     "_tony_B1": {

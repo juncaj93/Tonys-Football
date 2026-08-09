@@ -4,7 +4,7 @@ import { type AssetResolution } from '@/lib/assets/types';
 import { type Composite } from '@/lib/character/composite';
 import { type HeldRing } from '@/lib/counter/rings';
 import { place } from '@/lib/parlor/objects';
-import { roomObject, SLOTS, type Slot } from '@/lib/rooms/objects';
+import { PENNANT, roomObject, slotArtRect, SLOTS, type Slot } from '@/lib/rooms/objects';
 
 /**
  * What is actually in the room — the things, drawn where they are.
@@ -30,14 +30,16 @@ export interface DrawnItem {
 /**
  * The four slots' contents.
  *
- * Each sprite is drawn into **exactly the hit region's rectangle**, from
- * `lib/rooms/objects.ts`. That is the property the back hall established and it
- * is worth restating in a file that could easily have re-declared four positions:
- * what a manager sees and what a tap lands on are one definition.
+ * Each sprite is drawn into its **art rect** — always exactly 46 × 46, which is
+ * the pipeline's rule 4: one art pixel is one room unit, the same relationship
+ * the counter tray has.
  *
- * A 46 × 46 sprite in a 46 × 46 region is `1:1` at the room's own scale, which is
- * the pipeline's rule 4 — one art pixel is one room unit — and the same
- * relationship the counter tray has.
+ * That is deliberately **not** the hit region. The frame on the wall is
+ * 116 × 78 because that is the frame, and the desk is 68 × 58 because that is
+ * the desktop; both are sized for a thumb. Collapsing the two would either
+ * shrink the targets to sprite size or stretch every sprite to its furniture,
+ * and the second is the fractional resample the pipeline exists to avoid.
+ * `lib/rooms/objects.ts` holds both, so there is still one definition of each.
  */
 export function PlacedItems({ items }: { items: readonly DrawnItem[] }) {
   const bySlot = new Map(items.map((item) => [item.slot, item]));
@@ -54,7 +56,7 @@ export function PlacedItems({ items }: { items: readonly DrawnItem[] }) {
             aria-hidden="true"
             data-room-item={slot}
             className="pointer-events-none absolute z-10 flex items-end justify-center"
-            style={place(roomObject(slot).rect)}
+            style={place(slotArtRect(slot))}
           >
             <AssetView resolution={item.asset} compact placeholder="collectible" />
           </span>
@@ -92,13 +94,10 @@ export function PlacedItems({ items }: { items: readonly DrawnItem[] }) {
  * ## Six on the wall, all of them in the panel
  *
  * Same pitch as the parlor's rail — 18 wide on a 22-unit spacing — which fits
- * six across the 140-unit rod. A seventh title is years away and belongs to the
+ * six across the 134-unit rod. A seventh title is years away and belongs to the
  * panel, which lists them all. **No "+2" mark**: a count of what is not being
  * shown is a score, and `18 §4` allows none.
  */
-const PENNANTS_ON_THE_RAIL = 6;
-const PENNANT = { width: 18, height: 15, pitch: 22, top: 8 } as const;
-
 export function RingsOnRail({
   rings,
   asset,
@@ -108,7 +107,7 @@ export function RingsOnRail({
   asset: AssetResolution;
 }) {
   const [railX, railY] = roomObject('rings').rect;
-  const shown = rings.slice(0, PENNANTS_ON_THE_RAIL);
+  const shown = rings.slice(0, PENNANT.shown);
 
   return (
     <>
@@ -119,8 +118,8 @@ export function RingsOnRail({
           data-room-title={ring.year}
           className="pointer-events-none absolute z-10"
           style={place([
-            railX + 4 + index * PENNANT.pitch,
-            railY + PENNANT.top,
+            railX + PENNANT.offsetX + index * PENNANT.pitch,
+            railY + PENNANT.offsetY,
             PENNANT.width,
             PENNANT.height,
           ])}
