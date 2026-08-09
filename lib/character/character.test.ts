@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { assetRegistry } from '@/lib/assets/registry';
@@ -741,6 +741,28 @@ describe.skipIf(!hasDatabase)('saving and wearing', () => {
     expect(row?.body).toBe(0);
     expect(row?.palette).toBe(0);
     expect((await characterFor(db!, manager)).configuration).toEqual(chosen);
+  });
+
+  it('renders a row written by code that predates the new columns', async () => {
+    /*
+     * The deploy window `0016` is defaulted for: `vercel-build` migrates during
+     * the build while the previous deployment keeps serving, so a migrated
+     * database briefly answers to code that writes only `body`, `face`, `hair`
+     * and `palette`. The same window exists in reverse on a rollback.
+     *
+     * Written with raw SQL naming only the old columns, because that is exactly
+     * what the old code's insert was. It must produce a character rather than a
+     * NOT NULL violation.
+     */
+    await db!.execute(
+      sql`insert into character_configurations (user_id, body, face, hair, palette)
+          values (${manager}::uuid, 1, 0, 2, 3)`,
+    );
+
+    const state = await characterFor(db!, manager);
+    expect(state.chosen).toBe(true);
+    expect(state.configuration.hair).toBe(2);
+    expect(() => compositeRuns(state.composite)).not.toThrow();
   });
 
   it('draws a character out of a row whose stored option was retired', async () => {
