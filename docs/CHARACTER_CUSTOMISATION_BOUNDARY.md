@@ -1,8 +1,21 @@
 # The character-customisation rebuild — the canonical account
 
-**Status:** built. One reopened product area, one production crash root-caused and
-fixed, one trait model replaced, one sprite system written, one screen redesigned.
-Everything outside character customisation stays frozen.
+**Status: CLOSED — production verified, 2026-08-09.** One reopened product area,
+one production crash root-caused and fixed, one trait model replaced, one sprite
+system written, one screen redesigned. Merged in #78 (`ecbaf2f`).
+
+**The fix is confirmed on the real deployment**, not inferred from a green gate:
+Alex loaded production on iPhone, opened the character editor, changed a trait and
+saved. It worked, and the exception did not recur — the exact path that originally
+failed. `1891557172@E352` is **not** an active defect.
+
+That observation covers **this feature only**. It says nothing about cron
+execution, live Sleeper ingestion, the commissioner variable, demo seats in
+production, or the rest of `docs/ACTIVATION.md §5`.
+
+The area is **not reopened** by this record. The six-trait, 64 × 96, 29-layer
+system below is the accepted v1 implementation, and everything outside character
+customisation stays frozen.
 
 ---
 

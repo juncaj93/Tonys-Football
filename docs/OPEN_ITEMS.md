@@ -58,6 +58,37 @@ rather than no data:
 
 `docs/IN_SEASON_SYNC_BOUNDARY.md`. Closed.
 
+### A2 · Every character save returned a server-side exception — **CLOSED, production verified**
+
+`app/actions/character.ts` exported `const CUSTOMISER_SLOTS` — a frozen array
+with **no consumer anywhere** — from a `'use server'` file. Next.js compiles such
+a module with an injected `ensureServerEntryExports`, which throws
+`A "use server" file can only export async functions, found object.` carrying
+`__NEXT_ERROR_CODE = "E352"`. The module is evaluated when an **action is
+invoked**, not when the page renders, so the route loaded perfectly and **every
+Save failed from #48 (2026-07-31) onward** — with `next build`, `npm run test`
+and `npm run visual:qa` all green, because none of the three invokes an action.
+
+The digest Alex saw was `1891557172@E352`. **It is not an active defect.**
+
+Fixed, rebuilt and merged in #78 (`ecbaf2f`). Two guards stop the class
+recurring: a test that parses every `'use server'` file with the TypeScript AST
+and refuses a non-async runtime export (it fails on the pre-fix file), and a
+visual state that **presses the Save button** rather than photographing the form.
+
+**Evidence, in order:**
+
+| | |
+|---|---|
+| The original failure | **reproduced locally** against a production build, through the product, before anything changed — same error, same `@E352` |
+| Root cause | non-function export from a `'use server'` module |
+| The fix and the rebuilt feature | **1,485 tests**, **103 visual states × 3 widths**, both hosted gates green |
+| Deployed | merged to `main`; post-merge `main` CI green |
+| **It works in production** | **observed.** Alex loaded the live site on iPhone, opened the character editor, changed a trait, and Save completed. The exception did not recur. |
+
+That last row is the exact user path that originally failed, on the real
+deployment. `docs/CHARACTER_CUSTOMISATION_BOUNDARY.md` is the canonical account.
+
 **Nothing else is in category A.** Every other v1 system is built, tested and
 reachable; what remains below is polish, activation, or deferred scope.
 
@@ -210,11 +241,30 @@ The read-only query is in `docs/PUBLIC_MODE.md` and has never been run. This is 
 record it as passed. If a `demo:` seat with `is_admin = true` is ever found in
 production it is an authentication incident, not a cleanup task.
 
-### D5 · Nobody has looked at production in a browser
+### D5 · The production smoke test — **one path observed, the checklist still open**
 
-`*.vercel.app` is unreachable through the agent proxy, so every claim about
-production in this repository rests on GitHub's gate results and Vercel's own
-status. Carried since #23 and still true.
+**Corrected 2026-08-09.** This entry read *"Nobody has looked at production in a
+browser"* and said the claim had been carried since #23 and was *"still true"*.
+It is no longer true, and the correction has to be exact in both directions.
+
+**What has been observed:** Alex loaded the live site on iPhone and completed the
+character-customisation path — page load, editor, change a trait, Save — and it
+worked (**A2**). That is the first thing in this repository confirmed by loading
+production rather than inferred from a green gate.
+
+**What that does not do:** it does not complete this item. `docs/ACTIVATION.md §5`
+is an eleven-step checklist and character customisation is not one of its steps;
+a manager reaches the editor beneath *"Your keys"* rather than as a listed stop.
+One path working is one path working.
+
+**It also proves nothing about anything else.** Not cron execution, not real 2026
+Sleeper ingestion, not the commissioner variable, not the absence of demo seats
+in production. Each of those is its own D item with its own evidence, and none of
+them moved.
+
+`*.vercel.app` remains unreachable through the agent proxy, so no session can
+observe production directly; every remaining production claim in this repository
+still rests on GitHub's gate results and Vercel's own status.
 
 **Timing: before the league is given the URL.** `docs/ACTIVATION.md §5` is a
 5–10 minute phone checklist of the highest-value paths, not a manual QA campaign.
@@ -374,8 +424,13 @@ mechanism has never run for real.
 | It is deployed to production | **inferred** from a normal merge to `main`; not observed |
 | It successfully reads a real played week from Sleeper and stores it | **never observed.** It cannot be until a real post-week Tuesday run happens, with `CRON_SECRET` set |
 
-**Nothing in this repository has been confirmed by loading the production site.**
-That is D5, and it is on the activation list.
+**One thing in this repository has been confirmed by loading the production
+site**, and exactly one: the character-customisation flow, on Alex's iPhone
+(**A2**). Everything else above — including every row of the table — is still
+source, local Postgres, hosted CI, hosted visual QA, or inference from a merge.
+
+That single observation is **not** the smoke test. D5 carries what it does and
+does not settle.
 
 ### Autonomous development is stopped here
 
