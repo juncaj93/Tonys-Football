@@ -38,6 +38,7 @@ export const CHARACTER_PREVIEWS = [
   'balding-visor',
   'every-slot',
   'long-hair-apron',
+  'retired-options',
 ] as const;
 
 export type CharacterPreviewKey = (typeof CHARACTER_PREVIEWS)[number];
@@ -50,6 +51,8 @@ export const CHARACTER_PREVIEW_DESCRIPTIONS: Readonly<Record<CharacterPreviewKey
     'balding-visor': 'The pair the hat-floating rule exists for: the lowest hair under a visor.',
     'every-slot': 'All four worn slots filled at once, over the button-up shirt.',
     'long-hair-apron': 'Hair that falls past the shoulder under a body item that covers them.',
+    'retired-options':
+      'A stored character naming options that no longer exist. Every one of them falls back on its own; the rest of the character is untouched.',
   });
 
 export interface CharacterPreview {
@@ -75,23 +78,23 @@ interface Fixture {
  */
 const FIXTURES: Readonly<Record<CharacterPreviewKey, Fixture>> = Object.freeze({
   default: {
-    configuration: { body: 0, hair: 0, palette: 0 },
+    configuration: { skin: 1, hair: 0, hairColour: 1, facialHair: 0, top: 0, topColour: 1 },
     equipment: {},
   },
   tallest: {
-    configuration: { body: 0, hair: 3, palette: 1 },
+    configuration: { skin: 0, hair: 3, hairColour: 4, facialHair: 4, top: 5, topColour: 3 },
     equipment: { head: 'wear_head_beanie_winter' },
   },
   widest: {
-    configuration: { body: 0, hair: 5, palette: 2 },
+    configuration: { skin: 2, hair: 5, hairColour: 2, facialHair: 0, top: 2, topColour: 6 },
     equipment: { hand: 'wear_hand_pizza_peel' },
   },
   'balding-visor': {
-    configuration: { body: 1, hair: 4, palette: 3 },
+    configuration: { skin: 3, hair: 4, hairColour: 6, facialHair: 1, top: 1, topColour: 4 },
     equipment: { head: 'wear_head_pizza_visor', face: 'wear_face_shades' },
   },
   'every-slot': {
-    configuration: { body: 1, hair: 0, palette: 0 },
+    configuration: { skin: 1, hair: 0, hairColour: 0, facialHair: 2, top: 3, topColour: 5 },
     equipment: {
       head: 'wear_head_paper_hat',
       face: 'wear_face_mustache_fake',
@@ -100,8 +103,27 @@ const FIXTURES: Readonly<Record<CharacterPreviewKey, Fixture>> = Object.freeze({
     },
   },
   'long-hair-apron': {
-    configuration: { body: 0, hair: 2, palette: 2 },
+    configuration: { skin: 2, hair: 2, hairColour: 7, facialHair: 3, top: 4, topColour: 2 },
     equipment: { body: 'wear_body_jersey_blank', hand: 'wear_hand_trophy_mini' },
+  },
+
+  /*
+   * The state a real manager reaches by doing nothing at all.
+   *
+   * A hairstyle is retired, a colour is removed, a deploy is half rolled out —
+   * and a stored index stops naming anything. **This is the case the previous
+   * system got wrong**: it reset the *whole* character on the first bad value,
+   * so a manager whose hairstyle was retired also lost their skin tone, their
+   * shirt and their colour, and the reason was invisible.
+   *
+   * Two of these six are out of range. Four are not, and the picture has to show
+   * those four surviving — which is why the fixture is a *mixture* rather than
+   * six impossible numbers. The equipment names a slug that is not a wearable at
+   * all, so the drop path is photographed too.
+   */
+  'retired-options': {
+    configuration: { skin: 2, hair: 97, hairColour: 5, facialHair: 3, top: 4, topColour: 44 },
+    equipment: {},
   },
 });
 
@@ -124,10 +146,17 @@ export function resolveCharacterPreview(key: CharacterPreviewKey): CharacterPrev
     );
   }
 
-  // Every slug a fixture names must be real. A fixture referencing a retired or
-  // mistyped slug would otherwise composite to the *default* character
-  // (`composeCharacter` falls back rather than throwing) and photograph a
-  // perfectly good picture of the wrong thing under the right name.
+  /*
+   * Every slug a fixture names must be real. A fixture referencing a retired or
+   * mistyped slug would otherwise composite to a repaired character
+   * (`composeCharacter` falls back rather than throwing) and photograph a
+   * perfectly good picture of the wrong thing under the right name.
+   *
+   * `retired-options` is the one fixture whose *point* is unresolvable values,
+   * and it makes them in the configuration rather than in the equipment — so the
+   * check below stays unconditional. A per-key exemption here would be an
+   * exemption every future fixture could reach for.
+   */
   for (const [slot, slug] of Object.entries(fixture.equipment)) {
     const item = WEARABLES.find((candidate) => candidate.slug === slug);
     if (item === undefined) {

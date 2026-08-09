@@ -1418,9 +1418,9 @@ export type NewSignificancePolicy = typeof significancePolicies.$inferInsert;
 // ---------------------------------------------------------------------------
 
 /**
- * A manager's base appearance.
+ * A manager's chosen appearance.
  *
- * Four small integers, indices into `lib/character/catalog.ts`. `04 §10` permits
+ * Six small integers, indices into `lib/character/catalog.ts`. `04 §10` permits
  * a validated JSON configuration and this is columns instead, for one reason
  * that matters: a column can carry a CHECK, and a legal-combination rule living
  * only in application code holds until somebody writes a second caller.
@@ -1428,17 +1428,45 @@ export type NewSignificancePolicy = typeof significancePolicies.$inferInsert;
  * **Order in that catalog is the meaning of the stored number.** Never reorder
  * it; only append. A stored value pointing at a moved row is unrecoverable and
  * nobody notices for a week.
+ *
+ * ## `body`, `face` and `palette` are superseded and still here
+ *
+ * `0016` replaced one bundled `palette` — which chose a skin tone, a hair colour
+ * and a shirt colour together — with three independent columns, and split the
+ * garment out of `body`. The old three are **read by nothing** from that release
+ * onward. They are not dropped because dropping is the one migration a rollback
+ * cannot undo, and three integers cost nothing to keep.
+ *
+ * Do not read them. Do not write them. `0016` gave each a DEFAULT so that
+ * omitting them still satisfies NOT NULL.
  */
 export const characterConfigurations = pgTable('character_configurations', {
   userId: uuid('user_id')
     .primaryKey()
     .references(() => users.id, { onDelete: 'cascade' }),
 
-  body: integer('body').notNull(),
-  face: integer('face').notNull(),
+  /** Superseded by `top` in `0016`. Unread. */
+  body: integer('body').notNull().default(0),
+  /** Never used. There is no base face layer; the body carries one. Unread. */
+  face: integer('face').notNull().default(0),
+  /** Superseded by `skin` + `hairColour` + `topColour` in `0016`. Unread. */
+  palette: integer('palette').notNull().default(0),
+
+  /** Hairstyle. Carried across `0016` unchanged — same slugs, same order. */
   hair: integer('hair').notNull(),
-  /** Recolours the base layers only. A wearable keeps its authored colours. */
-  palette: integer('palette').notNull(),
+
+  /*
+   * Defaulted, and the product never uses the default: `saveCharacter` writes
+   * all six every time, and a manager who has never saved has no row. It exists
+   * so the window between a migration and its deploy — and the same window on a
+   * rollback — degrades to a plain character rather than to a NOT NULL violation
+   * (`drizzle/0016_character_traits.sql`).
+   */
+  skin: integer('skin').notNull().default(0),
+  hairColour: integer('hair_colour').notNull().default(0),
+  facialHair: integer('facial_hair').notNull().default(0),
+  top: integer('top').notNull().default(0),
+  topColour: integer('top_colour').notNull().default(0),
 
   ...timestamps,
 });

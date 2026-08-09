@@ -167,6 +167,9 @@ type StateName =
   | 'character-balding-visor'
   | 'character-every-slot'
   | 'character-long-hair-apron'
+  | 'character-retired-options'
+  | 'character-editing'
+  | 'character-saved'
   | 'tony-dialogue'
   /*
    * A Display opened **without** putting Tony's line away first.
@@ -403,6 +406,15 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'character-empty': 'character-empty',
   'character-dressed': 'character-dressed',
   'character-equipped': 'equipped-wearable',
+  /*
+   * The two states that **drive the customiser** rather than photograph it.
+   *
+   * They start from the empty wardrobe, because that is the manager every real
+   * seat is today, and the thing being photographed is the controls and the save
+   * — not what is in the drawer.
+   */
+  'character-editing': 'character-empty',
+  'character-saved': 'character-empty',
 
   /*
    * The press desk. Every one of these seats is an admin seat — set by
@@ -1301,6 +1313,50 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
 
     /*
+     * A category open, a choice made, and nothing saved.
+     *
+     * The screen this replaces printed every option of every trait at once, so
+     * "which category am I in" was not a state it could be in. It is now, and it
+     * is the one a manager spends the whole visit in.
+     */
+    case 'character-editing': {
+      await page.goto(`${BASE}/profile/character`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-character-customiser]', { state: 'attached' });
+      await page.click('[data-trait-tab="hair"]');
+      await pickSomethingElse(page, 'hair');
+      await page.waitForSelector('[data-character-dirty="yes"]', { state: 'attached' });
+      return;
+    }
+
+    /*
+     * **The state that would have caught the production crash.**
+     *
+     * Every existing character state opened the route and photographed it, and
+     * the route was never broken — `app/actions/character.ts` exported a
+     * non-function from a `'use server'` file, which Next evaluates when an
+     * action is *invoked*. So Save returned a 500 with digest `…@E352` for every
+     * manager, from #48 onward, with `visual:qa`, `npm run test` and `next build`
+     * all green.
+     *
+     * A screenshot of a form is not a test of the form. This one presses the
+     * button, waits for the server to answer, and photographs what it said.
+     */
+    case 'character-saved': {
+      await page.goto(`${BASE}/profile/character`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-character-customiser]', { state: 'attached' });
+      await page.click('[data-trait-tab="top"]');
+      await pickSomethingElse(page, 'top');
+      await page.waitForSelector('[data-character-dirty="yes"]', { state: 'attached' });
+      await page.click('[data-save]');
+      // The saved sentence, not a sleep: `router.refresh()` follows the action.
+      await page
+        .locator('[data-character-customiser] [aria-live="polite"]')
+        .filter({ hasText: /Saved/ })
+        .waitFor({ timeout: 20_000 });
+      return;
+    }
+
+    /*
      * The geometry fixtures — the silhouettes that could clip.
      *
      * `?character=` is resolved on the **server** behind the demo guard
@@ -1315,7 +1371,8 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'character-widest':
     case 'character-balding-visor':
     case 'character-every-slot':
-    case 'character-long-hair-apron': {
+    case 'character-long-hair-apron':
+    case 'character-retired-options': {
       const key = state.slice('character-'.length);
       await page.goto(`${BASE}/profile/character?character=${key}`, {
         waitUntil: 'networkidle',
@@ -1589,12 +1646,15 @@ const ALL_STATES: readonly StateName[] = [
   'character-empty',
   'character-dressed',
   'character-equipped',
+  'character-editing',
+  'character-saved',
   'character-default',
   'character-tallest',
   'character-widest',
   'character-balding-visor',
   'character-every-slot',
   'character-long-hair-apron',
+  'character-retired-options',
   'slice',
   'slice-offseason',
   'slice-preseason',
@@ -3699,6 +3759,197 @@ async function checkDevices(page: Page, width: number, state: string): Promise<v
   }
 }
 
+/**
+ * The character, and whether it is actually a character.
+ *
+ * ## What can go wrong here that a person cannot see
+ *
+ * A sprite at a fractional scale looks *nearly* right — every edge lands between
+ * device pixels and the whole figure goes half a shade soft, which reads as "the
+ * art is a bit muddy" rather than as a bug, and which is the exact defect
+ * recorded against the clipboard on `/profile` and against the collectibles'
+ * 1.4375x resample. So the scale is measured rather than looked at.
+ *
+ * ## And the one that shipped
+ *
+ * `character-saved` presses Save. Every character state before it opened the
+ * route and photographed it, and **the route was never broken** — the crash was
+ * in the action, which Next evaluates only when an action is invoked. A
+ * screenshot of a form is not a test of the form.
+ */
+/**
+ * Choose an option in the open category that is **not** the current one.
+ *
+ * A fixed index is a coin flip. A manager who has never saved gets a character
+ * derived from their user id (`defaultCharacterFor`), so whether option 3 is
+ * already selected depends on a hash of a uuid the seed regenerates — and
+ * choosing what is already chosen leaves the form clean, which leaves Save
+ * disabled, which fails as a twenty-second timeout on a button rather than as
+ * "nothing changed".
+ */
+async function pickSomethingElse(page: Page, trait: string): Promise<void> {
+  const option = page
+    .locator(`[data-trait-options="${trait}"] button[aria-pressed="false"]`)
+    .first();
+  if ((await option.count()) === 0) {
+    throw new Error(`every ${trait} option is already selected, which cannot be true`);
+  }
+  await option.click();
+}
+
+async function checkCharacter(page: Page, width: number, state: string): Promise<void> {
+  if (!state.startsWith('character-')) return;
+
+  const seen = await page.evaluate(() => {
+    const view = document.querySelector('[data-character-view]');
+    if (view === null) return null;
+
+    const box = view.getBoundingClientRect();
+    const svg = view.querySelector('svg');
+    const rects = svg?.querySelectorAll('rect').length ?? 0;
+    const viewBox = svg?.getAttribute('viewBox') ?? '';
+
+    const live = document.querySelector('[data-character-customiser] [aria-live="polite"]');
+
+    // Every tappable control inside the customiser, with its rendered box.
+    const controls = [...document.querySelectorAll('[data-character-customiser] button')].map(
+      (el) => {
+        const r = el.getBoundingClientRect();
+        return { w: r.width, h: r.height, text: (el.textContent ?? '').trim() };
+      },
+    );
+
+    return {
+      w: box.width,
+      h: box.height,
+      left: box.left,
+      right: box.right,
+      rects,
+      viewBox,
+      rendering: getComputedStyle(view).imageRendering,
+      /*
+       * `shape-rendering`, hyphenated — the attribute React emits from the
+       * `shapeRendering` prop. The camel-case name reads back empty from the DOM,
+       * and the first version of this gate asked for it and failed at all three
+       * widths on a page that was rendering correctly.
+       */
+      shapeRendering: svg?.getAttribute('shape-rendering') ?? '',
+      computedShapeRendering: svg === null ? '' : getComputedStyle(svg).shapeRendering,
+      status: (live?.textContent ?? '').trim(),
+      controls,
+      views: document.querySelectorAll('[data-character-view]').length,
+    };
+  });
+
+  if (seen === null) {
+    fail('character', `@${String(width)} ${state} draws no character at all.`);
+    return;
+  }
+
+  if (seen.viewBox !== '0 0 64 96') {
+    fail(
+      'character',
+      `@${String(width)} ${state} draws on viewBox "${seen.viewBox}", not the 64 x 96 canvas ` +
+        'every layer is authored against. A layer resampled to fit is a layer authored wrong.',
+    );
+  }
+
+  /*
+   * Integer scale, and the *same* integer in both directions. A non-square
+   * factor is how a sprite ends up subtly stretched, which nobody names and
+   * everybody sees.
+   */
+  const fx = seen.w / 64;
+  const fy = seen.h / 96;
+  if (!Number.isInteger(fx) || !Number.isInteger(fy) || fx !== fy || fx < 1) {
+    fail(
+      'character',
+      `@${String(width)} ${state} draws the 64 x 96 canvas at ${String(seen.w)} x ` +
+        `${String(seen.h)} — ${fx.toFixed(3)}x by ${fy.toFixed(3)}x. Pixel art at a fractional ` +
+        'scale puts every edge between device pixels.',
+    );
+  }
+
+  if (seen.rects < 50) {
+    fail(
+      'character',
+      `@${String(width)} ${state} draws ${String(seen.rects)} rectangles, which is not a figure. ` +
+        'An empty or nearly empty composite means a layer resolved to nothing.',
+    );
+  }
+
+  /*
+   * The attribute *and* what the browser resolved it to. The attribute alone is
+   * satisfied by a value the renderer ignored; the computed value alone cannot
+   * tell "crispEdges" from a default that happens to match on this engine.
+   */
+  if (seen.shapeRendering !== 'crispEdges' || seen.computedShapeRendering !== 'crispedges') {
+    fail(
+      'character',
+      `@${String(width)} ${state} draws the sprite with shape-rendering="${seen.shapeRendering}" ` +
+        `(computed ${seen.computedShapeRendering}). Anything but crispEdges antialiases a scaled ` +
+        'rectangle into a grey seam.',
+    );
+  }
+
+  if (seen.rendering !== 'pixelated') {
+    fail(
+      'character',
+      `@${String(width)} ${state} sets image-rendering: ${seen.rendering} on the character.`,
+    );
+  }
+
+  // Fully on screen, horizontally. A clipped character is the one thing this
+  // whole screen exists to show.
+  if (seen.left < 0 || seen.right > width) {
+    fail(
+      'character',
+      `@${String(width)} ${state} clips the character: ${seen.left.toFixed(1)}..` +
+        `${seen.right.toFixed(1)} against a ${String(width)}px viewport.`,
+    );
+  }
+
+  /*
+   * **Save actually saved.**
+   *
+   * The sentence rather than the absence of an error: a 500 replaces the whole
+   * document, so "no error visible" is also true of a page that never submitted.
+   */
+  if (state === 'character-saved' && !/saved/i.test(seen.status)) {
+    fail(
+      'character',
+      `@${String(width)} ${state} pressed Save and the screen says "${seen.status}". ` +
+        'This is the state that exists because saving a character returned a server-side ' +
+        'exception in production while every gate was green.',
+    );
+  }
+
+  if (state === 'character-editing' && !/not saved/i.test(seen.status)) {
+    fail(
+      'character',
+      `@${String(width)} ${state} changed a trait and the screen says "${seen.status}". ` +
+        'A screen that can be in a state that is not stored has to say so.',
+    );
+  }
+
+  /*
+   * Tap targets, judged here rather than by `checkTargets` — that gate is about
+   * the room's eight objects and their overlaps, and these are a scrolling strip
+   * of chips whose only risk is being small.
+   */
+  const small = seen.controls.filter((control) => control.h < 44 || control.w < 44);
+  if (small.length > 0) {
+    fail(
+      'character',
+      `@${String(width)} ${state} has ${String(small.length)} control(s) under 44px: ` +
+        small
+          .slice(0, 4)
+          .map((c) => `"${c.text}" ${c.w.toFixed(0)}x${c.h.toFixed(0)}`)
+          .join(', '),
+    );
+  }
+}
+
 async function checkRarityContrast(page: Page, width: number, state: string): Promise<void> {
   /*
    * The page returns **strings**; every calculation happens in Node.
@@ -4119,6 +4370,15 @@ async function run(): Promise<void> {
         await checkRarityContrast(page, width, state);
         // The key ring, on the two states that make a promise about it.
         await checkDevices(page, width, state);
+        /*
+         * Every `character-*` state, including the two that press a button.
+         *
+         * Everywhere rather than on one designed state, for the reason the
+         * colour and type gates are: the character is drawn on `/profile` too,
+         * and the crash this feature was rebuilt around was reachable from a
+         * control every one of these screens carries.
+         */
+        await checkCharacter(page, width, state);
         /*
          * One transient at a time, everywhere — not just on the state built to
          * catch it. `MANDATE §6` is a property of the room rather than of a

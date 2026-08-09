@@ -7,7 +7,6 @@ import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
 import { TYPE } from '@/lib/design/type';
 import { requireUser } from '@/lib/auth/current-user';
-import { customiserOptions } from '@/lib/character/composite';
 import { previewCharacter } from '@/lib/character/previews';
 import { characterFor, ownedWearables } from '@/lib/character/service';
 import { getDb } from '@/lib/db';
@@ -74,17 +73,19 @@ export default async function CharacterPage({
                 * in the picture and obvious in the order.
                 */}
               <ul className="mt-3 border-t-2 border-dashed border-ink-300/60 pt-3">
+                {/*
+                  * Label above slug, not beside it. Side by side, a slug as long
+                  * as `wear_head_beanie_winter` broke across the column edge and
+                  * printed as two fragments with the label's own wrap between
+                  * them — which is unreadable in the one place a reader is
+                  * checking a name character by character.
+                  */}
                 {preview.composite.layers.map((layer) => (
-                  <li
-                    key={layer.layer}
-                    className={`flex items-baseline justify-between gap-3 py-0.5 ${TYPE.bodyCompact} text-ink-700`}
-                  >
-                    <span className={`${TYPE.eyebrow} text-ink-900`}>
-                      {layer.layer.replace('-', ' ')}
+                  <li key={layer.layer} className="py-1">
+                    <span className={`block ${TYPE.eyebrow} text-ink-900`}>
+                      {layer.layer.replaceAll('-', ' ')}
                     </span>
-                    <span className={`text-right ${TYPE.machine} text-ink-500`}>
-                      {layer.slug}
-                    </span>
+                    <span className={`block ${TYPE.machine} text-ink-500`}>{layer.slug}</span>
                   </li>
                 ))}
               </ul>
@@ -128,7 +129,7 @@ export default async function CharacterPage({
               configuration={state.configuration}
               equipped={equipped}
               owned={items}
-              options={customiserOptions()}
+              chosen={state.chosen}
             />
           </div>
 

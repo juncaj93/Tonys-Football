@@ -7,7 +7,7 @@ import { assetRegistry } from '@/lib/assets/registry';
 import { CATALOG_SIZE, catalog } from '@/lib/counter/catalog';
 import { standardRewardTable } from '@/lib/counter/rewards';
 
-import { BASE_VARIANTS, WEARABLES, WEARABLE_COUNT, characterSlugs } from './catalog';
+import { WEARABLES, WEARABLE_COUNT, characterSlugs } from './catalog';
 
 /**
  * **Commissioner ruling, 2026-07-31: collectibles and wearables are separate
@@ -104,8 +104,16 @@ describe('the two families are separate in the registry', () => {
     expect(WEARABLES).toHaveLength(WEARABLE_COUNT);
     expect(WEARABLE_COUNT).toBe(12);
     expect(CATALOG_SIZE).toBe(24);
-    // 12 + 24 + the base layers, and no slug counted twice.
-    expect(new Set(characterSlugs()).size).toBe(WEARABLE_COUNT + BASE_VARIANTS.length);
+    /*
+     * Every character slug is distinct, and the twelve wearables are all of it
+     * that overlaps the earned economy. Counting the free layers explicitly would
+     * make appending a hairstyle fail this test for no reason — what it is
+     * actually guarding is that no slug is counted twice and that the wearable
+     * count has not drifted.
+     */
+    const slugs = characterSlugs();
+    expect(new Set(slugs).size).toBe(slugs.length);
+    expect(slugs.filter((slug) => slug.startsWith('wear_'))).toHaveLength(WEARABLE_COUNT);
   });
 });
 
