@@ -1455,11 +1455,18 @@ export const characterConfigurations = pgTable('character_configurations', {
   /** Hairstyle. Carried across `0016` unchanged — same slugs, same order. */
   hair: integer('hair').notNull(),
 
-  skin: integer('skin').notNull(),
-  hairColour: integer('hair_colour').notNull(),
-  facialHair: integer('facial_hair').notNull(),
-  top: integer('top').notNull(),
-  topColour: integer('top_colour').notNull(),
+  /*
+   * Defaulted, and the product never uses the default: `saveCharacter` writes
+   * all six every time, and a manager who has never saved has no row. It exists
+   * so the window between a migration and its deploy — and the same window on a
+   * rollback — degrades to a plain character rather than to a NOT NULL violation
+   * (`drizzle/0016_character_traits.sql`).
+   */
+  skin: integer('skin').notNull().default(0),
+  hairColour: integer('hair_colour').notNull().default(0),
+  facialHair: integer('facial_hair').notNull().default(0),
+  top: integer('top').notNull().default(0),
+  topColour: integer('top_colour').notNull().default(0),
 
   ...timestamps,
 });

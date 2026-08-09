@@ -70,12 +70,34 @@ UPDATE "character_configurations" SET
   "facial_hair" = COALESCE("facial_hair", 0),
   "top" = COALESCE("top", "body");--> statement-breakpoint
 
+--
+-- NOT NULL, **and defaulted** — which is about the deploy rather than the data.
+--
+-- `vercel-build` runs migrations during the build, and the previous deployment
+-- keeps serving until the new one is promoted. So there is a window in which a
+-- migrated database is answering to code that has never heard of these columns,
+-- and the same window exists in reverse on a rollback. A writer from that code
+-- omits all five, and without a default the insert fails a NOT NULL check.
+--
+-- **The product never reaches these defaults**: `saveCharacter` writes all six
+-- traits every time, and a manager who has never saved has no row at all — they
+-- get a character derived from their user id instead, which is what stops the
+-- ten of them being identical. The default exists so a mixed-version window
+-- degrades to a plain-looking character rather than to a 500.
+--
 ALTER TABLE "character_configurations"
   ALTER COLUMN "skin" SET NOT NULL,
   ALTER COLUMN "hair_colour" SET NOT NULL,
   ALTER COLUMN "facial_hair" SET NOT NULL,
   ALTER COLUMN "top" SET NOT NULL,
   ALTER COLUMN "top_colour" SET NOT NULL;--> statement-breakpoint
+
+ALTER TABLE "character_configurations"
+  ALTER COLUMN "skin" SET DEFAULT 0,
+  ALTER COLUMN "hair_colour" SET DEFAULT 0,
+  ALTER COLUMN "facial_hair" SET DEFAULT 0,
+  ALTER COLUMN "top" SET DEFAULT 0,
+  ALTER COLUMN "top_colour" SET DEFAULT 0;--> statement-breakpoint
 
 --
 -- The three superseded columns get a default so nothing has to write them.
