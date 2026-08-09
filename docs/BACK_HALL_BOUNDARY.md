@@ -2,6 +2,8 @@
 
 **Status:** **implemented, 2026-07-31.** The hall is a room. What follows is the boundary as prepared, with `§0`, `§5` and `§7` corrected to what was actually built and what was found while building it.
 
+> **Amended 2026-08-09 — the stairs are open.** The basement was built and `rooms` was flipped, so the hall a manager walks into now has one destination open and one shut. Four things in this document changed with it and are marked inline: `/rooms` is no longer a closed room (`§0`, `§1`), the rear doorway's reason for not glowing is now a mechanism rather than a state (`§3`), and the two photographed states swapped roles (`§5`). Everything else — the room's grammar, the Underground's fixed line, the object map, the depth rule — is unchanged. `docs/ROOMS_BOUNDARY.md` is the basement's own account.
+
 The commissioner's instruction: *"You may inspect and clarify the Back Hall, Rooms and Underground specifications. Prepare route contracts, state boundaries, navigation flow, locked/open states, demo requirements, and visual asset slots. Do not create generic dashboard pages."*
 
 The authority is `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md §5`–`§6` and `§9.2`. This file records what is **already true in code**, what `18` fixes that a future implementer must not re-decide, and the contracts that need to exist before anybody opens M4.
@@ -13,7 +15,7 @@ The authority is `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md §5`–`§6` and `§9
 | | State |
 |---|---|
 | `/back-hall` | **Built as a room** — one portrait scene, three hit regions in room units, nothing scrolling. `lib/backhall/objects.ts` is the map, `components/scene/back-hall.tsx` draws the placeholder scene |
-| `/rooms` | **Built as a closed room** — `app/rooms/page.tsx`, 41 lines, a `ClosedRoom` panel |
+| `/rooms` | **Built as a closed room** — `app/rooms/page.tsx`, 41 lines, a `ClosedRoom` panel. **Superseded 2026-08-09**: the basement is built and the stairs are open. `docs/ROOMS_BOUNDARY.md` |
 | `/underground` | **Deliberately not a route, and correctly so.** It is an inert plate on `/back-hall` that answers in world. A `<Link href="/underground">` to a route that did not exist shipped once, was prefetched on hover, logged a 404 on every visit, and was caught by the console gate rather than by CI (`VISUAL_ACCEPTANCE §0`) |
 | Art | Every slot in `18 §9.2` is a placeholder. `zone_back_hall_shell`, `object_stairs_rooms`, `object_door_underground_locked` / `_open`, `object_door_return` |
 
@@ -26,7 +28,7 @@ The authority is `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md §5`–`§6` and `§9
 | Route | Owns | Never |
 |---|---|---|
 | `/back-hall` | One compact pixel-art scene: two environmental choices and an in-world return | A card grid · a bottom nav · scrolling · a heading that says "Back Hall" as a page title |
-| `/rooms` | The basement landing. **Locked in v1** (`16` defers basements to P6 / v1.1) | Any inventory, any placement, any drag |
+| `/rooms` | ~~The basement landing. **Locked in v1**~~ **Open, 2026-08-09.** A manager's own room: four curated places, three themes, the character in it, and a door to the corridor | A card grid · free-form placement · drag-and-drop · a second balance |
 | `/underground` | The curtained doorway. **Locked, and never labelled `CASINO` on first discovery** | The word casino, anywhere on the page, in any state |
 
 **`/back-hall` is not a menu.** `18 §5`: *"a small pixel-art scene, not a menu card."* The failure mode has a name in this repository — the room's grammar is objects, and a page of buttons labelled with destinations is the generic dashboard the instruction forbids. If the implementation ends up with a `<ul>` of links, it is wrong regardless of how it is styled.
@@ -75,7 +77,7 @@ Three properties, all of them already true of the parlor and all of them easy to
 
 1. **The return is an in-world door**, not a browser-back dependency and not a breadcrumb. `ReturnPlate` is the existing component and it is what the other interior screens use.
 2. **Two taps is the approved maximum depth** for Rooms and Underground, and it is the *only* approved exception to one-tap depth (`18 §5`). Nothing may be added a third tap deep.
-3. **The rear doorway glows only when something beyond it is open** (`18 §3` — a Door glows only when it has something to say, and only Doors glow). In v1 nothing beyond it is open, so **it ships present and calm**. The `glow` gate in `npm run visual:qa` already fails a room where anything else glows; it will fail a Back Hall door that glows for nothing.
+3. **The rear doorway does not glow, and after 2026-08-09 that is a mechanism rather than a state.** This used to read *"it glows only when something beyond it is open… in v1 nothing beyond it is open"*, and the second half stopped being true when the basement opened. The doorway still does not glow, and **cannot**: it is baked into the shell (`18 §8.1`), so it carries no overlay, no alpha, and nothing for `drop-shadow()` to follow — `lib/parlor/objects.ts` states it directly. That is also the right answer on the merits. Glow means *available now*, and a door that lit up permanently because a feature exists would turn the affordance into a label. The opening of a locked door is an **announced event** (`18 §6`), which is a thing the commissioner does once, not a thing the room says forever.
 
 ---
 
@@ -106,6 +108,14 @@ The catalog pattern is settled twice over now (`lib/demo/states.ts`, `lib/slice/
 | `back-hall-both-open` | Both open. The state nobody will see for a year and which has to look right when they do |
 | `rooms-locked` | The closed basement landing and its line |
 | `underground-locked` | The curtained door and *"Don't worry about it."* |
+
+**Superseded 2026-08-09, and the two that survive have swapped roles.** `rooms`
+opened, so the hall a manager actually walks into has the stairs open and the
+curtain shut — that is what **`back-hall`** photographs now. The state needing a
+parameter is the one a **revert** produces, and it is **`back-hall-shut`**, via a
+new `?open=none` sentinel. Same two flag combinations, opposite defaults, and the
+shut hall is still photographed for exactly the reason `§5` gives below: nobody
+will look at it until the day somebody needs it.
 
 Every one of them is a **flag combination**, so they need no database writes at all — the same property that makes the Slice's editions safe, arrived at for a different reason.
 
