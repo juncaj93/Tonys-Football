@@ -206,9 +206,13 @@ The conservation ruling is struck through rather than deleted because **the half
 
 `docs/IN_SEASON_SYNC_BOUNDARY.md` is the canonical account.
 
-**`docs/OPEN_ITEMS.md` is the canonical open-items ledger** — everything still open, categorised, reconciled against `main` rather than against the paragraphs claiming it. Read it before picking up work.
+**The key ring meant three different things, and the entry saying it was unphotographed was wrong.** `/profile` was being captured at every width and showing **1 device at 390, 2 at 375 and 3 at 360** — the widths share a database and each signs in again — so the red *"change the locks everywhere"* control was absent from one file and present in two, all three under one name. Worse than an uncaptured screen: it looked covered. Both states build their own precondition now (`profile` uses the product's own revocation and signs back in; `profile-devices` makes its second session by **really signing in** from an iPhone-Safari context, so the two rows carry different labels — three identical lines cannot answer *"is that my phone?"*). `checkDevices` pins the count, the distinctness, the control's presence and its contrast. **100 states × 3 widths.**
 
-**Next assignment:** `docs/OPEN_ITEMS.md`. `docs/CHECKPOINT.md` remains the narrative record of how the product got here.
+**V1 engineering is FUNCTIONALLY READY, and autonomous product development is stopped.** Five human actions remain and `docs/ACTIVATION.md` is the packet for them — phone-first, ordered, reversible, with the real deadline for each: `CRON_SECRET` · the commissioner variable · the production demo-seat query · one line of Tony's dialogue · a production smoke test. **Do not resume Category C polish to fill capacity, and leave deferred scope deferred.**
+
+**`docs/OPEN_ITEMS.md` is the canonical open-items ledger** — everything still open, categorised, reconciled against `main` rather than against the paragraphs claiming it, with what has and has not been *observed in production* stated separately. Read it before picking up work.
+
+**Next assignment:** none autonomous. `docs/ACTIVATION.md` is Alex's. `docs/CHECKPOINT.md` remains the narrative record of how the product got here.
 
 **Previously:** the Back Hall as a room (visual debt 5) — one compact pixel-art scene with two environmental choices, not the three stacked panels `18 §5` forbids. Placeholder architecture is approved and M3 has shown what it looks like: a drawn stand-in at the right size, as geometry data, rather than a sign. `docs/BACK_HALL_BOUNDARY.md` carries the route contracts, the flag-based state boundary, the five asset slots and the five demo states. Stats Intelligence (#26) and M3 (#24) are both shipped.
 

@@ -80,6 +80,56 @@ runbook — generate, set, redeploy, verify without exposing the value, roll bac
 
 ---
 
+## Where the product is — 2026-08-09 (nineteenth session)
+
+### Final pre-launch: the key ring, and the stop
+
+**V1 engineering is FUNCTIONALLY READY and autonomous product development is
+stopped here.** `docs/ACTIVATION.md` is the commissioner packet; `docs/OPEN_ITEMS.md`
+is the ledger. Do not resume polish to fill capacity.
+
+The last justified verification gap was the profile screen's device list, and the
+entry describing it was **wrong in a way worth recording**. It said the
+destructive *"change the locks everywhere"* control was never photographed. It was
+being photographed — **accidentally, and differently at every width**: the three
+widths share a database and each signs in again, so `profile` captured **1 device
+at 390, 2 at 375 and 3 at 360**, control absent from the first and present in the
+others, all three under one filename, with a `--state=` run making a fourth
+meaning. That is worse than an uncaptured screen, because it looked covered.
+
+**Both states build their own precondition now**, the way `ensureClaimedManager`
+does on the door:
+
+- `profile` uses the product's **own** revocation — *"change the locks
+  everywhere"*, then sign back in — so the precondition is simultaneously
+  evidence that revocation works, at every width, on every sweep. No database
+  hook and no auth bypass, deliberately: a helper that deleted `sessions` rows
+  would depend on a mechanism the product does not have.
+- `profile-devices` makes its second session by **really signing in** from a
+  second browser context carrying an iPhone Safari User-Agent, so `deviceLabel`
+  reads a header the browser actually sent and the rows read `iPhone · Safari`
+  and `Unknown device · Chrome`. Three identical labels cannot answer *"is that
+  my phone?"*, which is the only question that column exists for.
+
+`checkDevices` pins the count per state, requires two devices to carry two
+distinct names, requires the control to appear exactly when it is real, and
+measures its contrast against its own red ground. The first deliberate capture
+exposed **no defect**.
+
+**100 states × 3 widths.** Route reconciliation re-run: 16 routes, 15 reached, 1
+exempt with a current reason, 0 missing.
+
+### The production line that has never been crossed
+
+Recorded because it is the single most important caveat at launch. The in-season
+sync is implemented (source), guarded and idempotent (local Postgres, each guard
+failing on the pre-fix build), compiling and passing (hosted CI), and visually
+verified (hosted visual QA). **It has never read a real played week from Sleeper
+in production**, and cannot until `CRON_SECRET` is set and a real post-week
+Tuesday fires. Do not upgrade that inference.
+
+---
+
 ## Execution status — who is actually doing what
 
 **Commissioner ruling, 2026-07-30:** a workstream is only *running* if an actor is implementing it. An issue, a label, a role contract or an `IMPLEMENTATION TASK` comment is **not** execution. Nothing sits in an ambiguous "assigned" state.
