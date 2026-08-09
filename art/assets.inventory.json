@@ -2,7 +2,7 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 103,
+  "totalSlugs": 112,
   "statusValues": [
     "placeholder",
     "generated",
@@ -369,131 +369,226 @@
       }
     },
     "_avatarLayers_B2": {
-      "$comment": "Free/starter layers available to every manager at claim time.",
+      "$comment": "Free/starter layers available to every manager at claim time. Canvas raised from 32x48 to 64x96 in the character-customisation rebuild -- no art existed at the old size, every row was art_status placeholder, so the change cost nothing to re-cut. See lib/character/art/geometry.ts for the measurement it was chosen by. art_status placeholder means there is no PNG: these layers are drawn at runtime from lib/character/art/, and a PNG dropped in with a path takes over per layer without a code change.",
+      "avatar_body_base": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "body",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "The figure every manager starts as"
+      },
       "avatar_hair_01": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
-        "alt": "Short hair"
+        "alt": "Short hair",
+        "anchor": "bottom-center"
       },
       "avatar_hair_02": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
-        "alt": "Buzzed hair"
+        "alt": "Buzzed hair",
+        "anchor": "bottom-center"
       },
       "avatar_hair_03": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
-        "alt": "Long hair"
+        "alt": "Long hair",
+        "anchor": "bottom-center"
       },
       "avatar_hair_04": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
-        "alt": "Curly hair"
+        "alt": "Curly hair",
+        "anchor": "bottom-center"
       },
       "avatar_hair_05": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
-        "alt": "Balding"
+        "alt": "Receding hair",
+        "anchor": "bottom-center"
       },
       "avatar_hair_06": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
-        "alt": "Ponytail"
+        "alt": "Ponytail",
+        "anchor": "bottom-center"
+      },
+      "avatar_face_hair_01": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "facial-hair",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "Stubble"
+      },
+      "avatar_face_hair_02": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "facial-hair",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "Moustache"
+      },
+      "avatar_face_hair_03": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "facial-hair",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "Goatee"
+      },
+      "avatar_face_hair_04": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "facial-hair",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "Full beard"
       },
       "avatar_body_starter_02": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
-        "slot": "body",
-        "alt": "Hoodie"
+        "slot": "top",
+        "alt": "Hoodie",
+        "anchor": "bottom-center"
       },
       "avatar_body_starter_03": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
-        "slot": "body",
-        "alt": "Button-up shirt"
+        "slot": "top",
+        "alt": "Button-up shirt",
+        "anchor": "bottom-center"
+      },
+      "avatar_body_starter_04": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "top",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "T-shirt"
+      },
+      "avatar_body_starter_05": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "top",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "Football jersey"
+      },
+      "avatar_body_starter_06": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "top",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "Flannel shirt"
+      },
+      "avatar_body_starter_07": {
+        "family": "avatar",
+        "canvas": "64x96",
+        "anchor": "bottom-center",
+        "slot": "top",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "Crew-neck sweater"
       }
     },
     "_wearables_B2": {
-      "$comment": "12 earned wearables for the modular character system (M3). COMMISSIONER RULING 2026-07-31: these are NOT part of the 24-item pizza-box collectible catalog. Collectibles and wearables are separate product families — a pizza box awards collectible_*, character equipment uses wear_*. This comment previously claimed the opposite; that claim was wrong and contradicted the seeded reward table. Crossover rewards are not approved and must not be implemented without a later explicit ruling.",
+      "$comment": "12 earned wearables for the modular character system (M3). COMMISSIONER RULING 2026-07-31: these are NOT part of the 24-item pizza-box collectible catalog. Collectibles and wearables are separate product families — a pizza box awards collectible_*, character equipment uses wear_*. This comment previously claimed the opposite; that claim was wrong and contradicted the seeded reward table. Crossover rewards are not approved and must not be implemented without a later explicit ruling. Canvas raised to 64x96 alongside the free starter layers.",
       "wear_head_pizza_visor": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "head",
         "rarity": "common",
-        "alt": "Tony's Pizza visor"
+        "alt": "Tony's Pizza visor",
+        "anchor": "bottom-center"
       },
       "wear_head_beanie_winter": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "head",
         "rarity": "common",
-        "alt": "Winter beanie"
+        "alt": "Winter beanie",
+        "anchor": "bottom-center"
       },
       "wear_head_paper_hat": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "head",
         "rarity": "rare",
-        "alt": "Folded paper cook's hat"
+        "alt": "Folded paper cook's hat",
+        "anchor": "bottom-center"
       },
       "wear_body_apron_tony": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "body",
         "rarity": "rare",
-        "alt": "Tony's Pizza apron"
+        "alt": "Tony's Pizza apron",
+        "anchor": "bottom-center"
       },
       "wear_body_jersey_blank": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "body",
         "rarity": "rare",
-        "alt": "Blue and silver football jersey, no markings"
+        "alt": "Blue and silver football jersey, no markings",
+        "anchor": "bottom-center"
       },
       "wear_body_tracksuit": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "body",
         "rarity": "common",
-        "alt": "Tracksuit"
+        "alt": "Tracksuit",
+        "anchor": "bottom-center"
       },
       "wear_body_delivery_uniform": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "body",
@@ -501,52 +596,58 @@
         "suppresses": [
           "head"
         ],
-        "alt": "Delivery driver uniform"
+        "alt": "Delivery driver uniform",
+        "anchor": "bottom-center"
       },
       "wear_face_shades": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "face",
         "rarity": "common",
-        "alt": "Sunglasses"
+        "alt": "Sunglasses",
+        "anchor": "bottom-center"
       },
       "wear_face_mustache_fake": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "face",
         "rarity": "rare",
-        "alt": "Obviously fake mustache"
+        "alt": "Obviously fake mustache",
+        "anchor": "bottom-center"
       },
       "wear_hand_pizza_peel": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hand",
         "rarity": "rare",
-        "alt": "Pizza peel"
+        "alt": "Pizza peel",
+        "anchor": "bottom-center"
       },
       "wear_hand_slice": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hand",
         "rarity": "common",
-        "alt": "Slice of pizza"
+        "alt": "Slice of pizza",
+        "anchor": "bottom-center"
       },
       "wear_hand_trophy_mini": {
         "family": "avatar",
-        "canvas": "32x48",
+        "canvas": "64x96",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hand",
         "rarity": "epic",
-        "alt": "Small trophy"
+        "alt": "Small trophy",
+        "anchor": "bottom-center"
       }
     },
     "_rings_B2": {

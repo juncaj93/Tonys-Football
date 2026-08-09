@@ -815,7 +815,7 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
     const result = await saveCharacter(
       db,
       seat.userId,
-      { body: 1, hair: 5, palette: 2 },
+      { skin: 2, hair: 5, hairColour: 2, facialHair: 3, top: 4, topColour: 6 },
       {
         head: pick('wear_head_beanie_winter'),
         face: pick('wear_face_shades'),

@@ -30,8 +30,16 @@ function driverCharacterStates(): readonly string[] {
   return [...list[1]!.matchAll(/'character-([a-z-]+)'/g)].map((match) => match[1]!);
 }
 
-/** The three manager-backed states are demo seats, not preview fixtures. */
-const MANAGER_BACKED = ['empty', 'dressed', 'equipped'];
+/**
+ * The manager-backed states are demo seats, not preview fixtures.
+ *
+ * `empty`, `dressed` and `equipped` are states of a *wardrobe*; `editing` and
+ * `saved` are states of a *session* — a category open with an unsaved change,
+ * and a save that has come back from the server. None of them is a composite, so
+ * none of them can be a `?character=` fixture: a fixture faking a save would be
+ * photographing a mock of the exact thing that was broken in production.
+ */
+const MANAGER_BACKED = ['empty', 'dressed', 'equipped', 'editing', 'saved'];
 
 describe('the visual driver and the character preview catalog agree', () => {
   it('photographs every declared preview', () => {

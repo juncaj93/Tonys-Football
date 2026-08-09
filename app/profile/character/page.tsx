@@ -7,7 +7,6 @@ import { RoomBehind } from '@/components/scene/room-behind';
 import { Page } from '@/components/shell';
 import { TYPE } from '@/lib/design/type';
 import { requireUser } from '@/lib/auth/current-user';
-import { customiserOptions } from '@/lib/character/composite';
 import { previewCharacter } from '@/lib/character/previews';
 import { characterFor, ownedWearables } from '@/lib/character/service';
 import { getDb } from '@/lib/db';
@@ -80,7 +79,7 @@ export default async function CharacterPage({
                     className={`flex items-baseline justify-between gap-3 py-0.5 ${TYPE.bodyCompact} text-ink-700`}
                   >
                     <span className={`${TYPE.eyebrow} text-ink-900`}>
-                      {layer.layer.replace('-', ' ')}
+                      {layer.layer.replaceAll('-', ' ')}
                     </span>
                     <span className={`text-right ${TYPE.machine} text-ink-500`}>
                       {layer.slug}
@@ -128,7 +127,7 @@ export default async function CharacterPage({
               configuration={state.configuration}
               equipped={equipped}
               owned={items}
-              options={customiserOptions()}
+              chosen={state.chosen}
             />
           </div>
 

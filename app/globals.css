@@ -1337,3 +1337,45 @@ body[data-parlor-focus] .tony-line * {
    * path and the ordinary one are finally the same thing.
    */
 }
+
+/*
+ * The character in the mirror breathes.
+ *
+ * **One source pixel, and steps.** The customiser draws at 3x, so a whole source
+ * pixel is three CSS pixels and `steps(1)` lands the sprite on an exact device
+ * pixel at both ends — a smoothly interpolated 1.5px would put every edge of a
+ * pixel-art figure between device pixels for most of the cycle, which is the one
+ * thing this art must never have done to it.
+ *
+ * It is on the preview and nowhere else. A character idling in a list is
+ * movement nobody asked for.
+ */
+@keyframes character-breathes {
+  0%,
+  44% {
+    transform: translateY(0);
+  }
+  50%,
+  94% {
+    transform: translateY(3px);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+.character-idle {
+  animation: character-breathes 3.6s steps(1, end) infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  /*
+   * Standing still is the resting state, not a frozen frame of the cycle: the
+   * global rule collapses the duration, which would leave the sprite wherever
+   * the first keyframe put it.
+   */
+  .character-idle {
+    animation: none;
+    transform: none;
+  }
+}

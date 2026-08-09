@@ -7,67 +7,74 @@
  * from the database on any device, forever — instead of a saved image nobody can
  * re-render when the art changes.
  *
- * ## Everything here comes from the registry, not from taste
+ * ## A slot has an order; an item does not
  *
- * The slots, the canvas and the slugs were already canon in
- * `art/assets.inventory.json` before this file existed — `avatar_hair_01`,
- * `wear_head_pizza_visor`, `32 × 48`. **Commissioner ruling, 2026-07-31:
- * preserve the exact canonical slugs.** A first draft of this file invented
- * `character_hair_short` at `64 × 64` with `back` and `bottoms` slots, none of
- * which exist, and the only thing that caught it was opening the registry.
+ * An item carrying its own z-index is the design that always arrives first and
+ * always fails — two items authored months apart pick the same number, and
+ * renumbering one breaks every saved configuration that used it.
  *
- * ## Two things from `docs/M3_CHARACTER_BOUNDARY.md` worth restating
+ * ## Tony is not in this system
  *
- * **Tony is not in this system.** He is baked into the room's foreground at a
- * fixed scale, guarded by `lib/parlor/tony-scale.test.ts`, and he has no
- * configuration to compose.
- *
- * **A slot has an order; an item does not.** An item carrying its own z-index is
- * the design that always arrives first and always fails — two items authored
- * months apart pick the same number, and renumbering one breaks every saved
- * configuration that used it.
+ * He is baked into the room's foreground at a fixed scale, guarded by
+ * `lib/parlor/tony-scale.test.ts`, and he has no configuration to compose. The
+ * compositor is for managers only, which keeps the blast radius of every defect
+ * in it inside surfaces Tony is not on.
  */
 
+export { ANCHOR as CHARACTER_ANCHOR, CANVAS as CHARACTER_CANVAS } from './art/geometry';
+
 /**
- * The two layers a manager configures from the free starter set.
+ * The traits a manager chooses, free, from the moment they claim a seat.
  *
- * `art/assets.inventory.json`, `_avatarLayers_B2`: *"free/starter layers
- * available to every manager at claim time."* There is no base **face** layer —
- * the base body carries one — so `face` below is worn-only.
+ * Six independent choices. The system this replaces had three — a body, a
+ * hairstyle and a *palette*, where the palette bundled skin tone with hair colour
+ * and shirt colour, so a manager could not take one without the other two. Four
+ * palettes × two bodies × six hairstyles is forty-eight characters for ten
+ * managers, and the two who both wanted the deepest skin tone were also both
+ * given black hair and a red shirt.
  */
-export const BASE_LAYERS = ['body', 'hair'] as const;
-export type BaseLayer = (typeof BASE_LAYERS)[number];
+export const BASE_TRAITS = ['skin', 'hair', 'hairColour', 'facialHair', 'top', 'topColour'] as const;
+export type BaseTrait = (typeof BASE_TRAITS)[number];
 
 /**
  * The four slots the twelve earned wearables occupy.
  *
- * With `hair` and the base body that is the **five slots** the ruling index
- * names. `body` appears in both lists on purpose: the starter body is the figure,
- * and a worn `body` item — an apron, a jersey — draws over it.
+ * Unchanged from M3, and deliberately: nothing about the free trait set touches
+ * the earned economy, its ownership trigger or its one-per-slot index.
  */
 export const WEARABLE_SLOTS = ['body', 'face', 'head', 'hand'] as const;
 export type WearableSlot = (typeof WEARABLE_SLOTS)[number];
 
-/** A position in the stack. Worn layers are distinguished from base ones. */
-export type LayerName = 'base-body' | 'base-hair' | 'worn-body' | 'worn-face' | 'worn-head' | 'worn-hand';
+/** A position in the stack. Worn layers are distinguished from chosen ones. */
+export type LayerName =
+  | 'base-body'
+  | 'base-top'
+  | 'worn-body'
+  | 'base-facial-hair'
+  | 'worn-face'
+  | 'base-hair'
+  | 'worn-head'
+  | 'worn-hand';
 
 /**
  * Back to front. **The order is the contract.**
  *
- * A worn body item sits over the figure. Shades sit on the face and **under** the
- * hair, so a fringe overlaps them the way a fringe does. A hat sits over the
- * hair. A held object is in front of everything, which is why `hand` is a slot in
- * the ownership sense and an overlay that includes the hand in the drawing sense
- * — modelling a held object honestly means splitting the body into arm layers,
- * which triples the base art for one class of item.
+ * The chosen top sits over the figure; a worn body item — an apron — sits over
+ * the chosen top, because that is what an apron does. Facial hair is on the face
+ * and under shades, so a pair of sunglasses covers the eyes rather than the
+ * moustache covering the glasses. Hair is drawn after the face and before
+ * anything worn on the head, so a fringe overlaps the brow and a hat overlaps the
+ * fringe. A held object is in front of everything.
  */
 export const LAYER_ORDER: Readonly<Record<LayerName, number>> = Object.freeze({
   'base-body': 10,
-  'worn-body': 20,
-  'worn-face': 30,
-  'base-hair': 40,
-  'worn-head': 50,
-  'worn-hand': 60,
+  'base-top': 20,
+  'worn-body': 30,
+  'base-facial-hair': 40,
+  'worn-face': 50,
+  'base-hair': 60,
+  'worn-head': 70,
+  'worn-hand': 80,
 });
 
 /** Where a worn slot draws. */
@@ -78,25 +85,20 @@ export const WORN_LAYER: Readonly<Record<WearableSlot, LayerName>> = Object.free
   hand: 'worn-hand',
 });
 
-/** Where a base layer draws. */
-export const BASE_LAYER_POSITION: Readonly<Record<BaseLayer, LayerName>> = Object.freeze({
-  body: 'base-body',
-  hair: 'base-hair',
-});
-
 /**
- * The canvas every layer is authored at.
+ * Where a chosen trait draws.
  *
- * `32 × 48`, from the registry, and not negotiable from this side: every avatar
- * and wearable row already declares it. A layer that has to be resampled to fit
- * is a layer authored wrong, and that is not hypothetical — every collectible was
- * once registered at `32x32` against a `46` slot, a 1.4375× resample that would
- * have blurred a whole batch and was discoverable only after the art existed.
+ * `hairColour`, `topColour` and `skin` are not here: they are **colours applied
+ * to another trait's layer**, not layers. That is the whole point of separating
+ * them — six traits, five drawn layers, and no combinatorial art.
  */
-export const CHARACTER_CANVAS = Object.freeze({ width: 32, height: 48 });
-
-/** Bottom-centre, exactly as collectibles anchor. A tall hat grows upward. */
-export const CHARACTER_ANCHOR = 'bottom-center';
+export const TRAIT_LAYER: Readonly<Record<'hair' | 'facialHair' | 'top', LayerName>> = Object.freeze(
+  {
+    top: 'base-top',
+    facialHair: 'base-facial-hair',
+    hair: 'base-hair',
+  },
+);
 
 export function isWearableSlot(value: string): value is WearableSlot {
   return (WEARABLE_SLOTS as readonly string[]).includes(value);

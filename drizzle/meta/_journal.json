@@ -113,6 +113,13 @@
       "when": 1786100100000,
       "tag": "0015_championship_rings",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1786100200000,
+      "tag": "0016_character_traits",
+      "breakpoints": true
     }
   ]
 }
