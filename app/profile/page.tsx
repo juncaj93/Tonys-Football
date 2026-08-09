@@ -89,13 +89,26 @@ export default async function ProfilePage() {
                 </span>
               </div>
 
-              <ul className="mt-2.5 space-y-2">
+              {/*
+                * `data-device-list` and `data-device-label` are gate hooks, not
+                * styling.
+                *
+                * The count on this screen used to be whatever the sweep happened
+                * to have created: 1 device at 390, 2 at 375, 3 at 360, because
+                * the widths share a database and each one signs in again. Three
+                * files with the same name meant three different screens, and a
+                * single-state run made a fourth. `checkDevices` pins the count
+                * per state, and it needs something stable to count.
+                */}
+              <ul className="mt-2.5 space-y-2" data-device-list={devices.length}>
                 {devices.map((device) => (
                   <li
                     key={device.id}
                     className={`flex items-baseline justify-between gap-3 ${TYPE.bodyLead}`}
                   >
-                    <span className="text-ink-900">{device.label}</span>
+                    <span className="text-ink-900" data-device-label>
+                      {device.label}
+                    </span>
                     <span className={`shrink-0 ${TYPE.body} text-ink-500`}>
                       {device.current ? 'this one' : formatLastSeen(device.lastSeenAt)}
                     </span>
@@ -130,6 +143,7 @@ export default async function ProfilePage() {
               <form action={signOutEverywhereAction}>
                 <button
                   type="submit"
+                  data-sign-out-everywhere
                   className={`${ACTION} border-red-mid bg-red-dark text-paper-white`}
                 >
                   Change the locks everywhere

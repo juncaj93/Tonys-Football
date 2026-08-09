@@ -207,6 +207,20 @@ type StateName =
    * line at 360 (#75).
    */
   | 'profile'
+  /**
+   * The same screen with a second key cut, and the destructive control that
+   * only exists then.
+   *
+   * *"Change the locks everywhere"* renders only at two or more sessions, and it
+   * is the one irreversible action on any manager-facing page. It was reaching
+   * film **by accident**: the widths share a database and each signs in again,
+   * so `profile` photographed 1 device at 390, 2 at 375 and 3 at 360 — three
+   * files with one name meaning three screens, and a single-state run making a
+   * fourth. That is the defect the door states' own comment names.
+   *
+   * Both states build their own precondition now, so both mean one thing.
+   */
+  | 'profile-devices'
   | 'rooms'
   | 'office'
   | 'prediction'
@@ -469,6 +483,72 @@ async function signIn(page: Page): Promise<void> {
 }
 
 /**
+ * A User-Agent that `deviceLabel` reads as a different device.
+ *
+ * Real, and real matters: `lib/auth/session.ts` derives the label by matching
+ * `iPhone` and then `Safari` in the header the browser sent. A made-up string
+ * would test the regular expression rather than the product.
+ */
+const OTHER_DEVICE_UA =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 18_5 like Mac OS X) AppleWebKit/605.1.15 ' +
+  '(KHTML, like Gecko) Version/18.5 Mobile/15E148 Safari/604.1';
+
+/**
+ * Leave this manager holding exactly one key.
+ *
+ * Through the product and nothing else: *"Change the locks everywhere"* revokes
+ * every session including this one, so the page lands back at the door and signs
+ * in again — one row, deterministically, whatever ran before.
+ *
+ * **No database hook and no auth bypass**, deliberately. A helper that deleted
+ * `sessions` rows would make the screenshot depend on a mechanism the product
+ * does not have, and it would stop the precondition from being evidence that
+ * revocation works. This way the destructive control is exercised on every
+ * sweep, at every width, before it is photographed.
+ *
+ * The button is absent when only one session exists, which is the ordinary case
+ * at the first width. Absent is the goal already met, so it is not an error.
+ */
+async function onlyThisDevice(page: Page): Promise<void> {
+  await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
+
+  const revoke = page.locator('[data-sign-out-everywhere]');
+  if ((await revoke.count()) === 0) return;
+
+  await revoke.click();
+  // Every session is dead, including this one, so the next page is the door.
+  await page.waitForURL((url) => url.pathname.startsWith('/door'), { timeout: 20_000 });
+  await signIn(page);
+}
+
+/**
+ * Sign in as the same manager from a second, visibly different device.
+ *
+ * Its own browser context, so its own cookie jar: this is a second sign-in
+ * rather than a shared session, which is what puts a second row in `sessions`.
+ * The context is closed immediately — the row survives it, the way a real
+ * manager's other phone does after they put it down.
+ */
+async function signInFromAnotherDevice(page: Page): Promise<void> {
+  const browser = page.context().browser();
+  if (browser === null) throw new Error('no browser to open a second device from');
+
+  const other = await browser.newContext({
+    viewport: { width: 390, height: 664 },
+    deviceScaleFactor: 3,
+    isMobile: true,
+    hasTouch: true,
+    userAgent: OTHER_DEVICE_UA,
+  });
+
+  try {
+    await signIn(await other.newPage());
+  } finally {
+    await other.close();
+  }
+}
+
+/**
  * Sign in at a specific door.
  *
  * Split out of `signIn` so a demo seat — which is reached by the URL the applier
@@ -693,11 +773,39 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
 
     /*
-     * The key ring. Reached directly rather than through the room, because it
-     * hangs off the utility bar rather than off a parlor object — `18 §3` gives
-     * the homepage eight interactive objects and this is not one of them.
+     * The key ring, holding exactly one key.
+     *
+     * Reached directly rather than through the room, because it hangs off the
+     * utility bar rather than off a parlor object — `18 §3` gives the homepage
+     * eight interactive objects and this is not one of them.
+     *
+     * `onlyThisDevice` is the precondition, and it is the same idea as
+     * `ensureClaimedManager` on the door: a state whose content depends on what
+     * ran before it is a state with three meanings and one filename.
      */
     case 'profile':
+      await onlyThisDevice(page);
+      await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * The key ring with a second key on it.
+     *
+     * The second session is made by **signing in again from another device** —
+     * the real front door, the real form, the real PIN — in a context carrying
+     * an iPhone Safari User-Agent. Nothing is inserted, nothing is stubbed and
+     * no token is copied: `deviceLabel` reads the header the browser actually
+     * sent, so the two rows are `iPhone · Safari` and `Unknown device · Chrome`
+     * rather than two identical lines distinguishable only by a date.
+     *
+     * That distinction is the screen's whole job. *"Is that my phone?"* cannot
+     * be answered by a list of three identical labels, and a capture of one
+     * would have verified nothing about the label at all.
+     */
+    case 'profile-devices':
+      await onlyThisDevice(page);
+      await signInFromAnotherDevice(page);
       await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
       return;
@@ -1443,6 +1551,9 @@ const ALL_STATES: readonly StateName[] = [
   'rack',
   'timeline',
   'profile',
+  // Directly after, and that order is load-bearing: this one leaves a second
+  // session behind, and `profile` is the state that must not have one.
+  'profile-devices',
   'rooms',
   'prediction',
   'receipt',
@@ -3489,6 +3600,105 @@ async function checkRevealPresent(page: Page, width: number, state: string): Pro
   }
 }
 
+/**
+ * What the key ring is holding, and whether you could tell one key from another.
+ *
+ * Three assertions, and each is a defect this screen actually had:
+ *
+ *   1. **The count is the one the state promises.** It used to be whatever the
+ *      sweep had accumulated — 1 device at 390, 2 at 375, 3 at 360 — so three
+ *      files with one name meant three different screens and a `--state=` run
+ *      made a fourth. Both states build their own precondition now; this is what
+ *      stops that quietly coming back.
+ *   2. **Two devices are two different labels.** `deviceLabel` exists to answer
+ *      *"is that my phone?"*, and three identical lines separated only by a date
+ *      cannot. A capture of identical rows would have verified the list rendered
+ *      and nothing about whether it is usable.
+ *   3. **The destructive control appears exactly when it is real, and reads.**
+ *      *"Change the locks everywhere"* is the one irreversible action on any
+ *      manager-facing page, and it is the only red slab on a cream sheet — the
+ *      combination that has produced two accessibility defects here before.
+ *      Measured against its own ground rather than assumed.
+ */
+async function checkDevices(page: Page, width: number, state: string): Promise<void> {
+  const expected = state === 'profile' ? 1 : state === 'profile-devices' ? 2 : null;
+  if (expected === null) return;
+
+  const seen = await page.evaluate(() => {
+    const list = document.querySelector('[data-device-list]');
+    const labels = [...document.querySelectorAll('[data-device-label]')].map((el) =>
+      (el.textContent ?? '').trim(),
+    );
+    const button = document.querySelector('[data-sign-out-everywhere]');
+    let ground = '';
+    let node: Element | null = button;
+    for (let depth = 0; depth < 12 && node !== null; depth++) {
+      const bg = getComputedStyle(node).backgroundColor;
+      if (bg !== '' && !bg.includes('rgba(0, 0, 0, 0)')) {
+        ground = bg;
+        break;
+      }
+      node = node.parentElement;
+    }
+    return {
+      declared: list === null ? null : Number(list.getAttribute('data-device-list')),
+      labels,
+      hasButton: button !== null,
+      colour: button === null ? '' : getComputedStyle(button).color,
+      ground,
+      text: button === null ? '' : (button.textContent ?? '').trim(),
+    };
+  });
+
+  if (seen.declared !== expected) {
+    fail(
+      'devices',
+      `@${String(width)} ${state} shows ${String(seen.declared)} device(s), not ${String(expected)}. ` +
+        'The state builds its own precondition, so this is drift rather than a coincidence — ' +
+        'a screen whose content depends on what ran before it has one filename and several meanings.',
+    );
+    return;
+  }
+
+  if (expected > 1 && new Set(seen.labels).size !== seen.labels.length) {
+    fail(
+      'devices',
+      `@${String(width)} ${state} lists ${String(seen.labels.length)} devices under ` +
+        `${String(new Set(seen.labels).size)} distinct name(s): ${seen.labels.join(', ')}. ` +
+        'The label exists to answer "is that my phone?", and it cannot when two rows read alike.',
+    );
+  }
+
+  // Present exactly when it means something. One key cannot be signed out of
+  // "everywhere else", and offering it would be an irreversible control that
+  // does nothing.
+  const wanted = expected > 1;
+  if (seen.hasButton !== wanted) {
+    fail(
+      'devices',
+      `@${String(width)} ${state} ${seen.hasButton ? 'offers' : 'hides'} "change the locks ` +
+        `everywhere" with ${String(expected)} device(s), which is backwards.`,
+    );
+    return;
+  }
+
+  if (!seen.hasButton) return;
+
+  const fg = channels(seen.colour);
+  const bg = channels(seen.ground);
+  if (fg === null || bg === null) return;
+
+  const ratio = contrast(fg, bg);
+  if (ratio < AA_CONTRAST) {
+    fail(
+      'devices',
+      `@${String(width)} ${state} "${seen.text}" is ${ratio.toFixed(2)}:1 against its own red ` +
+        `ground, under the ${String(AA_CONTRAST)}:1 AA floor. This is the only irreversible ` +
+        'control a manager can reach, so it is the last one that may be hard to read.',
+    );
+  }
+}
+
 async function checkRarityContrast(page: Page, width: number, state: string): Promise<void> {
   /*
    * The page returns **strings**; every calculation happens in Node.
@@ -3907,6 +4117,8 @@ async function run(): Promise<void> {
         // surface, and the defect this catches was on the one surface nobody
         // thought to check.
         await checkRarityContrast(page, width, state);
+        // The key ring, on the two states that make a promise about it.
+        await checkDevices(page, width, state);
         /*
          * One transient at a time, everywhere — not just on the state built to
          * catch it. `MANDATE §6` is a property of the room rather than of a

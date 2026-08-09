@@ -4,10 +4,20 @@
 narrative record of how the product got here and stays that; this file is the
 answer to *"what is actually left."* When they disagree, this file is newer.
 
-**Reconciled against `main` on 2026-08-08**, at `ad84bbb`, by reading the code
-and the database rather than the status paragraphs. Where a document said
-something was open and it had shipped, the document is corrected rather than the
-work redone; those corrections are in **H**.
+**Reconciled against `main` on 2026-08-09**, by reading the code and the database
+rather than the status paragraphs. Where a document said something was open and
+it had shipped, the document is corrected rather than the work redone; those
+corrections are in **H**.
+
+> ## V1 engineering: FUNCTIONALLY READY
+>
+> **Autonomous product development is stopped.** Every v1 system is built,
+> tested against a real Postgres, and photographed. What remains is five human
+> actions, and `docs/ACTIVATION.md` is the packet for them — written for a phone,
+> ordered, reversible, and the only document Alex needs.
+>
+> Do not resume Category C polish because capacity exists. Deferred scope stays
+> deferred.
 
 Every item is in exactly one category:
 
@@ -82,25 +92,45 @@ unverified type floor, colour fidelity, tap targets and reduced-motion promise.
 Closed with the guard that stops it recurring: `scripts/route-coverage.test.ts`
 enumerates `app/**/page.tsx` and fails for any route no state reaches, with one
 declared exemption carrying its reason. It **fails on the pre-fix driver naming
-all three**. 99 states x 3 widths.
+all three**.
 
-### C2 · `/profile`'s destructive control is never photographed
+**Re-reconciled 2026-08-09**, after `profile-devices` was added: 16 routes on
+disk, 15 reached by a state, 1 exempt (`/dev/assets`, reason current), 0 missing.
+The enumerator reads the filesystem, so a new route cannot escape it.
 
-Found by the first capture of `/profile`, which is what C1 was for. *"Change the
-locks everywhere"* — the one destructive control on any manager-facing page —
-renders only when `devices.length > 1`, and the driver holds exactly one session,
-so the gate photographs the page without it every time.
+### C2 · The key ring meant three different things — **fixed**
 
-It is **red on cream**, which is precisely the contrast class that has produced
-visual debt here before: `LEGENDARY` at 2.24:1 on the reveal plate, and Common's
-rarity word at 3.42:1, both on the same ground.
+**The entry that was here was wrong, and the correction is the finding.** It said
+*"the destructive control is never photographed"*. It was being photographed —
+**accidentally, and differently at every width**. The three widths share a
+database and each signs in again, so `profile` captured **1 device at 390, 2 at
+375 and 3 at 360**, with the red *"change the locks everywhere"* control absent
+from the first and present in the others. Three files with one name meant three
+screens, and a `--state=profile` run made a fourth.
 
-Left open rather than built because it is the first state that needs the driver
-to hold **two** sessions at once, and its session model is one context signed in
-lazily. That is a real change to the harness for one screen, and it should be
-made deliberately rather than folded into a route-coverage slice.
+That is the defect class the door states' own comment names, and it is worse than
+an unphotographed state: the screen *looked* covered.
 
-The copy item that was here is **D3** — the line is the commissioner's to write.
+Two states now build their own precondition, the way `ensureClaimedManager` does
+on the door:
+
+- **`profile`** — exactly one device. Reached by using the product's own *"change
+  the locks everywhere"* and signing back in, so the precondition is also
+  evidence that revocation works, at every width, on every sweep.
+- **`profile-devices`** — exactly two, and **visibly different**: the second is a
+  real sign-in through the real front door from a context carrying an iPhone
+  Safari User-Agent, so the rows read `iPhone · Safari` and `Unknown device ·
+  Chrome`. Three identical labels could not answer *"is that my phone?"*, which
+  is the only question the label exists for.
+
+No database hook, no auth bypass, no production data, no test-only route.
+`checkDevices` pins the count per state, requires two devices to carry two
+distinct names, requires the control to appear exactly when it is real, and
+measures its contrast against its own red ground.
+
+The first deliberate capture exposed **no defect**. 100 states × 3 widths.
+
+---
 
 ---
 
@@ -113,12 +143,18 @@ With the secret unset they answer `404` to everything including Vercel's own
 scheduler, which is deliberate: a job that runs unprotected is a job whose
 missing secret nobody notices.
 
-**The one-time runbook is `docs/DEPLOYMENT.md §2 → "Turning the jobs on"**: how
-to generate it, where to set it, why production-only, how to verify without
-exposing the value, what success looks like, and how to roll back.
+**`docs/ACTIVATION.md §1` is the packet for Alex** — phone-first, ordered,
+reversible. `docs/DEPLOYMENT.md §2` is the engineering-facing version of the same
+steps.
 
-Not urgent before the season's first Tuesday, and free to do early — with no week
-played the job reads an empty week and reports that it did nothing.
+**Timing: safe now, and needed before Sunday 13 September.** The Sunday job fires
+Monday 14 September 00:55 ET and is the only thing that can make a week-1
+Monday-comeback story truthful — a missed snapshot cannot be retaken. The Tuesday
+job fires 15 September 05:00 ET and *is* recoverable, by re-running with `?week=`.
+
+Before kickoff a successful run legitimately reports that it did nothing. The
+packet separates *"the door opened"* from *"there was football to process"*, so a
+pre-season no-op is not misread as a failure.
 
 **This session did not set it and must not.** It is the commissioner's step
 (`AUTONOMY.md §4`), and no value for it exists anywhere in this repository.
@@ -131,8 +167,12 @@ one able to work it. The seed prints `Admin  COMMISSIONER_SLEEPER_USER_ID is
 unset — nobody is an admin.` when it is missing, so the answer is visible in any
 deploy log.
 
-Documented in `docs/DEPLOYMENT.md §2`. Recorded here because nothing in this
-session could observe production, and *"probably set"* is not a launch check.
+`docs/ACTIVATION.md §2`. Recorded here because nothing in any session has
+observed production, and *"probably set"* is not a launch check.
+
+**Timing: before Tuesday 15 September**, when the first draft lands on the desk.
+Verifiable from a phone in three taps — the profile screen shows a
+*Commissioner's office* button when it is set.
 
 ### D3 · One greeting pair still shares a line, and the line is the commissioner's to write
 
@@ -143,6 +183,13 @@ collision so adding a line shows up as a change. The material exists and is
 verified — cheeseking went 1–13 in 2024 and 9–5 with a third-place finish in
 2025; SuggMyNick had the second-best record in 2025 at 10–4.
 
+**`docs/ACTIVATION.md §4` is the fill-in.** It names the pair, the line they
+share, the tag that already separates them (`third_place_2025` — Cheese finished
+third in 2025, Nick fourth), the verified facts, and the four rules a line must
+satisfy. One sentence, not a creative brief.
+
+**Timing: before the league is given the URL.** No schedule dependency.
+
 **Not written here on purpose.** `CLAUDE.md` limits generative AI to the Slice
 and requires ordinary Tony dialogue to be *curated content*; Group A was approved
 as a set and Group B is explicitly waiting on approval. A session adding a line
@@ -151,6 +198,12 @@ league reads as him. `IMPLEMENTATION_HANDOFF.md` files it under *"Open, and for
 the commissioner"*, and that is where it belongs.
 
 ### D4 · Production demo-seat verification — still UNVERIFIED
+
+**Timing: before the league is given the URL.** `docs/ACTIVATION.md §3` is the
+procedure — Neon's own browser SQL editor, so no connection string is exposed.
+**The recorded query is current, not stale**: `users.sleeper_user_id` and
+`users.is_admin` both exist in the shipped schema, checked against a migrated
+database on 2026-08-09.
 
 The read-only query is in `docs/PUBLIC_MODE.md` and has never been run. This is a
 **commissioner risk acceptance, not a finding that the count is zero.** Do not
@@ -163,6 +216,13 @@ production it is an authentication incident, not a cleanup task.
 production in this repository rests on GitHub's gate results and Vercel's own
 status. Carried since #23 and still true.
 
+**Timing: before the league is given the URL.** `docs/ACTIVATION.md §5` is a
+5–10 minute phone checklist of the highest-value paths, not a manual QA campaign.
+
+**This is the one that matters most for the Tuesday sync fix.** The code is
+implemented and the regressions are tested; production ingestion from Sleeper
+remains **unobserved** until a real post-week run happens.
+
 ---
 
 ## E — Technical debt worth doing when it fits
@@ -173,7 +233,7 @@ status. Carried since #23 and still true.
 surface needs them, so this is a note rather than a task — recorded so a future
 session does not read the absence as an oversight and start writing migrations.
 
-### E2 · The harness probed the server with an unbounded `fetch` — **fixed**
+### E2 · The harness probed the server with an unbounded `fetch` — **fixed and confirmed closed on `main`**
 
 `assertServerIsOurBuild` waited on the platform default, so a server that
 accepted the connection and then wedged would have hung the preflight rather than
@@ -293,6 +353,35 @@ to do before January; recorded so it is not discovered then.
 **`V1 FUNCTIONALLY READY — ACTIVATION ITEMS REMAIN`.**
 
 Every system the league needs for a season is built, tested against a real
-Postgres and reachable. What stands between here and a working season is **D1**,
-one environment variable, plus confirming **D2**. Neither is engineering and
-neither can be done from a session.
+Postgres and reachable. What stands between here and a working season is five
+human actions, none of which is engineering and none of which a session may take.
+
+**`docs/ACTIVATION.md` is the packet.** It is written for a phone, in the order
+to do them, with the real deadline for each and a reversal path for the only one
+that changes production behaviour.
+
+### What has actually been observed, and what has not
+
+The distinction matters more than usual here, because the season's most important
+mechanism has never run for real.
+
+| Claim | Evidence |
+|---|---|
+| The in-season sync is implemented | **source code** |
+| It is idempotent, bounded, refuses stale and unplayed data, and resolves its week after syncing | **local Postgres**, and each guard fails on the pre-fix build |
+| It compiles, lints and passes the suite | **hosted CI** |
+| Every reachable screen renders correctly at three phone widths | **hosted visual QA** |
+| It is deployed to production | **inferred** from a normal merge to `main`; not observed |
+| It successfully reads a real played week from Sleeper and stores it | **never observed.** It cannot be until a real post-week Tuesday run happens, with `CRON_SECRET` set |
+
+**Nothing in this repository has been confirmed by loading the production site.**
+That is D5, and it is on the activation list.
+
+### Autonomous development is stopped here
+
+The last justified verification slice is complete. Remaining items are D (human),
+F (monitored, restart conditions unmet) and G (deferred). Category C is empty of
+anything with clear value.
+
+Do not resume feature or polish work to fill capacity. Launch readiness is not a
+cleanup budget.
