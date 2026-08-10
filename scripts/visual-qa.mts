@@ -48,6 +48,8 @@ import path from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright';
 import sharp from 'sharp';
 
+import { CANVAS as CHARACTER_CANVAS } from '../lib/character/art/geometry.ts';
+import { CHARACTER_SCALES } from '../components/character/character-view.tsx';
 import { TYPE_FLOOR_PX } from '../lib/design/type.ts';
 import { QUARANTINE_CEILING, quarantineFor } from './visual-qa-quarantine.ts';
 import { CAPTURE } from './visual-qa-capture';
@@ -247,6 +249,26 @@ type StateName =
   | 'room-visited'
   | 'room-empty'
   | 'office'
+  /**
+   * The commissioner queue — *"what needs my approval?"* — in its four answers.
+   *
+   * `office` is the empty one and keeps its name: it is the state Alex meets
+   * today, because the 2026 season has no games and nothing has been drafted.
+   * These are the three that have something on them plus the whole desk, and
+   * they exist because a governance screen that has only ever been photographed
+   * empty is a governance screen nobody has looked at.
+   *
+   * Three of them narrow the queue with `?queue=<band>`, a server-resolved
+   * preview behind both demo guards that **filters and fabricates nothing**. The
+   * reason is the one `review-empty` records: an issue belongs to the league
+   * rather than to a seat, and the driver loops widths on the outside, so an
+   * unnarrowed "one paper is waiting" would photograph one item at 390 and four
+   * at 360 under a single name.
+   */
+  | 'office-ready'
+  | 'office-blocked'
+  | 'office-printed'
+  | 'office-queue'
   | 'prediction'
   | 'receipt'
   | 'counter'
@@ -362,8 +384,19 @@ type StateName =
   | 'review-approved'
   | 'review-published'
   | 'review-held'
-  /** One draft, opened from the queue. The screen where the decision is made. */
-  | 'review-draft';
+  /** One draft, opened from the queue. The proof sheet, as it will print. */
+  | 'review-draft'
+  /**
+   * The same draft, scrolled to the stamp.
+   *
+   * Screenshots here are one phone screen, and the review screen puts its
+   * actions **below the paper** on purpose so that approving without reading is
+   * not the default gesture. The consequence went unnoticed until the queue was
+   * built: the single most consequential control in the product — the one that
+   * puts a week of league history in front of ten people — was off the bottom of
+   * every picture ever taken of the screen it lives on.
+   */
+  | 'review-decision';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -485,8 +518,21 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'review-held': 'review-held',
   // The detail screen, reached by opening the queue's one waiting draft.
   'review-draft': 'review-waiting',
+  // The same draft, scrolled to the stamp. Same seat, same draft, lower down.
+  'review-decision': 'review-waiting',
   // The office. Borrowed for the commissioner's keys — see `reach`.
   office: 'review-empty',
+
+  /*
+   * The office queue. Each has its own demo state, and all four arrange the
+   * *same* desk — one paper of each kind — because what differs between the
+   * four screens is which bands the preview parameter shows, not what is in the
+   * database. Applying them in any order at any width lands on the same rows.
+   */
+  'office-ready': 'office-ready',
+  'office-blocked': 'office-blocked',
+  'office-printed': 'office-printed',
+  'office-queue': 'office-queue',
 };
 
 interface DemoApplied {
@@ -1098,6 +1144,40 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * `review-empty` is exactly "a commissioner seat with nothing waiting."
      */
     case 'office':
+      /*
+       * `?queue=empty` rather than a bare `/admin`.
+       *
+       * The office used to have no queue on it, so a bare URL was deterministic.
+       * It has one now, and the queue is league-scoped and additive — the same
+       * hazard `review-empty` records — so the empty desk has to be asked for.
+       * Nothing else about the screen changes: the key board and the press-desk
+       * door are the product's, unfiltered.
+       */
+      await page.goto(`${BASE}/admin?queue=empty`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * The queue with something on it, narrowed one band at a time.
+     *
+     * `office-queue` takes no parameter: it is the real, whole desk. It is
+     * deterministic because its own applier arranges one paper of each kind and
+     * every applier that could add another is idempotent on a fixed slot — so
+     * the second and third widths photograph the same rows as the first.
+     */
+    case 'office-ready':
+      await page.goto(`${BASE}/admin?queue=ready`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+    case 'office-blocked':
+      await page.goto(`${BASE}/admin?queue=blocked`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+    case 'office-printed':
+      await page.goto(`${BASE}/admin?queue=printed`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+    case 'office-queue':
       await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
       return;
@@ -1460,6 +1540,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * controls, the validator's violations, the Print button, the printed stamp.
      */
     case 'review-draft':
+    case 'review-decision':
     case 'review-refused':
     case 'review-approved':
     case 'review-published': {
@@ -1469,7 +1550,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       const row =
         state === 'review-refused'
           ? page.locator('[data-review-refused]')
-          : state === 'review-draft'
+          : state === 'review-draft' || state === 'review-decision'
             ? page.locator('[data-review-section="waiting"] a:not([data-review-refused])')
             : page.locator(
                 `[data-review-section="${state === 'review-approved' ? 'approved' : 'published'}"] a`,
@@ -1484,6 +1565,24 @@ async function reach(page: Page, state: StateName): Promise<void> {
 
       await row.first().click();
       await page.waitForSelector('[data-review-version]', { state: 'attached' });
+
+      /*
+       * The stamp itself, which nothing had ever photographed.
+       *
+       * Screenshots here are **viewport-sized**, not full-page — one phone
+       * screen — and the review screen deliberately puts its actions below the
+       * paper so that approving without reading is not the default gesture. The
+       * consequence is that the single most consequential control in the product
+       * has always been off the bottom of every picture of it. `review-draft`
+       * photographs the proof sheet; this photographs the decision.
+       *
+       * Scrolled to rather than deep-linked, for the reason the block above
+       * gives: getting there from the desk is part of what is being reviewed.
+       */
+      if (state === 'review-decision') {
+        await page.locator('[data-review-decision]').scrollIntoViewIfNeeded();
+      }
+
       await page.waitForTimeout(400);
       return;
     }
@@ -1997,12 +2096,26 @@ const ALL_STATES: readonly StateName[] = [
   'review-empty',
   'review-waiting',
   'review-draft',
+  'review-decision',
   'review-refused',
   'review-approved',
   'review-published',
   'review-held',
   // The office, last of the commissioner-seated states for the same reason.
   'office',
+  /*
+   * The queue, after the press desk on purpose.
+   *
+   * `office-queue` shows the **real** desk with no narrowing, so it must be
+   * photographed once the press-desk states have put their papers on it —
+   * otherwise the first width would see a different desk from the other two.
+   * Every applier involved is idempotent on a fixed slot, so running them again
+   * at 375 and 360 reproduces the same rows rather than adding to them.
+   */
+  'office-ready',
+  'office-blocked',
+  'office-printed',
+  'office-queue',
 
   /*
    * Last, and that is load-bearing: `reach` signs *out* to get here, so any
@@ -3372,6 +3485,8 @@ const DESK_EXPECTATIONS: Record<
   'review-waiting': { desk: 'live', hold: 'off', atLeast: { waiting: 1 } },
   'review-held': { desk: 'live', hold: 'on', atLeast: { approved: 1 } },
   'review-draft': { version: 'needs_review', publishable: 'yes' },
+  // The same draft, lower down. The stamp only exists in this state.
+  'review-decision': { version: 'needs_review', publishable: 'yes' },
   // The validator's refusal, on the screen where it is explained rather than on
   // the row where it is only labelled.
   'review-refused': { version: 'needs_review', publishable: 'no' },
@@ -3466,6 +3581,126 @@ async function checkDeckWrap(page: Page, width: number, state: string): Promise<
           `who posted it is two incomplete lines, not a smaller version of one.`,
       );
     }
+  }
+}
+
+/**
+ * What each office state must actually contain.
+ *
+ * **Exact counts, not `atLeast`** — which is the opposite of `DESK_EXPECTATIONS`
+ * and is the whole reason the preview parameter exists. The press desk's states
+ * are additive and league-scoped, so equality there would encode the run order
+ * into the gate. Here the narrowing makes each screen's composition a fact, and
+ * a fact is worth pinning: an off-by-one in the filter, a band that stops being
+ * produced, or an item leaking between screens are all silent otherwise.
+ *
+ * `office` is the one a commissioner meets today, and its zeroes are the
+ * assertion: the preview resolved on the server, and the empty desk is empty.
+ */
+const OFFICE_EXPECTATIONS: Record<
+  string,
+  {
+    readonly outstanding: number;
+    readonly pending: number;
+    /** Exactly which bands are on the screen, in the order they are rendered. */
+    readonly bands: readonly string[];
+  }
+> = {
+  office: { outstanding: 0, pending: 0, bands: [] },
+  'office-ready': { outstanding: 1, pending: 1, bands: ['ready'] },
+  'office-blocked': { outstanding: 1, pending: 1, bands: ['blocked'] },
+  'office-printed': { outstanding: 0, pending: 0, bands: ['published'] },
+  /*
+   * The whole desk: one waiting, **two** stamped, one refused, one printed.
+   *
+   * The order is the queue's priority — a thing you can complete above a thing
+   * you cannot — so this row is also the assertion that the ordering rule holds
+   * on a real screen rather than only in a unit test.
+   *
+   * The second `approved` is not a mistake and it is not the applier's. It was
+   * written here as one, and the gate said four: `review-approved` and
+   * `review-held` each leave a stamped-and-unprinted version on the desk, and
+   * `office-queue`'s applier **releases the hold**, so the held one becomes an
+   * ordinary approved item rather than disappearing.
+   *
+   * Corrected here rather than suppressed in the applier, because the desk that
+   * would show three is a desk the database does not have — and the pair is
+   * worth photographing on its own account: two items in one band is the only
+   * state where the recency tie-break inside a band is visible.
+   */
+  'office-queue': {
+    outstanding: 4,
+    pending: 4,
+    bands: ['ready', 'approved', 'approved', 'blocked', 'published'],
+  },
+};
+
+/**
+ * The gate against an office-queue false green.
+ *
+ * Two ways this screen can lie, and neither is visible in a screenshot:
+ *
+ *   1. `requireAdmin()` answers `notFound()`, so a seat that failed to get the
+ *      commissioner's keys photographs a **404** that files under the state's
+ *      name and passes every pixel gate. That is the failure the nine `reveal-*`
+ *      states cost a milestone to.
+ *   2. The queue is the surface `16 §9`'s approval gate is *found* through. A
+ *      queue that silently showed nothing — a broken filter, a preview
+ *      resolving in production, a band that stopped being produced — would look
+ *      exactly like a quiet week, which is the ordinary state.
+ *
+ * So the marker is checked rather than the pixels, and the composition is
+ * checked rather than the marker alone.
+ */
+async function checkOfficeQueue(page: Page, width: number, state: string): Promise<void> {
+  const expected = OFFICE_EXPECTATIONS[state];
+  if (expected === undefined) {
+    fail('office-queue', `@${String(width)} ${state} has no entry in OFFICE_EXPECTATIONS`);
+    return;
+  }
+
+  const at = `@${String(width)} ${state}`;
+
+  const found = await page.evaluate(() => {
+    const queue = document.querySelector('[data-review-queue-pending]');
+    return {
+      rendered: queue !== null,
+      pending: Number(queue?.getAttribute('data-review-queue-pending') ?? '-1'),
+      outstanding: Number(queue?.getAttribute('data-review-queue-size') ?? '-1'),
+      bands: [...document.querySelectorAll('[data-review-item]')].map(
+        (el) => el.getAttribute('data-review-item') ?? '',
+      ),
+    };
+  });
+
+  if (!found.rendered) {
+    fail(
+      'office-queue',
+      `${at} the office queue did not render — is the seat a commissioner? ` +
+        'requireAdmin() answers notFound(), which photographs cleanly.',
+    );
+    return;
+  }
+
+  if (found.outstanding !== expected.outstanding) {
+    fail(
+      'office-queue',
+      `${at} shows ${String(found.outstanding)} outstanding item(s), expected ${String(expected.outstanding)}`,
+    );
+  }
+
+  if (found.pending !== expected.pending) {
+    fail(
+      'office-queue',
+      `${at} counts ${String(found.pending)} as pending, expected ${String(expected.pending)}`,
+    );
+  }
+
+  if (found.bands.join(',') !== expected.bands.join(',')) {
+    fail(
+      'office-queue',
+      `${at} rendered bands [${found.bands.join(', ')}], expected [${expected.bands.join(', ')}]`,
+    );
   }
 }
 
@@ -3702,6 +3937,8 @@ async function checkRoom(page: Page, width: number, state: string): Promise<void
     fail('room', `${at} was meant to have a panel up and has none`);
   }
 
+  await checkManagerBelongsInTheRoom(page, at);
+
   /*
    * **A visitor has nothing that writes.**
    *
@@ -3719,6 +3956,107 @@ async function checkRoom(page: Page, width: number, state: string): Promise<void
       ),
     );
     if (writable) fail('room', `${at} offers a control that would change somebody else's room`);
+  }
+}
+
+/**
+ * The manager stands in the room at the room's own resolution, and casts a
+ * shadow on its floor.
+ *
+ * **This is the gate for the 2026-08-10 sprite-quality pass**, and it is measured
+ * in the browser because the thing it is holding is a *relationship between two
+ * pictures* — the painted shell and the sprite standing on it — which neither
+ * one's own tests can see.
+ *
+ * `lib/rooms/objects.test.ts` pins the authored numbers: the manager's rectangle
+ * is exactly the sprite canvas, so one sprite pixel is one room unit, the same
+ * ratio the shell and every collectible already keep. What that test cannot see
+ * is the **rendered** result: a stylesheet that sized the figure by anything but
+ * the room's own scale would put it back to being a coarser picture magnified
+ * into a finer one, which is the defect the commissioner reported and the
+ * arithmetic would still be green.
+ *
+ * So it compares device pixels per source pixel for the two, and they must
+ * match. No integer is required of either — `docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md`
+ * records that integer scaling is unavailable on these viewports and cannot be
+ * bought (`gcd(1080, 1125, 1170) = 45`). Agreement is the whole property.
+ */
+async function checkManagerBelongsInTheRoom(page: Page, at: string): Promise<void> {
+  const seen = await page.evaluate(
+    ({ canvasWidth, canvasHeight }) => {
+      const room = document.querySelector('[data-room-shell]');
+      const figure = document.querySelector('[data-room-character] [data-character-view]');
+      const shadow = document.querySelector('[data-room-shadow]');
+      if (room === null || figure === null) return null;
+
+      const roomBox = room.getBoundingClientRect();
+      const figureBox = figure.getBoundingClientRect();
+      return {
+        // The room is authored 320 units wide (`lib/parlor/objects.ts`).
+        roomScale: roomBox.width / 320,
+        spriteScaleX: figureBox.width / canvasWidth,
+        spriteScaleY: figureBox.height / canvasHeight,
+        /*
+         * The rendered width, not the element's existence. The first version of
+         * this shadow was a `rounded-[50%] blur-[2px]` span whose arbitrary
+         * utilities Tailwind never emitted — the element was in the DOM at every
+         * width and drew nothing anybody could see. A gate that asks whether a
+         * node exists would have been green on it.
+         */
+        shadow: shadow === null ? null : shadow.getBoundingClientRect().width,
+        shadowAlpha: shadow === null ? '' : getComputedStyle(shadow).backgroundColor,
+        feet: figureBox.bottom,
+        shadowBottom: shadow?.getBoundingClientRect().bottom ?? 0,
+      };
+    },
+    { canvasWidth: CHARACTER_CANVAS.width, canvasHeight: CHARACTER_CANVAS.height },
+  );
+
+  if (seen === null) {
+    fail('room', `${at} draws no manager in the room at all`);
+    return;
+  }
+
+  const drift = Math.abs(seen.spriteScaleX - seen.roomScale) / seen.roomScale;
+  if (drift > 0.02) {
+    fail(
+      'room',
+      `${at} draws the manager at ${seen.spriteScaleX.toFixed(3)} CSS px per sprite pixel in a ` +
+        `room drawn at ${seen.roomScale.toFixed(3)} per room unit — ${(drift * 100).toFixed(1)}% ` +
+        'apart. A figure at a different resolution from the room it stands in reads as pasted on, ' +
+        'whatever it is drawn like.',
+    );
+  }
+
+  if (Math.abs(seen.spriteScaleX - seen.spriteScaleY) > 0.01) {
+    fail(
+      'room',
+      `${at} draws the manager ${seen.spriteScaleX.toFixed(3)} wide by ` +
+        `${seen.spriteScaleY.toFixed(3)} tall per sprite pixel. The figure is stretched.`,
+    );
+  }
+
+  /*
+   * The shadow is the difference between standing in a room and being placed on
+   * a picture of one, and it is the one cue no work on the sprite itself can
+   * supply. Checked for existence and for landing at the feet — a shadow that
+   * has drifted up the wall is worse than none.
+   */
+  const opaque = /rgba?\([^)]*?(?:,\s*([\d.]+))?\)\s*$/.exec(seen.shadowAlpha);
+  const alpha = opaque?.[1] === undefined ? 1 : Number(opaque[1]);
+
+  if (seen.shadow === null || seen.shadow < seen.roomScale * 20 || alpha < 0.15) {
+    fail(
+      'room',
+      `${at} draws no shadow under the manager (width ${String(seen.shadow ?? 'absent')}, ` +
+        `fill ${seen.shadowAlpha || 'none'}), so the figure floats on the rug`,
+    );
+  } else if (Math.abs(seen.shadowBottom - seen.feet) > seen.roomScale * 8) {
+    fail(
+      'room',
+      `${at} puts the manager's shadow ${Math.round(seen.shadowBottom - seen.feet)}px from their ` +
+        'feet. A shadow that is not at the feet is a smudge.',
+    );
   }
 }
 
@@ -4215,7 +4553,9 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
 
     const box = view.getBoundingClientRect();
     const svg = view.querySelector('svg');
-    const rects = svg?.querySelectorAll('rect').length ?? 0;
+    const drawn = [...(svg?.querySelectorAll('rect') ?? [])];
+    const rects = drawn.length;
+    const fills = new Set(drawn.map((el) => el.getAttribute('fill') ?? '')).size;
     const viewBox = svg?.getAttribute('viewBox') ?? '';
 
     const live = document.querySelector('[data-character-customiser] [aria-live="polite"]');
@@ -4234,6 +4574,7 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
       left: box.left,
       right: box.right,
       rects,
+      fills,
       viewBox,
       rendering: getComputedStyle(view).imageRendering,
       /*
@@ -4255,35 +4596,81 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
     return;
   }
 
-  if (seen.viewBox !== '0 0 64 96') {
+  const canvas = `${String(CHARACTER_CANVAS.width)} x ${String(CHARACTER_CANVAS.height)}`;
+
+  if (seen.viewBox !== `0 0 ${String(CHARACTER_CANVAS.width)} ${String(CHARACTER_CANVAS.height)}`) {
     fail(
       'character',
-      `@${String(width)} ${state} draws on viewBox "${seen.viewBox}", not the 64 x 96 canvas ` +
+      `@${String(width)} ${state} draws on viewBox "${seen.viewBox}", not the ${canvas} canvas ` +
         'every layer is authored against. A layer resampled to fit is a layer authored wrong.',
     );
   }
 
   /*
-   * Integer scale, and the *same* integer in both directions. A non-square
-   * factor is how a sprite ends up subtly stretched, which nobody names and
-   * everybody sees.
+   * The *same* factor in both directions, one of the four the component offers,
+   * and a whole number of CSS pixels out of it.
+   *
+   * This used to demand a whole-number factor, which was the right rule for the
+   * old `64 × 96` canvas and is the wrong one for `112 × 168`: at whole
+   * multiples only, the smallest avatar the product could draw would be the full
+   * canvas, which is a poster rather than a row. What the old rule was protecting
+   * is that no edge lands between CSS pixels, and **that** is what is checked
+   * here — both canvas dimensions are even, so every offered half-step still
+   * lands on a whole pixel.
+   *
+   * A non-square factor stays forbidden. It is how a sprite ends up subtly
+   * stretched, which nobody names and everybody sees.
    */
-  const fx = seen.w / 64;
-  const fy = seen.h / 96;
-  if (!Number.isInteger(fx) || !Number.isInteger(fy) || fx !== fy || fx < 1) {
+  const fx = seen.w / CHARACTER_CANVAS.width;
+  const fy = seen.h / CHARACTER_CANVAS.height;
+  const offered = new Set<number>(Object.values(CHARACTER_SCALES));
+
+  if (fx !== fy || !offered.has(fx)) {
     fail(
       'character',
-      `@${String(width)} ${state} draws the 64 x 96 canvas at ${String(seen.w)} x ` +
-        `${String(seen.h)} — ${fx.toFixed(3)}x by ${fy.toFixed(3)}x. Pixel art at a fractional ` +
-        'scale puts every edge between device pixels.',
+      `@${String(width)} ${state} draws the ${canvas} canvas at ${String(seen.w)} x ` +
+        `${String(seen.h)} — ${fx.toFixed(3)}x by ${fy.toFixed(3)}x, which is not one of the ` +
+        `offered scales (${[...offered].join(', ')}).`,
     );
   }
 
-  if (seen.rects < 50) {
+  if (!Number.isInteger(seen.w) || !Number.isInteger(seen.h)) {
+    fail(
+      'character',
+      `@${String(width)} ${state} draws the character at ${seen.w.toFixed(3)} x ` +
+        `${seen.h.toFixed(3)} CSS px. A fractional box puts every edge of the sprite between ` +
+        'CSS pixels, which is the softening a fixed scale exists to prevent.',
+    );
+  }
+
+  if (seen.rects < 200) {
     fail(
       'character',
       `@${String(width)} ${state} draws ${String(seen.rects)} rectangles, which is not a figure. ` +
         'An empty or nearly empty composite means a layer resolved to nothing.',
+    );
+  }
+
+  /*
+   * **The figure has tonal structure**, measured on what the browser was
+   * actually given rather than on what the compositor believes it emitted.
+   *
+   * The regression this exists for shipped inside the sprite-quality pass and
+   * survived every unit test in the character suite: one transposed index in the
+   * shading pass sent every depth back as `1`, the edge test fired on every solid
+   * pixel, and the whole figure rendered in its own outline colour. It is drawn,
+   * it is in the canvas, it stands on the floor, every colour is legal — and it
+   * is a silhouette. Counting distinct fills is what tells the two apart.
+   *
+   * Five ramps of three steps plus ink is the floor a default character clears
+   * comfortably; the broken build produced four.
+   */
+  if (seen.fills < 8) {
+    fail(
+      'character',
+      `@${String(width)} ${state} draws the whole figure in ${String(seen.fills)} colours. ` +
+        'A character with no light and no shade is a silhouette — check that the shading pass ' +
+        'is still producing light, base and shade rather than collapsing to outline.',
     );
   }
 
@@ -4896,6 +5283,11 @@ async function run(): Promise<void> {
           // Every press-desk state must actually be that desk.
           if (state.startsWith('review-')) {
             await checkReviewDesk(page, width, state);
+          }
+
+          // Every office state must actually be the queue it claims to be.
+          if (state === 'office' || state.startsWith('office-')) {
+            await checkOfficeQueue(page, width, state);
           }
         }
 

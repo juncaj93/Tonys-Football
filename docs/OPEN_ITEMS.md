@@ -41,6 +41,54 @@ Every item is in exactly one category:
 
 ## A — V1 launch blockers
 
+### A0 · The Slice could never have drafted during the season it is about — **fixed, 2026-08-10**
+
+Found **twice on the same day, independently**, by the two rehearsals that were
+the first things in this repository to drive the chain against a season that was
+*open*: the Week 8 rehearsal (#86, `docs/WEEK8_REHEARSAL.md §5.1`) and the Week 1
+rehearsal (#85, `docs/WEEK_1_REHEARSAL.md §6`).
+
+`lib/slice/packet.ts` built its week from `seasons.finalized_at` — the season's
+own close, which happens in January. `16 §4.3`'s Tuesday chain ends by drafting
+the week that just closed. So for **every week of the 2026 season** the packet
+would have refused `not-final`, the Tuesday job would have written *"That week is
+still open"* into its `skipped` list, and the press desk would have been empty
+every Tuesday until the season was over.
+
+The same shape as A1: `not-final` is the truth in July and looks identical in
+October. `npm run check` and `npm run visual:qa` were both green, and the Tuesday
+job's own integration test asserted the wrong behaviour in passing — *"on an open
+season the Slice will not even draft"* — as though it were a property.
+
+The rule was already written down: `lib/stats/finality.ts` says a week is final
+when **its own** finalization exists and prefers that over the season's, and its
+header names the Slice as one of its two consumers. Rewards and stake settlement
+have called it since they were built; the Slice was the one caller still asking
+the wider question. The fix calls the predicate rather than restating it.
+
+**Nothing is loosened** — a week with no `week_finalizations` row is still
+refused — and **nothing about approval moved**: `16 §9`'s named-person gate is
+untouched, so the change puts a draft on the desk and never past it.
+`lib/rehearsal/week-1.test.ts` holds the positive half and **fails on the pre-fix
+build**; `lib/slice/slice.test.ts` holds the negative half.
+
+**The two rehearsals disagreed about whether to fix it, and that is recorded
+rather than smoothed over.** #86 pinned the defect with a test written to go red
+on repair, because its scope excluded the Slice's editorial architecture. #85's
+scope names the Tuesday Slice handoff, so it made the repair and **inverted** that
+test rather than deleting it — the tripwire worked exactly as intended and this
+is the conversation it demanded. If the commissioner would rather the desk stayed
+dark until January, reverting is one small commit against `lib/slice/packet.ts`
+and the two tests that pin it.
+
+**The playoff rehearsal found it a third time**, independently and on the same
+day, and its implementation was discarded in favour of this one. What it
+contributes instead is the range: `lib/rehearsal/week-16.test.ts` proves the
+repair holds to the **semifinal**, where sixteen closed weeks produce sixteen
+pending-review drafts and nothing is published.
+
+`docs/WEEK_1_REHEARSAL.md` §6 and `docs/PLAYOFF_REHEARSAL.md` §1. Closed.
+
 ### A1 · The live season could not get into the database — **fixed this session**
 
 `16 §4.3` specifies the Tuesday chain as **sync → finalize → …** and the sync had
@@ -125,59 +173,68 @@ canvas, so the first delivered shell would have been written three times
 oversized. Corrected to **320 × 569**, the size the shipped parlor shell has
 always been on disk, and `lib/rooms/objects.test.ts` now pins it.
 
-### A4 · The manager sprite cannot reach the approved reference by swapping art
+### A4 · The manager sprite cannot reach the approved reference by swapping art — **CLOSED, 2026-08-10**
 
-**A commissioner decision, and stated as one.** Colour in the character system is
-a *runtime parameter* — 4 skin × 8 hair × 8 top ramps, resolved at render and
-never stored — and a layer that resolves to a PNG **bypasses it entirely**. So
-the existing per-layer art-swap contract, which works everywhere else in this
-product, would silently delete seven of eight hair colours the first time a hair
-PNG landed.
+The premise stands and is why a swap was never on the table. Colour in the
+character system is a *runtime parameter* — 4 skin × 8 hair × 8 top ramps,
+resolved at render and never stored — and a layer that resolves to a PNG
+**bypasses it entirely**, so the per-layer art-swap contract that works
+everywhere else would silently delete seven of eight hair colours the first time
+a hair PNG landed. Keeping the traits *and* using PNGs is 132 files before a
+single wearable.
 
-Keeping the traits *and* using PNGs is **132 files** before a single wearable,
-multiplying four ways with every colour added later.
+**What was wrong is the conclusion drawn from it.** `ROOMS_BOUNDARY §14.2`
+offered two routes and dismissed the cheaper one as *"ceilinged by
+hand-authoring"* — reasoning about how the sprite is **drawn** without ever
+measuring how it is **displayed**. At `64 × 96` into a `112 × 168` rectangle, a
+manager pixel covered **1.75 room units** against the painted shell's exactly one:
+the figure was the only object in the world rendered coarser than the world and
+then magnified into it, which is *simplistic, flat and geometric* whatever it is
+drawn like.
 
-`docs/ROOMS_BOUNDARY.md §14` sets out the two real routes — raise the drawn
-fidelity in place (costs no art, ceilinged by hand-authoring) or add a
-**tinted-mask pipeline** (reaches the bar, costs a new rendering path and ~29
-authored masks). **Nothing was done**: the customiser is `CLOSED — production
-verified` and the direction says not to reopen it.
+Closed by **raising the canvas to the room's own resolution** and rewriting the
+shading pass on it. No masks, no new pipeline, no art requested, no trait, index,
+slug, default or guard moved, and the same 11,520 combinations. Twenty-nine
+registry rows changed a `canvas` field and no PNG existed at any of the three
+sizes this canvas has had.
 
-### A5 · The Slice could not have printed one week of the season — **fixed this session**
+`docs/MANAGER_SPRITE_BOUNDARY.md` is the canonical account, including the
+eighteen defects the render loop found and the ones no test in the suite could
+have. **A tinted-mask pipeline is not refused — it is not needed**, and if
+painted layers are ever commissioned this geometry is what they are painted to.
 
-Found by playing a season forward through the deployed Tuesday job
-(`lib/rehearsal/`). `factPacket` asked whether the **season** was finalized —
-`seasons.finalized_at`, the January close — and passed that as the week's
-`finalized` flag. Every game of a live season therefore came back suppressed
-`season-not-finalized`, `assemblePacket` refused `not-final`, and the draft step
-declined. **Every Tuesday, September to January.**
+### A5 · Twelve of the twenty-four collectibles have no art, and they are 59.5% of every box opened — **art dependency**
 
-Nothing would have looked broken: `runTuesday` records a refusal as a *skipped
-step* rather than a failure, so the job returns 200 with a sentence in `skipped`
-and an empty press desk.
+**Measured, 2026-08-10, and it is not the twelve you would guess.** Every epic
+and every legendary is already painted, so the unpainted twelve are exactly the
+**most frequently pulled** twelve: seven commons carrying **42.0%** of all box
+openings and five rares carrying a further **17.5%**. Three boxes in five
+produce the same picture of a closed pizza box, and a median manager's
+season-one collection is **40% real objects and 60% placeholder**.
 
-`lib/stats/finality.ts` was written for exactly this and names the Slice as one
-of its two consumers; only weekly stakes was ever wired to it, and
-`lib/stakes/facts.ts` records the same correction made from the other side and
-never carried across.
+**This is not a defect and nothing is broken.** `art/ASSET_PIPELINE.md §5`
+deliberately commits to 12-of-24 at launch and `placeholder_pizza_box` is a
+designed in-world stand-in — an item still in its box. What was missing was the
+*number*: nobody had measured what the deferral costs at the surface a manager
+actually looks at. It is here so the commissioner can decide with it rather than
+around it.
 
-**Fixed.** Finality is asked per week. The season-level flag is untouched where
-it is the right question — the finalized margin and score *populations* still
-read closed seasons only. The old test that should have caught it passed for the
-wrong reason and is now two tests that can.
+**It is the highest-return art in the product per sprite.** One common sprite is
+seen 1.7× as often as a rare one and 6× as often as a legendary one, so the
+order inside the batch matters as much as the batch: commons first, always.
+[`docs/art/BATCH_F_COLLECTIBLE_HANDOFF.md`](art/BATCH_F_COLLECTIBLE_HANDOFF.md)
+briefs all twelve, ready to paste, with one free product win folded in —
+`collectible_paper_menu` rebriefed as a menu board that **hangs**, which gives
+the room's picture frame its first common-tier occupant at no extra art and no
+catalog change.
 
-`docs/PLAYOFF_REHEARSAL.md §3.1`.
-
-### A6 · The homepage board would have read WEEK ONE in December — **fixed this session**
-
-`boardFace` has taken a `week` since it was written; `app/page.tsx` never passed
-one. Not stale copy — a false statement on the largest object in the room, on
-every load, for four months. It now passes the last week the Tuesday job closed,
-which is null before the first Tuesday and therefore says WEEK ONE when that is
-true. `docs/PLAYOFF_REHEARSAL.md §3.2`.
+**Nothing is blocked.** Every unpainted slug resolves today, the loop works, and
+a swap stays a registry row.
 
 **Nothing else is in category A.** Every other v1 system is built, tested and
-reachable; what remains below is polish, activation, or deferred scope.
+reachable; what remains below is polish, activation, or deferred scope. The two
+that remain — **A3** and **A5** — are both art dependencies and neither blocks
+anything: every unpainted slug resolves today.
 
 ---
 
@@ -292,6 +349,14 @@ observed production, and *"probably set"* is not a launch check.
 Verifiable from a phone in three taps — the profile screen shows a
 *Commissioner's office* button when it is set.
 
+**Unchanged by the 2026-08-10 publication-approval work**, and worth stating
+plainly because that work built the queue this variable unlocks. There is no
+`is_admin` system of its own: commissioner authority is still `users.is_admin`,
+still set only by the deploy seed from this variable, and with it unset every
+seat answers `notFound()`. The generalized queue is **built and inert in
+production** until Alex sets it. `lib/publication/authority.test.ts` asserts the
+fail-closed behaviour; it does not and cannot assert the variable.
+
 ### D3 · One greeting pair still shares a line, and the line is the commissioner's to write
 
 SuggMyNick and cheeseking both made the 2025 playoffs without a title and A21 is
@@ -370,6 +435,14 @@ remains **unobserved** until a real post-week run happens.
 surface needs them, so this is a note rather than a task — recorded so a future
 session does not read the absence as an oversight and start writing migrations.
 
+**Now also enforced, 2026-08-10.** `lib/stats/unsupported.ts` names the stories
+these tables would unlock — trade revenge, bench crimes — with what each would
+need, and `unsupported.test.ts` parses `lib/db/schema.ts` and **fails if one of
+them is created** while the registry still calls it absent. That is not a guard
+against building them; it is a guard against the registry going on describing a
+limitation the product no longer has. `docs/HISTORICAL_ANALYSIS_BOUNDARY.md §1`
+carries the full source-of-truth matrix.
+
 ### E2 · The harness probed the server with an unbounded `fetch` — **fixed and confirmed closed on `main`**
 
 `assertServerIsOurBuild` waited on the platform default, so a server that
@@ -403,28 +476,53 @@ still pair a 0–0 fixture as a game. Harmless today — the snapshot only feeds
 comeback detection, which needs a result to flip — but it is one rule living in
 one of three places that could each see the payload.
 
-### E5 · A live elimination story needs the bracket persisted
+### E5 · The economy gate models a 14-week season and checks a range centred on its own boundary
 
-The product stores `made_playoffs` and `final_rank` and nothing else about the
-postseason's structure. Both are *consequences* of the bracket rather than the
-bracket, so *"who advanced this week"* is not answerable on the Tuesday it
-happened — which means the Slice's `elimination` story is **retrospective**,
-pinned by a test that says so.
+Two defects in the **release gate**, not in the economy, found by the catalog
+sizing study and **reported rather than fixed** — `16 §8` owns those ranges and
+`docs/ECONOMY_SIMULATION.md` is a signed-off measurement, so changing either
+without a ruling would be the gate approving itself.
 
-The `elimination` candidate itself was fixed this session: it had been derived
-from *"the loser meets no other playoff team again this season"*, which this
-league's bracket makes permanently false — the first-round losers meet each other
-in week 16 for fifth and the semifinal losers meet each other in week 17 for
-third. Measured rather than reasoned: it appears nowhere in the six playoff weeks
-of the two recorded seasons. It now reads the recorded placement, and two
-headline templates changed with it, because *"{l} is done for the year"* would
-have been false the first time it fired.
+1. **`scripts/simulate-economy.ts` defaults to `--weeks=14`**, described as *"the
+   imported-season shape"*. The recorded fixtures score **seventeen** weeks, and
+   `lib/rewards/derive.ts` has no branch on week type — a playoff or consolation
+   win pays the same 150 — so a season has three more paydays than the gate
+   models. At `--weeks=17` boxes per manager measure 11.0 against a 6–12 range;
+   every other range stays green.
+2. **The legendary-rate range is 2–4% and the configured mass is exactly 2%**, so
+   the check sits on its own floor and passes on noise. Measured across twelve
+   seeds at 50 seasons: **5/12 pass at 14 weeks, 6/12 at 17.** More seasons
+   cannot fix a range centred on its boundary — which is the same failure
+   `ECONOMY_SIMULATION.md` diagnosed at five seasons and cured only halfway.
 
-Making it live is a `playoff_bracket` table fed by the sync. That is a feature,
-it is not in `16`'s v1 list, and it was not built.
-`docs/PLAYOFF_REHEARSAL.md §3.4` and `§5`.
+Neither changes a shipped value. The economy's conclusions survive both: at 17
+weeks the price of 200 still lands mid-range, and the legendary rate is exactly
+the 2% the table configures.
 
-### E6 · A stale standings payload moves the table backwards for a week
+### E6 · The elimination story is retrospective, and live bracket state is ruled out
+
+**The candidate was fixed; the limitation is a ruling, not a defect.**
+
+`elimination` had been derived from *"the loser meets no other playoff team
+again this season"*, which this league's bracket makes permanently false — the
+first-round losers meet each other in week 16 for fifth and the semifinal losers
+meet each other in week 17 for third. Measured rather than reasoned: it appears
+nowhere in the six playoff weeks of the two recorded seasons. It now reads the
+recorded placement, and two headline templates changed with it because
+*"{l} is done for the year"* would have been false the first time it fired.
+
+It fires only once ranks one and two exist, so the paper printed on the Tuesday
+of the semifinal cannot carry it. **Commissioner ruling, 2026-08-10: do not add
+a `playoff_bracket` table for v1.** Retrospective playoff facts are acceptable
+where the persisted data proves them, and a live *"who advanced this week"*
+story is a deferred feature opportunity rather than a launch blocker. Building
+it needs a scoped decision of its own — source of truth, schema, sync semantics,
+idempotency, stale-data behaviour and its own rehearsal coverage. **Nothing of
+the sort was introduced here.**
+
+`docs/PLAYOFF_REHEARSAL.md §3.2` and `§5`.
+
+### E7 · A stale standings payload moves the table backwards for a week
 
 Injected and observed. `reconcileSeason` catches it and names both records for
 all ten rosters, but the disagreement is a *warning* rather than a *conflict*, so
@@ -432,6 +530,11 @@ all ten rosters, but the disagreement is a *warning* rather than a *conflict*, s
 points disagree permanently, and a run reading `NEEDS_REVIEW` every week would
 teach whoever reads it to stop reading — but a commissioner reading only the
 status would not see it. Recorded as behaviour, not filed as a defect.
+
+**Commissioner ruling, 2026-08-10: the policy is not to be changed in a playoff
+PR.** A historical permanent disagreement is not a reason to make all standings
+drift fatal. If it deserves stronger visibility, that is a separate hardening
+task.
 
 ---
 
@@ -484,18 +587,59 @@ a blanket re-opening.
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
 
-### G2 · Tonight has no playoff voice, and that is the commissioner's to give it
+### G4 · Commissioner announcements — specified, unbuilt, and the shape is recommended
+
+> Renumbered from **G2** on 2026-08-10. Two concurrent slices each added a `G2`
+> to this list — announcements (#88) and the catalog ruling (#87) — and the one
+> cross-reference in `CLAUDE.md` points at the catalog. So the catalog keeps the
+> number and this one moved.
+
+`08 §18` lists what the Slice may announce and `18 §6` gives a commissioner
+announcement priority 6 on the Tonight board. **Neither exists**: no table, no
+route, no writer, nothing that reads one.
+
+Recorded here rather than left implicit because the 2026-08-10 publication audit
+had to classify it, and *"it is a publication surface with no rows"* is a
+different answer from *"nobody thought about it."* A kind in
+`lib/publication/kinds.ts` for a surface that can never produce an item would be
+a queue section that is permanently empty — which is how a queue stops being
+believed.
+
+**When it is built, the recommended shape is one explicit *Publish announcement*
+button and no second approval step.** Alex writing the words and Alex approving
+the words are the same act on the same screen; a two-step there is bureaucracy
+rather than intentionality, and the goal of the review path is that nothing
+reaches the league **unintentionally**, not that everything is stamped twice.
+That is a recommendation and not a ruling — the decision belongs with the
+feature. `docs/PUBLICATION_APPROVAL_BOUNDARY.md §5` carries it.
+
+### G3 · Tonight has no playoff voice — deferred, and what is actually missing is copy
 
 The board's five possible lines are the kickoff countdown, the standing
 champion, the heaviest finalized game, who has picked up their keys, and which
-seasons are on the books. **There is no playoff or elimination line at all** —
-so there is no precedence rule about the postseason to get right or wrong.
+seasons are on the books. **There is no playoff or elimination line at all**, so
+there is no precedence rule about the postseason to get right or wrong.
 
-Found while rehearsing week 16, where the expectation had been that
-championship and elimination outrank everything. Reported rather than built: a
-playoff line is new curated copy in Tony's voice, and `CLAUDE.md` reserves that
-for the commissioner. `lib/rehearsal/playoffs.test.ts` pins the current set, so
-the day one is added it reads as a change rather than as a surprise.
+**Commissioner ruling, 2026-08-10.** Playoff-specific board messaging is
+desirable — verified championship, advancement and elimination context may
+outrank an ordinary matchup detail during the postseason — but deterministic
+state and Tony's authored wording are separate layers, and an engineering
+session may not invent the second. Nothing unsupported may be claimed, and the
+board must not assert live bracket facts the persisted data cannot prove.
+
+**Nothing was prepared behind a typed interface either, and that is deliberate.**
+The deterministic half such a line would need — *who advanced this week* — is
+exactly the bracket state **E6**'s ruling declines to persist. What remains
+available without new persistence is three states, and all three are copy slots
+rather than data gaps:
+
+- **championship week** — derivable from `playoff_week_start` and the bracket's round count;
+- **champion confirmed** — `final_rank = 1` on a finalized season, which the banner rail already reads;
+- **season complete** — `seasons.finalized_at`.
+
+Those are the exact slots to fill. Final wording must be commissioner-approved
+before publication. `lib/rehearsal/week-16.test.ts` pins the current set of five
+so the day one is added it reads as a change rather than as a surprise.
 
 ### G1 · The Underground — the decision that is actually wanted
 
@@ -541,8 +685,34 @@ everyone at once as an announced event — so it can only be spent once.
 
 Twelve of twenty-four collectibles stay `placeholder_pizza_box` **by design** —
 that is the number `art/ASSET_PIPELINE.md §5` commits to at launch, not a gap.
+**What that costs is now measured** rather than assumed: see **A5**.
 
 Group B greeting lines await commissioner approval; seed Group A only.
+
+### G2 · Growing the catalog past twenty-four — a ruling, not a session
+
+**The simulation recommends 32 for season one. Nothing was built.** `16` approves
+*"one loot box and a 24-item catalog"* and `lib/counter/catalog.ts` asserts
+`CATALOG_SIZE = 24` precisely so the seed fails loudly rather than shipping a
+different economy quietly — so this is the commissioner's to say, and
+[`docs/CATALOG_SIZING.md`](CATALOG_SIZING.md) is the evidence to say it against.
+
+**It is not urgent, and the date is measured rather than felt.** The shipped
+catalog first hands somebody tokens instead of an object in **week 12 of season
+one** for the median manager who gets there at all, and only 5.0% of openings at
+season end. Season *two* is where 24 gives way — 25.9% of openings paying tokens
+and 82% of managers hitting the wall. So the deadline for the eight new items is
+**week 12**, not kickoff, and the whole question can wait behind **A5**, which
+needs no ruling at all.
+
+**Adding an item is cheap and additive**: a registry row, that constant, and a
+new content-hashed reward-table version. Every opening already recorded keeps
+pointing at the table it actually rolled against, and the rarity mass is per
+tier — so a legendary stays exactly 2% however many items exist.
+
+**Do not execute it autonomously**, and do not reach for a price change instead:
+a catalog problem is not fixed by moving token economics, which is the standing
+instruction and also what the numbers say.
 
 ---
 
@@ -610,6 +780,7 @@ mechanism has never run for real.
 |---|---|
 | The in-season sync is implemented | **source code** |
 | It is idempotent, bounded, refuses stale and unplayed data, and resolves its week after syncing | **local Postgres**, and each guard fails on the pre-fix build |
+| **The whole week — Sunday photograph → Tuesday close → rewards → draft → approval → publication → week 2 — works as one system** | **local Postgres**, forty-two assertions plus nine failure injections (`lib/rehearsal/week-1.test.ts`), with the run itself printed in `docs/evidence/week-1-rehearsal/report.md` |
 | It compiles, lints and passes the suite | **hosted CI** |
 | Every reachable screen renders correctly at three phone widths | **hosted visual QA** |
 | It is deployed to production | **inferred** from a normal merge to `main`; not observed |

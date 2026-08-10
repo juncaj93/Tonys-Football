@@ -3,6 +3,7 @@ import { asc, eq, sql } from 'drizzle-orm';
 import { type Queryable } from '@/lib/db';
 import { fantasyMatchups, seasons, weekFinalizations } from '@/lib/db/schema';
 import { fromCents } from '@/lib/sleeper/reconcile';
+import { LAST_SYNCABLE_WEEK } from '@/lib/sleeper/weekly';
 
 import { rosterNames } from './facts';
 
@@ -215,27 +216,30 @@ export function publishableWeek(
   };
 }
 
-/**
- * Every stored game of a season, ascending, with the seats it needs.
- *
- * ## `finalized` and `weekFinalizedAt` answer different questions
- *
- * `finalized` is the **season's** books closing in January. It is the right
- * question for a comparison population — a percentile that shifts under a
- * published fact makes the fact retroactively wrong — and the wrong question
- * for *"may this week be printed"*, which is what `week_finalizations` and
- * `lib/stats/finality.ts` exist to answer. Both are returned so a caller has to
- * pick one rather than inherit whichever this function happened to compute.
- */
+/** Every stored game of a season, ascending, with the seats it needs. */
 export async function seasonWeeks(
   db: Queryable,
   year: number,
 ): Promise<{
   readonly found: boolean;
-  /** The season's books are shut. January, not Tuesday. */
   readonly finalized: boolean;
-  readonly seasonFinalizedAt: Date | null;
-  /** Week → when the Tuesday job closed it. Empty before the first Tuesday. */
+  /**
+   * When the books were shut, or null while they are open.
+   *
+   * The same fact as {@link finalized} and not a duplicate of it: `weekFinality`
+   * takes the instant rather than the boolean, so a caller that wants the
+   * canonical predicate can pass this straight through instead of reconstructing
+   * a date it does not have.
+   */
+  readonly finalizedAt: Date | null;
+  /**
+   * Weeks this season closed on a Tuesday, and when.
+   *
+   * `16 §4.3`'s Tuesday job writes these, and `lib/stats/finality.ts` prefers
+   * them over the season's own close because they are the narrower claim. A
+   * caller asking *"may this week be printed / paid / settled"* needs both this
+   * and {@link finalizedAt}, which is why they are read together.
+   */
   readonly weekFinalizedAt: ReadonlyMap<number, Date>;
   readonly rows: readonly StoredWeekGame[];
   readonly roster: ReadonlyMap<number, { userId: string; displayName: string }>;
@@ -250,7 +254,7 @@ export async function seasonWeeks(
     return {
       found: false,
       finalized: false,
-      seasonFinalizedAt: null,
+      finalizedAt: null,
       weekFinalizedAt: new Map(),
       rows: [],
       roster: new Map(),
@@ -286,36 +290,11 @@ export async function seasonWeeks(
   return {
     found: true,
     finalized: season.finalizedAt !== null,
-    seasonFinalizedAt: season.finalizedAt,
+    finalizedAt: season.finalizedAt,
     weekFinalizedAt: new Map(closed.map((row) => [row.week, row.finalizedAt])),
     rows,
     roster: await rosterNames(db, season.id),
   };
-}
-
-/**
- * The highest week of a season the Tuesday job has closed. Null before the first.
- *
- * The one honest answer to *"what week is it"* that this product holds. Sleeper's
- * `state.week` rolls over on Tuesday morning — measured, and the reason
- * `lib/sleeper/weekly.ts` refuses to ask it — and the latest *stored* week can be
- * a week whose games are half in. A closed week is a week somebody's job decided
- * was over, which is the same fact the paper on the rack is about.
- *
- * A single aggregate rather than {@link seasonWeeks}, because the homepage asks
- * this on every load and does not need the season's games to answer it.
- */
-export async function latestFinalizedWeek(
-  db: Queryable,
-  seasonId: string,
-): Promise<number | null> {
-  const [row] = await db
-    .select({ week: sql<number | null>`max(${weekFinalizations.week})` })
-    .from(weekFinalizations)
-    .where(eq(weekFinalizations.seasonId, seasonId));
-
-  const week = row?.week;
-  return week === null || week === undefined ? null : Number(week);
 }
 
 /**
@@ -331,4 +310,51 @@ export function teamScoresCents(rows: readonly StoredWeekGame[]): number[] {
   const out: number[] = [];
   for (const row of rows) out.push(row.pointsACents, row.pointsBCents);
   return out.sort((x, y) => x - y);
+}
+
+/**
+ * The week the league is playing right now — highest **closed** week, plus one.
+ *
+ * ## Why this exists, and why it is derived rather than asked for
+ *
+ * `boardFace()` has taken a `week` since it was written, and `board-face.test.ts`
+ * asserts it renders `WEEK 5` when it is given one. **The homepage never gave it
+ * one.** `app/page.tsx` called it with only `daysUntilKickoff` and `matchup`, so
+ * the moment the season started the largest object in the room would have read
+ * **WEEK ONE** — and gone on reading it every week until January. The midseason
+ * rehearsal is what made that visible: in week one the wrong answer and the right
+ * answer are the same string.
+ *
+ * ## Highest closed week, plus one
+ *
+ * A board says which week is being *played*, not which week was last settled, so
+ * this counts forward from finality rather than from stored games. On the Tuesday
+ * that closes week 8 the league moves to week 9, and that is what the board
+ * should say for the six days after it.
+ *
+ * **Nothing is inferred about the NFL schedule**, because nothing can be:
+ * `lib/sleeper/endpoints.ts` is the whole surface this product talks to and none
+ * of its eight endpoints carries one (`docs/SUNDAY_SNAPSHOT_BOUNDARY.md §3`).
+ * Sleeper's `state.week` was considered and is the same value this computes, with
+ * a network call and an ambiguity at the Tuesday rollover that
+ * `lib/sleeper/weekly.ts` already rejected it for.
+ *
+ * A season nothing has closed is week 1 — which is true of a season on its
+ * opening Sunday and true of one that has not kicked off, and in the second case
+ * the clock is what governs the face anyway (`daysUntilKickoff`).
+ *
+ * Clamped at `LAST_SYNCABLE_WEEK` — the same 18, imported rather than restated,
+ * because "the last week the league plays" is one fact and a second constant
+ * holding it is a second thing to keep in step.
+ */
+export async function currentWeekOf(db: Queryable, year: number): Promise<number> {
+  const [row] = await db
+    .select({ closed: sql<number | null>`max(${weekFinalizations.week})` })
+    .from(weekFinalizations)
+    .innerJoin(seasons, eq(seasons.id, weekFinalizations.seasonId))
+    .where(eq(seasons.year, year));
+
+  const closed = row?.closed;
+  const settled = closed === null || closed === undefined ? 0 : Number(closed);
+  return Math.min(LAST_SYNCABLE_WEEK, settled + 1);
 }

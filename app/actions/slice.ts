@@ -8,7 +8,6 @@ import { openSeason } from '@/lib/counter/tokens';
 import {
   approveVersion,
   generateDraft,
-  publishVersion,
   rejectVersion,
   setPublicationHold,
   submitForReview,
@@ -120,14 +119,18 @@ export async function rejectIssueAction(formData: FormData): Promise<void> {
   redirect(`/admin/slice/${versionId}`);
 }
 
-export async function publishIssueAction(formData: FormData): Promise<void> {
-  const admin = await requireAdmin();
-  const versionId = formData.get('versionId');
-  if (!isUuid(versionId)) return;
-
-  await publishVersion(getDb(), { versionId, actorUserId: admin.user.id });
-  redirect(`/admin/slice/${versionId}?published=1`);
-}
+/*
+ * `publishIssueAction` is **gone**, and its absence is the point.
+ *
+ * `approveAndPublishAction` (`app/actions/publication.ts`) reaches the press for
+ * every caller now, including an already-approved version — so a second action
+ * doing the same thing would be a second endpoint to keep correct, and the one
+ * that drifted would be the one without the digest check on it.
+ *
+ * An exported `'use server'` function is a **live endpoint**, not a helper. One
+ * with no caller is a door nobody is watching, so it is deleted rather than kept
+ * "in case". The service it called, `publishVersion`, is untouched.
+ */
 
 /**
  * The manual hold (`16 §9`, permanent).

@@ -66,7 +66,13 @@ export type PacketRefusal =
   | 'no-season'
   /** That week was never played. */
   | 'no-week'
-  /** The games exist but the season's books are open, so nothing is settled. */
+  /**
+   * The games exist and **nothing has closed the week**, so nothing is settled.
+   *
+   * The week's own finalization, or the season's close — `lib/stats/finality.ts`
+   * owns the rule and prefers the first. It used to be the season's alone, which
+   * refused every week of a live season; see the note on `isFinal` below.
+   */
   | 'not-final'
   /** Every game in the week names somebody who may not be published. */
   | 'nobody-publishable';
@@ -319,42 +325,43 @@ export async function factPacket(
     snapshotFor.set(weekNumber, await weekSnapshot(db, { season: input.season, week: weekNumber }));
   }
 
-  /*
-   * Finality is asked **per week**, and the season's own close is only one of
-   * the two answers.
+  /**
+   * Whether this particular week may be printed.
    *
-   * This used to pass `season.finalized` — `seasons.finalized_at`, the January
-   * close — and the consequence was total: **no week of a live season could
-   * ever be printed.** Every game came back suppressed `season-not-finalized`,
-   * `assemblePacket` refused `not-final`, and the Tuesday job's draft step
-   * declined every week from September to January while reporting success.
-   * Nothing looked broken; the press desk was simply always empty.
+   * **This used to read the season's own finality, and that was a defect that
+   * would have cost the league every paper of the 2026 season.** `16 §4.3`'s
+   * Tuesday job ends by drafting the week that just closed; a season's books do
+   * not shut until January; so a packet gated on `seasons.finalized_at` refuses
+   * *every* week of a live season with `not-final` — and `not-final` is the
+   * truth in July and looks identical in October. The Week 1 lifecycle rehearsal
+   * (`lib/rehearsal/`) is what found it, because it is the first thing to run
+   * the whole chain against a season that was open.
    *
-   * `lib/stats/finality.ts` was written for exactly this and names the Slice as
-   * one of its two consumers — *"the Slice, which will not print an unfinalized
-   * week"* — but only weekly stakes was ever wired to it. A **week** is final on
-   * the Tuesday the job closes it (`week_finalizations`), and that is the claim
-   * the paper needs: the week whose result is being printed has been closed, on
-   * purpose, by the job that owns closing weeks.
+   * The rule was already written down and already had a home:
+   * `lib/stats/finality.ts` says a week is final when **its own** finalization
+   * exists, and prefers that over the season's because it is the narrower and
+   * earlier claim. Its own header names the Slice as one of the two consumers.
+   * Rewards and stake settlement have used it since they were built; this was
+   * the one caller still asking the wider question.
    *
-   * `lib/stakes/facts.ts` records the same correction from the other side, made
-   * during the weekly-stakes slice and not carried across to here.
+   * Nothing is loosened by this. A week with no `week_finalizations` row is
+   * still refused, so an in-progress week still cannot be printed — which is
+   * what *"a number that can still move must not be printed"* actually requires.
+   * The predicate is called rather than restated, so this cannot drift from the
+   * rule the ledger and the settler enforce.
    */
-  const finalityOf = (weekNumber: number, hasGames: boolean): boolean =>
+  const isFinal = (weekNumber: number): boolean =>
     weekFinality({
-      seasonFinalizedAt: season.seasonFinalizedAt,
+      seasonFinalizedAt: season.finalizedAt,
       weekFinalizedAt: season.weekFinalizedAt.get(weekNumber) ?? null,
-      hasGames,
+      hasGames: season.rows.some((row) => row.week === weekNumber),
     }).final;
 
   const forWeek = (weekNumber: number): { raw: WeekRecord; open: WeekRecord } => {
     const raw = buildWeek({
       season: input.season,
       week: weekNumber,
-      finalized: finalityOf(
-        weekNumber,
-        season.rows.some((row) => row.week === weekNumber),
-      ),
+      finalized: isFinal(weekNumber),
       rows: season.rows,
       roster: season.roster,
     });

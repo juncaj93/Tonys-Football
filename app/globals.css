@@ -1341,11 +1341,18 @@ body[data-parlor-focus] .tony-line * {
 /*
  * The character in the mirror breathes.
  *
- * **One source pixel, and steps.** The customiser draws at 3x, so a whole source
- * pixel is three CSS pixels and `steps(1)` lands the sprite on an exact device
- * pixel at both ends — a smoothly interpolated 1.5px would put every edge of a
- * pixel-art figure between device pixels for most of the cycle, which is the one
- * thing this art must never have done to it.
+ * **A whole number of source pixels, and steps.** The customiser draws the
+ * `112 x 168` canvas at 1.5x, so three CSS pixels is exactly two source pixels
+ * and `steps(1)` lands the sprite on an exact device pixel at both ends — a
+ * smoothly interpolated 1.5px would put every edge of a pixel-art figure between
+ * device pixels for most of the cycle, which is the one thing this art must
+ * never have done to it.
+ *
+ * The distance is unchanged from the 64 x 96 canvas at 3x, where the same three
+ * pixels were one source pixel. It is the *travel on screen* that has to stay
+ * the same — a breath is a movement a person sees, not a number of pixels — and
+ * two rows of a 168-row figure is the same fraction of it that one row of a
+ * 96-row figure was.
  *
  * It is on the preview and nowhere else. A character idling in a list is
  * movement nobody asked for.

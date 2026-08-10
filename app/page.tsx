@@ -40,7 +40,8 @@ import { BoardPanel, ChalkSlate } from '@/components/scene/chalkboard';
 import { chalkboardFor } from '@/lib/stakes/chalkboard';
 import { previewBoard } from '@/lib/stakes/boards';
 import { featuredMatchup, matchupLine } from '@/lib/stats/board';
-import { latestFinalizedWeek } from '@/lib/stats/week';
+import { currentWeekOf } from '@/lib/stats/week';
+import { currentSeasonYear } from '@/lib/league/membership';
 import { loadTags } from '@/lib/tags/repository';
 
 /**
@@ -100,7 +101,7 @@ export default async function ParlorPage({
   const db = getDb();
   const clock = seasonClock();
 
-  const [tags, managers, tonight, banners, box, season, featured] = await Promise.all([
+  const [tags, managers, tonight, banners, box, season, featured, boardYear] = await Promise.all([
     loadTags(db),
     listDoorManagers(db),
     tonightBoard(db),
@@ -110,26 +111,20 @@ export default async function ParlorPage({
     // A Stats fact, or null. The board renders it or renders nothing — it never
     // derives one (`PRODUCT_DELIVERY_MANDATE.md §9`).
     featuredMatchup(db),
+    /*
+     * The season the board is about — the newest on record, not the open one.
+     *
+     * They differ in January: `openSeason` goes null the moment the books shut,
+     * while the room still has to name a season. Reading the newest keeps the
+     * face answerable in every state.
+     */
+    currentSeasonYear(db),
   ]);
 
   // Null when this manager holds no seat this season — a co-owner, or somebody not
   // seated yet. A zero would make "no tab" and "spent everything" look the same.
   const purse =
     season === null ? null : await wallet(db, { userId: user.id, seasonId: season.id });
-
-  /*
-   * The week the board names, and it had never been supplied.
-   *
-   * `boardFace` has taken a `week` since it was written and this call omitted
-   * it, so the hero fell through to its no-week branch — which meant the largest
-   * object in the room would have read **WEEK ONE** in December. Not stale copy:
-   * a false statement, on every load, for four months.
-   *
-   * The source is the last week the Tuesday job closed, not the calendar and not
-   * Sleeper's `state.week`. Before the first Tuesday of the season it is null and
-   * the hero says WEEK ONE, which is then true.
-   */
-  const closedWeek = season === null ? null : await latestFinalizedWeek(db, season.id);
 
   // What the league can see of them, so the room reflects the Showcase choice.
   const shown = await showcaseFor(db, user.id);
@@ -215,7 +210,8 @@ export default async function ParlorPage({
   const spoken = aside ?? greeting;
   const line = spoken?.text ?? `Tony nods at ${user.displayName} and goes back to the oven.`;
   /*
-   * The board's face: a hero and at most one short fact.
+   * The board's face: a hero and at most one short fact, in the two states it
+   * actually has.
    *
    * In the offseason the detail is the countdown — a verified clock value. Once
    * the season is under way it is the matchup, and that matchup arrives as a
@@ -223,16 +219,35 @@ export default async function ParlorPage({
    * component worked out. Two names and nothing else: the intensity and the
    * margin travel with the fact to surfaces that have room to state them, and a
    * loaded word on the largest object in the room without its evidence is the
-   * thing `PRODUCT_DELIVERY_MANDATE.md §9` forbids.
+   * thing `PRODUCT_DELIVERY_MANDATE.md §9` forbids. Null stays null — an absent
+   * fact leaves the detail empty rather than inventing prose.
    *
-   * Null stays null. An absent fact leaves the detail empty rather than
-   * inventing prose.
+   * This used to be one call that omitted `week`, and `boardFace` defaulted a
+   * missing week to `WEEK ONE` — so from the opening Sunday to January the
+   * largest object in the room would have said week one, every week. It is
+   * invisible in week one, where the wrong answer and the right one are the same
+   * string; the midseason rehearsal is what made it visible
+   * (`docs/WEEK8_REHEARSAL.md`). `BoardFaceInput` is now two shapes so a caller
+   * that does not know the week cannot compile, which is the half of the fix
+   * that survives the next person editing this file.
+   *
+   * `currentWeekOf` counts forward from **closed** weeks. Nothing here infers an
+   * NFL schedule, because the product does not have one.
+   *
+   * The matchup is filtered by the season the hero names. `featuredMatchup`
+   * returns the strongest fact from the most recent *archived* season, and two
+   * bare names under `WEEK 9` are a claim about week 9 — true fact, false claim.
+   * `matchupLine` is where that boundary lives; null here is ordinary, and the
+   * panel behind the board still carries the whole fact with its season on it.
    */
-  const face = boardFace({
-    daysUntilKickoff: clock.daysUntilKickoff,
-    week: closedWeek,
-    matchup: matchupLine(featured),
-  });
+  const face =
+    clock.daysUntilKickoff !== null
+      ? boardFace({ daysUntilKickoff: clock.daysUntilKickoff })
+      : boardFace({
+          daysUntilKickoff: null,
+          week: await currentWeekOf(db, boardYear ?? 0),
+          matchup: matchupLine(featured, { season: boardYear }),
+        });
   const shell = resolveAsset('zone_parlor_shell');
 
   return (

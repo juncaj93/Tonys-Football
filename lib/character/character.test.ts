@@ -8,6 +8,7 @@ import { characterConfigurations, collectibles, users, wearableEquips } from '@/
 import { resetDatabase } from '@/lib/db/test-helpers';
 
 import { drawnSlugs, toneGrid } from './art';
+import { FACE, HAT_BRIM } from './art/geometry';
 import {
   COLOUR_TRAITS,
   STYLE_TRAITS,
@@ -213,6 +214,29 @@ describe('the art and the catalog agree', () => {
         expect(shared, `${hat.slug} floats above ${style.slug!}`).toBeGreaterThan(0);
       }
     }
+  });
+
+  it('keeps every hat clear of the face it is worn on', () => {
+    /*
+     * **A hat is worn on a face, not on a skull.** Every one of the three was
+     * authored in offsets from `HEAD.top`, so when the features moved they came
+     * down with the top of the head rather than with the eyes: the winter beanie's
+     * band landed across both eyes, the visor's brim on the lash line, and the
+     * paper hat's band through the eyebrows. All three were photographed and all
+     * three would have shipped, because nothing awards a wearable yet — so the
+     * day one is awarded is the day somebody's hat covers their face.
+     *
+     * `HAT_BRIM` is the one number, two rows above the brow, and it is checked
+     * here rather than trusted to three files agreeing.
+     */
+    for (const hat of WEARABLES.filter((item) => item.slot === 'head')) {
+      const box = bounds(toneGrid(hat.slug)!)!;
+      expect(box.bottom, `${hat.slug} reaches row ${String(box.bottom)}`).toBeLessThanOrEqual(
+        HAT_BRIM,
+      );
+    }
+    // And the brim really is clear of the face, or the rule above is decoration.
+    expect(HAT_BRIM).toBeLessThan(FACE.browY);
   });
 
   it('leaves the held hand clear on every top, so a sleeve never eats a hand', () => {
