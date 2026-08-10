@@ -13,6 +13,7 @@ import {
 } from '@/lib/db/schema';
 import { resetDatabase } from '@/lib/db/test-helpers';
 import { championBanners } from '@/lib/parlor/champions';
+import { ensureRoom, roomFor } from '@/lib/rooms/service';
 import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
 import { factPacket } from '@/lib/slice/packet';
 import { latestPublishedIssue } from '@/lib/slice/publication';
@@ -437,6 +438,79 @@ describe.skipIf(!hasDatabase)('the week 16 playoff rehearsal', () => {
     ).toBe(true);
   });
 
+  it('leaves every manager their room after elimination', async () => {
+    /*
+     * `16 §7.4` again, on the surface a manager actually visits. A basement is
+     * a *permanent* thing (`11 §2` keeps the person and the seat apart), so
+     * missing the playoffs must not close one — and `roomFor` returning null
+     * for four of ten managers in December is exactly what that would look
+     * like.
+     */
+    for (const rosterId of [...MISSED_OUT, ...STILL_IN]) {
+      const manager = state.seats.find((seat) => seat.rosterId === rosterId);
+      expect(manager, `roster ${String(rosterId)} has no seat`).toBeDefined();
+
+      const userId = await rehearsal.managerIdNamed(manager!.manager);
+      expect(userId).not.toBeNull();
+
+      await ensureRoom(db!, userId!);
+      const room = await roomFor(db!, userId!);
+      expect(room, `${manager!.manager} has no room`).not.toBeNull();
+    }
+  });
+
+  // ------------------------------------------------------------------
+  // The Sunday photograph, on a playoff week
+  // ------------------------------------------------------------------
+
+  describe('the Sunday snapshot', () => {
+    it('photographs the games and leaves the byes out', async () => {
+      /*
+       * Run against week 15 rather than 16 because 15 is the week with byes, so
+       * it can tell a working filter from an absent one. Ten rosters are read
+       * and four games are photographed: a snapshot that captured an unpaired
+       * roster would run `07 §8`'s comeback arithmetic against a score with no
+       * opponent.
+       *
+       * The week is already closed by the time this runs, which does not matter
+       * — the photograph and the close are independent records, and the Sunday
+       * job's only guard is that a week is photographed once.
+       */
+      const leg = await rehearsal.sunday({
+        week: PLAYOFF_WEEK_START,
+        played: PLAYOFF_WEEK_START,
+        at: new Date('2026-12-14T04:55:00Z'),
+      });
+
+      expect(leg.outcome.kind).toBe('ran');
+      if (leg.outcome.kind !== 'ran') return;
+
+      expect(leg.outcome.report.rosters).toBe(10);
+      expect(leg.outcome.report.games).toBe(4);
+      expect(leg.outcome.report.unpaired).toBe(2);
+    });
+
+    it('is taken once and never retaken', async () => {
+      /*
+       * Idempotency is stronger here than anywhere else in the schema, and
+       * deliberately so: a second capture is a *worse* photograph, not a
+       * fresher one. The score before Monday is unrecoverable once Monday has
+       * happened.
+       */
+      const again = await rehearsal.sunday({
+        week: PLAYOFF_WEEK_START,
+        played: PLAYOFF_WEEK_START,
+        at: new Date('2026-12-21T04:55:00Z'),
+      });
+
+      expect(again.outcome.kind).toBe('ran');
+      if (again.outcome.kind !== 'ran') return;
+
+      expect(again.outcome.report.capture?.captured).toBe(false);
+      expect(again.outcome.report.skipped.join(' ')).toMatch(/already photographed/);
+    });
+  });
+
   // ------------------------------------------------------------------
   // The season transition, which must not happen yet
   // ------------------------------------------------------------------
@@ -524,6 +598,65 @@ describe.skipIf(!hasDatabase)('week 16 under injected failure', () => {
       .toEqual([...QUALIFIERS]);
   });
 
+  it('finalizes nothing on a playoff week Sleeper has only scheduled', async () => {
+    /*
+     * The state between the semifinal and the final: Sleeper answers week 17
+     * with ordinary rows at zero on both sides and nothing in the payload saying
+     * *"not yet"*. Two 0.00–0.00 rows stored as a tie and finalized would put a
+     * championship nobody played into an append-only table, and `16 §4.3`'s job
+     * would then be unable to record the real one.
+     *
+     * Week 1 rehearses this on a regular week; the playoff week is worth its own
+     * case because the row it would fabricate is a **title game**.
+     */
+    setFixedClock(NOW);
+    await resetDatabase(db!);
+    const rehearsal = createRehearsal({
+      db: db!,
+      script: WEEK_16_SCRIPT,
+      finalizeYears: [2024, 2025],
+    });
+    await rehearsal.seed();
+    await playThrough(rehearsal, SEMIFINAL_WEEK);
+
+    /*
+     * The bracket is held back with the games, which is what the upstream
+     * actually looks like: Sleeper resolves a bracket *from* results, so a week
+     * it has only scheduled cannot have a decided one. Serving a decided bracket
+     * over unplayed games would be staging a contradiction rather than a state.
+     *
+     * The asymmetry is worth naming: placements follow the **bracket alone**, so
+     * a bracket that ran ahead of its own games would write a finish for a game
+     * that was never stored. Nothing observed does that, and the lagging
+     * direction — which is the one that has been seen — is covered above.
+     */
+    const scheduled = createRehearsal({
+      db: db!,
+      script: { ...WEEK_16_SCRIPT, brackets: laggedBrackets(CHAMPIONSHIP_WEEK) },
+      finalizeYears: [2024, 2025],
+    });
+
+    await scheduled.tuesday({
+      at: tuesdayOf(CHAMPIONSHIP_WEEK),
+      played: CHAMPIONSHIP_WEEK,
+      week: CHAMPIONSHIP_WEEK,
+      scheduledOnly: true,
+    });
+
+    const state = await rehearsal.observe();
+
+    expect(state.games.filter((game) => game.week === CHAMPIONSHIP_WEEK)).toEqual([]);
+    expect(state.finalizations.map((row) => row.week)).not.toContain(CHAMPIONSHIP_WEEK);
+
+    // And the championship is still unclaimed, because it has not been played.
+    const ranked = await db!
+      .select({ rosterId: seasonMemberships.rosterId, finalRank: seasonMemberships.finalRank })
+      .from(seasonMemberships)
+      .innerJoin(seasons, eq(seasons.id, seasonMemberships.seasonId))
+      .where(eq(seasons.year, WEEK_16_SCRIPT.year));
+    expect(ranked.filter((row) => row.finalRank === 1)).toEqual([]);
+  });
+
   it('changes nothing when the Tuesday job runs twice on the semifinal', async () => {
     const rehearsal = await freshRehearsal();
     for (let week = 1; week <= 16; week++) {
@@ -550,10 +683,10 @@ describe.skipIf(!hasDatabase)('week 16 under injected failure', () => {
  * untouched, because a lagging endpoint serves a bracket that is *behind* rather
  * than one that is malformed.
  */
-function laggedBrackets(): ScriptedBrackets {
+function laggedBrackets(from: number = SEMIFINAL_WEEK): ScriptedBrackets {
   const strip = (matches: readonly ScriptedBracketMatch[]): readonly ScriptedBracketMatch[] =>
     matches.map((match) => {
-      if (match.week < SEMIFINAL_WEEK) return match;
+      if (match.week < from) return match;
       const { winner: _withheld, ...behind } = match;
       return behind;
     });
@@ -609,6 +742,24 @@ describe.skipIf(!hasDatabase)('carrying the rehearsal to the championship', () =
       .from(seasons)
       .where(eq(seasons.year, WEEK_16_SCRIPT.year));
     expect(season?.finalizedAt).toBeNull();
+  });
+
+  it('puts seventeen drafts on the desk and publishes none of them', async () => {
+    /*
+     * One per closed week, which is what the approved weekly drafting model
+     * means in practice: `week finalized → fact packet → draft → review desk`,
+     * and the cron stopping there. Seventeen, because the season has seventeen
+     * played weeks.
+     */
+    const state = await rehearsal.observe();
+    const byStatus: Record<string, number> = {};
+    for (const version of state.versions) {
+      byStatus[version.status] = (byStatus[version.status] ?? 0) + 1;
+    }
+
+    expect(byStatus['needs_review']).toBe(CHAMPIONSHIP_WEEK);
+    expect(byStatus['published'] ?? 0).toBe(0);
+    expect(byStatus['approved'] ?? 0).toBe(0);
   });
 
   it('still grants no ring while the books are open', async () => {

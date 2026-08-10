@@ -83,6 +83,23 @@ export interface ScriptedWeek {
    * script that contradicted it would be scripting the answer.
    */
   readonly postseason?: boolean;
+  /**
+   * Rosters that score but play nobody — `[rosterId, points]`.
+   *
+   * **Not an omission to be tidied away.** `lib/sleeper/weeks.ts` opens with it:
+   * Sleeper keeps reporting points for a roster whose week is over, and reading
+   * those as results is how the league's lowest score ever becomes a
+   * fabrication. It happens in exactly two shapes — a **bye** in the first
+   * playoff week, and an **eliminated** roster still accruing NFL scoring
+   * beside the real games — and both are states the product has to classify
+   * rather than states it can arrange never to see.
+   *
+   * Written out per week rather than derived from "everybody not in a game",
+   * because the score is the point: `explainUnpaired` has to tell a bye from an
+   * elimination, and a rehearsal that supplied neither could not exercise
+   * either.
+   */
+  readonly unpaired?: readonly (readonly [number, number])[];
 }
 
 /**
@@ -252,7 +269,7 @@ export function scriptedSeason(options: ScriptedSourceOptions): ScriptedSource {
     const scripted = weekOf(script, week);
     if (scripted === undefined) return [];
 
-    return scripted.games.flatMap((game) => {
+    const rows = scripted.games.flatMap((game) => {
       const points = scoresOf(game, phase);
       return game.rosters.map((rosterId, side) => ({
         roster_id: rosterId,
@@ -263,6 +280,28 @@ export function scriptedSeason(options: ScriptedSourceOptions): ScriptedSource {
         players: [],
       }));
     });
+
+    /*
+     * The rosters with a score and no game. See `ScriptedWeek.unpaired`.
+     *
+     * A scheduled week has none by construction: the state being staged is
+     * *"Sleeper published the fixtures"*, and it publishes them at zero for
+     * everybody who has one rather than inventing a bye.
+     */
+    if (phase !== 'scheduled') {
+      for (const [rosterId, points] of scripted.unpaired ?? []) {
+        rows.push({
+          roster_id: rosterId,
+          matchup_id: null as unknown as number,
+          points,
+          custom_points: null,
+          starters: [],
+          players: [],
+        });
+      }
+    }
+
+    return rows.sort((left, right) => left.roster_id - right.roster_id);
   }
 
   /**

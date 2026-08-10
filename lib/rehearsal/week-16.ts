@@ -194,6 +194,12 @@ const POSTSEASON: readonly ScriptedWeek[] = [
       game(3, [2, 5], [110.07, 103.38]),
       game(4, [7, 9], [108.02, 102.16]),
     ],
+    // The two byes. Real NFL scoring on a roster with nothing riding on it —
+    // not a win, not a loss, and it must not break a streak or pay a reward.
+    unpaired: [
+      [3, 128.44],
+      [6, 124.9],
+    ],
   },
   {
     week: 16,
@@ -218,6 +224,17 @@ const POSTSEASON: readonly ScriptedWeek[] = [
       // stopped playing for everybody whose bracket is finished.
       game(1, [3, 6], [138.0, 133.41]),
       game(2, [1, 8], [135.46, 127.55]),
+    ],
+    // Six rosters are finished and still score. The championship week is where
+    // this is at its most dangerous: read naively, the league's lowest score
+    // ever is one of these.
+    unpaired: [
+      [2, 99.12],
+      [4, 104.83],
+      [5, 88.5],
+      [7, 95.61],
+      [9, 91.07],
+      [10, 101.24],
     ],
   },
 ];
