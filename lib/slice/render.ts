@@ -290,10 +290,15 @@ export const KIND_COLOUR = {
   ],
   elimination: [
     'The bracket does not care how the season went before it.',
-    // Was "One afternoon and the year is over." — the same false claim the
-    // headlines carried. `bodyOf` does not reach this list for an elimination
-    // today, and a line waiting to be wrong is still worth correcting.
-    'One afternoon and the title is somebody else’s.',
+    /*
+     * Was "One afternoon and the year is over." — the same false claim the
+     * headlines carried. `bodyOf` does not reach this list for an elimination
+     * today, and a line waiting to be wrong is still worth correcting.
+     *
+     * No apostrophe, and no contraction: every curated line in this file avoids
+     * both, which is why the validator has never had to think about them.
+     */
+    'One afternoon, and the title goes to somebody else.',
   ],
   upset: [
     'The table said one thing and the afternoon said another.',

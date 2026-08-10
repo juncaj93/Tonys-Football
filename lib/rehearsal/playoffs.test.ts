@@ -14,11 +14,14 @@ import {
   weeklyRewards,
 } from '@/lib/db/schema';
 import { resetDatabase } from '@/lib/db/test-helpers';
+import { championBanners } from '@/lib/parlor/champions';
 import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
 import { factPacket } from '@/lib/slice/packet';
 import { latestPublishedIssue } from '@/lib/slice/publication';
 import { renderEdition } from '@/lib/slice/render';
+import { runSunday } from '@/lib/slice/sunday';
 import { validateEdition } from '@/lib/slice/validate';
+import { decodeMatchups } from '@/lib/sleeper/codec';
 import { finalizeSeason } from '@/lib/sleeper/persist';
 import { latestFinalizedWeek } from '@/lib/stats/week';
 
@@ -399,6 +402,30 @@ describe.skipIf(!hasDatabase)('the week 16 playoff rehearsal', () => {
       expect(boardFace({ daysUntilKickoff: null, week }).hero).toBe('WEEK 16');
     });
 
+    it('hangs no 2026 banner while the bracket is unfinished', async () => {
+      /*
+       * The title-contending surface, and the one place a premature champion
+       * would be most visible: the rail on the parlor wall. After the semifinal
+       * 2026 must read as *still being played* rather than name anybody — and
+       * the two seasons on the books must be untouched by a third season's
+       * postseason.
+       */
+      const banners = await championBanners(db!);
+      const current = banners.find((banner) => banner.year === REHEARSAL_SEASON_YEAR);
+
+      expect(current?.champion).toBeNull();
+      expect(current?.current).toBe(true);
+
+      expect(
+        banners
+          .filter((banner) => banner.year < REHEARSAL_SEASON_YEAR)
+          .map((banner) => [banner.year, banner.champion]),
+      ).toEqual([
+        [2024, 'Alex'],
+        [2025, 'Matty B'],
+      ]);
+    });
+
     it('says nothing about the playoffs, and that is reported rather than invented', async () => {
       /*
        * The mission expected the Tonight board to give playoff elimination a
@@ -418,6 +445,71 @@ describe.skipIf(!hasDatabase)('the week 16 playoff rehearsal', () => {
       expect(keys.every((key) => ['kickoff', 'champion', 'heaviest', 'keys', 'history'].includes(key))).toBe(
         true,
       );
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // Phase 4b — the Sunday photograph, on a playoff week
+  // ------------------------------------------------------------------
+
+  describe('the Sunday snapshot', () => {
+    it('photographs only the games, and the byes are not games', async () => {
+      /*
+       * Week 15 has four games and two byes. `pairMatchups` has to leave the
+       * byes out — a snapshot that photographed an unpaired roster would make
+       * `07 §8`'s comeback arithmetic run against a score with no opponent.
+       *
+       * Run against week 15 rather than 16 because 16 has no byes, so it could
+       * not tell a working filter from an absent one.
+       */
+      const source = rehearsalSeason({ played: 15 });
+      const raw = await source.fetch({
+        kind: 'matchups',
+        leagueId: REHEARSAL_LEAGUE,
+        week: 15,
+      });
+      expect(raw.kind).toBe('ok');
+
+      const entries = decodeMatchups(raw.kind === 'ok' ? raw.payload : []);
+      const report = await runSunday(db!, {
+        season: REHEARSAL_SEASON_YEAR,
+        week: 15,
+        entries: entries.value,
+        at: new Date('2026-12-14T04:55:00Z'),
+        source: 'rehearsal',
+      });
+
+      expect(report.rosters).toBe(10);
+      expect(report.games).toBe(4);
+      expect(report.unpaired).toBe(2);
+      expect(report.capture?.captured).toBe(true);
+    });
+
+    it('is taken once and never retaken', async () => {
+      /*
+       * Idempotency is stronger here than anywhere else in the schema, and
+       * deliberately so: a second capture is a *worse* photograph, not a fresher
+       * one. The score before Monday is unrecoverable once Monday has happened.
+       */
+      const source = rehearsalSeason({ played: 15 });
+      const raw = await source.fetch({
+        kind: 'matchups',
+        leagueId: REHEARSAL_LEAGUE,
+        week: 15,
+      });
+      const entries = decodeMatchups(raw.kind === 'ok' ? raw.payload : []);
+
+      const again = await runSunday(db!, {
+        season: REHEARSAL_SEASON_YEAR,
+        week: 15,
+        entries: entries.value,
+        // A different night, a different score, and it changes nothing.
+        at: new Date('2026-12-21T04:55:00Z'),
+        source: 'rehearsal-retry',
+      });
+
+      expect(again.capture?.captured).toBe(false);
+      expect(again.skipped.join(' ')).toMatch(/already photographed/);
     });
   });
 

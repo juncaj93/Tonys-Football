@@ -210,6 +210,54 @@ describe('bracket-shaped stories', () => {
     expect(storiesFor(FIRST_ROUND).some((story) => story.kind === 'championship')).toBe(false);
   });
 
+  it('makes no bracket claim about a drawn playoff game', () => {
+    /*
+     * A tie in a playoff week, using the behaviour the code already has rather
+     * than a tiebreak rule invented for the test. **The league has no written
+     * tiebreak anywhere in this repository**, and manufacturing one would be
+     * exactly the fabrication `16 §12` forbids — so what is asserted is the
+     * conservative half: a drawn game has no winner and no loser, and both
+     * bracket stories are built from `decided`, so neither can name it.
+     *
+     * If Sleeper's own bracket breaks the tie, it does so in the `w` field and
+     * the placement follows from that — which is the bracket's answer, read
+     * rather than derived.
+     */
+    const drawn: StoredWeekGame[] = SEASON.map((row) =>
+      row.week === 16 && row.sleeperMatchupId === 1
+        ? { ...row, pointsBCents: row.pointsACents, winnerRosterId: null, marginCents: 0 }
+        : row,
+    );
+
+    const record = buildWeek({
+      season: 2026,
+      week: SEMIFINAL,
+      finalized: true,
+      rows: drawn,
+      roster: ROSTER,
+    });
+
+    const stories = deriveStories({
+      week: record,
+      seasonRows: drawn,
+      roster: ROSTER,
+      marginPopulationCents: [],
+      scorePopulationCents: [],
+      policy: POLICY,
+      finalRanks: FINAL_RANKS,
+      playoffRosters: PLAYOFF_ROSTERS,
+    });
+
+    const bracketClaims = stories.filter(
+      (story) => story.kind === 'elimination' || story.kind === 'championship',
+    );
+
+    for (const claim of bracketClaims) {
+      expect(claim.subjects).not.toContain('u1');
+      expect(claim.subjects).not.toContain('u3');
+    }
+  });
+
   it('does not mistake the third-place game for the final', () => {
     // Week 17 holds two games. Only the one between the rosters who finished
     // first and second is the title game, and the other must not produce a

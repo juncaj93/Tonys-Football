@@ -196,6 +196,8 @@ Sixteen weeks played through `runTuesday` against a season in motion, with week
 | Week 15 rewards | 4 wins, not 5 — **a bye pays nothing** |
 | Token expiry | none. No `SEASON_AWARD` row exists; every balance stands through the postseason |
 | Silent auction | not activated, not reachable, not referenced |
+| Sunday snapshot, week 15 | 10 rosters read, **4 games photographed, 2 byes left out** — a bye is not a game |
+| Sunday snapshot, retaken | refused. The score before Monday is unrecoverable once Monday has happened |
 | Slice at week 16 | prints; leads with the close semifinal; validator clean |
 | Slice at week 17 (unplayed) | refused `no-week` |
 | Publication | **17 versions, all `needs_review`. Nothing approved, nothing published** |
@@ -269,11 +271,16 @@ seventeen drafts.
 | A consolation result | never reaches a title-track surface; cannot produce an elimination or championship candidate |
 | A week nobody has played | refused, rather than printed as a quiet week |
 
-Ties were **not** manufactured. The league has no tiebreak rule written down
+**A tiebreak rule was not manufactured.** The league has none written down
 anywhere in the repository, and inventing one to test it would have been the
-fabrication the mission forbids. What is asserted instead is what the code
-already does with a tie: `RenderedScore` carries `tie`, a tied game pays no
-`MATCHUP_WIN`, and a tied high score pays everyone who posted it.
+fabrication the mission forbids. What is asserted instead is the conservative
+half — a drawn playoff game has no winner and no loser, both bracket stories are
+built from the decided games, and neither can therefore name it. If Sleeper's
+own bracket breaks a tie it does so in the match's `w` field, and the placement
+follows from that: the bracket's answer, read rather than derived. Beside that,
+the behaviour already asserted elsewhere still holds — `RenderedScore` carries
+`tie`, a tied game pays no `MATCHUP_WIN`, and a tied high score pays everyone
+who posted it.
 
 ---
 

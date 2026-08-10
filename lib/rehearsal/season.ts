@@ -160,7 +160,14 @@ const STRENGTH: readonly number[] = [8, 3, 10, 5, 1, 9, 4, 7, 2, 6];
 export function scoreCents(rosterId: number, week: number): number {
   const strength = STRENGTH[(rosterId - 1) % STRENGTH.length] ?? 5;
   const wobble = (rosterId * 7919 + week * 104729) % 4001;
-  return 800000 / 100 + strength * 210 + wobble;
+
+  /*
+   * 80.00 points, plus up to 21.00 of standing and up to 40.00 of week. The
+   * range lands between roughly 82 and 143, which is where this league's real
+   * team-weeks sit — a generator whose scores were out of range would make
+   * every percentile in `significance.ts` meaningless.
+   */
+  return 8_000 + strength * 210 + wobble;
 }
 
 /** `${week}:${rosterId}` — the key an override is written against. */
