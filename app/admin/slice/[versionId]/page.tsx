@@ -334,8 +334,17 @@ export default async function SliceReviewPage({
                     <input type="hidden" name="id" value={detail.versionId} />
                     <input type="hidden" name="digest" value={detail.contentHash} />
                     <div className="mt-2.5">
+                      {/*
+                        * `and`, not `&`.
+                        *
+                        * Found by looking at the picture: Silkscreen's ampersand
+                        * at stamp size reads as a **cent sign**, so the most
+                        * consequential control in the product said `APPROVE ¢
+                        * PRINT`. The word costs four characters and the button
+                        * is full-width at all three widths.
+                        */}
                       <StampButton tone="go" disabled={!detail.publishable}>
-                        {hold.held ? 'Approve — the press is stopped' : 'Approve & print'}
+                        {hold.held ? 'Approve — the press is stopped' : 'Approve and print'}
                       </StampButton>
                     </div>
                   </form>
