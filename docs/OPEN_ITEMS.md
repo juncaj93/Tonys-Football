@@ -337,6 +337,14 @@ remains **unobserved** until a real post-week run happens.
 surface needs them, so this is a note rather than a task — recorded so a future
 session does not read the absence as an oversight and start writing migrations.
 
+**Now also enforced, 2026-08-10.** `lib/stats/unsupported.ts` names the stories
+these tables would unlock — trade revenge, bench crimes — with what each would
+need, and `unsupported.test.ts` parses `lib/db/schema.ts` and **fails if one of
+them is created** while the registry still calls it absent. That is not a guard
+against building them; it is a guard against the registry going on describing a
+limitation the product no longer has. `docs/HISTORICAL_ANALYSIS_BOUNDARY.md §1`
+carries the full source-of-truth matrix.
+
 ### E2 · The harness probed the server with an unbounded `fetch` — **fixed and confirmed closed on `main`**
 
 `assertServerIsOurBuild` waited on the platform default, so a server that
