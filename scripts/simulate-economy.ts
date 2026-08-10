@@ -4,6 +4,7 @@ import { PROVISIONAL_ECONOMY } from '@/lib/counter/tokens';
 import {
   type DuplicatePolicy,
   type SalvageValues,
+  SCORED_WEEKS,
   checkRanges,
   salvageFor,
   simulate,
@@ -29,7 +30,7 @@ const arg = (name: string, fallback: number): number => {
 const SEASONS = arg('seasons', 5);
 const SEED = arg('seed', 20260804);
 const MANAGERS = arg('managers', 10);
-const WEEKS = arg('weeks', 14);
+const WEEKS = arg('weeks', SCORED_WEEKS);
 const GRANTS = arg('grants', 2);
 
 function run(price: number, policy: DuplicatePolicy, salvage: SalvageValues): boolean {

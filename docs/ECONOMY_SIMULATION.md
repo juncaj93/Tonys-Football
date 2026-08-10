@@ -83,14 +83,29 @@ gate.
 
 ### Where 200 lands
 
+**Restated 2026-08-10** against the corrected 17-week season and the corrected
+legendary checks (§7). The numbers moved; the ruling did not.
+
 | Range | Target | Measured |
 |---|---|---|
-| Boxes per manager per season | 6–12 | **10.0** ✓ |
-| Reward-bearing weeks, median | 35–60% | 57.1% ✓ |
+| Boxes per manager per season | 6–12 | **11.0** ✓ |
+| Reward-bearing weeks, median | 35–60% | 52.9% ✓ |
 | Non-weekly reward rate | ~0% | 0 ✓ |
-| Legendary rate per opening | 2–4% | 2.26% ✓ |
+| Legendary mass, configured | exactly 2% | 2.000% ✓ |
+| Legendary rate per opening (sampled) | 2.00% ± 0.67 (4σ, n=6,976) | 1.98% ✓ |
 | Legendaries league-wide/season | 2–3 | 2.8 ✓ |
 | Direct grants per manager/season | exactly 2 | 2.00 ✓ |
+
+**The correction made the ruling stronger rather than weaker.** Re-run at 17
+weeks, the sweep is no longer three passes: **175 now fails** on boxes (13.0
+against 6–12) and on legendary volume (3.2 against 2–3), while 200 and 225 pass.
+The band the commissioner chose from has narrowed onto the value they chose.
+
+| price | boxes / manager / season | legendaries league-wide | |
+|---|---|---|---|
+| 175 | 13.0 | 3.2 | ✗ |
+| **200** | **11.0** | **2.8** | ✓ |
+| 225 | 10.0 | 2.7 | ✓ |
 
 **The price alone is safe.** With the grants not yet built, 200 still measures
 9.0 boxes and 2.1 legendaries — both in range. The grants are additive rather
@@ -121,7 +136,7 @@ consolation, it is what a finished collection converts boxes into.
 In order of how much it moves the answer:
 
 1. `PROFILES` — the football assumption.
-2. `--weeks` — 14 scored weeks is the imported-season shape; a longer season pays more.
+2. `--weeks` — **17** scored weeks, counted off the recorded fixtures and asserted against them (`SCORED_WEEKS`). It was 14, and that was wrong rather than conservative; see §7.
 3. The spending policy in `simulate()` — currently the ceiling.
 4. `--seed` — a different league. If a conclusion changes with the seed, it was never a conclusion; the ranges above are stable across the seeds tried.
 
@@ -147,12 +162,35 @@ This file measures **`16 §8`'s six ranges**. It does not size the catalog: it t
 
 [`docs/CATALOG_SIZING.md`](CATALOG_SIZING.md) is the other half — *how many unique items each rarity needs so a box keeps producing objects* — with its own model (`lib/economy/catalog-sizing.ts`) that reuses this one's PRNG, salvage helper and economy constants. The two do not overlap: **catalog depth and pull odds are independent knobs**, because rarity mass is assigned per tier and split among that tier's items, so nothing that study recommends can move a range this one checks.
 
-### Two defects in *this* gate, found by that study
+### Two defects in *this* gate — found by that study, **corrected 2026-08-10**
 
-Reported here rather than fixed, because `16 §8` owns these ranges and this document is a signed-off measurement — correcting either without a ruling would be the gate approving itself. Both are carried in `docs/OPEN_ITEMS.md` **E5**.
+Both were reported and left alone at first, because `16 §8` owns these ranges. The commissioner ruled on them on 2026-08-10 and authorised exactly these two corrections, with the economy explicitly held still: *"the gate should evaluate the real economy rather than make the economy conform to a stale model."*
 
-1. **`--weeks` defaults to 14, and §5 above calls that "the imported-season shape". It is not.** The recorded fixtures score **seventeen** weeks — weeks 1–14 at five games, then 4, 5 and 2 — and `lib/rewards/derive.ts` contains no branch on week type, so a playoff or consolation win pays the same 150. A season therefore has three more paydays than this gate models. At `--weeks=17` the measured boxes per manager rise from 10.0 to 11.0, still inside 6–12, and every other range stays green.
+#### 1. The season is seventeen weeks, not fourteen
 
-2. **The legendary-rate range is 2–4% and `PROVISIONAL_RARITY_MASS` sets legendary mass to exactly 2%.** The check therefore sits on its own floor and resolves on sampling noise: across twelve seeds at 50 seasons it passes **5/12** at 14 weeks and **6/12** at 17. §3 above diagnosed exactly this shape of problem at five seasons and cured it by raising the sample — which cannot fix a range centred on its boundary. The rate itself is not in question; it is 2.0% by construction.
+`--weeks` defaulted to 14, and §5 above called that *"the imported-season shape"*. It is not. The recorded fixtures hold paired games in **weeks 1–17** — five games a week through 14, then 4, 5 and 2 — and only week 18 is unscored. `lib/rewards/derive.ts` contains no branch on week type, deliberately, so a playoff or consolation win pays the same 150: a season has three more paydays than this gate was modelling.
 
-Neither finding moves a shipped value, and the ruling of 2026-08-04 survives both.
+`SCORED_WEEKS = 17` is now the default, and `simulate.test.ts` asserts it **against the fixture files** rather than against itself, so a return to 14 fails on the league's own record. **No reward amount was touched to compensate**, per the ruling.
+
+What it still simplifies, stated rather than hidden: the last three weeks do not pay everybody — 8 rosters play in week 15 and 4 in week 17 — and `simulate()` models a flat league week, so it slightly **overstates** the postseason. That is the conservative direction for every range here, and the model that resolves participation properly already exists next door in `lib/economy/catalog-sizing.ts`.
+
+#### 2. The legendary check is now two checks
+
+The old check was *"legendary rate per opening, 2–4%"*, measured. `PROVISIONAL_RARITY_MASS` sets legendary mass to **exactly 2%**, so the range's floor sat on the true value and the check resolved on Monte Carlo noise — it passed **5 seeds in 12** at fifty seasons. §3 above diagnosed this shape of problem at five seasons and cured it only by raising the sample, which cannot fix a bound centred on the thing it is bounding.
+
+The ruling's own preference decided the shape — *assert the configuration exactly, and use simulation only for emergent outcomes*:
+
+| check | kind | what it catches |
+|---|---|---|
+| **Legendary mass, configured** — `exactly 2%` | deterministic, from the stored integer weights. No seed, no sample | a re-weighted table, an edited mass, a tier added — the real regression, caught with no possibility of a lucky pass |
+| **Legendary rate per opening (sampled)** — `p ± 4σ`, `σ = sqrt(p(1−p)/n)` over the run's own openings | sampled | a **drawing** defect: the table says 2% and `drawRarity` hands out something else |
+
+**Why 4σ, and why that is not weakening.** At the gate's own configuration — 50 seasons, 10 managers, ~7,000 openings — σ is about 0.17 percentage points, so the band is roughly **1.33% – 2.67%**. Halving the mass to 1% or raising it to 3% lands more than **five sigma** outside and fails; ordinary noise does not, at a two-sided false-failure rate of about 6 in 100,000. The band **narrows as the sample grows** — a longer run is a stricter gate, which is exactly the property the fixed range lacked. The configured 2% remains inside `16 §8`'s stated 2–4%, and check 1 pins it there exactly.
+
+**No seed was cherry-picked and no value was tuned.** The regression tests run twenty-four fixed seeds and assert that the old predicate is *not* stable across them while both new checks are; that the deterministic check goes red on a re-weighted table; that the sampled check goes red on a result whose draw contradicts its own table; and that the band shrinks with the sample.
+
+**No approved economy value changed.** The price, the grants, the rewards, the rarity mass and the salvage values are exactly as ruled on 2026-08-04.
+
+#### What the correction exposed, and did not touch
+
+Re-run at 17 weeks, the **`Legendaries league-wide per season` 2–3 range** — an *emergent* range this ruling did not authorise changing — now measures a mean of **2.78** against a ceiling of 3, and across twenty-four seeds it lands outside on **3 of 24** (it was 24/24 inside at the short season, mean 2.40). The default seed passes and the gate is deterministic, so nothing is flaky in CI. It is reported rather than adjusted, and carried in `docs/OPEN_ITEMS.md` **E6**.

@@ -487,28 +487,56 @@ still pair a 0–0 fixture as a game. Harmless today — the snapshot only feeds
 comeback detection, which needs a result to flip — but it is one rule living in
 one of three places that could each see the payload.
 
-### E5 · The economy gate models a 14-week season and checks a range centred on its own boundary
+### E5 · The economy gate modelled a 14-week season and checked a range centred on its own boundary — **fixed, 2026-08-10**
 
 Two defects in the **release gate**, not in the economy, found by the catalog
-sizing study and **reported rather than fixed** — `16 §8` owns those ranges and
-`docs/ECONOMY_SIMULATION.md` is a signed-off measurement, so changing either
-without a ruling would be the gate approving itself.
+sizing study (#87) and reported rather than fixed, because `16 §8` owns those
+ranges. The commissioner ruled on 2026-08-10 and authorised exactly these two
+corrections, with the economy held still: *"the gate should evaluate the real
+economy rather than make the economy conform to a stale model."*
 
-1. **`scripts/simulate-economy.ts` defaults to `--weeks=14`**, described as *"the
-   imported-season shape"*. The recorded fixtures score **seventeen** weeks, and
-   `lib/rewards/derive.ts` has no branch on week type — a playoff or consolation
-   win pays the same 150 — so a season has three more paydays than the gate
-   models. At `--weeks=17` boxes per manager measure 11.0 against a 6–12 range;
-   every other range stays green.
-2. **The legendary-rate range is 2–4% and the configured mass is exactly 2%**, so
-   the check sits on its own floor and passes on noise. Measured across twelve
-   seeds at 50 seasons: **5/12 pass at 14 weeks, 6/12 at 17.** More seasons
-   cannot fix a range centred on its boundary — which is the same failure
-   `ECONOMY_SIMULATION.md` diagnosed at five seasons and cured only halfway.
+1. **`SCORED_WEEKS = 17`**, replacing a 14 that `ECONOMY_SIMULATION.md §5` called
+   *"the imported-season shape"*. The recorded fixtures hold paired games in
+   weeks 1–17; only week 18 is unscored. `lib/rewards/derive.ts` has no branch on
+   week type, so those are three real paydays. The constant is asserted **against
+   the fixture files**, so returning it to 14 fails on the league's own record.
+   **No reward amount moved to compensate.**
+2. **The legendary check is now two checks**, following the ruling's own
+   preference — assert the configuration exactly, simulate only for emergent
+   outcomes. *Legendary mass, configured* is deterministic from the stored
+   integer weights and catches a re-weighted table with no sample at all;
+   *Legendary rate per opening (sampled)* is `p ± 4σ` over the run's own openings
+   and catches a drawing defect. The band **narrows as the sample grows**, which
+   the old fixed 2–4% range never did.
 
-Neither changes a shipped value. The economy's conclusions survive both: at 17
-weeks the price of 200 still lands mid-range, and the legendary rate is exactly
-the 2% the table configures.
+**No approved economy value changed** — price 200, two grants, 150/400, mass
+60/28/10/2, salvage 20/40/70/120. The corrected gate makes the 2026-08-04 price
+ruling *stronger*: re-swept at 17 weeks, **175 now fails** and 200 and 225 pass,
+so the band has narrowed onto the value the commissioner chose.
+
+`docs/ECONOMY_SIMULATION.md §7` carries the methodology and the tolerance
+derivation. Closed.
+
+### E6 · `Legendaries league-wide per season` now sits against its ceiling
+
+**Exposed by E5's correction, and deliberately not touched by it.** The range is
+`16 §8`'s and describes an *emergent* economy outcome, which the 2026-08-10
+ruling did not authorise changing.
+
+The corrected 17-week season buys about one more box per manager per season, so
+league-wide legendary volume rises from a mean of **2.40** to **2.78** against a
+ceiling of **3**. Across twenty-four fixed seeds at fifty seasons it lands
+outside the 2–3 band on **3 of 24** — it was 24 of 24 inside at the short season.
+
+**Nothing is flaky in CI.** The gate is deterministic and its default seed
+passes; the sensitivity only appears if the seed is changed. But it is the same
+shape of problem E5 just fixed one instance of — a bound close to the true value
+— on a range only the commissioner can move.
+
+Three ways out, none of them a session's to pick: widen the range, express it as
+a tolerance around a derived expectation the way the legendary-rate check now is,
+or accept that the real economy produces ~2.8 legendaries a season and restate
+`16 §8`. **Reporting it is the whole action taken.**
 
 ---
 
@@ -560,27 +588,6 @@ a blanket re-opening.
 | **Vending machine** | **LATER — gated on an economy simulation** | It does have a distinct purpose (a **deterministic** purchase against the box's random one, which is the anti-frustration valve), so it is not the duplicate surface the mission warns about. But `16 §8`'s seventh range derives vending prices from box EV, and `docs/ECONOMY_SIMULATION.md §115` records that the simulation deliberately does not check them because the feature does not exist. Building it without extending the simulation would put a second token sink beside a box whose price was fixed at 200 four days ago |
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
-
-### G2 · Commissioner announcements — specified, unbuilt, and the shape is recommended
-
-`08 §18` lists what the Slice may announce and `18 §6` gives a commissioner
-announcement priority 6 on the Tonight board. **Neither exists**: no table, no
-route, no writer, nothing that reads one.
-
-Recorded here rather than left implicit because the 2026-08-10 publication audit
-had to classify it, and *"it is a publication surface with no rows"* is a
-different answer from *"nobody thought about it."* A kind in
-`lib/publication/kinds.ts` for a surface that can never produce an item would be
-a queue section that is permanently empty — which is how a queue stops being
-believed.
-
-**When it is built, the recommended shape is one explicit *Publish announcement*
-button and no second approval step.** Alex writing the words and Alex approving
-the words are the same act on the same screen; a two-step there is bureaucracy
-rather than intentionality, and the goal of the review path is that nothing
-reaches the league **unintentionally**, not that everything is stamped twice.
-That is a recommendation and not a ruling — the decision belongs with the
-feature. `docs/PUBLICATION_APPROVAL_BOUNDARY.md §5` carries it.
 
 ### G1 · The Underground — the decision that is actually wanted
 
@@ -654,6 +661,31 @@ tier — so a legendary stays exactly 2% however many items exist.
 **Do not execute it autonomously**, and do not reach for a price change instead:
 a catalog problem is not fixed by moving token economics, which is the standing
 instruction and also what the numbers say.
+
+### G3 · Commissioner announcements — specified, unbuilt, and the shape is recommended
+
+`08 §18` lists what the Slice may announce and `18 §6` gives a commissioner
+announcement priority 6 on the Tonight board. **Neither exists**: no table, no
+route, no writer, nothing that reads one.
+
+Recorded here rather than left implicit because the 2026-08-10 publication audit
+had to classify it, and *"it is a publication surface with no rows"* is a
+different answer from *"nobody thought about it."* A kind in
+`lib/publication/kinds.ts` for a surface that can never produce an item would be
+a queue section that is permanently empty — which is how a queue stops being
+believed.
+
+**Commissioner ruling, 2026-08-10: announcements remain DEFERRED, and the shape
+is settled if they are ever approved.** One explicit *Publish announcement*
+action, **no redundant second approval step**, the publication action audited, no
+cron publication, and no generic editorial framework unless several real
+consumers justify one. Writing and approving one's own explicit announcement may
+be treated as **the same intentional human act** — which is the reasoning this
+entry had already reached and the ruling confirms.
+
+**This is product direction, not authorization to build.** Nothing here may be
+implemented without a separate instruction.
+`docs/PUBLICATION_APPROVAL_BOUNDARY.md §5` carries the longer form.
 
 ---
 

@@ -256,10 +256,10 @@ The brief asked for this to stay separate from catalog sizing, and it does — a
 | Rarity mass | 60 / 28 / 10 / 2 | **KEEP** | Legendary rate per opening is exactly 2%, mid-range and independent of catalog size |
 | Purchase cadence | buy-when-affordable | **KEEP** | Nothing in the product observes restraint; the ceiling is the right model |
 | **Duplicate salvage** | 20 / 40 / 70 / 120 | **MONITOR** | A common spare returns **10% of the box price**, and commons are 60% of pulls. Harmless in season one (0.5% of openings under P1); by season two at the shipped catalog it is one box in four. Watch it, and if it needs a change, change the **catalog** first |
-| **Gate season length** | 14 weeks | **TUNE — commissioner** | `scripts/simulate-economy.ts` defaults to 14. The recorded seasons score **17**, and playoff wins pay. At `--weeks=17` every range stays green except the one below |
-| **Gate legendary-rate range** | 2–4% | **TUNE — commissioner** | The floor **equals the configured mass exactly**, so the check passes on noise. Measured across twelve seeds at 50 seasons: **5/12 pass at 14 weeks, 6/12 at 17.** More seasons cannot fix a range centred on its boundary |
+| **Gate season length** | ~~14~~ **17 weeks** | **FIXED, 2026-08-10** | `SCORED_WEEKS = 17`, asserted against the fixture files. The recorded seasons score 17 and playoff wins pay |
+| **Gate legendary-rate range** | ~~2–4%~~ **two checks** | **FIXED, 2026-08-10** | The configured mass is now asserted **exactly** and deterministically; the sampled rate is checked against `p ± 4σ` derived from the run's own sample size |
 
-The last two are defects in the **release gate**, not in the economy, and they were found by this study rather than caused by it. They are reported rather than fixed: `16 §8` owns those ranges and `docs/ECONOMY_SIMULATION.md` is a signed-off measurement. Changing either without a ruling would be the gate approving itself.
+The last two were defects in the **release gate**, not in the economy — found by this study, reported rather than fixed, and then **corrected by commissioner ruling on 2026-08-10**. `docs/ECONOMY_SIMULATION.md §7` carries the methodology. **No approved economy value changed**, and the corrected gate makes the 200-token price ruling stronger rather than weaker: re-swept at 17 weeks, 175 now fails and 200 and 225 pass.
 
 ---
 
