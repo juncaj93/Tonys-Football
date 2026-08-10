@@ -301,6 +301,14 @@ observed production, and *"probably set"* is not a launch check.
 Verifiable from a phone in three taps — the profile screen shows a
 *Commissioner's office* button when it is set.
 
+**Unchanged by the 2026-08-10 publication-approval work**, and worth stating
+plainly because that work built the queue this variable unlocks. There is no
+`is_admin` system of its own: commissioner authority is still `users.is_admin`,
+still set only by the deploy seed from this variable, and with it unset every
+seat answers `notFound()`. The generalized queue is **built and inert in
+production** until Alex sets it. `lib/publication/authority.test.ts` asserts the
+fail-closed behaviour; it does not and cannot assert the variable.
+
 ### D3 · One greeting pair still shares a line, and the line is the commissioner's to write
 
 SuggMyNick and cheeseking both made the 2025 playoffs without a title and A21 is
@@ -493,6 +501,27 @@ a blanket re-opening.
 | **Vending machine** | **LATER — gated on an economy simulation** | It does have a distinct purpose (a **deterministic** purchase against the box's random one, which is the anti-frustration valve), so it is not the duplicate surface the mission warns about. But `16 §8`'s seventh range derives vending prices from box EV, and `docs/ECONOMY_SIMULATION.md §115` records that the simulation deliberately does not check them because the feature does not exist. Building it without extending the simulation would put a second token sink beside a box whose price was fixed at 200 four days ago |
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
+
+### G2 · Commissioner announcements — specified, unbuilt, and the shape is recommended
+
+`08 §18` lists what the Slice may announce and `18 §6` gives a commissioner
+announcement priority 6 on the Tonight board. **Neither exists**: no table, no
+route, no writer, nothing that reads one.
+
+Recorded here rather than left implicit because the 2026-08-10 publication audit
+had to classify it, and *"it is a publication surface with no rows"* is a
+different answer from *"nobody thought about it."* A kind in
+`lib/publication/kinds.ts` for a surface that can never produce an item would be
+a queue section that is permanently empty — which is how a queue stops being
+believed.
+
+**When it is built, the recommended shape is one explicit *Publish announcement*
+button and no second approval step.** Alex writing the words and Alex approving
+the words are the same act on the same screen; a two-step there is bureaucracy
+rather than intentionality, and the goal of the review path is that nothing
+reaches the league **unintentionally**, not that everything is stamped twice.
+That is a recommendation and not a ruling — the decision belongs with the
+feature. `docs/PUBLICATION_APPROVAL_BOUNDARY.md §5` carries it.
 
 ### G1 · The Underground — the decision that is actually wanted
 

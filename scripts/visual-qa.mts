@@ -249,6 +249,26 @@ type StateName =
   | 'room-visited'
   | 'room-empty'
   | 'office'
+  /**
+   * The commissioner queue — *"what needs my approval?"* — in its four answers.
+   *
+   * `office` is the empty one and keeps its name: it is the state Alex meets
+   * today, because the 2026 season has no games and nothing has been drafted.
+   * These are the three that have something on them plus the whole desk, and
+   * they exist because a governance screen that has only ever been photographed
+   * empty is a governance screen nobody has looked at.
+   *
+   * Three of them narrow the queue with `?queue=<band>`, a server-resolved
+   * preview behind both demo guards that **filters and fabricates nothing**. The
+   * reason is the one `review-empty` records: an issue belongs to the league
+   * rather than to a seat, and the driver loops widths on the outside, so an
+   * unnarrowed "one paper is waiting" would photograph one item at 390 and four
+   * at 360 under a single name.
+   */
+  | 'office-ready'
+  | 'office-blocked'
+  | 'office-printed'
+  | 'office-queue'
   | 'prediction'
   | 'receipt'
   | 'counter'
@@ -364,8 +384,19 @@ type StateName =
   | 'review-approved'
   | 'review-published'
   | 'review-held'
-  /** One draft, opened from the queue. The screen where the decision is made. */
-  | 'review-draft';
+  /** One draft, opened from the queue. The proof sheet, as it will print. */
+  | 'review-draft'
+  /**
+   * The same draft, scrolled to the stamp.
+   *
+   * Screenshots here are one phone screen, and the review screen puts its
+   * actions **below the paper** on purpose so that approving without reading is
+   * not the default gesture. The consequence went unnoticed until the queue was
+   * built: the single most consequential control in the product — the one that
+   * puts a week of league history in front of ten people — was off the bottom of
+   * every picture ever taken of the screen it lives on.
+   */
+  | 'review-decision';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -487,8 +518,21 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'review-held': 'review-held',
   // The detail screen, reached by opening the queue's one waiting draft.
   'review-draft': 'review-waiting',
+  // The same draft, scrolled to the stamp. Same seat, same draft, lower down.
+  'review-decision': 'review-waiting',
   // The office. Borrowed for the commissioner's keys — see `reach`.
   office: 'review-empty',
+
+  /*
+   * The office queue. Each has its own demo state, and all four arrange the
+   * *same* desk — one paper of each kind — because what differs between the
+   * four screens is which bands the preview parameter shows, not what is in the
+   * database. Applying them in any order at any width lands on the same rows.
+   */
+  'office-ready': 'office-ready',
+  'office-blocked': 'office-blocked',
+  'office-printed': 'office-printed',
+  'office-queue': 'office-queue',
 };
 
 interface DemoApplied {
@@ -1100,6 +1144,40 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * `review-empty` is exactly "a commissioner seat with nothing waiting."
      */
     case 'office':
+      /*
+       * `?queue=empty` rather than a bare `/admin`.
+       *
+       * The office used to have no queue on it, so a bare URL was deterministic.
+       * It has one now, and the queue is league-scoped and additive — the same
+       * hazard `review-empty` records — so the empty desk has to be asked for.
+       * Nothing else about the screen changes: the key board and the press-desk
+       * door are the product's, unfiltered.
+       */
+      await page.goto(`${BASE}/admin?queue=empty`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * The queue with something on it, narrowed one band at a time.
+     *
+     * `office-queue` takes no parameter: it is the real, whole desk. It is
+     * deterministic because its own applier arranges one paper of each kind and
+     * every applier that could add another is idempotent on a fixed slot — so
+     * the second and third widths photograph the same rows as the first.
+     */
+    case 'office-ready':
+      await page.goto(`${BASE}/admin?queue=ready`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+    case 'office-blocked':
+      await page.goto(`${BASE}/admin?queue=blocked`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+    case 'office-printed':
+      await page.goto(`${BASE}/admin?queue=printed`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
+    case 'office-queue':
       await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
       return;
@@ -1462,6 +1540,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * controls, the validator's violations, the Print button, the printed stamp.
      */
     case 'review-draft':
+    case 'review-decision':
     case 'review-refused':
     case 'review-approved':
     case 'review-published': {
@@ -1471,7 +1550,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       const row =
         state === 'review-refused'
           ? page.locator('[data-review-refused]')
-          : state === 'review-draft'
+          : state === 'review-draft' || state === 'review-decision'
             ? page.locator('[data-review-section="waiting"] a:not([data-review-refused])')
             : page.locator(
                 `[data-review-section="${state === 'review-approved' ? 'approved' : 'published'}"] a`,
@@ -1486,6 +1565,24 @@ async function reach(page: Page, state: StateName): Promise<void> {
 
       await row.first().click();
       await page.waitForSelector('[data-review-version]', { state: 'attached' });
+
+      /*
+       * The stamp itself, which nothing had ever photographed.
+       *
+       * Screenshots here are **viewport-sized**, not full-page — one phone
+       * screen — and the review screen deliberately puts its actions below the
+       * paper so that approving without reading is not the default gesture. The
+       * consequence is that the single most consequential control in the product
+       * has always been off the bottom of every picture of it. `review-draft`
+       * photographs the proof sheet; this photographs the decision.
+       *
+       * Scrolled to rather than deep-linked, for the reason the block above
+       * gives: getting there from the desk is part of what is being reviewed.
+       */
+      if (state === 'review-decision') {
+        await page.locator('[data-review-decision]').scrollIntoViewIfNeeded();
+      }
+
       await page.waitForTimeout(400);
       return;
     }
@@ -1999,12 +2096,26 @@ const ALL_STATES: readonly StateName[] = [
   'review-empty',
   'review-waiting',
   'review-draft',
+  'review-decision',
   'review-refused',
   'review-approved',
   'review-published',
   'review-held',
   // The office, last of the commissioner-seated states for the same reason.
   'office',
+  /*
+   * The queue, after the press desk on purpose.
+   *
+   * `office-queue` shows the **real** desk with no narrowing, so it must be
+   * photographed once the press-desk states have put their papers on it —
+   * otherwise the first width would see a different desk from the other two.
+   * Every applier involved is idempotent on a fixed slot, so running them again
+   * at 375 and 360 reproduces the same rows rather than adding to them.
+   */
+  'office-ready',
+  'office-blocked',
+  'office-printed',
+  'office-queue',
 
   /*
    * Last, and that is load-bearing: `reach` signs *out* to get here, so any
@@ -3374,6 +3485,8 @@ const DESK_EXPECTATIONS: Record<
   'review-waiting': { desk: 'live', hold: 'off', atLeast: { waiting: 1 } },
   'review-held': { desk: 'live', hold: 'on', atLeast: { approved: 1 } },
   'review-draft': { version: 'needs_review', publishable: 'yes' },
+  // The same draft, lower down. The stamp only exists in this state.
+  'review-decision': { version: 'needs_review', publishable: 'yes' },
   // The validator's refusal, on the screen where it is explained rather than on
   // the row where it is only labelled.
   'review-refused': { version: 'needs_review', publishable: 'no' },
@@ -3468,6 +3581,126 @@ async function checkDeckWrap(page: Page, width: number, state: string): Promise<
           `who posted it is two incomplete lines, not a smaller version of one.`,
       );
     }
+  }
+}
+
+/**
+ * What each office state must actually contain.
+ *
+ * **Exact counts, not `atLeast`** — which is the opposite of `DESK_EXPECTATIONS`
+ * and is the whole reason the preview parameter exists. The press desk's states
+ * are additive and league-scoped, so equality there would encode the run order
+ * into the gate. Here the narrowing makes each screen's composition a fact, and
+ * a fact is worth pinning: an off-by-one in the filter, a band that stops being
+ * produced, or an item leaking between screens are all silent otherwise.
+ *
+ * `office` is the one a commissioner meets today, and its zeroes are the
+ * assertion: the preview resolved on the server, and the empty desk is empty.
+ */
+const OFFICE_EXPECTATIONS: Record<
+  string,
+  {
+    readonly outstanding: number;
+    readonly pending: number;
+    /** Exactly which bands are on the screen, in the order they are rendered. */
+    readonly bands: readonly string[];
+  }
+> = {
+  office: { outstanding: 0, pending: 0, bands: [] },
+  'office-ready': { outstanding: 1, pending: 1, bands: ['ready'] },
+  'office-blocked': { outstanding: 1, pending: 1, bands: ['blocked'] },
+  'office-printed': { outstanding: 0, pending: 0, bands: ['published'] },
+  /*
+   * The whole desk: one waiting, **two** stamped, one refused, one printed.
+   *
+   * The order is the queue's priority — a thing you can complete above a thing
+   * you cannot — so this row is also the assertion that the ordering rule holds
+   * on a real screen rather than only in a unit test.
+   *
+   * The second `approved` is not a mistake and it is not the applier's. It was
+   * written here as one, and the gate said four: `review-approved` and
+   * `review-held` each leave a stamped-and-unprinted version on the desk, and
+   * `office-queue`'s applier **releases the hold**, so the held one becomes an
+   * ordinary approved item rather than disappearing.
+   *
+   * Corrected here rather than suppressed in the applier, because the desk that
+   * would show three is a desk the database does not have — and the pair is
+   * worth photographing on its own account: two items in one band is the only
+   * state where the recency tie-break inside a band is visible.
+   */
+  'office-queue': {
+    outstanding: 4,
+    pending: 4,
+    bands: ['ready', 'approved', 'approved', 'blocked', 'published'],
+  },
+};
+
+/**
+ * The gate against an office-queue false green.
+ *
+ * Two ways this screen can lie, and neither is visible in a screenshot:
+ *
+ *   1. `requireAdmin()` answers `notFound()`, so a seat that failed to get the
+ *      commissioner's keys photographs a **404** that files under the state's
+ *      name and passes every pixel gate. That is the failure the nine `reveal-*`
+ *      states cost a milestone to.
+ *   2. The queue is the surface `16 §9`'s approval gate is *found* through. A
+ *      queue that silently showed nothing — a broken filter, a preview
+ *      resolving in production, a band that stopped being produced — would look
+ *      exactly like a quiet week, which is the ordinary state.
+ *
+ * So the marker is checked rather than the pixels, and the composition is
+ * checked rather than the marker alone.
+ */
+async function checkOfficeQueue(page: Page, width: number, state: string): Promise<void> {
+  const expected = OFFICE_EXPECTATIONS[state];
+  if (expected === undefined) {
+    fail('office-queue', `@${String(width)} ${state} has no entry in OFFICE_EXPECTATIONS`);
+    return;
+  }
+
+  const at = `@${String(width)} ${state}`;
+
+  const found = await page.evaluate(() => {
+    const queue = document.querySelector('[data-review-queue-pending]');
+    return {
+      rendered: queue !== null,
+      pending: Number(queue?.getAttribute('data-review-queue-pending') ?? '-1'),
+      outstanding: Number(queue?.getAttribute('data-review-queue-size') ?? '-1'),
+      bands: [...document.querySelectorAll('[data-review-item]')].map(
+        (el) => el.getAttribute('data-review-item') ?? '',
+      ),
+    };
+  });
+
+  if (!found.rendered) {
+    fail(
+      'office-queue',
+      `${at} the office queue did not render — is the seat a commissioner? ` +
+        'requireAdmin() answers notFound(), which photographs cleanly.',
+    );
+    return;
+  }
+
+  if (found.outstanding !== expected.outstanding) {
+    fail(
+      'office-queue',
+      `${at} shows ${String(found.outstanding)} outstanding item(s), expected ${String(expected.outstanding)}`,
+    );
+  }
+
+  if (found.pending !== expected.pending) {
+    fail(
+      'office-queue',
+      `${at} counts ${String(found.pending)} as pending, expected ${String(expected.pending)}`,
+    );
+  }
+
+  if (found.bands.join(',') !== expected.bands.join(',')) {
+    fail(
+      'office-queue',
+      `${at} rendered bands [${found.bands.join(', ')}], expected [${expected.bands.join(', ')}]`,
+    );
   }
 }
 
@@ -5050,6 +5283,11 @@ async function run(): Promise<void> {
           // Every press-desk state must actually be that desk.
           if (state.startsWith('review-')) {
             await checkReviewDesk(page, width, state);
+          }
+
+          // Every office state must actually be the queue it claims to be.
+          if (state === 'office' || state.startsWith('office-')) {
+            await checkOfficeQueue(page, width, state);
           }
         }
 
