@@ -254,7 +254,15 @@ export default async function SliceReviewPage({
           </div>
 
           <div className="mt-6">
-            <DeskPanel>
+            {/*
+              * `data-review-decision` — the anchor the visual driver scrolls to.
+              *
+              * Screenshots are one phone screen, and the actions are below the
+              * paper on purpose, so without this the stamp that publishes a week
+              * of league history is off the bottom of every picture of this
+              * screen.
+              */}
+            <DeskPanel data-review-decision="">
               <SectionHeading ink="text-ink-500">The decision</SectionHeading>
 
               {error === 'reason-required' && (

@@ -62,21 +62,31 @@ describe('the visual driver and the press-desk catalog agree', () => {
     expect(DESK_STATES).toHaveLength(6);
   });
 
-  it('photographs every one of them, plus the draft itself', () => {
-    /*
-     * `review-draft` is not a demo state — it is the *detail* screen, reached by
-     * opening the queue's waiting draft. It shares `review-waiting`'s seat, which
-     * is why it has no catalog entry of its own and why it is named here rather
-     * than derived.
-     */
-    expect([...driverStates()].sort()).toEqual([...DESK_STATES, 'review-draft'].sort());
+  /*
+   * The two screens that are not demo states.
+   *
+   * Neither is a state of the *world*; both are places on the **detail screen**,
+   * reached by opening the queue's waiting draft, and both share
+   * `review-waiting`'s seat — which is why they have no catalog entry and are
+   * named here rather than derived.
+   *
+   * `review-draft` is the proof sheet. `review-decision` is the same draft
+   * scrolled to the stamp, and it exists because screenshots here are one phone
+   * screen and the review screen puts its actions **below the paper** on
+   * purpose: the control that publishes a week of league history was off the
+   * bottom of every picture ever taken of the screen it lives on.
+   */
+  const DETAIL_STATES = ['review-draft', 'review-decision'];
+
+  it('photographs every one of them, plus the draft and the decision', () => {
+    expect([...driverStates()].sort()).toEqual([...DESK_STATES, ...DETAIL_STATES].sort());
   });
 
   it('declares a case for each of them', () => {
     // A state in `ALL_STATES` with no `case` photographs whatever page was
     // already open. The driver throws at runtime for that; this catches it
     // before a nine-minute workflow does.
-    for (const key of [...DESK_STATES, 'review-draft']) {
+    for (const key of [...DESK_STATES, ...DETAIL_STATES]) {
       expect(DRIVER, key).toContain(`case '${key}':`);
     }
   });
@@ -87,7 +97,7 @@ describe('the visual driver and the press-desk catalog agree', () => {
      * expectation would capture a picture and assert nothing about it, which is
      * the same as not having a gate — and worse, because the screenshot exists.
      */
-    expect([...deskExpectations()].sort()).toEqual([...DESK_STATES, 'review-draft'].sort());
+    expect([...deskExpectations()].sort()).toEqual([...DESK_STATES, ...DETAIL_STATES].sort());
   });
 
   /*

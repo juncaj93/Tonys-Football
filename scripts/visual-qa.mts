@@ -382,8 +382,19 @@ type StateName =
   | 'review-approved'
   | 'review-published'
   | 'review-held'
-  /** One draft, opened from the queue. The screen where the decision is made. */
-  | 'review-draft';
+  /** One draft, opened from the queue. The proof sheet, as it will print. */
+  | 'review-draft'
+  /**
+   * The same draft, scrolled to the stamp.
+   *
+   * Screenshots here are one phone screen, and the review screen puts its
+   * actions **below the paper** on purpose so that approving without reading is
+   * not the default gesture. The consequence went unnoticed until the queue was
+   * built: the single most consequential control in the product — the one that
+   * puts a week of league history in front of ten people — was off the bottom of
+   * every picture ever taken of the screen it lives on.
+   */
+  | 'review-decision';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -505,6 +516,8 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'review-held': 'review-held',
   // The detail screen, reached by opening the queue's one waiting draft.
   'review-draft': 'review-waiting',
+  // The same draft, scrolled to the stamp. Same seat, same draft, lower down.
+  'review-decision': 'review-waiting',
   // The office. Borrowed for the commissioner's keys — see `reach`.
   office: 'review-empty',
 
@@ -1525,6 +1538,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
      * controls, the validator's violations, the Print button, the printed stamp.
      */
     case 'review-draft':
+    case 'review-decision':
     case 'review-refused':
     case 'review-approved':
     case 'review-published': {
@@ -1534,7 +1548,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       const row =
         state === 'review-refused'
           ? page.locator('[data-review-refused]')
-          : state === 'review-draft'
+          : state === 'review-draft' || state === 'review-decision'
             ? page.locator('[data-review-section="waiting"] a:not([data-review-refused])')
             : page.locator(
                 `[data-review-section="${state === 'review-approved' ? 'approved' : 'published'}"] a`,
@@ -1549,6 +1563,24 @@ async function reach(page: Page, state: StateName): Promise<void> {
 
       await row.first().click();
       await page.waitForSelector('[data-review-version]', { state: 'attached' });
+
+      /*
+       * The stamp itself, which nothing had ever photographed.
+       *
+       * Screenshots here are **viewport-sized**, not full-page — one phone
+       * screen — and the review screen deliberately puts its actions below the
+       * paper so that approving without reading is not the default gesture. The
+       * consequence is that the single most consequential control in the product
+       * has always been off the bottom of every picture of it. `review-draft`
+       * photographs the proof sheet; this photographs the decision.
+       *
+       * Scrolled to rather than deep-linked, for the reason the block above
+       * gives: getting there from the desk is part of what is being reviewed.
+       */
+      if (state === 'review-decision') {
+        await page.locator('[data-review-decision]').scrollIntoViewIfNeeded();
+      }
+
       await page.waitForTimeout(400);
       return;
     }
@@ -2062,6 +2094,7 @@ const ALL_STATES: readonly StateName[] = [
   'review-empty',
   'review-waiting',
   'review-draft',
+  'review-decision',
   'review-refused',
   'review-approved',
   'review-published',
@@ -3450,6 +3483,8 @@ const DESK_EXPECTATIONS: Record<
   'review-waiting': { desk: 'live', hold: 'off', atLeast: { waiting: 1 } },
   'review-held': { desk: 'live', hold: 'on', atLeast: { approved: 1 } },
   'review-draft': { version: 'needs_review', publishable: 'yes' },
+  // The same draft, lower down. The stamp only exists in this state.
+  'review-decision': { version: 'needs_review', publishable: 'yes' },
   // The validator's refusal, on the screen where it is explained rather than on
   // the row where it is only labelled.
   'review-refused': { version: 'needs_review', publishable: 'no' },
@@ -3574,15 +3609,27 @@ const OFFICE_EXPECTATIONS: Record<
   'office-blocked': { outstanding: 1, pending: 1, bands: ['blocked'] },
   'office-printed': { outstanding: 0, pending: 0, bands: ['published'] },
   /*
-   * The whole desk: one waiting, one refused, one stamped, one printed. The
-   * order is the queue's priority — a thing you can complete above a thing you
-   * cannot — so this row is also the assertion that the ordering rule holds on a
-   * real screen rather than only in a unit test.
+   * The whole desk: one waiting, **two** stamped, one refused, one printed.
+   *
+   * The order is the queue's priority — a thing you can complete above a thing
+   * you cannot — so this row is also the assertion that the ordering rule holds
+   * on a real screen rather than only in a unit test.
+   *
+   * The second `approved` is not a mistake and it is not the applier's. It was
+   * written here as one, and the gate said four: `review-approved` and
+   * `review-held` each leave a stamped-and-unprinted version on the desk, and
+   * `office-queue`'s applier **releases the hold**, so the held one becomes an
+   * ordinary approved item rather than disappearing.
+   *
+   * Corrected here rather than suppressed in the applier, because the desk that
+   * would show three is a desk the database does not have — and the pair is
+   * worth photographing on its own account: two items in one band is the only
+   * state where the recency tie-break inside a band is visible.
    */
   'office-queue': {
-    outstanding: 3,
-    pending: 3,
-    bands: ['ready', 'approved', 'blocked', 'published'],
+    outstanding: 4,
+    pending: 4,
+    bands: ['ready', 'approved', 'approved', 'blocked', 'published'],
   },
 };
 
