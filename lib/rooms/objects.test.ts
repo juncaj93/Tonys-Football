@@ -295,11 +295,22 @@ describe('the three themes', () => {
       expect(record, `${theme} has no registered shell`).toBeDefined();
       expect(record?.family, shell).toBe('zone');
       /*
-       * `960 × 1707` is `320 × 569` at the pipeline's 3× authoring scale —
-       * the same canvas `zone_back_hall_shell` uses, so the three rooms of this
-       * product are authored at one size.
+       * **`320 × 569` — the logical size, not a 3× authoring scale.**
+       *
+       * This asserted `960x1707` for one day, copied from
+       * `zone_back_hall_shell`, and both were wrong. The one shell this product
+       * has actually shipped — `zone_parlor_shell` — is **320 × 569 on disk**,
+       * and `ART_PRODUCTION_BACKLOG`'s first rule says why: art is *"authored at
+       * its logical size in CSS pixels, no larger… an oversized source gets
+       * resampled and loses"* its edges. The device scales it up with
+       * `image-rendering: pixelated`.
+       *
+       * It matters because `process-art.ts` resizes to whatever this says. The
+       * error was invisible while every shell was a placeholder and would have
+       * shipped a 3×-oversized room the moment one arrived. `zone_back_hall_shell`
+       * was corrected in the same change.
        */
-      expect(record?.canvas, shell).toBe('960x1707');
+      expect(record?.canvas, shell).toBe('320x569');
       slugs.add(shell);
     }
 

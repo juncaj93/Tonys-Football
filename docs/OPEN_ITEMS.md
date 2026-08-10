@@ -94,27 +94,36 @@ visual state that **presses the Save button** rather than photographing the form
 That last row is the exact user path that originally failed, on the real
 deployment. `docs/CHARACTER_CUSTOMISATION_BOUNDARY.md` is the canonical account.
 
-### A3 · The basement's shells are briefed and do not exist — **art dependency**
+### A3 · Two of the basement's three shells are still unpainted — **art dependency**
 
-Not a launch blocker for football and not a defect. It is the one place in the
-product where **engineering is finished and the next step is a file**.
+**The storeroom is delivered and live** (2026-08-10). The commissioner supplied
+the approved shell, it was processed through `art:process` unmodified, and
+`/rooms` renders it for every manager on the default theme — `data-room-shell`
+reads `art` at all three widths. The claim that the swap would be *"a file plus a
+registry row"* was tested by doing it, and it was **almost** true: the file and
+the row were the whole runtime change, and the one thing that moved besides was
+`lib/rooms/objects.ts`, because the delivered composition sits a few units off
+the coordinates the brief had asked for.
 
-`/rooms` is now shell-first: `zone_room_shell_storeroom`, `_rec_room` and
-`_cold_store` are registered, resolved per theme, and every one of them is
-`art_status: placeholder`, so all three render the drawn stand-in. The stand-in
-follows the approved reference's composition and is deliberately flat — it exists
-so the geometry, the hit regions, the gates and the eight visual states are real
-before any art arrives, and `MANDATE`'s slot rules forbid mistaking it for the
-answer.
+That is the decision worth recording. The brief was written *"the geometry is
+fixed and the art is drawn to it"*, and when the art came back close-but-not-
+exact the cheaper correction was the code: a room that already works can be
+re-aimed in an afternoon, a painting cannot be redrawn to a unit. So the
+geometry moved to the art **once**, and the storeroom is now **the master** —
+`BATCH_E_BASEMENT_HANDOFF.md` briefs the remaining two to *its* measurements, so
+a shell drawn to it lands with no code change at all.
 
-**`docs/art/BATCH_E_BASEMENT_HANDOFF.md` is the packet**, written to be pasted
-into a generation session as-is. Three shells, the storeroom first, each
-independently useful because no theme is gated on another.
+`rec_room` and `cold_store` are still `art_status: placeholder` and still draw
+the stand-in, per theme and independently. Nothing is gated on them: a manager
+who picks one gets the same room with the same hit regions in flat colour, and
+the gate reads which half rendered rather than demanding either.
 
-Two things make this safe to leave open: the room is fully usable today, and the
-day a shell lands it is **a file plus a registry row** — `art:process` already
-handles shells, and the visual gate reports which half rendered rather than
-demanding the stand-in.
+**Also missed by the old canvas.** All four room shells — the three basements
+and `zone_back_hall_shell` — were registered at **960 × 1707**, copied from an
+entry that had never shipped a file. `process-art.ts` resizes to the registry
+canvas, so the first delivered shell would have been written three times
+oversized. Corrected to **320 × 569**, the size the shipped parlor shell has
+always been on disk, and `lib/rooms/objects.test.ts` now pins it.
 
 ### A4 · The manager sprite cannot reach the approved reference by swapping art
 
@@ -403,7 +412,7 @@ a blanket re-opening.
 
 | Area | | Why |
 |---|---|---|
-| **Rooms / basements** | **NOW — built; art now the constraint** | Fully specified by `04 §10`, `06 §6.2`, `14 §5` and `16`'s P6 row, and shipped. The commissioner's art direction of 2026-08-09 then made the room **shell-first**: see **A3** |
+| **Rooms / basements** | **NOW — built; the default room is painted** | Fully specified by `04 §10`, `06 §6.2`, `14 §5` and `16`'s P6 row, and shipped. The commissioner's art direction of 2026-08-09 made the room **shell-first**, and the approved storeroom shell landed on 2026-08-10. Two themes still draw the stand-in: see **A3** |
 | **Underground / casino** | **LATER — and it wants a decision, not a session** | See G1. Two commissioner-level sources disagree about what the games are, and no wager can settle before September |
 | **Silent auction** | **LATER** | `16` puts it in a **November** window, and it is a *spend-down* mechanism: it exists to give end-of-season tokens somewhere to go. There are no season tokens yet. Its inventory authority is also genuinely undecided — an auction of collectibles competes with the box for the same 24-item catalog the P3 simulation was just balanced around |
 | **Seasonal events** | **DO NOT BUILD** *(as an engine)* | The mission's own test — *"if a simple seasonal visual state can be expressed through existing architecture without a new abstraction, that is different"* — is already met. `16 §7.2`'s dressing resolver is built and the offseason dressing ships today. A generalized event engine is the speculative framework both the mission and `16 §4.1`'s deferral refuse |

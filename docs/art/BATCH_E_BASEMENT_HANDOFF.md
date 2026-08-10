@@ -1,7 +1,19 @@
 # Batch E — the manager’s basement
 
-**Status:** ready to generate. Prepared 2026-08-09, against the commissioner's approved room reference.
+**Status:** **storeroom delivered and live (2026-08-10).** Two shells outstanding.
 **Purpose:** replace the basement's drawn stand-in with painted shells, so `/rooms` is a room rather than a diagram of one.
+
+> ## The storeroom is the master. Draw the other two to it.
+>
+> `zone_room_shell_storeroom` is delivered, processed and shipped, and the runtime
+> geometry in `lib/rooms/objects.ts` was **aligned to it** — the coordinates in
+> §3 below are no longer a proposal, they are measurements off the art that is
+> live. The remaining two shells are *the same room refitted*, so every fixture
+> must sit where the storeroom puts it, at the same size, or a manager who
+> changes the theme finds their things have moved.
+>
+> The fastest way to get that right: **generate from the storeroom image as a
+> reference**, changing only materials and light.
 
 This file is meant to be **pasted into an image-generation session as-is**. Every number in it is the number `lib/rooms/objects.ts` holds, read off the running product. Nothing here is a question for the commissioner.
 
@@ -15,8 +27,8 @@ That is the reverse of how the parlor was done (art first, geometry measured off
 
 | | |
 |---|---|
-| Canvas | **960 × 1707** — that is `320 × 569` at the pipeline's 3× authoring scale, identical to `zone_parlor_shell` and `zone_back_hall_shell` |
-| Coordinates below | given in **room units** (the 320 × 569 space). **Multiply by 3** for the authoring canvas |
+| Canvas | **320 × 569** — the **logical** size in CSS pixels, exactly what the shipped `zone_parlor_shell` is on disk. `process-art.ts` resizes to it and the device scales up with `image-rendering: pixelated`. Generate large, deliver large; the pipeline downscales |
+| Coordinates below | given in **room units**, which ARE the delivered pixels one-for-one |
 | Background | **opaque.** This is an environment, not a cutout |
 | Delivery | `art/incoming/`, then `npm run art:prepare-incoming && npm run art:process` |
 
@@ -53,16 +65,16 @@ Paraphrasing the preamble is how style drift starts. It is invisible until the t
 
 **Six places must be empty in all three shells.** A manager's own things are composited into them at runtime, and anything painted there will be covered by a sprite and read as a bug.
 
-| Place | Room units `[x, y, w, h]` | Must be drawn as | Must **not** contain |
+| Place | Room units | Must be drawn as | Must **not** contain |
 |---|---|---|---|
-| **The frame on the back wall** | `[124, 112, 116, 78]` | An empty picture frame, glass or backing board visible, with its own soft interior shadow | A picture, a poster, a photograph, lettering |
-| **The shelf plank** | plank top at `y 262`, spanning `x 120–230` | One plank on two brackets, completely bare | Books, ornaments, tins, anything standing on it |
-| **The desk top** | desktop at `y 264`, spanning `x 246–314` | A clear working surface | Papers, a lamp, a mug, a pencil cup, a keyboard |
-| **The pennant rail** | rod at `[124, 60, 134, 4]` | A bare metal rod on two brackets | Pennants, flags, bunting |
-| **The noticeboard** | `[266, 56, 48, 124]` | A cork board in a frame, with pins in it | Notes, paper, photographs, lettering |
-| **The rug / front floor** | `[76, 396, 190, 150]` | A rug, patterned, laid flat and unobstructed | Furniture, boxes, anything standing on it |
+| **The frame on the back wall** | outer edge `x 150–250`, `y 140–222`. A 46 × 46 sprite is composited centred at `[177, 153]` | An empty picture frame with a plain backing board and its own soft interior shadow | A picture, a poster, a photograph, lettering |
+| **The shelf** | surface at `y 262`, spanning `x 136–250`. Two sprites stand on it at `x 140` and `x 196` | A bare shelf, its top surface clear across the full span | Books, ornaments, tins, anything standing on it |
+| **The desk top** | usable surface `x 256–316`, `y 286–346`. A sprite stands at `[263, 292]` | A clear working surface, foreground right | Papers, a lamp, a mug, a pencil cup, a keyboard |
+| **The pennant rod** | `x 138–252` at `y ≈ 120`, four units thick | A bare metal rod on two brackets | Pennants, flags, bunting |
+| **The noticeboard** | `x 280–320`, `y 118–230` (it runs off the right edge) | A cork board in a frame, with pins in it | Notes, paper, photographs, lettering |
+| **The rug / front floor** | roughly `x 96–276`, `y 356–532` | A rug, patterned, laid flat and unobstructed | Furniture, boxes, anything standing on it |
 
-**The rug is the character's ground line.** A flat, front-facing manager sprite is composited standing on it, feet at `y 488`, roughly 112 × 168 room units. The floor's recession must be shallow enough that a completely non-perspective figure standing there looks correct.
+**The rug is the character's ground line.** A flat, front-facing manager sprite is composited standing on it, **feet at `y 502`, 112 × 168 room units**, centred on `x 182`. The floor's recession must be shallow enough that a completely non-perspective figure standing there looks correct.
 
 ### 3.1 The fixed architecture
 
@@ -70,20 +82,20 @@ These are drawn fully and are never covered. Coordinates are where the code expe
 
 | Feature | Room units | Notes |
 |---|---|---|
-| **Ceiling** | `y 0–46` | Exposed timber joists running left–right, with two pipe runs across them |
-| **Back wall** | `y 46–366` | The wall material. This is the theme's biggest single difference |
-| **Floor** | `y 366–569` | Recedes gently. Front strip along the bottom edge stays clear |
-| **The staircase** | `[10, 92, 98, 274]` | A full wooden flight in its own framed opening, rising away from the viewer, with **warm light at the top** where the hall is. It is the room's largest feature and the way you got in |
-| **The pendant lamp** | shade at `[174, 30, 34, 12]`, cord to the ceiling | One hanging light, centred, throwing a warm pool. In the cold store it is a fluorescent strip instead |
-| **The window** | `[32, 54, 48, 30]` | A small high basement window, upper left. Dim daylight or dark glass |
-| **The desk body** | `x 246–314`, top at `y 264`, legs to the floor | Against the right wall, under the noticeboard |
+| **Ceiling** | `y 0–62` | Exposed timber joists running left–right, with two pipe runs across them |
+| **Back wall** | `y 62–340` | The wall material. This is the theme's biggest single difference |
+| **Floor** | `y 340–569` | Recedes gently. Front strip along the bottom edge stays clear |
+| **The staircase** | opening `x 48–130`, `y 92–332` | A full wooden flight in its own framed opening, rising away from the viewer, with **warm light at the top** where the hall is. It is the room's largest feature and the way you got in |
+| **The pendant lamp** | shade around `x 196–230` at `y ≈ 80` | One hanging light, centred, throwing a warm pool. In the cold store it is a fluorescent strip instead |
+| **The window** | `x 184–222`, `y 98–124` | A small high basement window on the back wall, just above the rod. Dim daylight or dark glass |
+| **The desk body** | `x 250–320`, top at `y ≈ 340`, standing forward of the wall | Foreground right, below the noticeboard |
 | **Scenery, free choice** | left floor and near corners | Milk crates, flattened boxes, a folded chair, a side table with an old radio, a pizza box. **Keep clear of the rug and of every prepared place above.** |
 
 ---
 
 ## 4. SUBJECT blocks — paste one per generation
 
-### 4.1 `zone_room_shell_storeroom` — generate first
+### 4.1 `zone_room_shell_storeroom` — **delivered 2026-08-10.** Kept as the record of what the master shell was drawn from.
 
 ```
 SUBJECT: The storeroom basement beneath an old neighbourhood pizza parlor, seen straight on
@@ -119,7 +131,7 @@ MOOD: A real hidden personal room under an old pizza place. Warm, nostalgic, sli
 lived in. Cozy clutter around the edges and a clear middle.
 ```
 
-### 4.2 `zone_room_shell_rec_room`
+### 4.2 `zone_room_shell_rec_room` — outstanding
 
 ```
 SUBJECT: The same basement room as the storeroom shell, with identical architecture, identical
@@ -140,7 +152,7 @@ the clear desk, the empty cork noticeboard, the clear rug, the window — is in 
 at the same size, drawn just as empty.
 ```
 
-### 4.3 `zone_room_shell_cold_store`
+### 4.3 `zone_room_shell_cold_store` — outstanding
 
 ```
 SUBJECT: The same basement room as the storeroom shell, with identical architecture, identical
@@ -174,7 +186,7 @@ MOOD: Clean, cold, slightly clinical, and deliberately the least cosy of the thr
 
 Checked mechanically by `npm run art:process` and by `npm run visual:qa` once the registry row gains a `path`.
 
-1. **Opaque** and exactly `960 × 1707`.
+1. **Opaque** and exactly `320 × 569` after processing. Deliver **large** — the pipeline downscales — but at this **aspect** (`0.562`); `process-art.ts` uses `fit: 'fill'`, so a wrong-aspect source is stretched rather than cropped. The delivered storeroom was 940 × 1672, which is exact.
 2. **Quantized to the `zone` family palette** — 64 colours, per `docs/PALETTE_FIDELITY_BOUNDARY.md`. The pipeline does this; a source with smooth gradients survives it badly, so keep fills flat.
 3. **No text anywhere.** Not on the noticeboard, not on the pennant rod, not on a box. Every word in this product is runtime HTML.
 4. **No people.** The manager is composited.

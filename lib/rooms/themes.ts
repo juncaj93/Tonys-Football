@@ -139,8 +139,9 @@ export const THEME_SPECS: Readonly<Record<Theme, ThemeSpec>> = {
     glow: 'rgba(255,217,138,0.52)',
     timber: 'bg-wood-light',
     timberDark: 'bg-wood-mid',
-    rug: 'bg-amber-deep',
-    rugEdge: 'bg-red-dark/70',
+    /* A woven mat laid on the carpet. Amber here read as a lit slab. */
+    rug: 'bg-wood-mid',
+    rugEdge: 'bg-wood-dark',
   },
 
   cold_store: {
