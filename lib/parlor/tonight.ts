@@ -73,19 +73,47 @@ export interface BoardFace {
  * looked up in here. Keeping the query out is what stops this function from
  * growing an opinion about which game matters.
  */
-export function boardFace(input: {
-  /** Days until week one, or null once the season is under way. */
-  readonly daysUntilKickoff: number | null;
-  /** The current week, once there is one. */
-  readonly week?: number | null;
-  /** A Stats-provided matchup of the week, e.g. `Matty B v Nathan`. */
-  readonly matchup?: string | null;
-}): BoardFace {
-  const week = input.week ?? null;
+/**
+ * What the face is told, in two shapes rather than one.
+ *
+ * ## The week is required in season, and that is a repair
+ *
+ * The first version made `week` optional and defaulted a missing one to `WEEK
+ * ONE`. `app/page.tsx` never passed it, so from the opening Sunday to January
+ * the largest object in the room would have read **WEEK ONE**, every week — and
+ * nothing caught it, because in week one the wrong answer and the right answer
+ * are the same string. The midseason rehearsal is what made it visible
+ * (`docs/WEEK8_REHEARSAL.md`).
+ *
+ * A default that is correct in exactly one week is not a default, it is a bug
+ * with a grace period. So the two states are two shapes: before kickoff the
+ * countdown is the whole face and there is no week to name; after it, the week
+ * is **not optional** and a caller that does not know it cannot compile.
+ */
+export type BoardFaceInput =
+  | {
+      /** Days until week one. The face is a countdown and names no week. */
+      readonly daysUntilKickoff: number;
+      readonly week?: undefined;
+      readonly matchup?: undefined;
+    }
+  | {
+      /** Null once the season is under way. */
+      readonly daysUntilKickoff: null;
+      /** The week the league is playing. `lib/stats/week.ts` derives it. */
+      readonly week: number;
+      /**
+       * A Stats-provided matchup **of the season the hero names**, e.g.
+       * `Matty B v Nathan`. `lib/stats/board.ts`'s `matchupLine` is what
+       * enforces the season, and null is an ordinary outcome.
+       */
+      readonly matchup?: string | null;
+    };
 
+export function boardFace(input: BoardFaceInput): BoardFace {
   if (input.daysUntilKickoff === null) {
     return {
-      hero: week === null ? 'WEEK ONE' : `WEEK ${String(week)}`,
+      hero: `WEEK ${String(input.week)}`,
       detail: input.matchup ?? null,
     };
   }
