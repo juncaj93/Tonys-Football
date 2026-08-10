@@ -480,9 +480,9 @@ export function renderPreseason(packet: PreseasonPacket): Edition | null {
     /*
      * Week zero — the preseason slot.
      *
-     * Never printed: the dateline says `Draft Review` and no surface renders the
-     * number. It exists so `slice_issues` can hold both kinds under its existing
-     * `UNIQUE(season_id, week)` without the two colliding (`0018`).
+     * Never printed: the dateline says `Season 2026 · Preseason` and no surface
+     * renders the number. It exists so `slice_issues` can hold both kinds under
+     * its existing `UNIQUE(season_id, week)` without the two colliding (`0018`).
      */
     week: 0,
     dateline: `${PHRASES.datelineSeason} ${String(packet.season)} · ${PRESEASON.dateline}`,
