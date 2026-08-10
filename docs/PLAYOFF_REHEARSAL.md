@@ -137,7 +137,7 @@ eliminations, and two managers into the final.
 | Qualifiers | the six the fourteen-week table produced, and only those |
 | Byes | derived from the draw; **week 15 stores four games, not five** |
 | Week type | weeks 15–16 stored `playoff`, week 14 `regular`, from the league's own `playoff_week_start` |
-| Eliminated managers | all ten memberships intact — active, full 14-game record, tokens standing |
+| Eliminated managers | all ten memberships intact — active, full 14-game record, tokens standing, **and their room still opens** |
 | Final rank after week 16 | 5, 6, 7, 8, 9, 10 written; **the four semifinalists null** |
 | Consolation | 7th–10th all held by rosters with `made_playoffs = false` |
 | Champion banner | 2026 reads *still being played*; 2024 and 2025 untouched |
@@ -152,7 +152,9 @@ eliminations, and two managers into the final.
 | Silent auction | not activated, not reachable, not referenced |
 | Slice at week 16 | prints; leads with the close semifinal; validator clean |
 | Slice at week 17 (unplayed) | refused `no-week` |
-| Publication | **16 versions, all `needs_review`. Nothing approved, nothing published** |
+| Sunday snapshot, week 15 | ten rosters read, **four games photographed, two byes left out** — a bye is not a game |
+| Sunday snapshot, retaken | refused. The score before Monday is unrecoverable once Monday has happened |
+| Publication | **16 versions, all `needs_review`** after the semifinal and **17** after the final. Nothing approved, nothing published |
 | Homepage board | reads **WEEK 17** after the semifinal closes, never WEEK ONE |
 | Season transition | 2026 not finalized, not `ARCHIVED`; week 17 still open |
 | Championship round | played; all ten ranks settle; the books still do not close on their own |
@@ -195,7 +197,15 @@ sixteen drafts.
    available (*championship week*, *champion confirmed*, *season complete*) are
    all copy slots rather than data gaps. Those three are the slots to fill when
    the commissioner writes them. `docs/OPEN_ITEMS.md` **G3**.
-3. **A stale standings payload moves the table backwards for a week.** Injected
+3. **Placements follow the bracket alone, so a bracket ahead of its own games
+   would write a finish for a game never stored.** Found while building the
+   scheduled-but-unplayed injection, which failed first time for exactly this
+   reason — and the injection was at fault rather than the code: Sleeper
+   resolves a bracket *from* results, so serving a decided bracket over unplayed
+   games stages a contradiction rather than a state. Recorded as a property
+   rather than filed as a defect; the **lagging** direction is the one that has
+   been observed, and §6 covers it.
+4. **A stale standings payload moves the table backwards for a week.** Injected
    and observed against the previous harness: `reconcileSeason` catches it and
    names both records for all ten rosters, but the disagreement is a *warning*
    rather than a *conflict*, so `sync_runs.status` stays `SUCCEEDED`. **The
@@ -217,6 +227,7 @@ sixteen drafts.
 | A ring grant on a completed bracket with the books open | zero — the season gate holds |
 | A consolation result | never reaches a title-track surface; cannot produce an elimination or championship candidate |
 | A drawn playoff game | no winner, no loser, and neither bracket story can name it |
+| A **championship week Sleeper has only scheduled** | no game stored, no week finalized, no champion claimed |
 | A week nobody has played | refused, rather than printed as a quiet week |
 
 The nine injections week 1 owns — unreachable Sleeper, malformed payload, crash
