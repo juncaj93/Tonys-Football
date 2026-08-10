@@ -1,4 +1,4 @@
-import { rasterise, shade, type Op, type ToneGrid } from '../sprite';
+import { bounds, rasterise, shade, type Bounds, type Op, type ToneGrid } from '../sprite';
 
 import { BODY } from './body';
 import { CANVAS } from './geometry';
@@ -32,6 +32,7 @@ export const LAYER_SHAPES: Readonly<Record<string, readonly Op[]>> = Object.free
 });
 
 const CACHE = new Map<string, ToneGrid>();
+const BOXES = new Map<string, Bounds | null>();
 
 /**
  * The tone grid for a slug, or `null` if nothing is drawn under that name.
@@ -53,6 +54,24 @@ export function toneGrid(slug: string): ToneGrid | null {
   const grid = shade(rasterise(shapes, CANVAS.width, CANVAS.height));
   CACHE.set(slug, grid);
   return grid;
+}
+
+/**
+ * The occupied box of a slug's artwork, or `null` if it draws nothing.
+ *
+ * Cached beside the tone grid and for the same reason: it depends only on the
+ * slug, and `compositeRuns` bounds all three of its passes by it. A layer is
+ * rasterised once for the life of the process; measuring its extent every render
+ * would put the walk back that the bound exists to remove.
+ */
+export function layerBounds(slug: string): Bounds | null {
+  const cached = BOXES.get(slug);
+  if (cached !== undefined) return cached;
+
+  const grid = toneGrid(slug);
+  const box = grid === null ? null : bounds(grid);
+  BOXES.set(slug, box);
+  return box;
 }
 
 /** Every slug the art actually has. For the contract test against the catalog. */

@@ -125,23 +125,35 @@ canvas, so the first delivered shell would have been written three times
 oversized. Corrected to **320 × 569**, the size the shipped parlor shell has
 always been on disk, and `lib/rooms/objects.test.ts` now pins it.
 
-### A4 · The manager sprite cannot reach the approved reference by swapping art
+### A4 · The manager sprite cannot reach the approved reference by swapping art — **CLOSED, 2026-08-10**
 
-**A commissioner decision, and stated as one.** Colour in the character system is
-a *runtime parameter* — 4 skin × 8 hair × 8 top ramps, resolved at render and
-never stored — and a layer that resolves to a PNG **bypasses it entirely**. So
-the existing per-layer art-swap contract, which works everywhere else in this
-product, would silently delete seven of eight hair colours the first time a hair
-PNG landed.
+The premise stands and is why a swap was never on the table. Colour in the
+character system is a *runtime parameter* — 4 skin × 8 hair × 8 top ramps,
+resolved at render and never stored — and a layer that resolves to a PNG
+**bypasses it entirely**, so the per-layer art-swap contract that works
+everywhere else would silently delete seven of eight hair colours the first time
+a hair PNG landed. Keeping the traits *and* using PNGs is 132 files before a
+single wearable.
 
-Keeping the traits *and* using PNGs is **132 files** before a single wearable,
-multiplying four ways with every colour added later.
+**What was wrong is the conclusion drawn from it.** `ROOMS_BOUNDARY §14.2`
+offered two routes and dismissed the cheaper one as *"ceilinged by
+hand-authoring"* — reasoning about how the sprite is **drawn** without ever
+measuring how it is **displayed**. At `64 × 96` into a `112 × 168` rectangle, a
+manager pixel covered **1.75 room units** against the painted shell's exactly one:
+the figure was the only object in the world rendered coarser than the world and
+then magnified into it, which is *simplistic, flat and geometric* whatever it is
+drawn like.
 
-`docs/ROOMS_BOUNDARY.md §14` sets out the two real routes — raise the drawn
-fidelity in place (costs no art, ceilinged by hand-authoring) or add a
-**tinted-mask pipeline** (reaches the bar, costs a new rendering path and ~29
-authored masks). **Nothing was done**: the customiser is `CLOSED — production
-verified` and the direction says not to reopen it.
+Closed by **raising the canvas to the room's own resolution** and rewriting the
+shading pass on it. No masks, no new pipeline, no art requested, no trait, index,
+slug, default or guard moved, and the same 11,520 combinations. Twenty-nine
+registry rows changed a `canvas` field and no PNG existed at any of the three
+sizes this canvas has had.
+
+`docs/MANAGER_SPRITE_BOUNDARY.md` is the canonical account, including the
+eighteen defects the render loop found and the ones no test in the suite could
+have. **A tinted-mask pipeline is not refused — it is not needed**, and if
+painted layers are ever commissioned this geometry is what they are painted to.
 
 ### A5 · Twelve of the twenty-four collectibles have no art, and they are 59.5% of every box opened — **art dependency**
 
@@ -172,7 +184,9 @@ catalog change.
 a swap stays a registry row.
 
 **Nothing else is in category A.** Every other v1 system is built, tested and
-reachable; what remains below is polish, activation, or deferred scope.
+reachable; what remains below is polish, activation, or deferred scope. The two
+that remain — **A3** and **A5** — are both art dependencies and neither blocks
+anything: every unpainted slug resolves today.
 
 ---
 

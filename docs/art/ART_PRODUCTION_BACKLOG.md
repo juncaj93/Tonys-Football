@@ -110,22 +110,33 @@ The **selected**, **equipped** and **on-the-shelf** markers stay runtime — the
 
 ---
 
-## Batch D — character identity — **blocked on a decision, not on a brief**
+## Batch D — character identity — **not requested, and no longer blocking anything**
 
-**Corrected 2026-08-09.** This read *"prepared, not requested. M3 defines the layer set; generating layers before that lands would fix a rig that has not been designed."* M3 landed, the rig is designed and closed — six traits, a 64 × 96 canvas, twenty-nine layers — and the constraint that actually blocks this batch is a different one, which nothing had written down.
+**Resolved 2026-08-10.** The decision this batch was waiting on was taken, and it
+was *neither* of the two below: the sprite reached the bar by being **drawn at
+the room's own resolution** instead of at 1.75× it, with a form-shading pass, a
+third tone taken from the locked palette's own ramps, and composite-level contact
+shadows. **No art was requested and none is needed.** `docs/MANAGER_SPRITE_BOUNDARY.md`
+is the account; the canvas is now **112 × 168**.
+
+The table below is kept because it is still the right analysis *if painted layers
+are ever commissioned* — the 132-file arithmetic and the mask convention are both
+unchanged, and this geometry is what such masks would be painted to.
+
+**Corrected 2026-08-09.** This read *"prepared, not requested. M3 defines the layer set; generating layers before that lands would fix a rig that has not been designed."* M3 landed, the rig is designed and closed — six traits, a canvas, twenty-nine layers — and the constraint that actually blocks this batch is a different one, which nothing had written down.
 
 **Colour is a runtime parameter here, and a PNG cannot carry it.** `composeCharacter` attaches a `Paint` to every layer and resolves it against the chosen ramp at render time — 4 skin × 8 hair × 8 top. A layer that resolves to a PNG **bypasses that entirely** (`pngLayers` draws the file as authored), so the first hair PNG to land silently deletes seven of the eight hair colours.
 
 Keeping the traits *and* using PNGs is a file per shape **per colour**: 4 + 48 + 32 + 48 = **132 files** before a single wearable, multiplying four ways with every colour added later.
 
-So this batch cannot be briefed until one of two routes is chosen, and both are commissioner decisions:
+The two routes this batch was blocked on, and what happened to each:
 
-| | Reaches the approved sprite reference | Costs |
-|---|---|---|
-| **Raise the drawn fidelity in place** — better shapes in `lib/character/art/*.ts` | Closer, not all the way | No art, no pipeline. Ceilinged by hand-authoring |
-| **A tinted-mask pipeline** — 2-tone masks recoloured per ramp at render | Yes, and stays fully customisable | A new rendering path, a mask convention, an acceptance gate, and ~29 authored masks |
+| | Reaches the approved sprite reference | Costs | Outcome |
+|---|---|---|---|
+| **Raise the drawn fidelity in place** — better shapes in `lib/character/art/*.ts` | ~~Closer, not all the way~~ **Yes**, once the canvas matched the room | No art, no pipeline | **Taken.** The *"ceilinged by hand-authoring"* judgement was measured against a system whose layers are pixels; these are shapes, so resolution was close to free |
+| **A tinted-mask pipeline** — 2-tone masks recoloured per ramp at render | Yes, and stays fully customisable | A new rendering path, a mask convention, an acceptance gate, and ~29 authored masks registering to each other to the pixel | **Not needed.** Not refused — available if painted layers are ever wanted |
 
-`docs/ROOMS_BOUNDARY.md §14` carries the full account. The one constraint still worth recording from the old entry: **every layer shares one canvas and one anchor**, so layering is compositing rather than per-item positioning.
+`docs/MANAGER_SPRITE_BOUNDARY.md` carries the full account and `docs/ROOMS_BOUNDARY.md §14` the superseded analysis. The one constraint still worth recording from the old entry: **every layer shares one canvas and one anchor**, so layering is compositing rather than per-item positioning.
 
 ---
 

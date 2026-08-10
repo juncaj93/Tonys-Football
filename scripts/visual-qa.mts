@@ -48,6 +48,8 @@ import path from 'node:path';
 import { chromium, type Browser, type Page } from 'playwright';
 import sharp from 'sharp';
 
+import { CANVAS as CHARACTER_CANVAS } from '../lib/character/art/geometry.ts';
+import { CHARACTER_SCALES } from '../components/character/character-view.tsx';
 import { TYPE_FLOOR_PX } from '../lib/design/type.ts';
 import { QUARANTINE_CEILING, quarantineFor } from './visual-qa-quarantine.ts';
 import { CAPTURE } from './visual-qa-capture';
@@ -3935,6 +3937,8 @@ async function checkRoom(page: Page, width: number, state: string): Promise<void
     fail('room', `${at} was meant to have a panel up and has none`);
   }
 
+  await checkManagerBelongsInTheRoom(page, at);
+
   /*
    * **A visitor has nothing that writes.**
    *
@@ -3952,6 +3956,107 @@ async function checkRoom(page: Page, width: number, state: string): Promise<void
       ),
     );
     if (writable) fail('room', `${at} offers a control that would change somebody else's room`);
+  }
+}
+
+/**
+ * The manager stands in the room at the room's own resolution, and casts a
+ * shadow on its floor.
+ *
+ * **This is the gate for the 2026-08-10 sprite-quality pass**, and it is measured
+ * in the browser because the thing it is holding is a *relationship between two
+ * pictures* — the painted shell and the sprite standing on it — which neither
+ * one's own tests can see.
+ *
+ * `lib/rooms/objects.test.ts` pins the authored numbers: the manager's rectangle
+ * is exactly the sprite canvas, so one sprite pixel is one room unit, the same
+ * ratio the shell and every collectible already keep. What that test cannot see
+ * is the **rendered** result: a stylesheet that sized the figure by anything but
+ * the room's own scale would put it back to being a coarser picture magnified
+ * into a finer one, which is the defect the commissioner reported and the
+ * arithmetic would still be green.
+ *
+ * So it compares device pixels per source pixel for the two, and they must
+ * match. No integer is required of either — `docs/HOMEPAGE_CLEANLINESS_BOUNDARY.md`
+ * records that integer scaling is unavailable on these viewports and cannot be
+ * bought (`gcd(1080, 1125, 1170) = 45`). Agreement is the whole property.
+ */
+async function checkManagerBelongsInTheRoom(page: Page, at: string): Promise<void> {
+  const seen = await page.evaluate(
+    ({ canvasWidth, canvasHeight }) => {
+      const room = document.querySelector('[data-room-shell]');
+      const figure = document.querySelector('[data-room-character] [data-character-view]');
+      const shadow = document.querySelector('[data-room-shadow]');
+      if (room === null || figure === null) return null;
+
+      const roomBox = room.getBoundingClientRect();
+      const figureBox = figure.getBoundingClientRect();
+      return {
+        // The room is authored 320 units wide (`lib/parlor/objects.ts`).
+        roomScale: roomBox.width / 320,
+        spriteScaleX: figureBox.width / canvasWidth,
+        spriteScaleY: figureBox.height / canvasHeight,
+        /*
+         * The rendered width, not the element's existence. The first version of
+         * this shadow was a `rounded-[50%] blur-[2px]` span whose arbitrary
+         * utilities Tailwind never emitted — the element was in the DOM at every
+         * width and drew nothing anybody could see. A gate that asks whether a
+         * node exists would have been green on it.
+         */
+        shadow: shadow === null ? null : shadow.getBoundingClientRect().width,
+        shadowAlpha: shadow === null ? '' : getComputedStyle(shadow).backgroundColor,
+        feet: figureBox.bottom,
+        shadowBottom: shadow?.getBoundingClientRect().bottom ?? 0,
+      };
+    },
+    { canvasWidth: CHARACTER_CANVAS.width, canvasHeight: CHARACTER_CANVAS.height },
+  );
+
+  if (seen === null) {
+    fail('room', `${at} draws no manager in the room at all`);
+    return;
+  }
+
+  const drift = Math.abs(seen.spriteScaleX - seen.roomScale) / seen.roomScale;
+  if (drift > 0.02) {
+    fail(
+      'room',
+      `${at} draws the manager at ${seen.spriteScaleX.toFixed(3)} CSS px per sprite pixel in a ` +
+        `room drawn at ${seen.roomScale.toFixed(3)} per room unit — ${(drift * 100).toFixed(1)}% ` +
+        'apart. A figure at a different resolution from the room it stands in reads as pasted on, ' +
+        'whatever it is drawn like.',
+    );
+  }
+
+  if (Math.abs(seen.spriteScaleX - seen.spriteScaleY) > 0.01) {
+    fail(
+      'room',
+      `${at} draws the manager ${seen.spriteScaleX.toFixed(3)} wide by ` +
+        `${seen.spriteScaleY.toFixed(3)} tall per sprite pixel. The figure is stretched.`,
+    );
+  }
+
+  /*
+   * The shadow is the difference between standing in a room and being placed on
+   * a picture of one, and it is the one cue no work on the sprite itself can
+   * supply. Checked for existence and for landing at the feet — a shadow that
+   * has drifted up the wall is worse than none.
+   */
+  const opaque = /rgba?\([^)]*?(?:,\s*([\d.]+))?\)\s*$/.exec(seen.shadowAlpha);
+  const alpha = opaque?.[1] === undefined ? 1 : Number(opaque[1]);
+
+  if (seen.shadow === null || seen.shadow < seen.roomScale * 20 || alpha < 0.15) {
+    fail(
+      'room',
+      `${at} draws no shadow under the manager (width ${String(seen.shadow ?? 'absent')}, ` +
+        `fill ${seen.shadowAlpha || 'none'}), so the figure floats on the rug`,
+    );
+  } else if (Math.abs(seen.shadowBottom - seen.feet) > seen.roomScale * 8) {
+    fail(
+      'room',
+      `${at} puts the manager's shadow ${Math.round(seen.shadowBottom - seen.feet)}px from their ` +
+        'feet. A shadow that is not at the feet is a smudge.',
+    );
   }
 }
 
@@ -4448,7 +4553,9 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
 
     const box = view.getBoundingClientRect();
     const svg = view.querySelector('svg');
-    const rects = svg?.querySelectorAll('rect').length ?? 0;
+    const drawn = [...(svg?.querySelectorAll('rect') ?? [])];
+    const rects = drawn.length;
+    const fills = new Set(drawn.map((el) => el.getAttribute('fill') ?? '')).size;
     const viewBox = svg?.getAttribute('viewBox') ?? '';
 
     const live = document.querySelector('[data-character-customiser] [aria-live="polite"]');
@@ -4467,6 +4574,7 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
       left: box.left,
       right: box.right,
       rects,
+      fills,
       viewBox,
       rendering: getComputedStyle(view).imageRendering,
       /*
@@ -4488,35 +4596,81 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
     return;
   }
 
-  if (seen.viewBox !== '0 0 64 96') {
+  const canvas = `${String(CHARACTER_CANVAS.width)} x ${String(CHARACTER_CANVAS.height)}`;
+
+  if (seen.viewBox !== `0 0 ${String(CHARACTER_CANVAS.width)} ${String(CHARACTER_CANVAS.height)}`) {
     fail(
       'character',
-      `@${String(width)} ${state} draws on viewBox "${seen.viewBox}", not the 64 x 96 canvas ` +
+      `@${String(width)} ${state} draws on viewBox "${seen.viewBox}", not the ${canvas} canvas ` +
         'every layer is authored against. A layer resampled to fit is a layer authored wrong.',
     );
   }
 
   /*
-   * Integer scale, and the *same* integer in both directions. A non-square
-   * factor is how a sprite ends up subtly stretched, which nobody names and
-   * everybody sees.
+   * The *same* factor in both directions, one of the four the component offers,
+   * and a whole number of CSS pixels out of it.
+   *
+   * This used to demand a whole-number factor, which was the right rule for the
+   * old `64 × 96` canvas and is the wrong one for `112 × 168`: at whole
+   * multiples only, the smallest avatar the product could draw would be the full
+   * canvas, which is a poster rather than a row. What the old rule was protecting
+   * is that no edge lands between CSS pixels, and **that** is what is checked
+   * here — both canvas dimensions are even, so every offered half-step still
+   * lands on a whole pixel.
+   *
+   * A non-square factor stays forbidden. It is how a sprite ends up subtly
+   * stretched, which nobody names and everybody sees.
    */
-  const fx = seen.w / 64;
-  const fy = seen.h / 96;
-  if (!Number.isInteger(fx) || !Number.isInteger(fy) || fx !== fy || fx < 1) {
+  const fx = seen.w / CHARACTER_CANVAS.width;
+  const fy = seen.h / CHARACTER_CANVAS.height;
+  const offered = new Set<number>(Object.values(CHARACTER_SCALES));
+
+  if (fx !== fy || !offered.has(fx)) {
     fail(
       'character',
-      `@${String(width)} ${state} draws the 64 x 96 canvas at ${String(seen.w)} x ` +
-        `${String(seen.h)} — ${fx.toFixed(3)}x by ${fy.toFixed(3)}x. Pixel art at a fractional ` +
-        'scale puts every edge between device pixels.',
+      `@${String(width)} ${state} draws the ${canvas} canvas at ${String(seen.w)} x ` +
+        `${String(seen.h)} — ${fx.toFixed(3)}x by ${fy.toFixed(3)}x, which is not one of the ` +
+        `offered scales (${[...offered].join(', ')}).`,
     );
   }
 
-  if (seen.rects < 50) {
+  if (!Number.isInteger(seen.w) || !Number.isInteger(seen.h)) {
+    fail(
+      'character',
+      `@${String(width)} ${state} draws the character at ${seen.w.toFixed(3)} x ` +
+        `${seen.h.toFixed(3)} CSS px. A fractional box puts every edge of the sprite between ` +
+        'CSS pixels, which is the softening a fixed scale exists to prevent.',
+    );
+  }
+
+  if (seen.rects < 200) {
     fail(
       'character',
       `@${String(width)} ${state} draws ${String(seen.rects)} rectangles, which is not a figure. ` +
         'An empty or nearly empty composite means a layer resolved to nothing.',
+    );
+  }
+
+  /*
+   * **The figure has tonal structure**, measured on what the browser was
+   * actually given rather than on what the compositor believes it emitted.
+   *
+   * The regression this exists for shipped inside the sprite-quality pass and
+   * survived every unit test in the character suite: one transposed index in the
+   * shading pass sent every depth back as `1`, the edge test fired on every solid
+   * pixel, and the whole figure rendered in its own outline colour. It is drawn,
+   * it is in the canvas, it stands on the floor, every colour is legal — and it
+   * is a silhouette. Counting distinct fills is what tells the two apart.
+   *
+   * Five ramps of three steps plus ink is the floor a default character clears
+   * comfortably; the broken build produced four.
+   */
+  if (seen.fills < 8) {
+    fail(
+      'character',
+      `@${String(width)} ${state} draws the whole figure in ${String(seen.fills)} colours. ` +
+        'A character with no light and no shade is a silhouette — check that the shading pass ' +
+        'is still producing light, base and shade rather than collapsing to outline.',
     );
   }
 
