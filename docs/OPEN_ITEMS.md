@@ -552,6 +552,19 @@ and printed, and a dev build's message still fails on sight.
 **element name**, and only a dev build produces one. Do not restart the hunt
 merely because the defect still exists. `docs/VISUAL_DEBT.md` item 16.
 
+**New as of 2026-08-10, and it is about the *gate* rather than the defect.**
+Five local sweeps of one build produced 3, 2, 2, 4 and 1 sightings — **two of
+five runs failed on a build whose every other gate was green**, which is the
+condition the quarantine's own header names as a gate that has stopped
+protecting anything. Nothing was changed in response: the ceiling is the reason
+a new mismatch cannot hide, and raising it to make a branch green is exactly the
+move that header argues against. But the arithmetic under it has moved — the
+sweep is **375 captures against the 261 the ceiling was reasoned about**, so a
+fixed per-capture rate now expects proportionally more. **The ceiling and the
+rate want re-deriving together**, against a fresh measurement, by whoever picks
+this up. Do not move either alone, and do not move either to unblock a branch.
+The table is in `docs/VISUAL_DEBT.md`.
+
 ### F2 · Visual debt 1, 2 and 14
 
 The collection's empty-state scroll rhythm; the reveal plate's caption
