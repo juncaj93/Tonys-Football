@@ -239,14 +239,19 @@ export function BoardRow({
         </span>
         {take !== null && (
           /*
-           * One line of the take, clamped.
+           * One line of the take, clamped, and **in prose**.
            *
            * Enough to recognise which one this is when coming back to fix it,
            * and not enough to turn the board into ten paragraphs. `line-clamp-1`
            * rather than a substring, so the truncation happens at the width the
            * reader actually has.
+           *
+           * It was `TYPE.metadata`, which is the display face and uppercase by
+           * design — correct for a dateline or a version number, and wrong for a
+           * sentence somebody wrote. Ten rows of Tony's own words in capitals
+           * read as ten rows of shouting.
            */
-          <span className={`mt-1 line-clamp-1 ${TYPE.metadata} text-ink-500`}>{take}</span>
+          <span className={`mt-1 line-clamp-1 ${TYPE.ledgerNote} text-ink-500`}>{take}</span>
         )}
       </Link>
     </li>
