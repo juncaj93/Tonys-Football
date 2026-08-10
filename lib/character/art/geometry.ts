@@ -153,6 +153,21 @@ export const FACE = Object.freeze({
   cheekY: 40,
 });
 
+/**
+ * The lowest row anything worn on the head may reach.
+ *
+ * Two rows above the brow. Hats used to be authored in offsets from `HEAD.top`
+ * chosen against the old face, and when the features moved every one of them
+ * came down with the skull rather than with the eyes: the winter beanie's band
+ * landed **across both eyes**, the visor's brim on the lash line, and the paper
+ * hat's band through the eyebrows. All three were photographed in the preview
+ * fixtures — which is what the fixtures are for — and none of them is reachable
+ * in v1, so all three would have shipped the day a wearable was awarded.
+ *
+ * `character.test.ts` holds it: nothing in the head slot draws below this row.
+ */
+export const HAT_BRIM = 29;
+
 export const NECK = Object.freeze({ top: 48, bottom: 64, left: 50, width: 12 });
 
 export const TORSO = Object.freeze({

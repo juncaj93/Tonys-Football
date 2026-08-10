@@ -203,12 +203,21 @@ export const HAIR_STYLES: Readonly<Record<string, readonly Op[]>> = Object.freez
   avatar_hair_05: Object.freeze([
     CAP(1, 1),
     /*
-     * The crown comes out **wider than the cap**, so nothing of it survives above
-     * the skull. Cut narrower — which is what a receding hairline looks like on
-     * paper — it leaves two vertical strips of the cap standing at the temples
-     * and above the head, and every balding manager grew a pair of horns.
+     * A **horseshoe**: the crown comes out and a rim of hair stays at the
+     * temples. Both of the obvious cuts are wrong and both were rendered.
+     *
+     * Cut wide, so nothing survives above the skull, and there is no hair left
+     * high enough for a hat to touch — `character.test.ts`'s matrix caught the
+     * visor floating a clear five rows above a balding manager's head.
+     *
+     * Cut high and narrow, against the old taller cap, and the two rim strips
+     * stand *above* the head: every ginger manager grew a pair of horns.
+     *
+     * The cap is a size smaller than the other styles' and the cut is two
+     * columns inside it, which leaves the rim at the temple where a receding
+     * hairline actually keeps it.
      */
-    eraseEllipse(HEAD.cx, HEAD.cy - 11, HEAD.rx + 2, 14),
+    eraseEllipse(HEAD.cx, HEAD.cy - 11, HEAD.rx - 2, 14),
     ...FACE_CUT(HEAD.cy - 6, 4),
     ...SIDEBURNS(18),
     ...BROWS,

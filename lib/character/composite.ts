@@ -320,12 +320,17 @@ export function compositeRuns(composite: Composite): readonly ColourRun[] {
   /*
    * Every pass below is bounded by the layer's own occupied box.
    *
-   * Not premature: measured at 15.6ms per character when each pass walked the
-   * whole canvas, which is a *server component on every page view* and roughly
-   * five times what the old `64 × 96` compositor cost. Three of the four layers
-   * on a plain character occupy under a third of the canvas, and the contact
-   * pass is eight neighbour lookups per pixel, so the bound is most of the
-   * difference. `bounds` is cached per slug beside the tone grid.
+   * Not premature, and measured rather than assumed: **15.6ms per character**
+   * when each pass walked the whole canvas, against **6.5ms** bounded — on a
+   * function that runs inside a server component on every page view, and again
+   * in the browser on every tap in the customiser. Three of the four layers on a
+   * plain character occupy under a third of the canvas, and the contact pass is
+   * eight neighbour lookups per pixel, so the bound is most of the difference.
+   * `bounds` is cached per slug beside the tone grid.
+   *
+   * The bounded version is **byte-identical** on every fixture: a pixel outside
+   * a layer's own box cannot be written by it, and cannot be shadowed by it
+   * either, because the occluder would have to sit outside the box too.
    */
   let top: number = height;
   let bottom = 0;

@@ -1,7 +1,7 @@
 import { ellipse, erase, outline, poly, rect, type Op } from '../sprite';
 
 import { SHORT_SLEEVE_END, SLEEVE_END, shell, sleeves } from './garment';
-import { ARM, AXIS, FACE, HEAD, HELD, TORSO } from './geometry';
+import { ARM, AXIS, FACE, HAT_BRIM, HEAD, HELD, TORSO } from './geometry';
 
 /**
  * The twelve earned wearables.
@@ -34,44 +34,51 @@ const SKULL = HEAD.right - HEAD.left;
 
 export const WEARABLE_ART: Readonly<Record<string, readonly Op[]>> = Object.freeze({
   // ------------------------------------------------------------------ head --
-  /** Tony's Pizza visor — a crown and a brim wider than the head. */
+  /**
+   * Tony's Pizza visor — a crown and a brim wider than the head.
+   *
+   * Everything here is cut to {@link HAT_BRIM} rather than to an offset from
+   * `HEAD.top`. A hat is worn on a *face*, so it is the brow line it has to
+   * clear, and the two move independently.
+   */
   wear_head_pizza_visor: Object.freeze([
-    ellipse(HEAD.cx, HEAD.top + 10, HEAD.rx + 2, 11, 'main'),
-    // Everything below the band belongs to the face.
-    erase(HEAD.left - 8, HEAD.top + 12, SKULL + 17, 30),
+    ellipse(HEAD.cx, HEAD.top + 4, HEAD.rx + 2, 11, 'main'),
+    // Everything below the brim belongs to the face.
+    erase(HEAD.left - 12, HAT_BRIM, SKULL + 25, 30),
     // The brim, wider than the head, sitting on the cut.
-    rect(HEAD.left - 5, HEAD.top + 12, SKULL + 11, 4, 'alt'),
-    ellipse(HEAD.cx, HEAD.top + 14, HEAD.rx + 8, 3, 'alt'),
-    erase(HEAD.left - 12, HEAD.top + 17, SKULL + 25, 10),
+    rect(HEAD.left - 5, HAT_BRIM - 4, SKULL + 11, 4, 'alt'),
+    ellipse(HEAD.cx, HAT_BRIM - 3, HEAD.rx + 8, 3, 'alt'),
+    erase(HEAD.left - 12, HAT_BRIM, SKULL + 25, 10),
     // A pale panel on the front, where a wordmark would go.
-    rect(AXIS - 7, HEAD.top + 4, 14, 5, 'fixed:cream'),
+    rect(AXIS - 7, HAT_BRIM - 12, 14, 5, 'fixed:cream'),
   ]),
 
   /** Winter beanie — the tallest thing the system draws, pom included. */
   wear_head_beanie_winter: Object.freeze([
-    ellipse(HEAD.cx, HEAD.top + 8, HEAD.rx + 2, 15, 'main'),
-    erase(HEAD.left - 6, HEAD.top + 16, SKULL + 13, 30),
-    // The turned-up band.
-    rect(HEAD.left - 3, HEAD.top + 8, SKULL + 7, 8, 'alt'),
+    ellipse(HEAD.cx, HEAD.top + 1, HEAD.rx + 2, 15, 'main'),
+    erase(HEAD.left - 6, HAT_BRIM, SKULL + 13, 30),
+    // The turned-up band, sitting just clear of the brow.
+    rect(HEAD.left - 3, HAT_BRIM - 7, SKULL + 7, 7, 'alt'),
     /*
      * The pom, and the tallest thing the system draws. It overlaps the crown
      * rather than sitting on a stalk above it: drawn clear, the outline pass gives
      * it its own closed silhouette and it reads as a balloon on a string.
      */
-    rect(AXIS - 3, HEAD.top - 6, 6, 8, 'alt'),
-    ellipse(HEAD.cx, HEAD.top - 7, 7, 7, 'fixed:cream'),
+    rect(AXIS - 3, HEAD.top - 9, 6, 8, 'alt'),
+    ellipse(HEAD.cx, HEAD.top - 10, 7, 7, 'fixed:cream'),
   ]),
 
   /** Folded paper cook's hat — tall, square-ish, with a fold down the middle. */
   wear_head_paper_hat: Object.freeze([
     // The puff — three overlapping circles, so a toque reads as cloth rather
     // than as a lampshade, which is what a straight-sided polygon gave.
-    ellipse(AXIS - 10, HEAD.top - 4, 10, 10, 'main'),
-    ellipse(AXIS + 10, HEAD.top - 4, 10, 10, 'main'),
-    ellipse(AXIS, HEAD.top - 9, 12, 12, 'main'),
-    rect(HEAD.left, HEAD.top - 6, SKULL + 1, 15, 'main'),
+    ellipse(AXIS - 10, HEAD.top - 7, 10, 10, 'main'),
+    ellipse(AXIS + 10, HEAD.top - 7, 10, 10, 'main'),
+    ellipse(AXIS, HEAD.top - 12, 12, 12, 'main'),
+    rect(HEAD.left, HEAD.top - 9, SKULL + 1, 14, 'main'),
     // The band it sits on.
-    rect(HEAD.left - 3, HEAD.top + 5, SKULL + 7, 8, 'alt'),
+    rect(HEAD.left - 3, HAT_BRIM - 6, SKULL + 7, 6, 'alt'),
+    erase(HEAD.left - 6, HAT_BRIM, SKULL + 13, 30),
   ]),
 
   // ------------------------------------------------------------------ face --
@@ -94,8 +101,8 @@ export const WEARABLE_ART: Readonly<Record<string, readonly Op[]>> = Object.free
     rect(AXIS - 15, FACE.mouthY - 5, 4, 4, 'main'),
     rect(AXIS + 11, FACE.mouthY - 5, 4, 4, 'main'),
     // The curl at each end, which is the whole joke.
-    rect(AXIS - 17, FACE.mouthY - 9, 3, 6, 'main'),
-    rect(AXIS + 14, FACE.mouthY - 9, 3, 6, 'main'),
+    rect(AXIS - 17, FACE.mouthY - 7, 3, 6, 'main'),
+    rect(AXIS + 14, FACE.mouthY - 7, 3, 6, 'main'),
   ]),
 
   // ------------------------------------------------------------------ body --
