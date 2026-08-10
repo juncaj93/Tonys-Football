@@ -172,3 +172,37 @@ several runs, or better, for a probe that reproduces the trigger rather than
 waiting for it. The `earliest`/`recovered` diff is what such a probe would be
 built to narrow: it says which part of the tree React chose to rebuild, and that
 is a much smaller search than the whole document.
+
+### 2026-08-10 — the sweep grew, the ceiling did not
+
+Recorded because it is a measurement, not a fix, and because the next person to
+see a red visual gate on an unrelated branch should find it here first.
+
+The quarantine's ceiling of **2** was reasoned about against *"a full sweep is
+261 captures"* (`scripts/visual-qa-quarantine.ts`). The sweep is now **124
+states × 3 widths = 372 captures**, and the two local sweeps taken on the
+preseason branch across one build went:
+
+| Run | Sightings | Where |
+|---|---|---|
+| 1 | **3 — over the ceiling, run failed** | `/rooms` @390 · `/profile` @375 · `/slice` @360 |
+| 2 | 2 — at the ceiling, run passed | `/profile` @390 · `/slice` @375 |
+
+Neither run repeated a place, which is the signature the entry above describes
+and is why the first run was **not** treated as a new deterministic mismatch: a
+structural mismatch introduced by a change fires on one state at every width,
+and no state appeared twice in either run.
+
+**Nothing was changed in response.** The ceiling is doing the job it was
+designed for — it is the reason a new mismatch cannot hide — and raising it to
+make a branch green would be the exact move its own header argues against. What
+has changed is the arithmetic underneath it: at a fixed per-capture rate, a 42%
+longer sweep expects 42% more sightings, so the probability of an unrelated red
+run has risen and the two numbers should be re-derived together rather than
+either being moved alone. That is a decision for whoever closes item 16.
+
+**Local rate, this build:** 5 sightings in 744 captures ≈ **1 per 149**, which
+is higher than every figure previously recorded (hosted ~1 per 528–792; the
+first local sighting was 1 in 279). Two sweeps is a thin basis and the estimate
+should be treated as an order of magnitude, exactly as the row above says of
+its own.

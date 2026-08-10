@@ -2257,6 +2257,12 @@ const ALL_STATES: readonly StateName[] = [
    * otherwise the first width would see a different desk from the other two.
    * Every applier involved is idempotent on a fixed slot, so running them again
    * at 375 and 360 reproduces the same rows rather than adding to them.
+   *
+   * The draft-review states above put a **second** kind of paper on that same
+   * desk, and no ordering can hide it: the database survives between widths, so
+   * whatever ran at 390 is still there at 375. `OFFICE_EXPECTATIONS` counts it
+   * rather than working around it — see the note there before reordering
+   * anything in this block.
    */
   'office-ready',
   'office-blocked',
@@ -3976,11 +3982,37 @@ const OFFICE_EXPECTATIONS: Record<
   }
 > = {
   office: { outstanding: 0, pending: 0, bands: [] },
-  'office-ready': { outstanding: 1, pending: 1, bands: ['ready'] },
-  'office-blocked': { outstanding: 1, pending: 1, bands: ['blocked'] },
-  'office-printed': { outstanding: 0, pending: 0, bands: ['published'] },
   /*
-   * The whole desk: one waiting, **two** stamped, one refused, one printed.
+   * **Two ready, and the second one is Tony's draft review.**
+   *
+   * This row said one until the preseason issue existed. The office queue is
+   * deliberately **league-wide and unnarrowed** — `reviewQueue` takes no season
+   * and no kind, because *"is there anything for me at all"* is a question that
+   * cannot be answered by a filtered list. So the moment a preseason issue is
+   * drafted and submitted, it is a decision waiting on the commissioner and the
+   * queue is right to show it.
+   *
+   * It cannot be ordered around. The sweep iterates **width outermost**, and
+   * the database is not reset between widths, so a state photographed before
+   * `office-*` at 390 is still on the desk when `office-*` runs at 375 and 360.
+   * Moving the preseason block after the office block would make 390 correct
+   * and the other two wrong — a worse failure than this one, because it would
+   * look like a width-dependent bug in the queue.
+   *
+   * So the expectation follows the desk rather than the desk following the
+   * expectation, and the counts stay **exact**: this still fails on an
+   * off-by-one, a band that stops being produced, or an item leaking between
+   * screens. What it now also photographs is worth having on its own account —
+   * the queue holding **both kinds of paper at once**, which is the state a
+   * commissioner is actually in on the Tuesday after the draft.
+   */
+  'office-ready': { outstanding: 2, pending: 2, bands: ['ready', 'ready'] },
+  'office-blocked': { outstanding: 1, pending: 1, bands: ['blocked'] },
+  /* The weekly issue and the draft review, both printed. See `office-ready`. */
+  'office-printed': { outstanding: 0, pending: 0, bands: ['published', 'published'] },
+  /*
+   * The whole desk: **two** waiting, **two** stamped, one refused, **two**
+   * printed — where it was one, two, one, one before the draft review.
    *
    * The order is the queue's priority — a thing you can complete above a thing
    * you cannot — so this row is also the assertion that the ordering rule holds
@@ -3998,9 +4030,9 @@ const OFFICE_EXPECTATIONS: Record<
    * state where the recency tie-break inside a band is visible.
    */
   'office-queue': {
-    outstanding: 4,
-    pending: 4,
-    bands: ['ready', 'approved', 'approved', 'blocked', 'published'],
+    outstanding: 5,
+    pending: 5,
+    bands: ['ready', 'ready', 'approved', 'approved', 'blocked', 'published', 'published'],
   },
 };
 
