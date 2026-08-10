@@ -162,6 +162,19 @@ export const MIDSEASON_GAMES: Readonly<Record<number, readonly MidseasonGame[]>>
     [10, 125.36, 4, 97.29],
     [2, 124.83, 3, 100.48],
   ],
+  /*
+   * **Week 9 is the next week's card, and no test plays it.**
+   *
+   * Two things need a week the season has not reached. The
+   * drafted-but-unplayed probe needs a real schedule to arrive as ten rows at
+   * 0.00 — before this existed {@link scheduledMatchupRows} answered `[]` for
+   * week 9 and the probe passed against an empty payload, which is a test
+   * asserting nothing. And the board's featured matchup needs a card for the
+   * week it is naming, which after week 8 closes is week 9.
+   *
+   * The scores are here so a Sunday photograph can be taken of it. Nothing
+   * finalizes week 9, so they never reach a record.
+   */
   8: [
     // The 0.42 loss.
     [1, 139.15, 8, 139.57],
@@ -172,10 +185,22 @@ export const MIDSEASON_GAMES: Readonly<Record<number, readonly MidseasonGame[]>>
     [2, 126.7, 5, 118.02],
     [3, 112.85, 4, 104.19],
   ],
+  9: [
+    [1, 131.44, 9, 127.08],
+    [10, 122.63, 8, 118.91],
+    [2, 129.37, 7, 125.02],
+    [3, 108.16, 6, 101.55],
+    [4, 114.29, 5, 110.73],
+  ],
 };
 
-/** The last week this fixture has a scoreboard for. */
-export const MIDSEASON_LAST_WEEK = 8;
+/**
+ * The last week this fixture has a scoreboard for.
+ *
+ * Nine, one past {@link REHEARSAL_WEEK}, because two probes need a week the
+ * season has not played yet — see the note on week 9 above.
+ */
+export const MIDSEASON_LAST_WEEK = 9;
 
 export interface MidseasonOptions {
   /** Weeks with a real result. Beyond this, see {@link scheduledThrough}. */

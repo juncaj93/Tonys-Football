@@ -1,7 +1,9 @@
 # The midseason rehearsal — week 8 of 2026
 
-**Status:** run. Two defects found and fixed, three contradictions reported and
-deliberately not fixed, everything else measured and green.
+**Status:** run, and **closed out**. Two defects found and fixed here; three
+contradictions reported here and all three now ruled on by the commissioner
+(2026-08-10) — one fixed by the Week 1 rehearsal, two implemented in #89.
+Everything else measured and green.
 
 This is the canonical account of what the lifecycle does after seven finalized
 weeks already exist. Where it disagrees with an older document about midseason
@@ -13,7 +15,8 @@ Four artefacts carry it:
 |---|---|
 | `lib/sleeper/midseason-2026.ts` | The scoreboard — forty games, eighty scores, frozen |
 | `lib/sleeper/midseason-season.ts` | Standing the season up: a deploy's seed, then seven Tuesdays |
-| `lib/slice/midseason-week8.test.ts` | The gate — 45 tests against a real Postgres |
+| `lib/slice/midseason-week8.test.ts` | The gate — 47 tests against a real Postgres |
+| `lib/parlor/receipt.test.ts` · `lib/stats/importance.test.ts` | The two 2026-08-10 rulings, covered where they live |
 | `scripts/week8-rehearsal.ts` | The instrument — plays the same eight weeks and prints everything below |
 
 ---
@@ -263,9 +266,15 @@ is honest and it is a visible gap — see §5.3.
 
 ## 5. Contradictions reported, and deliberately not fixed
 
-Each of these is a commissioner-level decision or outside this rehearsal's scope.
-None is fixed here. The first is pinned by a test that will go **red** the day it
-is addressed, which is the point: it should be a decision, not a slip.
+Each of these was a commissioner-level decision or outside this rehearsal's
+scope. None was fixed *here*. The first was pinned by a test that would go
+**red** the day it was addressed, which was the point: it should be a decision,
+not a slip.
+
+> **All three are now ruled on** (commissioner, 2026-08-10). The findings below
+> stand exactly as written and are the evidence the rulings were made on; each
+> carries its outcome underneath. §5.1 was repaired by the Week 1 rehearsal
+> (#85); §5.2 and §5.3 were ruled on and implemented in **#89**.
 
 ### 5.1 The Slice cannot draft any week of a live season
 
@@ -343,6 +352,34 @@ receipt at all**, and that is correct. He holds roster 4 in 2026; roster ids are
 seasonal (`16 §5.1`) and that seat belonged to two other people in 2024 and 2025.
 `receiptFor` returns null, which is a real state rather than a gap.
 
+> #### RULED — 2026-08-10. Show the current season once it has finalized data
+>
+> > The old behavior of showing the most recent archived season was justified
+> > during preseason because the current season contains no meaningful results.
+> > That justification expires once real finalized weeks exist.
+>
+> Implemented in #89. The switch is on **the thing the old reason was about** —
+> does this season contain a result yet — rather than on a date:
+>
+> | State | What prints |
+> |---|---|
+> | No finalized week in the current season | The most recent **archived** season |
+> | At least one finalized week | **This** season, through that week |
+> | Neither exists | `null` — "No record on file" |
+>
+> The live record is rebuilt from stored games whose week carries a
+> `week_finalizations` row and from **no other week**, which is what makes *"do
+> not infer unfinished results"* mechanical: `season_memberships` mirrors
+> Sleeper's running standings for an open season and **would** include a synced
+> but unclosed week, so it is deliberately not the source. Nothing is blended in
+> either direction, and a live receipt claims a **standing** (`1st through week
+> 8`) rather than a finish — `finalRank` is null by rule.
+>
+> Zack's null becomes a real receipt the moment week 1 closes, which is the first
+> thing this product has ever been able to tell him.
+>
+> `lib/parlor/receipt.test.ts` carries the four ruled states.
+
 ### 5.3 There is no "highest-stakes matchup" selector
 
 The mission asked whether the homepage's matchup selection uses combined record,
@@ -357,6 +394,39 @@ other four games, so the deterministic answer is unambiguous. Nothing consumes
 it. Building the selector would be a new product feature and is out of scope; it
 is recorded here because §4.2 leaves the board's detail slot empty in-season and
 this is the obvious thing that would fill it.
+
+> #### RULED — 2026-08-10. Build a deterministic in-season selector
+>
+> Implemented in #89 as `lib/stats/importance.ts` (the rule, pure) and
+> `featuredCurrentMatchup` in `lib/stats/board.ts` (the reads).
+>
+> **The ranking rule, in order:** combined wins, descending → standings
+> proximity `|rankA − rankB|`, ascending → combined points for, descending.
+> Roster id makes the sort total and is **never** allowed to select.
+>
+> **Refuses rather than fabricates**, which is the ruling's own instruction:
+> `no-candidates`, `not-enough-history` (below two finalized weeks), 
+> `roster-unresolved`, and `no-clear-favourite` — the best game must *strictly*
+> beat the second on the football keys, or nothing is featured.
+>
+> **Two permitted inputs are deliberately unused.** Playoff-position proximity is
+> not *legitimately derivable* mid-season: the field comes from the winners
+> bracket, which has no decided game until January. Head-to-head is computed and
+> carried as evidence but not scored, because a complete round robin makes it
+> zero for most of a season.
+>
+> **The honest limitation:** the league's schedule is not stored — `persistWeeks`
+> drops an all-zero pairing as an unplayed fixture, on purpose — so the pairings
+> for a not-yet-final week come from **Sunday's photograph** (`week_snapshots`),
+> or from the week's stored games in the degraded case where a week synced but
+> its Tuesday declined to close it. Between the Tuesday that closes a week and
+> the Sunday that photographs the next, no pairing is on record and the slot is
+> empty. Closing that gap means persisting the schedule, which is new storage and
+> was not in the ruling's scope.
+>
+> **No claim travels with it.** The face prints two names. Nothing is called
+> *must-win*, *win-and-in* or an *elimination game*, because none of those is
+> provable from a table without the remaining schedule.
 
 ---
 
