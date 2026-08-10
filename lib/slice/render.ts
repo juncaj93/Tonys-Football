@@ -141,7 +141,21 @@ export const HEADLINES = {
   tie: ['Nobody wins', 'Dead level', '{a} and {b} cannot be split'],
   'high-score': ['{m} hangs {n} on the league', '{m} goes off', 'Big afternoon for {m}'],
   'low-score': ['A quiet afternoon for {m}', '{m} never found it', 'Cold week for {m}'],
-  elimination: ['{l} is done for the year', '{w} sends {l} home', 'End of the road for {l}'],
+  /*
+   * The title race, not the season.
+   *
+   * These read *"{l} is done for the year"*, *"{w} sends {l} home"* and *"End of
+   * the road for {l}"* — three claims that the loser has stopped playing. In
+   * this league's bracket that is **false**: Sleeper's six-team draw sends every
+   * playoff loser into a placement game the following week, so a first-round
+   * loser plays twice more and a semifinal loser plays again for third. The
+   * candidate could not fire when they were written (see `lib/stats/stories.ts`),
+   * so nothing untrue was ever printed; the moment it can fire, they would be.
+   *
+   * What the story actually establishes is narrower and is what these now say:
+   * the winner reached the final and the loser cannot.
+   */
+  elimination: ['{l} will not be champion', '{w} goes on, {l} does not', 'No ring for {l} this year'],
   upset: ['{w} was not supposed to win that', '{w} turns one over', '{l} never saw {w} coming'],
   streak: ['{m} makes it {n} in a row', '{n} straight for {m}', '{m} will not lose'],
   'standings-up': ['{m} climbs', '{m} is on the move', '{m} goes up the table'],
@@ -276,7 +290,10 @@ export const KIND_COLOUR = {
   ],
   elimination: [
     'The bracket does not care how the season went before it.',
-    'One afternoon and the year is over.',
+    // Was "One afternoon and the year is over." — the same false claim the
+    // headlines carried. `bodyOf` does not reach this list for an elimination
+    // today, and a line waiting to be wrong is still worth correcting.
+    'One afternoon and the title is somebody else’s.',
   ],
   upset: [
     'The table said one thing and the afternoon said another.',

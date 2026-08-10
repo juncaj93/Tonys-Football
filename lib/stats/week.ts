@@ -1,7 +1,7 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 
 import { type Queryable } from '@/lib/db';
-import { fantasyMatchups, seasons } from '@/lib/db/schema';
+import { fantasyMatchups, seasons, weekFinalizations } from '@/lib/db/schema';
 import { fromCents } from '@/lib/sleeper/reconcile';
 
 import { rosterNames } from './facts';
@@ -215,13 +215,28 @@ export function publishableWeek(
   };
 }
 
-/** Every stored game of a season, ascending, with the seats it needs. */
+/**
+ * Every stored game of a season, ascending, with the seats it needs.
+ *
+ * ## `finalized` and `weekFinalizedAt` answer different questions
+ *
+ * `finalized` is the **season's** books closing in January. It is the right
+ * question for a comparison population — a percentile that shifts under a
+ * published fact makes the fact retroactively wrong — and the wrong question
+ * for *"may this week be printed"*, which is what `week_finalizations` and
+ * `lib/stats/finality.ts` exist to answer. Both are returned so a caller has to
+ * pick one rather than inherit whichever this function happened to compute.
+ */
 export async function seasonWeeks(
   db: Queryable,
   year: number,
 ): Promise<{
   readonly found: boolean;
+  /** The season's books are shut. January, not Tuesday. */
   readonly finalized: boolean;
+  readonly seasonFinalizedAt: Date | null;
+  /** Week → when the Tuesday job closed it. Empty before the first Tuesday. */
+  readonly weekFinalizedAt: ReadonlyMap<number, Date>;
   readonly rows: readonly StoredWeekGame[];
   readonly roster: ReadonlyMap<number, { userId: string; displayName: string }>;
 }> {
@@ -232,7 +247,14 @@ export async function seasonWeeks(
     .limit(1);
 
   if (season === undefined) {
-    return { found: false, finalized: false, rows: [], roster: new Map() };
+    return {
+      found: false,
+      finalized: false,
+      seasonFinalizedAt: null,
+      weekFinalizedAt: new Map(),
+      rows: [],
+      roster: new Map(),
+    };
   }
 
   const rows = await db
@@ -256,12 +278,44 @@ export async function seasonWeeks(
       asc(fantasyMatchups.rosterAId),
     );
 
+  const closed = await db
+    .select({ week: weekFinalizations.week, finalizedAt: weekFinalizations.finalizedAt })
+    .from(weekFinalizations)
+    .where(eq(weekFinalizations.seasonId, season.id));
+
   return {
     found: true,
     finalized: season.finalizedAt !== null,
+    seasonFinalizedAt: season.finalizedAt,
+    weekFinalizedAt: new Map(closed.map((row) => [row.week, row.finalizedAt])),
     rows,
     roster: await rosterNames(db, season.id),
   };
+}
+
+/**
+ * The highest week of a season the Tuesday job has closed. Null before the first.
+ *
+ * The one honest answer to *"what week is it"* that this product holds. Sleeper's
+ * `state.week` rolls over on Tuesday morning — measured, and the reason
+ * `lib/sleeper/weekly.ts` refuses to ask it — and the latest *stored* week can be
+ * a week whose games are half in. A closed week is a week somebody's job decided
+ * was over, which is the same fact the paper on the rack is about.
+ *
+ * A single aggregate rather than {@link seasonWeeks}, because the homepage asks
+ * this on every load and does not need the season's games to answer it.
+ */
+export async function latestFinalizedWeek(
+  db: Queryable,
+  seasonId: string,
+): Promise<number | null> {
+  const [row] = await db
+    .select({ week: sql<number | null>`max(${weekFinalizations.week})` })
+    .from(weekFinalizations)
+    .where(eq(weekFinalizations.seasonId, seasonId));
+
+  const week = row?.week;
+  return week === null || week === undefined ? null : Number(week);
 }
 
 /**

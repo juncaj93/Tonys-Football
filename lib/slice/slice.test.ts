@@ -8,10 +8,11 @@ import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
 import { persistChain } from '@/lib/sleeper/persist';
 import { LEAD_FLOOR, STORY_FLOOR, type StoryCandidate } from '@/lib/stats/stories';
+import { buildWeek } from '@/lib/stats/week';
 
 import { latestEdition } from './edition';
 import { SLICE_EDITIONS, allEditions, resolveEdition } from './editions';
-import { factPacket, margin, points, type FactPacket } from './packet';
+import { assemblePacket, factPacket, margin, points, type FactPacket } from './packet';
 import { MATERIAL, MAX_STORIES, selectStories } from './select';
 import {
   COLOUR,
@@ -501,13 +502,69 @@ describe.skipIf(!hasDatabase)('the Slice, against the imported seasons', () => {
     expect(packet.lead?.kind).toBe('nail-biter');
   });
 
-  it('withholds every result while a season is open', async () => {
-    // 2026 is imported and not finalized. `not-final` rather than a soft version
-    // of the story: a number that can still move must not be printed at all.
+  it('withholds a week the league has not played', async () => {
+    /*
+     * 2026 is imported as a preseason photograph and holds no matchups at all,
+     * so the refusal is `no-season` — `factPacket` reports a season with no
+     * stored game that way, which is a separate (and older) imprecision from the
+     * one below and is left alone here.
+     *
+     * **This assertion used to read `withholds every result while a season is
+     * open`, and that was the defect wearing a passing test.** `factPacket`
+     * asked whether the *season* was finalized, which meant no week of a live
+     * season could ever be printed — every Tuesday from September to January
+     * would have refused. It passed here because 2026 has no games either way,
+     * so the test could not tell the two reasons apart. Finality is now asked
+     * per week (`lib/stats/finality.ts`), and the case this was meant to cover
+     * is the one below.
+     */
     const packet = await factPacket(db!, { season: 2026, week: 1 });
-    expect(packet.refusal).not.toBeNull();
+    expect(packet.refusal).toBe('no-season');
     expect(packet.lead).toBeNull();
     expect(packet.scoreboard).toEqual([]);
+  });
+
+  it('withholds a week that was played and has not been closed', () => {
+    /*
+     * The rule the name above used to claim, stated where it can actually be
+     * exercised: a week with games whose Tuesday has not run prints nothing.
+     *
+     * Asserted against `assemblePacket` because it is the pure half. The
+     * database round trip — a live season whose week *has* been closed, and
+     * therefore does print — is exercised in `lib/rehearsal/playoffs.test.ts`,
+     * where a season is played forward through the deployed Tuesday job.
+     */
+    const roster = new Map([
+      [1, { userId: 'u1', displayName: 'One' }],
+      [2, { userId: 'u2', displayName: 'Two' }],
+    ]);
+
+    const rows = [
+      {
+        week: 9,
+        weekType: 'regular',
+        sleeperMatchupId: 1,
+        rosterAId: 1,
+        rosterBId: 2,
+        pointsACents: 12000,
+        pointsBCents: 9000,
+        winnerRosterId: 1,
+        marginCents: 3000,
+        disputed: false,
+      },
+    ];
+
+    const unclosed = buildWeek({ season: 2026, week: 9, finalized: false, rows, roster });
+    const closed = buildWeek({ season: 2026, week: 9, finalized: true, rows, roster });
+    const shared = {
+      candidates: [],
+      publishableManagerIds: new Set(['u1', 'u2']),
+    };
+
+    expect(
+      assemblePacket({ week: unclosed, rawWeek: unclosed, ...shared }).refusal,
+    ).toBe('not-final');
+    expect(assemblePacket({ week: closed, rawWeek: closed, ...shared }).refusal).toBeNull();
   });
 
   it('renders the same issue twice for the same week', async () => {

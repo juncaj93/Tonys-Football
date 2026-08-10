@@ -40,6 +40,7 @@ import { BoardPanel, ChalkSlate } from '@/components/scene/chalkboard';
 import { chalkboardFor } from '@/lib/stakes/chalkboard';
 import { previewBoard } from '@/lib/stakes/boards';
 import { featuredMatchup, matchupLine } from '@/lib/stats/board';
+import { latestFinalizedWeek } from '@/lib/stats/week';
 import { loadTags } from '@/lib/tags/repository';
 
 /**
@@ -115,6 +116,20 @@ export default async function ParlorPage({
   // seated yet. A zero would make "no tab" and "spent everything" look the same.
   const purse =
     season === null ? null : await wallet(db, { userId: user.id, seasonId: season.id });
+
+  /*
+   * The week the board names, and it had never been supplied.
+   *
+   * `boardFace` has taken a `week` since it was written and this call omitted
+   * it, so the hero fell through to its no-week branch — which meant the largest
+   * object in the room would have read **WEEK ONE** in December. Not stale copy:
+   * a false statement, on every load, for four months.
+   *
+   * The source is the last week the Tuesday job closed, not the calendar and not
+   * Sleeper's `state.week`. Before the first Tuesday of the season it is null and
+   * the hero says WEEK ONE, which is then true.
+   */
+  const closedWeek = season === null ? null : await latestFinalizedWeek(db, season.id);
 
   // What the league can see of them, so the room reflects the Showcase choice.
   const shown = await showcaseFor(db, user.id);
@@ -215,6 +230,7 @@ export default async function ParlorPage({
    */
   const face = boardFace({
     daysUntilKickoff: clock.daysUntilKickoff,
+    week: closedWeek,
     matchup: matchupLine(featured),
   });
   const shell = resolveAsset('zone_parlor_shell');

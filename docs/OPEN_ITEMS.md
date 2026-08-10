@@ -143,6 +143,39 @@ fidelity in place (costs no art, ceilinged by hand-authoring) or add a
 authored masks). **Nothing was done**: the customiser is `CLOSED — production
 verified` and the direction says not to reopen it.
 
+### A5 · The Slice could not have printed one week of the season — **fixed this session**
+
+Found by playing a season forward through the deployed Tuesday job
+(`lib/rehearsal/`). `factPacket` asked whether the **season** was finalized —
+`seasons.finalized_at`, the January close — and passed that as the week's
+`finalized` flag. Every game of a live season therefore came back suppressed
+`season-not-finalized`, `assemblePacket` refused `not-final`, and the draft step
+declined. **Every Tuesday, September to January.**
+
+Nothing would have looked broken: `runTuesday` records a refusal as a *skipped
+step* rather than a failure, so the job returns 200 with a sentence in `skipped`
+and an empty press desk.
+
+`lib/stats/finality.ts` was written for exactly this and names the Slice as one
+of its two consumers; only weekly stakes was ever wired to it, and
+`lib/stakes/facts.ts` records the same correction made from the other side and
+never carried across.
+
+**Fixed.** Finality is asked per week. The season-level flag is untouched where
+it is the right question — the finalized margin and score *populations* still
+read closed seasons only. The old test that should have caught it passed for the
+wrong reason and is now two tests that can.
+
+`docs/PLAYOFF_REHEARSAL.md §3.1`.
+
+### A6 · The homepage board would have read WEEK ONE in December — **fixed this session**
+
+`boardFace` has taken a `week` since it was written; `app/page.tsx` never passed
+one. Not stale copy — a false statement on the largest object in the room, on
+every load, for four months. It now passes the last week the Tuesday job closed,
+which is null before the first Tuesday and therefore says WEEK ONE when that is
+true. `docs/PLAYOFF_REHEARSAL.md §3.2`.
+
 **Nothing else is in category A.** Every other v1 system is built, tested and
 reachable; what remains below is polish, activation, or deferred scope.
 
@@ -370,6 +403,36 @@ still pair a 0–0 fixture as a game. Harmless today — the snapshot only feeds
 comeback detection, which needs a result to flip — but it is one rule living in
 one of three places that could each see the payload.
 
+### E5 · A live elimination story needs the bracket persisted
+
+The product stores `made_playoffs` and `final_rank` and nothing else about the
+postseason's structure. Both are *consequences* of the bracket rather than the
+bracket, so *"who advanced this week"* is not answerable on the Tuesday it
+happened — which means the Slice's `elimination` story is **retrospective**,
+pinned by a test that says so.
+
+The `elimination` candidate itself was fixed this session: it had been derived
+from *"the loser meets no other playoff team again this season"*, which this
+league's bracket makes permanently false — the first-round losers meet each other
+in week 16 for fifth and the semifinal losers meet each other in week 17 for
+third. Measured rather than reasoned: it appears nowhere in the six playoff weeks
+of the two recorded seasons. It now reads the recorded placement, and two
+headline templates changed with it, because *"{l} is done for the year"* would
+have been false the first time it fired.
+
+Making it live is a `playoff_bracket` table fed by the sync. That is a feature,
+it is not in `16`'s v1 list, and it was not built.
+`docs/PLAYOFF_REHEARSAL.md §3.4` and `§5`.
+
+### E6 · A stale standings payload moves the table backwards for a week
+
+Injected and observed. `reconcileSeason` catches it and names both records for
+all ten rosters, but the disagreement is a *warning* rather than a *conflict*, so
+`sync_runs.status` stays `SUCCEEDED`. Deliberate — 2024's records and its weekly
+points disagree permanently, and a run reading `NEEDS_REVIEW` every week would
+teach whoever reads it to stop reading — but a commissioner reading only the
+status would not see it. Recorded as behaviour, not filed as a defect.
+
 ---
 
 ## F — Monitored, not worked
@@ -420,6 +483,19 @@ a blanket re-opening.
 | **Vending machine** | **LATER — gated on an economy simulation** | It does have a distinct purpose (a **deterministic** purchase against the box's random one, which is the anti-frustration valve), so it is not the duplicate surface the mission warns about. But `16 §8`'s seventh range derives vending prices from box EV, and `docs/ECONOMY_SIMULATION.md §115` records that the simulation deliberately does not check them because the feature does not exist. Building it without extending the simulation would put a second token sink beside a box whose price was fixed at 200 four days ago |
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
+
+### G2 · Tonight has no playoff voice, and that is the commissioner's to give it
+
+The board's five possible lines are the kickoff countdown, the standing
+champion, the heaviest finalized game, who has picked up their keys, and which
+seasons are on the books. **There is no playoff or elimination line at all** —
+so there is no precedence rule about the postseason to get right or wrong.
+
+Found while rehearsing week 16, where the expectation had been that
+championship and elimination outrank everything. Reported rather than built: a
+playoff line is new curated copy in Tony's voice, and `CLAUDE.md` reserves that
+for the commissioner. `lib/rehearsal/playoffs.test.ts` pins the current set, so
+the day one is added it reads as a change rather than as a surprise.
 
 ### G1 · The Underground — the decision that is actually wanted
 

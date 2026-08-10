@@ -2,6 +2,7 @@ import { type Queryable } from '@/lib/db';
 import { seasonMemberships, seasons } from '@/lib/db/schema';
 import { activeManagerIds } from '@/lib/league/membership';
 import { finalizedMarginsCents } from '@/lib/stats/facts';
+import { weekFinality } from '@/lib/stats/finality';
 import { standardPolicy } from '@/lib/stats/significance';
 import { weekSnapshot, type WeekSnapshotMap } from '@/lib/stats/snapshot';
 import { deriveStories, type StoryCandidate } from '@/lib/stats/stories';
@@ -318,11 +319,42 @@ export async function factPacket(
     snapshotFor.set(weekNumber, await weekSnapshot(db, { season: input.season, week: weekNumber }));
   }
 
+  /*
+   * Finality is asked **per week**, and the season's own close is only one of
+   * the two answers.
+   *
+   * This used to pass `season.finalized` — `seasons.finalized_at`, the January
+   * close — and the consequence was total: **no week of a live season could
+   * ever be printed.** Every game came back suppressed `season-not-finalized`,
+   * `assemblePacket` refused `not-final`, and the Tuesday job's draft step
+   * declined every week from September to January while reporting success.
+   * Nothing looked broken; the press desk was simply always empty.
+   *
+   * `lib/stats/finality.ts` was written for exactly this and names the Slice as
+   * one of its two consumers — *"the Slice, which will not print an unfinalized
+   * week"* — but only weekly stakes was ever wired to it. A **week** is final on
+   * the Tuesday the job closes it (`week_finalizations`), and that is the claim
+   * the paper needs: the week whose result is being printed has been closed, on
+   * purpose, by the job that owns closing weeks.
+   *
+   * `lib/stakes/facts.ts` records the same correction from the other side, made
+   * during the weekly-stakes slice and not carried across to here.
+   */
+  const finalityOf = (weekNumber: number, hasGames: boolean): boolean =>
+    weekFinality({
+      seasonFinalizedAt: season.seasonFinalizedAt,
+      weekFinalizedAt: season.weekFinalizedAt.get(weekNumber) ?? null,
+      hasGames,
+    }).final;
+
   const forWeek = (weekNumber: number): { raw: WeekRecord; open: WeekRecord } => {
     const raw = buildWeek({
       season: input.season,
       week: weekNumber,
-      finalized: season.finalized,
+      finalized: finalityOf(
+        weekNumber,
+        season.rows.some((row) => row.week === weekNumber),
+      ),
       rows: season.rows,
       roster: season.roster,
     });

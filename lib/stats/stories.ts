@@ -498,52 +498,76 @@ export function deriveStories(input: StoryInput): readonly StoryCandidate[] {
     }
 
     /*
-     * Still alive after this week: a roster that plays *another playoff team* in
-     * a later week. Playing a consolation opponent is not being alive — it is
-     * what the bracket does with you after you lose.
+     * Knocked out of the title race — the loser cannot finish first or second
+     * and the winner does.
+     *
+     * ## The previous rule could not fire, and that was measured
+     *
+     * It read *"still alive = plays another playoff team in a later week"*, and
+     * inferred elimination from the loser having no such game. That is true of a
+     * bracket that simply drops its losers, and **this league's bracket does not
+     * have one**: Sleeper's six-team draw sends the two first-round losers to a
+     * fifth-place game in the semifinal week and the two semifinal losers to a
+     * third-place game in the final week. Every playoff loser meets another
+     * playoff team the following week, so `stillAlive` always contained them and
+     * the candidate was never built.
+     *
+     * Checked rather than reasoned: across the six playoff weeks of the two
+     * recorded seasons, `elimination` appears nowhere — not as a lead, not in
+     * `rest`, not suppressed, not demoted. It was dead code on real data.
+     * `lib/stats/playoff-stories.test.ts` fails on the old rule.
+     *
+     * ## Why the new rule is the recorded placement and not another inference
+     *
+     * `finalRanks` is `season_memberships.final_rank`, derived at import from the
+     * bracket's own placement games (`lib/sleeper/placements.ts`) and never from
+     * a matchup position. So *"the winner finished first or second"* is a fact
+     * the bracket wrote down, exactly like the championship story above it, and
+     * *"the loser did not"* is the same fact about the other side. When it fires
+     * it is true; when the ranks are not in it does not fire at all.
+     *
+     * ## What it therefore cannot do, stated rather than implied
+     *
+     * It is **retrospective**. Ranks one and two exist only once the final has
+     * been played and synced, so the paper printed on the Tuesday of the
+     * semifinal week cannot carry this story — it can only appear in a later
+     * rendering of that week. Making it live needs the bracket itself persisted,
+     * which nothing in this product stores today; that is a feature, and it is
+     * reported rather than invented here.
      */
-    const stillAlive = new Set<number>();
-    for (const row of input.seasonRows) {
-      if (row.week <= week.week) continue;
-      const bothInBracket =
-        input.playoffRosters.has(row.rosterAId) && input.playoffRosters.has(row.rosterBId);
-      if (!bothInBracket) continue;
-      stillAlive.add(row.rosterAId);
-      stillAlive.add(row.rosterBId);
-    }
+    const knockedOut = decided.find((game) => {
+      if (game.loser === null || game.loser.displayName === null) return false;
+      if (!input.playoffRosters.has(game.loser.rosterId)) return false;
+      if (!input.playoffRosters.has(game.winner!.rosterId)) return false;
 
-    if (stillAlive.size > 0) {
-      const knockedOut = decided.find(
-        (game) =>
-          game.loser !== null &&
-          game.loser.displayName !== null &&
-          input.playoffRosters.has(game.loser.rosterId) &&
-          input.playoffRosters.has(game.winner!.rosterId) &&
-          !stillAlive.has(game.loser.rosterId) &&
-          stillAlive.has(game.winner!.rosterId),
-      );
-      if (knockedOut !== undefined) {
-        out.push(
-          marginStory({
-            id: id('elimination'),
-            kind: 'elimination',
-            week,
-            game: knockedOut,
-            intensity: classify(input.policy, {
-              margin: knockedOut.margin,
-              percentile: percentileOf(
-                input.marginPopulationCents,
-                knockedOut.marginCents,
-                input.policy.minPopulation,
-              ),
-              isSeasonLargest: false,
-            }),
-            percentile: null,
-            significance: 470,
-            note: 'the loser meets no other playoff team again this season; the winner does',
+      const winnerRank = input.finalRanks.get(game.winner!.rosterId);
+      const loserRank = input.finalRanks.get(game.loser.rosterId);
+      if (winnerRank === undefined || loserRank === undefined) return false;
+
+      return winnerRank <= 2 && loserRank > 2;
+    });
+
+    if (knockedOut !== undefined) {
+      out.push(
+        marginStory({
+          id: id('elimination'),
+          kind: 'elimination',
+          week,
+          game: knockedOut,
+          intensity: classify(input.policy, {
+            margin: knockedOut.margin,
+            percentile: percentileOf(
+              input.marginPopulationCents,
+              knockedOut.marginCents,
+              input.policy.minPopulation,
+            ),
+            isSeasonLargest: false,
           }),
-        );
-      }
+          percentile: null,
+          significance: 470,
+          note: 'the winner reached the final by recorded placement; the loser did not',
+        }),
+      );
     }
   }
 
