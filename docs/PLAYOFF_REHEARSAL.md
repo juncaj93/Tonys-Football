@@ -196,7 +196,7 @@ sixteen drafts.
    bracket state ruling 1 declines to persist, so the only honest states
    available (*championship week*, *champion confirmed*, *season complete*) are
    all copy slots rather than data gaps. Those three are the slots to fill when
-   the commissioner writes them. `docs/OPEN_ITEMS.md` **G3**.
+   the commissioner writes them. `docs/OPEN_ITEMS.md` **G4**.
 3. **Placements follow the bracket alone, so a bracket ahead of its own games
    would write a finish for a game never stored.** Found while building the
    scheduled-but-unplayed injection, which failed first time for exactly this
@@ -212,7 +212,7 @@ sixteen drafts.
    policy was deliberately not changed here** — 2024's records and its weekly
    points disagree permanently, and a run reading `NEEDS_REVIEW` every week
    would teach whoever reads it to stop reading. If it deserves stronger
-   visibility that is a separate hardening task. `docs/OPEN_ITEMS.md` **E7**.
+   visibility that is a separate hardening task. `docs/OPEN_ITEMS.md` **E8**.
 
 ---
 

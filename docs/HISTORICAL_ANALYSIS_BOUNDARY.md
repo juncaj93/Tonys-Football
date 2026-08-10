@@ -289,3 +289,174 @@ them.
   story — is not implemented here. `lib/slice/select.ts` already does duplicate
   suppression by `gameKey` for week stories, and extending it to historical facts
   needs a consumer first.
+
+---
+
+## 9. Commissioner rulings — 2026-08-10
+
+**The implementation merged in PR #83 / `28bddb4` is approved, and the
+architecture is approved: deterministic facts derived from the existing verified
+fantasy tables · explicit typed historical scope · permanent-manager resolution ·
+disputed-data exclusions · mechanically banned historical overclaims · no invented
+rivalries or relationships · no `league_events` persistence spine · no AI or
+editorial prose as a source of fantasy fact · an unsupported-story registry for
+concepts current data cannot prove.**
+
+**Do not redesign this architecture.**
+
+Both rulings below were checked against the merged code before being recorded.
+**Neither required a behavioural change**, so none was made — this section is the
+record, not a repair.
+
+### R1 — Blowout thresholds: keep the empirical calibration
+
+**RULING: keep the newer empirical calibration. The 20 / 40 / 60 bands suggested
+in `PROJECT_SPEC/07_AI_STORY_ENGINE_AND_EVENT_ANALYSIS.md §7.1` are NOT
+restored.**
+
+The measured archive shows a 20-point margin is far too common to carry
+meaningful *blowout* significance:
+
+| | |
+|---|---|
+| Measured real games | **162** |
+| Median margin | **~20.6 points** |
+| Share of games at or above 20 | **~54%** |
+
+So `lib/stats/significance.ts` wins over the older suggestion.
+
+**The durable product principle, as ruled:**
+
+> Historical significance thresholds should be deterministic, documented, and
+> calibrated against the actual verified league distribution. A label such as
+> *"blowout"* should identify meaningfully unusual outcomes rather than describe
+> roughly half the league's games.
+
+Three standing constraints come with it:
+
+- **No subjective AI classification of blowouts.** The tier is arithmetic over a
+  stored policy, and `MANDATE §9` already forbids SW choosing emotionally loaded
+  language without a Stats classification.
+- **No thresholds that move week to week.** The policy is static, content-hash
+  versioned, and stored append-only, so a fact stays interpretable against the
+  policy it was classified under.
+- **Any future recalibration is an intentional, documented product decision** —
+  never a silent change to what history meant. `significance_policies` is
+  append-only by trigger precisely so a recalibration writes a *new* version
+  rather than re-meaning the old one.
+
+**Why this cannot quietly reopen.** `lib/stats/significance.test.ts` asserts
+`handled.minPercentile === 70` and carries the 20.6 / 54% measurement beside it,
+so restoring a bare `>= 20` turns the suite red. The ruling is therefore enforced
+by a test that already existed, not by memory.
+
+`07 §7.1` is annotated as superseded on this point, so a future session reading
+the older document does not find the suggestion presented as unresolved.
+
+### R2 — Play-everyone / all-play: keep the neutral measurement
+
+**RULING: keep the neutral play-everyone measurement. `lib/stats/luck.ts`
+remains.**
+
+The disagreement between `07 §7.5` (which lists it as a measure) and
+`docs/DATA_AUDIT.md §9` (which called it *"not recommended"*) is resolved:
+
+> Play-everyone / all-play is permitted as a **secondary contextual historical
+> measurement**, provided it is explicitly labelled and derived from the same
+> verified eligible games.
+
+**It is NOT**, and none of these may be built on it:
+
+- an alternative official standings system;
+- a replacement for actual wins and losses;
+- a *"true record"*;
+- a luck ranking;
+- a manager-quality ranking;
+- a fraud detector;
+- evidence that a manager *"deserved"* a different record;
+- permission to invent narrative conclusions.
+
+**Verified Sleeper results remain authoritative.**
+
+Acceptable conceptual presentation is a clearly labelled pair:
+
+```
+Actual record:        X–Y
+Play-everyone record: A–B
+```
+
+The deterministic layer supplies the measurement and the **signed difference**.
+The editorial layer may point out an interesting contrast; it may **not** turn
+the metric into an unsupported factual claim about luck, skill, fraud,
+deservingness or managerial quality.
+
+**The disputed-week behaviour is preserved as ruled.** Where a week's data
+integrity makes the complete all-play comparison unreliable, the **whole week is
+excluded** rather than an asymmetric comparison being constructed. In the
+recorded archive that costs 2024 weeks 13 and 14, named on the fact, with the
+support dropping to `partial`.
+
+**How the merged code already satisfies each clause:**
+
+| Clause | Where |
+|---|---|
+| Explicitly labelled | `COMPUTED_NOT_PLAYED` is a required field on the fact and the **first** line of its evidence |
+| Same verified eligible games | The actual record is counted over exactly the weeks the measurement used |
+| Not a ranking | `lines` are sorted **alphabetically by display name**, never by delta |
+| No luck score, no fraud flag | Asserted by a test that inspects the emitted field names for `fraud`, `luck` and `expected` |
+| Signed difference only | `scheduleDelta`, documented as *"a subtraction, not a verdict"* |
+| Whole-week exclusion | `excludedWeeks` on the fact; a test proves a clean game in a spoiled week is dropped with it |
+
+### Historical scope remains mandatory
+
+Preserved and reaffirmed. These are **not** interchangeable merely because the
+numeric result is currently identical:
+
+- *highest score since 2024*;
+- *highest score in the available archive*;
+- *highest score ever*.
+
+Every historical fact must carry enough typed scope for a downstream consumer to
+describe accurately **what was actually measured**. The mechanical prevention of
+scope inflation — `all-time`, `ever`, `in league history`, `franchise record` —
+stays in force wherever the available chain cannot establish the claim.
+
+**The validator may not be weakened for editorial convenience.**
+
+### Unsupported categories remain unsupported
+
+**Do not create infrastructure merely to make a currently unsupported story
+possible.** The boundaries in `lib/stats/unsupported.ts` remain in force:
+reconstructed Monday comebacks for seasons without snapshots · remaining-Monday
+exposure without schedule evidence · trades and trade revenge without transaction
+history · bench-decision stories without lineup and player-score history ·
+projection and upset narratives · unsupported playoff *"must win"* claims ·
+invented rivalries · unbounded all-time history · deferred casino history.
+
+If a future **approved** workstream legitimately gives the data model support for
+one of these, the intentionally failing registry guard in
+`lib/stats/unsupported.test.ts` is the **signal to reassess that category** — it
+is not an obstacle. **Do not bypass the guard.**
+
+### No event spine
+
+The `league_events` deferral remains explicit. **Do not create it to "finish"
+historical analysis.** The pure derivation over the existing authoritative tables
+is intentional. A future persistence layer requires a demonstrated architectural
+need and a separate commissioner decision.
+
+### Consumers are separate workstreams
+
+**Historical analysis is not to be wired into a product surface from the thread
+that built it.** Potential consumers — the normal Tuesday Slice, the
+preseason/offseason Slice, the Timeline, future editorial candidate generation —
+are each their own workstream, and those surface owners deliberately select which
+deterministic facts they consume.
+
+> The existence of a historical fact does not mean it automatically deserves
+> publication. Accuracy and editorial relevance remain separate decisions.
+
+### Status
+
+**Deterministic Historical Analysis — COMPLETE AND MERGED.** R1 and R2 resolved
+2026-08-10. No open questions remain in this workstream.

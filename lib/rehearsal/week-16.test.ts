@@ -427,7 +427,7 @@ describe.skipIf(!hasDatabase)('the week 16 playoff rehearsal', () => {
      * Pinned as it stands rather than invented: a playoff line is new curated
      * copy in Tony's voice, which `CLAUDE.md` reserves for the commissioner, and
      * the deterministic half it would need — *who advanced* — is a bracket fact
-     * this product deliberately does not persist. `docs/OPEN_ITEMS.md` **G3**.
+     * this product deliberately does not persist. `docs/OPEN_ITEMS.md` **G4**.
      */
     const keys = (await tonightBoard(db!)).map((line) => line.key);
 
