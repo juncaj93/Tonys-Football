@@ -172,3 +172,52 @@ several runs, or better, for a probe that reproduces the trigger rather than
 waiting for it. The `earliest`/`recovered` diff is what such a probe would be
 built to narrow: it says which part of the tree React chose to rebuild, and that
 is a much smaller search than the whole document.
+
+### 2026-08-10 — the sweep grew, the ceiling did not
+
+Recorded because it is a measurement, not a fix, and because the next person to
+see a red visual gate on an unrelated branch should find it here first.
+
+The quarantine's ceiling of **2** was reasoned about against *"a full sweep is
+261 captures"* (`scripts/visual-qa-quarantine.ts`). The sweep is now **125
+states × 3 widths = 375 captures**, and five local sweeps taken on the preseason
+branch across essentially one build went:
+
+| Run | Sightings | Result | Where |
+|---|---|---|---|
+| 1 | **3** | failed | `/rooms` @390 · `/profile` @375 · `/slice` @360 |
+| 2 | 2 | passed | `/profile` @390 · `/slice` @375 |
+| 3 | 2 | passed | `/door` @360 · `/slice` @360 |
+| 4 | **4** | failed | `/slice` @390 · `/counter/collection` @375 · `/slice` @375 · `/` @360 |
+| 5 | 1 | passed | `/profile` @360 |
+
+**Twelve sightings, and no place repeated across any two runs.** That is the
+signature the entry above describes, and it is why none of these was treated as
+a new deterministic mismatch: a structural mismatch introduced by a change fires
+on one state at *every* width, so it appears three times in one column. Nothing
+here ever appeared twice.
+
+The one sighting that landed on a **newly added** state (`preseason-teams`,
+run 4) was checked rather than assumed: that state alone, **18 captures across
+six runs, produced zero**. A state is not guilty because the background landed
+on it once.
+
+**Two of five runs failed, on a build whose every other gate was green.** That
+is the condition the quarantine header names as a gate that has stopped
+protecting anything — *"a failure with nothing to do with the change under
+review"* — and it is now reached by arithmetic rather than by bad luck: at a
+fixed per-capture rate a 44% longer sweep expects 44% more sightings, while the
+ceiling that admits them has not moved.
+
+**Nothing was changed in response, and that is deliberate.** The ceiling is the
+reason a new mismatch cannot hide, and raising it to make a branch green would
+be exactly the move its own header argues against. The two numbers want
+re-deriving *together*, against a fresh rate measurement, and that is a decision
+for whoever closes item 16 — not a side effect of shipping a feature.
+
+**Local rate, this build:** 12 sightings in 1,866 captures ≈ **1 per 156** —
+higher than every figure previously recorded (hosted ~1 per 528–792; the first
+local sighting was 1 in 279). Five sweeps is still a thin basis and the estimate
+should be treated as an order of magnitude, exactly as the row above says of its
+own. **The hosted runner is not obviously worse:** the same branch passed the
+hosted visual gate first time on `e3a2fac`.

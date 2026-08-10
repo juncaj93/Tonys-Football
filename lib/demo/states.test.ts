@@ -118,8 +118,40 @@ describe('the demo catalog', () => {
      */
     const OFFICE_QUEUE = 4;
 
+    /*
+     * The draft review, added with the preseason issue
+     * (`docs/PRESEASON_SLICE_BOUNDARY.md`).
+     *
+     * The mandate's list predates it. Five, because the feature has five
+     * genuinely different screens and no two of them imply each other:
+     *
+     *  - **the board at zero** — what a commissioner meets on the Sunday after
+     *    draft night, and the state the whole editor exists to move out of. A
+     *    progress line only ever photographed healthy is a progress line nobody
+     *    has checked.
+     *  - **the board part-way** — four of ten, which is what a real session
+     *    looks like when it is interrupted, and the only state where the board
+     *    holds both a written row and a blank one.
+     *  - **the board complete** — where the print control appears. Its
+     *    *absence* in the two above is what makes its presence here mean
+     *    something.
+     *  - **on the desk** — the issue drafted and waiting on a stamp, which is
+     *    the proof that the preseason paper goes through the same approval gate.
+     *  - **on the rack** — printed, which is the only one a manager ever sees.
+     *
+     * The two editor screens are not in this count: they are two rows of the
+     * part-way board and share its seat, photographed from one database so the
+     * pair proves more than either would alone.
+     */
+    const PRESEASON = 5;
+
     expect(DEMO_STATES.length).toBe(
-      REQUIRED.length + CARRIED_BEYOND_THE_LIST + PRESS_DESK + CHAMPIONSHIPS + OFFICE_QUEUE,
+      REQUIRED.length +
+        CARRIED_BEYOND_THE_LIST +
+        PRESS_DESK +
+        CHAMPIONSHIPS +
+        OFFICE_QUEUE +
+        PRESEASON,
     );
   });
 

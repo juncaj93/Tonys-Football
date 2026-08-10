@@ -1,6 +1,7 @@
 import { type Intensity } from '@/lib/stats/significance';
 import { type StoryCandidate, type StoryDetail } from '@/lib/stats/stories';
 
+import { draftVocabulary } from './draft-vocabulary';
 import { margin, points, type FactPacket, type ScoreLine } from './packet';
 
 /**
@@ -73,6 +74,69 @@ export interface Edition {
   readonly column: string;
   /** Set when there is nothing to print at all, in the shop's voice. */
   readonly nothingToPrint: string | null;
+  /**
+   * The draft-review special's own sections. **Undefined on every weekly issue.**
+   *
+   * An optional field rather than a discriminated union, and the reason is
+   * `editionHash`: `canonical()` drops `undefined`, so every weekly issue
+   * already published hashes to exactly what it hashed to before this field
+   * existed. A required `kind` discriminator would have moved every one of them,
+   * and a version's hash is what a commissioner's approval names.
+   *
+   * Presence *is* the discriminator, and `slice_issues.kind` records the same
+   * fact in the database so a query never has to open the JSON to find out.
+   */
+  readonly preseason?: PreseasonSections;
+}
+
+/**
+ * The preseason issue, as printed.
+ *
+ * Every string here was either curated in {@link PRESEASON} / `DRAFT_PHRASES` or
+ * came out of a verified stored draft pick — except `take` and `concern`, which
+ * are **Tony's editorial voice supplied by the commissioner** and are the only
+ * free text this product prints. `lib/slice/preseason.ts` records what each is
+ * checked against and why the two differ.
+ */
+export interface PreseasonSections {
+  /** Tony's draft board: every manager, every grade, in one glance. */
+  readonly board: readonly { readonly manager: string; readonly grade: string }[];
+  /** Countable league-wide facts. Guarded — an unsupported one is absent. */
+  readonly snapshot: readonly { readonly label: string; readonly value: string }[];
+  readonly teams: readonly PreseasonTeamSection[];
+  /** Verified history, used sparingly. Empty when there is none worth a line. */
+  readonly history: readonly { readonly label: string; readonly value: string }[];
+  /**
+   * Week one's fixtures, when the schedule exists.
+   *
+   * No spread, no favourite, no projection — two names and the word between
+   * them. Empty when the league has not drawn a schedule yet, which is the
+   * ordinary state until the league drafts.
+   */
+  readonly weekOne: readonly { readonly left: string; readonly right: string }[];
+}
+
+export interface PreseasonTeamSection {
+  readonly manager: string;
+  readonly grade: string;
+  /** `Picked fourth`. Null when no pick of theirs recorded a board position. */
+  readonly slot: string | null;
+  /** Tony's take. The commissioner's words, in Tony's voice, unaltered. */
+  readonly take: string;
+  /** The first few picks, as a board reads them. */
+  readonly picks: readonly {
+    readonly label: string;
+    readonly player: string;
+    readonly position: string | null;
+  }[];
+  /** How many of each position, over the whole draft. `RB 5 · WR 6 · …`. */
+  readonly positions: string | null;
+  /** Countable sentences about how they drafted. At most two, each guarded. */
+  readonly shape: readonly string[];
+  /** Tony's favourite of their picks. Null when he did not name one. */
+  readonly bestPick: string | null;
+  /** Tony's one concern. Null when he did not raise one. */
+  readonly concern: string | null;
 }
 
 export interface RenderedScore {
@@ -94,7 +158,22 @@ export interface RenderedScore {
  * editions"* a property of the data rather than a styling decision somebody makes
  * per week.
  */
-export type EditionCharacter = 'title' | 'record' | 'loud' | 'ordinary' | 'quiet' | 'empty';
+export type EditionCharacter =
+  | 'title'
+  | 'record'
+  | 'loud'
+  | 'ordinary'
+  | 'quiet'
+  | 'empty'
+  /**
+   * The draft-review special.
+   *
+   * Not derived from significance like the other six, because there is no game
+   * to be significant — it is derived from *which pipeline ran*, which is a
+   * stronger statement of the same kind: the paper knows what it is before it
+   * knows how loud it is.
+   */
+  | 'preseason';
 
 /**
  * The verb for each tier, and nothing louder than the tier earned.
@@ -350,6 +429,61 @@ export const COLUMN: Record<EditionCharacter, readonly string[]> = {
   empty: [
     'Tony has nothing for you this week, and would rather say so.',
   ],
+  /*
+   * The preseason column. Tony sending the league into the year.
+   *
+   * Factless like every other column, and deliberately not triumphant: he has
+   * graded ten drafts and none of them has played a down, which is a thing he
+   * would say out loud.
+   */
+  preseason: [
+    'Tony has been wrong about a draft before and expects to be again. The oven is on either way.',
+    'Ten drafts, ten opinions, and not one of them worth a point until Sunday.',
+  ],
+} as const;
+
+/**
+ * The draft-review special's curated copy.
+ *
+ * Same rules as everything above it: **no literal digits**, no proper nouns
+ * except Tony, no claim that could be wrong. A preseason paper is the easiest
+ * place in this product to write something that reads well and asserts
+ * something nobody checked, so the furniture asserts nothing at all and every
+ * fact on the page arrives from the packet.
+ *
+ * `{s}` is the season, which is the one number the headline may carry — and it
+ * is in the packet's allowed numbers like any other.
+ */
+export const PRESEASON = {
+  headline: [
+    'The board is full',
+    'Ten drafts, and Tony has read them all',
+    'Everybody has a team now',
+  ],
+  deck: [
+    'Tony grades the lot before a down is played',
+    'The drafting is done. The arguing starts here',
+  ],
+  body: [
+    'Nobody has scored a point yet, which has never once stopped this shop having an opinion. ' +
+      'Tony went through every board, wrote down what he thought, and is prepared to be held to it.',
+    'The drafts are in and the season is not. Tony read every board twice, put a grade on each ' +
+      'one, and will hear complaints at the counter like always.',
+  ],
+  /**
+   * The dateline's second half. **Not** the flag's words.
+   *
+   * A weekly dateline says *when* — `Season 2025 · Week 14` — and the masthead
+   * flag says *what kind of paper this is*. The first version had both say
+   * `Draft Review`, so the sheet printed the same two words four rows apart,
+   * which is the duplication `render.ts` already refuses in a story's frame and
+   * its colour. This says when: after the draft, before the season.
+   */
+  dateline: 'Preseason',
+  /** The masthead flag, so a special edition is recognisable before a word of it is read. */
+  flag: 'Draft review',
+  /** What the desk says when a review is still missing. Never printed to a reader. */
+  incomplete: 'Tony has not finished reading the boards.',
 } as const;
 
 /**
@@ -797,6 +931,18 @@ export function houseWords(): ReadonlySet<string> {
     ...Object.values(VERB),
     ...Object.values(REFUSALS),
     ...Object.values(PHRASES),
+    /*
+     * The preseason issue's vocabulary, from both halves of it.
+     *
+     * `PRESEASON` is this file's own curated copy; `draftVocabulary()` is the
+     * spelled numbers, position words and phrase templates the preseason
+     * renderer assembles sentences from. Both are needed and neither is
+     * sufficient — the rule is *if the renderer can print it, `houseWords()`
+     * has to be able to see it*, and half the preseason page is phrased with
+     * words that live in a different module.
+     */
+    ...Object.values(PRESEASON).flat(),
+    draftVocabulary(),
   ].join(' ');
 
   const words = new Set<string>();

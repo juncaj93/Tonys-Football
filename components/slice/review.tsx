@@ -12,6 +12,7 @@ import {
 import { TAP_TARGET } from '@/components/shell';
 import { stamp } from '@/lib/design/moment';
 import { TYPE } from '@/lib/design/type';
+import type { PreseasonPacket } from '@/lib/slice/preseason';
 import { type ReviewDetail, type ReviewEvent } from '@/lib/slice/publication';
 
 /**
@@ -195,6 +196,26 @@ export function VerdictPanel({ detail }: { detail: ReviewDetail }) {
  * answered. The screen's job is to make that answer arguable, not to re-make it.
  */
 export function PacketPanel({ detail }: { detail: ReviewDetail }) {
+  /*
+   * Two packets, two panels.
+   *
+   * A preseason issue has no candidates, no significance scores and no
+   * suppressions — there was no game to score — so the weekly panel would
+   * render four empty sections and one useful one. What a commissioner needs to
+   * see about a draft review is different in kind: which draft it read, how many
+   * grades are in, and what Tony wrote that the draft does not contain.
+   */
+  if ('kind' in detail.packet) {
+    /*
+     * Narrowed by the discriminant itself rather than by a helper, and that is a
+     * boundary decision: a runtime import from `lib/slice/preseason` would pull
+     * the fact layer — and through it the database — into a display component's
+     * import graph, which `presentation.test.tsx` refuses. A weekly `FactPacket`
+     * has no `kind` at all, so `in` is the whole test.
+     */
+    return <PreseasonPacketPanel packet={detail.packet} />;
+  }
+
   const packet = detail.packet;
   const candidates = [
     ...(packet.lead === null ? [] : [{ ...packet.lead, role: 'Lead' as const }]),
@@ -288,6 +309,89 @@ export function PacketPanel({ detail }: { detail: ReviewDetail }) {
 }
 
 /**
+ * What a draft review was built from.
+ *
+ * The counterpart of the weekly panel above, and deliberately not a subset of
+ * it: the questions are different. *"Has Tony finished"* replaces *"what led"*,
+ * and the one thing this screen has that no other does is the **advisories** —
+ * the numbers and names inside Tony's own takes that the draft does not
+ * contain.
+ *
+ * Advisories do not block publication and the panel says so in as many words.
+ * They exist because Tony's take is the only free text this product prints: it
+ * is his opinion and he is the author, so the checker reports rather than
+ * refuses (`lib/slice/preseason.ts`). A reviewer who sees *"Bijan"* listed under
+ * a manager who did not draft him has been handed exactly the thing worth a
+ * second look.
+ */
+function PreseasonPacketPanel({ packet }: { packet: PreseasonPacket }) {
+  const advisories = packet.advisories ?? [];
+
+  return (
+    <div data-review-preseason-packet="">
+      <SectionHeading ink="text-ink-500">What it was built from</SectionHeading>
+
+      <div className="mt-2">
+        <Ledger>
+          <LedgerRow label="Draft" value={packet.draft?.sleeperDraftId ?? 'none'} />
+          <LedgerRow label="Picks" value={packet.draft?.totalPicks ?? 0} />
+          <LedgerRow
+            label="Reviewed"
+            value={`${String(packet.reviewed)} of ${String(packet.total)}`}
+          />
+        </Ledger>
+      </div>
+
+      {packet.outstanding.length > 0 && (
+        <>
+          <SectionLabel>Still waiting on Tony</SectionLabel>
+          <div className="mt-1.5">
+            <Ledger>
+              <LedgerRow kind="name" label={packet.outstanding.join(' · ')} />
+            </Ledger>
+          </div>
+        </>
+      )}
+
+      {advisories.length > 0 && (
+        <>
+          <SectionLabel>In Tony’s takes, not in the draft</SectionLabel>
+          <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>
+            Worth a look, and not a reason to hold the paper. A take is Tony’s opinion, so its
+            words are his rather than the draft’s.
+          </p>
+          <div className="mt-1.5">
+            <Ledger>
+              {advisories.map((advisory, index) => (
+                <LedgerRow
+                  key={`${advisory.manager}-${advisory.violation.value}-${String(index)}`}
+                  label={advisory.manager}
+                  value={advisory.violation.value}
+                />
+              ))}
+            </Ledger>
+          </div>
+        </>
+      )}
+
+      <SectionLabel>Facts this issue may use</SectionLabel>
+      <div className="mt-1.5">
+        <Ledger>
+          <LedgerRow label="Numbers">
+            <span className="tabular-nums">
+              {packet.allowedNumbers.length === 0 ? 'none' : packet.allowedNumbers.join(' · ')}
+            </span>
+          </LedgerRow>
+          <LedgerRow label="Names">
+            {packet.allowedNames.length === 0 ? 'none' : packet.allowedNames.join(' · ')}
+          </LedgerRow>
+        </Ledger>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Everything that has happened to this version, oldest first.
  *
  * `08 §22`: *"all edits and approvals must be audit logged."* Append-only in the
@@ -352,6 +456,7 @@ export function QueueRow({
   headline,
   season,
   week,
+  kind = 'weekly',
   version,
   status,
   publishable,
@@ -360,6 +465,14 @@ export function QueueRow({
   headline: string;
   season: number;
   week: number;
+  /**
+   * Weekly recap, or the draft-review special.
+   *
+   * The special has no week — it is week zero, a slot rather than a number
+   * (`0018`) — so the filing line names it instead. `Week 0` in a queue is the
+   * shape of the record leaking onto the screen that lists it.
+   */
+  kind?: ReviewDetail['kind'];
   version: number;
   status: ReviewDetail['status'];
   publishable: boolean;
@@ -374,7 +487,8 @@ export function QueueRow({
       >
         <span className={`${TYPE.bodyCompact} text-ink-900`}>{headline}</span>
         <MetadataStrip className="mt-1">
-          Season {season} &middot; Week {week} &middot; Draft {version}
+          Season {season} &middot; {kind === 'preseason' ? 'Draft review' : `Week ${String(week)}`}{' '}
+          &middot; Draft {version}
         </MetadataStrip>
         {(!publishable || status === 'draft') && (
           <span className={`mt-1 ${TYPE.eyebrow} ${publishable ? 'text-ink-500' : 'text-red-dark'}`}>

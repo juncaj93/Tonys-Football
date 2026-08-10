@@ -91,6 +91,15 @@ export function driverRoutes(source: string): ReadonlySet<string> {
   if (/\/admin\\\/slice\\\/\[0-9a-f-\]/.test(source) || source.includes("'review-draft'")) {
     seen.add('/admin/slice/*');
   }
+  /*
+   * `/admin/slice/draft/<uuid>` is reached the same way — the driver opens a row
+   * on the board rather than a URL it built, because the user id is a uuid it has
+   * no business knowing. The wait on the editor's own marker is the evidence, and
+   * it is read here rather than assumed.
+   */
+  if (source.includes("'draft-editor-blank'") && source.includes('data-draft-editor')) {
+    seen.add('/admin/slice/draft/*');
+  }
 
   // A dynamic segment in the route table matches a driver path that reached
   // *some* value for it. `/door/[userId]` is covered by `/door/*`.

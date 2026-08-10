@@ -36,10 +36,18 @@ const DESK_STATES = DEMO_STATES.filter((state) => state.route === '/admin/slice'
   (state) => state.key,
 );
 
+/**
+ * Every press-desk state the driver photographs.
+ *
+ * `preseason-review` is matched by name rather than by prefix: the draft-review
+ * special is a press-desk state — same queue, same screen, same stamp — and it
+ * is called what it is rather than `review-preseason`, because the thing it is
+ * about is the preseason and not the review.
+ */
 function driverStates(): readonly string[] {
   const list = /const ALL_STATES: readonly StateName\[\] = \[([\s\S]*?)\n\];/.exec(DRIVER);
   if (list === null) throw new Error('could not find ALL_STATES in scripts/visual-qa.mts');
-  return [...list[1]!.matchAll(/'(review-[a-z-]+)'/g)].map((match) => match[1]!);
+  return [...list[1]!.matchAll(/'(review-[a-z-]+|preseason-review)'/g)].map((match) => match[1]!);
 }
 
 function deskExpectations(): readonly string[] {
@@ -47,19 +55,28 @@ function deskExpectations(): readonly string[] {
   if (table === null) {
     throw new Error('could not find DESK_EXPECTATIONS in scripts/visual-qa.mts');
   }
-  return [...table[1]!.matchAll(/'(review-[a-z-]+)':/g)].map((match) => match[1]!);
+  return [...table[1]!.matchAll(/'(review-[a-z-]+|preseason-review)':/g)].map(
+    (match) => match[1]!,
+  );
 }
 
 describe('the visual driver and the press-desk catalog agree', () => {
-  it('declares six press-desk states, one per shape the decision has', () => {
+  it('declares seven press-desk states, one per shape the decision has', () => {
     /*
      * Nothing waiting · something waiting · something the validator refused ·
-     * approved and not yet printed · printed · and the press stopped.
+     * approved and not yet printed · printed · the press stopped · and the
+     * draft-review special waiting on a stamp.
      *
-     * Pinned as a number so adding a seventh is a deliberate edit that says what
-     * seventh shape a decision has.
+     * The seventh is a distinct shape rather than a repeat of the second: it is
+     * the proof that a **special edition** reaches the same desk and needs the
+     * same decision. A preseason paper that published itself would be `16 §9`'s
+     * approval gate with an exemption in it, and this is the screenshot that
+     * says there is not one.
+     *
+     * Pinned as a number so adding an eighth is a deliberate edit that says what
+     * eighth shape a decision has.
      */
-    expect(DESK_STATES).toHaveLength(6);
+    expect(DESK_STATES).toHaveLength(7);
   });
 
   /*
@@ -118,8 +135,47 @@ describe('the visual driver and the press-desk catalog agree', () => {
     }
   });
 
+  it('marks every other admin-surface seat as a commissioner too', () => {
+    /*
+     * Tony's draft board is behind the same `requireAdmin()`. It is a separate
+     * assertion rather than a widened one because the desk's own count above is
+     * pinned to `/admin/slice` exactly, and folding the board into it would make
+     * *"seven shapes of decision"* mean *"seven admin screenshots"* — which is a
+     * different and much less interesting claim.
+     */
+    for (const state of DEMO_STATES.filter((entry) => entry.route.startsWith('/admin'))) {
+      expect(state.commissioner, state.key).toBe(true);
+    }
+  });
+
+  /**
+   * The one state that holds the keys without showing an admin screen.
+   *
+   * `preseason-published` drives the whole approval chain — draft, approve,
+   * print — and then photographs `/slice`, which is the **public** rack. It
+   * needs a commissioner seat because approving and publishing are
+   * commissioner-only acts, and it lands on a manager's page because that is
+   * the only thing worth photographing at the end of them.
+   *
+   * Named rather than derived, so the exception is a decision somebody made and
+   * can disagree with rather than a hole in a predicate.
+   */
+  const COMMISSIONER_OFF_ADMIN: readonly string[] = ['preseason-published'];
+
   it('gives the commissioner keys to nothing else', () => {
-    for (const state of DEMO_STATES.filter((entry) => !ADMIN_ROUTES.includes(entry.route))) {
+    /*
+     * `startsWith` rather than `ADMIN_ROUTES.includes`, which is what this read
+     * before the draft board existed. The board's own routes are under
+     * `/admin/slice/draft` and are not in that two-entry list, so the narrower
+     * predicate would sweep five commissioner states into the assertion that
+     * nothing outside admin holds the keys — and they would each fail for being
+     * correct.
+     */
+    for (const state of DEMO_STATES.filter((entry) => !entry.route.startsWith('/admin'))) {
+      if (COMMISSIONER_OFF_ADMIN.includes(state.key)) {
+        expect(state.commissioner, state.key).toBe(true);
+        continue;
+      }
       expect(state.commissioner, state.key).toBeUndefined();
     }
   });

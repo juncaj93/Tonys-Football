@@ -1,7 +1,9 @@
+import { eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import { closePool, getDb } from '@/lib/db';
+import { fantasyMatchups, seasons, weekFinalizations } from '@/lib/db/schema';
 import { resetDatabase } from '@/lib/db/test-helpers';
 import { activeLeagueManagers } from '@/lib/league/membership';
 import { traverseChain } from '@/lib/sleeper/chain';
@@ -419,6 +421,63 @@ describe.skipIf(!hasDatabase)('the Slice, against the imported seasons', () => {
     const chain = await traverseChain(createFixtureSource(), LEAGUE_2026, { includeWeeks: true });
     await persistChain(db!, chain, { sourceLabel: 'test', finalizeYears: [2024, 2025] });
     await seedManagerNames(db!, readManagerNames());
+  });
+
+  /**
+   * A live season's closed week prints.
+   *
+   * ## The defect this pins
+   *
+   * `factPacket` used to take its finality from `seasons.finalized_at` — *the
+   * books closed in January* — so every week of an **open** season refused with
+   * `not-final` and the weekly Slice could not draft at all until the season was
+   * over. The first live Tuesday would have closed week one, paid every reward,
+   * settled every stake, and then declined to print the paper.
+   *
+   * `lib/stats/finality.ts` was written for exactly this and says so in its own
+   * header; only weekly stakes had adopted it. The fix is that a week is final
+   * when `week_finalizations` holds it **or** the season closed — and the Tuesday
+   * job writes that row four steps before it drafts.
+   *
+   * Asserted against 2026, which is the only open season on record and therefore
+   * the only place the defect was visible.
+   */
+  it('prints a closed week of a season whose books are still open', async () => {
+    const [season] = await db!
+      .select({ id: seasons.id })
+      .from(seasons)
+      .where(eq(seasons.year, 2026));
+
+    /* One real game, stored the way the in-season sync stores one. */
+    await db!.insert(fantasyMatchups).values({
+      seasonId: season!.id,
+      week: 1,
+      weekType: 'regular',
+      sleeperMatchupId: 1,
+      rosterAId: 1,
+      rosterBId: 2,
+      pointsACents: 14_412,
+      pointsBCents: 9_806,
+      winnerRosterId: 1,
+      marginCents: 4606,
+      capturedAt: new Date('2026-09-15T09:00:00Z'),
+      createdAt: new Date('2026-09-15T09:00:00Z'),
+      updatedAt: new Date('2026-09-15T09:00:00Z'),
+    });
+
+    /* Open books, unclosed week: nothing may be printed. */
+    expect((await factPacket(db!, { season: 2026, week: 1 })).refusal).toBe('not-final');
+
+    await db!.insert(weekFinalizations).values({
+      seasonId: season!.id,
+      week: 1,
+      games: 1,
+      finalizedAt: new Date('2026-09-15T13:00:00Z'),
+    });
+
+    const packet = await factPacket(db!, { season: 2026, week: 1 });
+    expect(packet.refusal).toBeNull();
+    expect(validateEdition(renderEdition(packet), packet).violations).toEqual([]);
   });
 
   it('publishes every week of both finalized seasons with no violations', async () => {

@@ -16,6 +16,10 @@ import { createFixtureSource } from '@/lib/sleeper/fixtures';
 import { seasonInProgress } from '@/lib/sleeper/test-source';
 import { persistChain } from '@/lib/sleeper/persist';
 
+import { activeLeagueManagers } from '@/lib/league/membership';
+import { demoDraftSource } from '@/lib/demo/draft-fixture';
+
+import { saveDraftReview } from './preseason-reviews';
 import { runTuesday } from './tuesday';
 
 /**
@@ -474,6 +478,148 @@ describe.skipIf(!hasDatabase)('the Tuesday job', () => {
 
       expect(report.week).toBe(2);
       expect(report.finalized).toBe(true);
+    });
+  });
+
+  /**
+   * The Tuesday before the opener.
+   *
+   * The one Tuesday in the year with no week behind it. `generateDraft` refuses
+   * it — correctly, because nothing has been played — and the whole question is
+   * whether the job then reaches for the other kind of paper or leaves the desk
+   * empty for the season's first issue.
+   */
+  describe('the preseason Tuesday', () => {
+    const OPEN_SEASON = 2026;
+
+    beforeEach(async () => {
+      await importLeague([2024, 2025]);
+    });
+
+    /** A source that serves the fixture 2026 draft and no results at all. */
+    async function draftOnly() {
+      const managers = [...(await activeLeagueManagers(db!))].sort(
+        (a, b) => a.rosterId - b.rosterId,
+      );
+      return demoDraftSource(managers.map((manager) => manager.rosterId));
+    }
+
+    it('prints nothing at all before the league drafts', async () => {
+      const report = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 0 }),
+      });
+
+      expect(report.issueKind).toBe('none');
+      expect(report.draft?.outcome).toBe('refused');
+      expect(report.skipped.join(' ')).toContain('has not drafted');
+      expect(report.failed).toEqual([]);
+    });
+
+    it('draws the draft in, and says so', async () => {
+      const report = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: await draftOnly(),
+      });
+
+      expect(report.draftSync?.refusal).toBeNull();
+      expect(report.draftSync?.picksStored).toBe(160);
+    });
+
+    it('is a read the second time the draft comes in', async () => {
+      await runTuesday(db!, { season: OPEN_SEASON, at: AT, sleeper: await draftOnly() });
+      const second = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: await draftOnly(),
+      });
+
+      expect(second.draftSync?.picksAdded).toBe(0);
+      expect(second.draftSync?.outcome).toBe('unchanged');
+    });
+
+    it('still prints nothing while Tony has grades outstanding', async () => {
+      const report = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: await draftOnly(),
+      });
+
+      expect(report.issueKind).toBe('none');
+      expect(report.skipped.join(' ')).toContain('has not graded every draft');
+    });
+
+    it('drafts the review once every grade is in, and stops at the desk', async () => {
+      await runTuesday(db!, { season: OPEN_SEASON, at: AT, sleeper: await draftOnly() });
+
+      const managers = await activeLeagueManagers(db!);
+      for (const manager of managers) {
+        await saveDraftReview(db!, {
+          seasonYear: OPEN_SEASON,
+          userId: manager.id,
+          grade: 'B',
+          take: 'Tony has seen worse and has seen better, which is most drafts.',
+          actorUserId: manager.id,
+        });
+      }
+
+      const report = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: await draftOnly(),
+      });
+
+      expect(report.issueKind).toBe('preseason');
+      expect(report.draft?.outcome).toBe('created');
+
+      /*
+       * The gate, asserted as a *status* rather than trusted. `16 §9` has no
+       * preseason exemption and there is no parameter on the job that creates
+       * one.
+       */
+      const [version] = await db!
+        .select({ status: sliceIssueVersions.status })
+        .from(sliceIssueVersions)
+        .where(eq(sliceIssueVersions.id, report.draft!.versionId!));
+
+      expect(version?.status).toBe('needs_review');
+    });
+
+    it('goes back to the weekly paper the moment a week is played', async () => {
+      /*
+       * The transition this whole branch has to get right. A calendar rule would
+       * still be printing draft reviews in October.
+       */
+      await runTuesday(db!, { season: OPEN_SEASON, at: AT, sleeper: await draftOnly() });
+
+      const managers = await activeLeagueManagers(db!);
+      for (const manager of managers) {
+        await saveDraftReview(db!, {
+          seasonYear: OPEN_SEASON,
+          userId: manager.id,
+          grade: 'B',
+          take: 'Tony has seen worse and has seen better, which is most drafts.',
+          actorUserId: manager.id,
+        });
+      }
+
+      const preseason = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: await draftOnly(),
+      });
+      expect(preseason.issueKind).toBe('preseason');
+
+      const played = await runTuesday(db!, {
+        season: OPEN_SEASON,
+        at: AT,
+        sleeper: seasonInProgress({ played: 1 }),
+      });
+
+      expect(played.issueKind).toBe('weekly');
+      expect(played.week).toBe(1);
     });
   });
 });

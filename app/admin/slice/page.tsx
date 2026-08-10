@@ -21,6 +21,7 @@ import { requireAdmin } from '@/lib/auth/current-user';
 import { getDb } from '@/lib/db';
 import { TYPE } from '@/lib/design/type';
 import { openSeason } from '@/lib/counter/tokens';
+import { draftBoard } from '@/lib/slice/preseason-desk';
 import {
   approvedQueue,
   publicationHold,
@@ -97,6 +98,17 @@ export default async function SliceReviewQueuePage({
    * terms rather than trusting this number.
    */
   const week = live === null ? 1 : await suggestedDraftWeek(db, live.year);
+
+  /*
+   * Tony's draft board, summarised.
+   *
+   * Read even when the desk is empty, because between draft night and the opener
+   * the draft board is the only work there is and a desk that showed *"nothing
+   * waiting on you"* while ten grades were outstanding would be wrong about the
+   * one thing it exists to say.
+   */
+  const board = live === null || emptyDesk ? null : await draftBoard(db, live.year);
+  const preseasonReady = board !== null && board.eligible && board.progress.complete;
 
   const docket = [
     { key: 'waiting', n: waiting.length, word: 'waiting on you' },
@@ -209,6 +221,7 @@ export default async function SliceReviewQueuePage({
                   headline={issue.headline}
                   season={issue.season}
                   week={issue.week}
+                  kind={issue.kind}
                   version={issue.version}
                   status={issue.status}
                   publishable={issue.publishable}
@@ -229,6 +242,7 @@ export default async function SliceReviewQueuePage({
                   headline={issue.headline}
                   season={issue.season}
                   week={issue.week}
+                  kind={issue.kind}
                   version={issue.version}
                   status={issue.status}
                   publishable={issue.publishable}
@@ -249,6 +263,7 @@ export default async function SliceReviewQueuePage({
                   headline={issue.headline}
                   season={issue.season}
                   week={issue.week}
+                  kind={issue.kind}
                   version={issue.version}
                   status={issue.status}
                   publishable={issue.publishable}
@@ -265,6 +280,7 @@ export default async function SliceReviewQueuePage({
                     headline={issue.headline}
                     season={issue.season}
                     week={issue.week}
+                    kind={issue.kind}
                     version={issue.version}
                     status={issue.status}
                     publishable={issue.publishable}
@@ -272,6 +288,34 @@ export default async function SliceReviewQueuePage({
                 ))}
               </QueueSection>
             )}
+
+            {/*
+              * The way to Tony's draft board.
+              *
+              * Above the by-hand week draft, because between the league's draft
+              * night and the opener it is the only work on this desk — and below
+              * the queue, because a decision waiting to be made outranks writing
+              * waiting to be done.
+              *
+              * The count is the whole reason to show it rather than a bare link:
+              * *"3 of 10"* is what a commissioner opens the page to find out.
+              */}
+            <div className="mt-6" data-review-draft-board={preseasonReady ? 'ready' : 'writing'}>
+              <PrintedRule />
+              <div className="mt-2">
+                <SectionHeading ink="text-ink-500">Tony’s draft board</SectionHeading>
+              </div>
+              <p className={`mt-1.5 ${TYPE.body} text-ink-700`}>
+                {board === null
+                  ? 'There is no open season, so there is no draft to review.'
+                  : preseasonReady
+                    ? 'Every draft has a grade and a take. The draft review is ready to print.'
+                    : `Tony has read ${String(board.progress.reviewed)} of ${String(board.progress.total)}.`}
+              </p>
+              <div className="mt-3">
+                <DeskExit href="/admin/slice/draft">Tony’s draft board&nbsp;&nbsp;&rarr;</DeskExit>
+              </div>
+            </div>
 
             <div className="mt-6">
               <PrintedRule />

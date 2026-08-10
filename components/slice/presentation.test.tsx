@@ -176,6 +176,8 @@ const PRESENTATION = [
   'components/slice/newspaper.tsx',
   'components/slice/review.tsx',
   'components/slice/stakes-band.tsx',
+  'components/slice/preseason.tsx',
+  'components/slice/draft-desk.tsx',
   'components/scene/text-surface.tsx',
 ];
 
@@ -185,6 +187,22 @@ const FACT_LAYER = [
   '@/lib/slice/packet',
   '@/lib/slice/validate',
   '@/lib/slice/edition',
+  /*
+   * The draft review's own fact layer.
+   *
+   * `preseason.ts` assembles and validates, `draft-facts.ts` counts, and
+   * `preseason-reviews.ts` reads and writes the editorial rows — all three reach
+   * the database. A component may name their **types**, which is how the
+   * boundary is stated, and may not call into them.
+   *
+   * `draft-vocabulary.ts` is deliberately absent: it is a leaf with no imports
+   * holding the words and the grade domain, and it exists precisely so a screen
+   * can know what a grade can be without importing a schema.
+   */
+  '@/lib/slice/preseason',
+  '@/lib/slice/preseason-reviews',
+  '@/lib/slice/preseason-desk',
+  '@/lib/slice/draft-facts',
   '@/lib/db',
 ];
 
@@ -200,8 +218,16 @@ describe('the presentation boundary', () => {
 
     for (const relative of PRESENTATION) {
       const source = readFileSync(path.join(process.cwd(), relative), 'utf8');
-      for (const match of source.matchAll(/from\s+'([^']+)'/g)) {
-        const spec = match[1] ?? '';
+      for (const match of source.matchAll(/(import\s+type\s+)?[^\n]*?from\s+'([^']+)'/g)) {
+        /*
+         * A type-only import is erased at build time and carries nothing into
+         * the bundle. It is also how the boundary is **stated** — a component
+         * takes a `PreseasonPacket` and prints it — so refusing one would refuse
+         * the very thing being asserted. `import type` is skipped; a value
+         * import of the same module is not.
+         */
+        if (match[1] !== undefined) continue;
+        const spec = match[2] ?? '';
         if (FACT_LAYER.some((banned) => spec === banned || spec.startsWith(`${banned}/`))) {
           breaches.push(`${relative} imports ${spec}`);
         }

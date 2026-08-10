@@ -246,7 +246,24 @@ Every remaining v1 system named in `CLAUDE.md`'s "In v1" list is built: the
 six-zone shop, Tonight, the Slice with Tony's Line, bounties and the chalkboard,
 the token ledger and weekly rewards, one loot box and a 24-item catalog,
 wearables and championship rings, the Showcase, the Timeline, the content engine,
-historical seasons, and persistent login.
+historical seasons, persistent login, and the **preseason draft-review special**
+(`docs/PRESEASON_SLICE_BOUNDARY.md`).
+
+### B0 · Tony's ten real draft grades — **Alex, after the league drafts**
+
+Not an engineering item and not a blocker for anything else. The feature is
+built, demonstrated and tested against a real Postgres; what it is waiting for is
+a draft that has not happened.
+
+**When:** after the 2026 draft, before the Tuesday of week one.
+**Where:** `/admin/slice/draft`.
+**What:** tap *Pull the draft*; then, per manager, a grade and a sentence — the
+best pick and the concern are optional. `Save, and next` ten times. When the
+board reads `10 of 10`, *Print a draft review*, read it, and approve.
+
+Until then the Tuesday job runs, records that the draft has not finished, and
+prints nothing — which is the correct behaviour in August and is
+indistinguishable from it in July only in the sense that both are true.
 
 ---
 
@@ -578,35 +595,45 @@ and printed, and a dev build's message still fails on sight.
 **element name**, and only a dev build produces one. Do not restart the hunt
 merely because the defect still exists. `docs/VISUAL_DEBT.md` item 16.
 
-#### The ceiling has not moved with the sweep, and the sweep has grown
+**New as of 2026-08-10, and it is about the *gate* rather than the defect.**
+Five local sweeps of one build produced 3, 2, 2, 4 and 1 sightings — **two of
+five runs failed on a build whose every other gate was green**, which is the
+condition the quarantine's own header names as a gate that has stopped
+protecting anything. Nothing was changed in response: the ceiling is the reason
+a new mismatch cannot hide, and raising it to make a branch green is exactly the
+move that header argues against. But the arithmetic under it has moved — the
+sweep is **375 captures against the 261 the ceiling was reasoned about**, so a
+fixed per-capture rate now expects proportionally more. **The ceiling and the
+rate want re-deriving together**, against a fresh measurement, by whoever picks
+this up. Do not move either alone, and do not move either to unblock a branch.
+The table is in `docs/VISUAL_DEBT.md`.
 
-**New measurement, 2026-08-10, and it is about the *quarantine* rather than the
-defect.** Three full local sweeps on one afternoon, same runner, same freshly
-seeded database:
+**A second, independent measurement says the same thing, and adds the control.**
+The playoff rehearsal ran three sweeps the same afternoon and — not knowing this
+entry was being written — reached the identical conclusion from the other side:
 
 | Sweep | Commit | Sightings | Where |
 |---|---|---|---|
 | playoff branch | `91c8a3f` | **3** — over the ceiling, **failed** | `/profile@390` · `/admin/slice@375` · `/door@360` |
-| clean `main` | `10d3466` | **2** — exactly on the ceiling, passed | `/admin@390` · `/profile@375` |
+| **clean `main`** | `10d3466` | **2** — exactly on the ceiling, passed | `/admin@390` · `/profile@375` |
 | playoff branch, again | `91c8a3f` | **0** — passed clean | — |
+
+The middle row is the one the five-sweep run above cannot supply: a **baseline
+of unmodified `main` on the same runner and the same freshly seeded database**,
+landing one sighting from failing. That is what turns *"this gate is noisy"* into
+*"this gate does not discriminate"* — the branch under test and the branch it
+would merge into are drawn from the same distribution, and on that afternoon
+`main` passed by luck.
 
 Five sightings across the two non-empty runs, on **five different
 route/state/width combinations, none repeated** — the signature
 `scripts/visual-qa-quarantine.ts` describes, and the opposite of a newly
 introduced mismatch, which is deterministic and fires on the *same* state at all
-three widths.
+three widths. At the 345 captures a sweep held before #89, the documented
+one-per-two-hundred rate expects ~1.7 and gives a **~24% chance of three or
+more**.
 
-The arithmetic is the point. The ceiling of **2** was set when a sweep was
-261–279 captures; a sweep is now **345**. At the documented background rate of
-roughly one per two hundred captures that is ~1.7 expected sightings per run and
-a **~24% chance of three or more** — so the gate now fails about one run in four
-for reasons unrelated to the change under test, and `main` passed today by one
-draw of the same dice.
-
-**Nothing was changed.** Raising `QUARANTINE_CEILING` to make a run green is
-indistinguishable from manufacturing green, and re-deriving it from the sweep
-size is a commissioner decision rather than a side effect of whichever pull
-request happens to draw a three. Recorded here so the decision has its numbers.
+Neither session changed the number.
 
 ### F2 · Visual debt 1, 2 and 14
 

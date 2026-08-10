@@ -45,11 +45,13 @@ const MAX_CHAIN_DEPTH = 25;
 interface Args {
   readonly leagueId: string;
   readonly check: boolean;
+  readonly draftsOnly: boolean;
 }
 
 function parseArgs(): Args {
   const argv = process.argv.slice(2);
   const check = argv.includes('--check');
+  const draftsOnly = argv.includes('--drafts');
   const positional = argv.filter((arg) => !arg.startsWith('--'));
 
   const leagueId = positional[0] ?? process.env['SLEEPER_LEAGUE_ID'] ?? '';
@@ -62,7 +64,11 @@ function parseArgs(): Args {
     throw new Error(`League ID "${leagueId}" is not numeric.`);
   }
 
-  return { leagueId, check };
+  if (check && draftsOnly) {
+    throw new Error('--check re-records the whole chain; it cannot be combined with --drafts.');
+  }
+
+  return { leagueId, check, draftsOnly };
 }
 
 /** Follow `previous_league_id` to collect every season's league ID, newest first. */
@@ -221,6 +227,103 @@ async function recordPlayerProjection(
   };
 }
 
+/**
+ * Record the draft endpoints only, and merge them into the existing manifest.
+ *
+ * ## Why an additive mode exists at all
+ *
+ * The default is a **full rewrite**, deliberately, so an endpoint that
+ * disappears upstream cannot linger as a stale fixture that tests keep passing
+ * against. That property is worth keeping and this mode does not weaken it: a
+ * later full run records the drafts too — `seasonEndpoints` lists them — and
+ * produces the same set of files.
+ *
+ * What it avoids is a real cost. The 2026 league is **live**: managers rename
+ * teams and change avatars during the preseason, so re-recording the whole
+ * chain to obtain two new endpoints rewrites payloads whose upstream has moved
+ * for reasons unrelated to the draft. That is a large, unreviewable diff in the
+ * middle of a change about something else — and it lands on the fixtures every
+ * other test in the suite reads.
+ *
+ * So: two requests per season, merged by key into the manifest that is already
+ * there.
+ *
+ * ## The picks need a second pass
+ *
+ * Sleeper hangs picks off the **draft**, not the league, so the draft id is not
+ * knowable until the list has been read. That is why `draft_picks` is absent
+ * from `seasonEndpoints` and why this loop reads what it just wrote.
+ */
+async function recordDraftsOnly(
+  source: SleeperSource,
+  leagueIds: readonly string[],
+): Promise<void> {
+  const root = FIXTURE_ROOT;
+  const manifest = readExistingManifest(root);
+  if (manifest === null) {
+    throw new Error(
+      'No manifest to merge into. Record the whole chain first with `npm run sleeper:record`.',
+    );
+  }
+
+  const entries = new Map(manifest.entries.map((entry) => [entry.key, entry] as const));
+
+  const record = async (endpoint: SleeperEndpoint): Promise<unknown> => {
+    const key = endpointKey(endpoint);
+    const result = await source.fetch(endpoint);
+
+    if (result.kind === 'error') {
+      throw new Error(`Recording aborted: ${result.message}`);
+    }
+
+    if (result.kind === 'empty') {
+      /*
+       * An empty draft list is a **fact**, not a failure: a league that has not
+       * drafted yet has no drafts, and the manifest is the only place that can
+       * be recorded because there is no file for it to live in.
+       */
+      entries.set(key, { key, endpoint, result: 'empty', status: result.status });
+      console.log(`  ${key} — empty`);
+      return null;
+    }
+
+    const written = writeFixture(root, key, result.payload);
+    entries.set(key, {
+      key,
+      endpoint,
+      result: 'ok',
+      status: result.status,
+      sha256: written.sha256,
+      bytes: written.bytes,
+    });
+    console.log(`  ${key} — ${String(Math.round(written.bytes / 1024))} KB`);
+    return result.payload;
+  };
+
+  console.log('\nRecording drafts…');
+
+  for (const leagueId of leagueIds) {
+    const payload = await record({ kind: 'drafts', leagueId });
+    if (!Array.isArray(payload)) continue;
+
+    for (const row of payload) {
+      if (typeof row !== 'object' || row === null) continue;
+      const draftId = (row as { draft_id?: unknown }).draft_id;
+      if (typeof draftId !== 'string' || draftId === '') continue;
+      await record({ kind: 'draft_picks', draftId });
+    }
+  }
+
+  const merged: FixtureManifest = {
+    ...manifest,
+    recordedAt: now().toISOString(),
+    entries: [...entries.values()].sort((a, b) => a.key.localeCompare(b.key)),
+  };
+
+  writeFileSync(manifestPath(root), stableStringify(merged), 'utf8');
+  console.log(`\nManifest updated: ${String(merged.entries.length)} entries.`);
+}
+
 async function main(): Promise<void> {
   const args = parseArgs();
   const source = createLiveSource();
@@ -228,6 +331,11 @@ async function main(): Promise<void> {
   console.log(`Recording Sleeper fixtures from ${SLEEPER_API_BASE}\n`);
   console.log('Chain:');
   const leagueIds = await discoverChain(source, args.leagueId);
+
+  if (args.draftsOnly) {
+    await recordDraftsOnly(source, leagueIds);
+    return;
+  }
 
   const root = FIXTURE_ROOT;
   const previousManifest = args.check ? readExistingManifest(root) : null;

@@ -28,7 +28,7 @@ import { DemoBlocked, applyDemoState } from '@/lib/demo/apply';
 import { DemoRefused } from '@/lib/demo/guard';
 import { retireDemoSeats } from '@/lib/demo/seat';
 import { BLOCKED_ON_M3, DEMO_STATES } from '@/lib/demo/states';
-import { SLICE_EDITIONS, SLICE_EDITION_CATALOG } from '@/lib/slice/editions';
+import { SLICE_EDITIONS, sliceEditionCatalog } from '@/lib/slice/editions';
 import { BOARD_DESCRIPTIONS, BOARD_STATES } from '@/lib/stakes/boards';
 
 const USAGE = `
@@ -69,8 +69,9 @@ async function main(): Promise<void> {
    */
   if (command === 'editions') {
     const width = Math.max(...SLICE_EDITIONS.map((key) => key.length));
-    console.log(`\n${String(SLICE_EDITION_CATALOG.length)} Slice editions\n`);
-    for (const entry of SLICE_EDITION_CATALOG) {
+    const catalog = sliceEditionCatalog();
+    console.log(`\n${String(catalog.length)} Slice editions\n`);
+    for (const entry of catalog) {
       console.log(
         `  /slice?edition=${entry.key.padEnd(width)}  ${entry.source.padEnd(10)} ${entry.shows}`,
       );
