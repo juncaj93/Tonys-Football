@@ -21,6 +21,7 @@ import { ensureSignificancePolicy } from '@/lib/stats/significance';
 import { traverseChain } from './chain';
 import { createFixtureSource } from './fixtures';
 import { persistChain } from './persist';
+import { type SleeperSource } from './transport';
 import {
   MIDSEASON_LEAGUE,
   MIDSEASON_SEASON,
@@ -80,12 +81,28 @@ import {
  */
 export async function importHistory(
   db: Database,
-  options: { readonly finalizeYears?: readonly number[] } = {},
+  options: {
+    readonly finalizeYears?: readonly number[];
+    /**
+     * Where the chain is read from. Defaults to the recorded fixtures.
+     *
+     * Injected for the reason every Sleeper read in this project is: a caller
+     * that needs the *league itself* to be wrong — a roster owned by an account
+     * this league has never seen — cannot express that against a recording, and
+     * `persistChain` leaves an existing membership alone, so injecting it after
+     * the seed proves nothing. `lib/rehearsal/` is that caller.
+     */
+    readonly source?: SleeperSource;
+    /** The league the chain starts at. Defaults to the 2026 league. */
+    readonly leagueId?: string;
+  } = {},
 ): Promise<void> {
-  // 1. The league chain, from the recorded fixtures.
-  const chain = await traverseChain(createFixtureSource(), MIDSEASON_LEAGUE, {
-    includeWeeks: true,
-  });
+  // 1. The league chain, from the recorded fixtures unless told otherwise.
+  const chain = await traverseChain(
+    options.source ?? createFixtureSource(),
+    options.leagueId ?? MIDSEASON_LEAGUE,
+    { includeWeeks: true },
+  );
   await persistChain(db, chain, {
     sourceLabel: 'midseason-rehearsal',
     finalizeYears: [...(options.finalizeYears ?? [2024, 2025])],

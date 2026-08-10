@@ -41,6 +41,48 @@ Every item is in exactly one category:
 
 ## A — V1 launch blockers
 
+### A0 · The Slice could never have drafted during the season it is about — **fixed, 2026-08-10**
+
+Found **twice on the same day, independently**, by the two rehearsals that were
+the first things in this repository to drive the chain against a season that was
+*open*: the Week 8 rehearsal (#86, `docs/WEEK8_REHEARSAL.md §5.1`) and the Week 1
+rehearsal (#85, `docs/WEEK_1_REHEARSAL.md §6`).
+
+`lib/slice/packet.ts` built its week from `seasons.finalized_at` — the season's
+own close, which happens in January. `16 §4.3`'s Tuesday chain ends by drafting
+the week that just closed. So for **every week of the 2026 season** the packet
+would have refused `not-final`, the Tuesday job would have written *"That week is
+still open"* into its `skipped` list, and the press desk would have been empty
+every Tuesday until the season was over.
+
+The same shape as A1: `not-final` is the truth in July and looks identical in
+October. `npm run check` and `npm run visual:qa` were both green, and the Tuesday
+job's own integration test asserted the wrong behaviour in passing — *"on an open
+season the Slice will not even draft"* — as though it were a property.
+
+The rule was already written down: `lib/stats/finality.ts` says a week is final
+when **its own** finalization exists and prefers that over the season's, and its
+header names the Slice as one of its two consumers. Rewards and stake settlement
+have called it since they were built; the Slice was the one caller still asking
+the wider question. The fix calls the predicate rather than restating it.
+
+**Nothing is loosened** — a week with no `week_finalizations` row is still
+refused — and **nothing about approval moved**: `16 §9`'s named-person gate is
+untouched, so the change puts a draft on the desk and never past it.
+`lib/rehearsal/week-1.test.ts` holds the positive half and **fails on the pre-fix
+build**; `lib/slice/slice.test.ts` holds the negative half.
+
+**The two rehearsals disagreed about whether to fix it, and that is recorded
+rather than smoothed over.** #86 pinned the defect with a test written to go red
+on repair, because its scope excluded the Slice's editorial architecture. #85's
+scope names the Tuesday Slice handoff, so it made the repair and **inverted** that
+test rather than deleting it — the tripwire worked exactly as intended and this
+is the conversation it demanded. If the commissioner would rather the desk stayed
+dark until January, reverting is one small commit against `lib/slice/packet.ts`
+and the two tests that pin it.
+
+`docs/WEEK_1_REHEARSAL.md` §6. Closed.
+
 ### A1 · The live season could not get into the database — **fixed this session**
 
 `16 §4.3` specifies the Tuesday chain as **sync → finalize → …** and the sync had
@@ -662,6 +704,7 @@ mechanism has never run for real.
 |---|---|
 | The in-season sync is implemented | **source code** |
 | It is idempotent, bounded, refuses stale and unplayed data, and resolves its week after syncing | **local Postgres**, and each guard fails on the pre-fix build |
+| **The whole week — Sunday photograph → Tuesday close → rewards → draft → approval → publication → week 2 — works as one system** | **local Postgres**, forty-two assertions plus nine failure injections (`lib/rehearsal/week-1.test.ts`), with the run itself printed in `docs/evidence/week-1-rehearsal/report.md` |
 | It compiles, lints and passes the suite | **hosted CI** |
 | Every reachable screen renders correctly at three phone widths | **hosted visual QA** |
 | It is deployed to production | **inferred** from a normal merge to `main`; not observed |
