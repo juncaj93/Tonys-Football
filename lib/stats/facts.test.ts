@@ -320,13 +320,27 @@ describe.skipIf(!hasDatabase)('facts derived from the recorded seasons', () => {
 
     expect(featured).not.toBeNull();
     expect(featured?.season).toBe(2025);
-    expect(matchupLine(featured ?? null)).toBe(
+    // Announcing the fact's own season, which is what the board does in the
+    // offseason — the face is about 2025 because 2025 is the last season played.
+    expect(matchupLine(featured ?? null, { season: 2025 })).toBe(
       `${featured!.winnerDisplayName} v ${featured!.loserDisplayName}`,
     );
   });
 
+  it('refuses to put last season’s game under this season’s week', async () => {
+    /*
+     * The midseason defect (`docs/WEEK8_REHEARSAL.md`). `featuredMatchup` only
+     * ever returns a fact from the most recent *archived* season, and the face
+     * has no room to say which season it is — so under a `WEEK 8` hero those two
+     * names are a claim about week 8. The fact is true; the claim is not.
+     */
+    const featured = await featuredMatchup(db!);
+    expect(featured?.season).toBe(2025);
+    expect(matchupLine(featured ?? null, { season: 2026 })).toBeNull();
+  });
+
   it('leaves the board empty rather than truncating two long names', async () => {
-    expect(matchupLine(null)).toBeNull();
+    expect(matchupLine(null, { season: 2025 })).toBeNull();
   });
 
   it('quotes the fact on the Tonight board rather than restating it', async () => {

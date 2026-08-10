@@ -1,8 +1,9 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, sql } from 'drizzle-orm';
 
 import { type Queryable } from '@/lib/db';
-import { fantasyMatchups, seasons } from '@/lib/db/schema';
+import { fantasyMatchups, seasons, weekFinalizations } from '@/lib/db/schema';
 import { fromCents } from '@/lib/sleeper/reconcile';
+import { LAST_SYNCABLE_WEEK } from '@/lib/sleeper/weekly';
 
 import { rosterNames } from './facts';
 
@@ -277,4 +278,51 @@ export function teamScoresCents(rows: readonly StoredWeekGame[]): number[] {
   const out: number[] = [];
   for (const row of rows) out.push(row.pointsACents, row.pointsBCents);
   return out.sort((x, y) => x - y);
+}
+
+/**
+ * The week the league is playing right now — highest **closed** week, plus one.
+ *
+ * ## Why this exists, and why it is derived rather than asked for
+ *
+ * `boardFace()` has taken a `week` since it was written, and `board-face.test.ts`
+ * asserts it renders `WEEK 5` when it is given one. **The homepage never gave it
+ * one.** `app/page.tsx` called it with only `daysUntilKickoff` and `matchup`, so
+ * the moment the season started the largest object in the room would have read
+ * **WEEK ONE** — and gone on reading it every week until January. The midseason
+ * rehearsal is what made that visible: in week one the wrong answer and the right
+ * answer are the same string.
+ *
+ * ## Highest closed week, plus one
+ *
+ * A board says which week is being *played*, not which week was last settled, so
+ * this counts forward from finality rather than from stored games. On the Tuesday
+ * that closes week 8 the league moves to week 9, and that is what the board
+ * should say for the six days after it.
+ *
+ * **Nothing is inferred about the NFL schedule**, because nothing can be:
+ * `lib/sleeper/endpoints.ts` is the whole surface this product talks to and none
+ * of its eight endpoints carries one (`docs/SUNDAY_SNAPSHOT_BOUNDARY.md §3`).
+ * Sleeper's `state.week` was considered and is the same value this computes, with
+ * a network call and an ambiguity at the Tuesday rollover that
+ * `lib/sleeper/weekly.ts` already rejected it for.
+ *
+ * A season nothing has closed is week 1 — which is true of a season on its
+ * opening Sunday and true of one that has not kicked off, and in the second case
+ * the clock is what governs the face anyway (`daysUntilKickoff`).
+ *
+ * Clamped at `LAST_SYNCABLE_WEEK` — the same 18, imported rather than restated,
+ * because "the last week the league plays" is one fact and a second constant
+ * holding it is a second thing to keep in step.
+ */
+export async function currentWeekOf(db: Queryable, year: number): Promise<number> {
+  const [row] = await db
+    .select({ closed: sql<number | null>`max(${weekFinalizations.week})` })
+    .from(weekFinalizations)
+    .innerJoin(seasons, eq(seasons.id, weekFinalizations.seasonId))
+    .where(eq(seasons.year, year));
+
+  const closed = row?.closed;
+  const settled = closed === null || closed === undefined ? 0 : Number(closed);
+  return Math.min(LAST_SYNCABLE_WEEK, settled + 1);
 }
