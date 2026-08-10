@@ -102,6 +102,63 @@ describe('the visual driver and the draft-board catalog agree', () => {
     }
   });
 
+  it('photographs the type at its hardest, on the sparse issue', async () => {
+    /*
+     * The two typographic stresses the commissioner asked for, and they are on
+     * the **sparse** edition together on purpose.
+     *
+     * A long name beside a grade is hardest when there is nothing else in the
+     * section to push the layout around, which is exactly what a stripped
+     * section is — so photographing the long names on the full edition and the
+     * long takes on another one would have caught each in the state that makes
+     * it easiest. The names come from `lib/stakes/boards.ts`'s own list rather
+     * than a second one, so *"the longest name"* means one thing in this
+     * product.
+     *
+     * Asserted through `previewEdition` rather than against the fixture literal
+     * because the fixture is rendered by the **shipping** pipeline: a take that
+     * survives here is one `renderPreseason` and `validatePreseason` accepted.
+     */
+    const { previewEdition } = await import('./editions');
+    const { TAKE_MAX } = await import('./preseason-reviews');
+
+    const preview = await previewEdition(null as never, 'preseason-sparse', {
+      DEMO_FIXTURES: '1',
+    });
+    // Asserted rather than defaulted: `?? []` would let a preview that stopped
+    // resolving pass this as "ten teams of nothing".
+    expect(preview?.issue).not.toBeNull();
+    const teams = preview?.issue?.preseason?.teams ?? [];
+
+    expect(teams).toHaveLength(10);
+    // Every section at the limit, so the wrap is measured on all ten rather
+    // than on whichever one happened to be longest.
+    for (const team of teams) expect(team.take.length, team.manager).toBe(TAKE_MAX);
+
+    /*
+     * **Every** section, not the longest one. The scrolled state photographs
+     * the tenth, so a list that ran out part-way would put the stress in the
+     * half of the paper the camera never reaches.
+     */
+    for (const team of teams) expect(team.manager.length, team.manager).toBeGreaterThanOrEqual(16);
+    expect(Math.max(...teams.map((team) => team.manager.length))).toBeGreaterThanOrEqual(24);
+  });
+
+  it('photographs the body of the paper, not only its masthead', () => {
+    /*
+     * Captures are viewport-sized, so the two rack states above photograph the
+     * top of the issue and nothing else. The draft review's entire body — ten
+     * sections, the long names, the grades beside them, the takes at their
+     * limit — is below that fold, which is where a wrap or a clipped grade
+     * would live and never be seen.
+     *
+     * The same defect main found on the review screen and fixed the same way
+     * (`review-decision`): a state that scrolls, rather than a taller picture.
+     */
+    expect(DRIVER).toContain("case 'preseason-teams':");
+    expect(DRIVER).toContain("'preseason-teams',");
+  });
+
   it('photographs the issue on the desk and on the rack', () => {
     /*
      * The two ends of the approval chain. `preseason-review` proves the special

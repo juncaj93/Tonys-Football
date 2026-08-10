@@ -409,6 +409,23 @@ type StateName =
    */
   | 'slice-preseason-draft-review'
   | 'slice-preseason-sparse'
+  /**
+   * The same sparse issue, scrolled to the **last** of its ten sections.
+   *
+   * Captures are viewport-sized, so every picture ever taken of this paper was
+   * of its masthead. The draft review's whole body is ten team sections below
+   * that fold — the long names, the grades beside them and the takes at their
+   * maximum length are all in the half nobody had photographed, and the DOM
+   * gates that count them cannot show whether they *read*.
+   *
+   * The tenth rather than the first, because the tenth is the one a short list
+   * would be missing and it is the one a scroll has to survive to reach.
+   *
+   * Not named `slice-*`: `checkEditionPresent` derives the expected edition key
+   * from that prefix, and this state renders `preseason-sparse` under its own
+   * name.
+   */
+  | 'preseason-teams'
   | 'draft-board-empty'
   | 'draft-board-partial'
   | 'draft-board-complete'
@@ -1695,6 +1712,22 @@ async function reach(page: Page, state: StateName): Promise<void> {
     }
 
     /*
+     * The body of the paper, which no capture had ever contained.
+     *
+     * `scrollIntoViewIfNeeded` on the tenth section rather than a pixel offset:
+     * the sections are different heights at every width, so a number would be
+     * three different places on three phones and would silently stop pointing
+     * at anything the first time a section grew.
+     */
+    case 'preseason-teams': {
+      await page.goto(`${BASE}/slice?edition=preseason-sparse`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-preseason-team]', { state: 'attached' });
+      await page.locator('[data-preseason-team]').last().scrollIntoViewIfNeeded();
+      await page.waitForTimeout(200);
+      return;
+    }
+
+    /*
      * The manager-backed customiser states. The demo runner has already signed
      * this driver in at the reserved seat, so the route is all that is left.
      */
@@ -2181,6 +2214,9 @@ const ALL_STATES: readonly StateName[] = [
   'slice-monday-comeback',
   'slice-preseason-draft-review',
   'slice-preseason-sparse',
+  // The same paper, scrolled to its tenth section — the half of the draft
+  // review that no viewport-sized capture had ever contained.
+  'preseason-teams',
   // The four rarity treatments, side by side and repeatable. Signed in as
   // whoever the previous demo state left us as, which is fine: the payload is
   // synthesised and does not depend on what that seat owns.
@@ -3808,6 +3844,7 @@ async function checkDraftBoard(page: Page, width: number, state: string): Promis
 const PRESEASON_ISSUE_STATES: ReadonlySet<string> = new Set([
   'slice-preseason-draft-review',
   'slice-preseason-sparse',
+  'preseason-teams',
   'preseason-rack',
 ]);
 

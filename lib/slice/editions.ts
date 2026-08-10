@@ -890,7 +890,44 @@ const DRAFT_2026 = {
 } as const satisfies PreseasonFixture;
 
 /**
- * The same draft with most of the optional fields empty.
+ * The longest names this league has, borrowed from the weekly board's own
+ * stress fixture (`lib/stakes/boards.ts`) rather than invented here.
+ *
+ * One list, so *"the longest name"* means the same thing on the chalkboard and
+ * in the paper. A second set would drift, and the first time it mattered the two
+ * screens would disagree about which name is the hard one.
+ *
+ * **All ten, not the first few.** The scrolled state photographs the *tenth*
+ * section, so a list that ran out at five would have put the long names in the
+ * half of the paper the camera never reaches and a short one in the half it
+ * does.
+ */
+const LONG_MANAGERS = [
+  'Christopher Papadopoulos',
+  'MattyB2317Longhand',
+  'cheesekingofdetroit',
+  'SuggMyNickerbocker',
+  'BigJuncerooniiii',
+  'Bartholomew Higgs',
+  'NicholasAlexander',
+  'Topouzianopoulos',
+  // Eight is what the board's list holds. The last two are the two shapes that
+  // list does not have — a name that is one unbroken word at the limit, and one
+  // that wraps only because of where its single space falls — so the ten cover
+  // the wrap, the no-wrap and the near-miss rather than eight of one kind.
+  'Bartholomewwwwwwwwwwwww',
+  'Wilhelmina Featherstonehaugh',
+] as const;
+
+/** A take at exactly `TAKE_MAX`, which is the only length worth photographing. */
+const LONGEST_TAKE =
+  'Tony has looked at this board four times now and he still cannot decide whether it is the ' +
+  'bravest thing anybody did on draft night or the one that gets quietly deleted in October, ' +
+  'and that is about the nicest thing he can say about a draft.';
+
+/**
+ * The same draft with most of the optional fields empty — and the type at its
+ * hardest.
  *
  * **This is the state Tony really files.** The commissioner's workload rule is a
  * grade and a take per manager, with the best pick and the concern optional — so
@@ -900,16 +937,25 @@ const DRAFT_2026 = {
  * The two teams that keep theirs are deliberate: one keeps only a best pick and
  * one keeps only a concern, so the two asides are each proved to stand alone
  * rather than only as a pair.
+ *
+ * **It also carries the long names and the longest legal take**, and that
+ * pairing is the point rather than a convenience: a 24-character name beside a
+ * grade is hardest when there is *nothing else in the section* to push the
+ * layout around, which is exactly what a stripped section is. Photographing the
+ * two stresses separately would have meant photographing each in the state that
+ * makes it easiest.
  */
 const DRAFT_2026_SPARSE: PreseasonFixture = {
   ...DRAFT_2026,
   weekOne: [],
   teams: (DRAFT_2026.teams as readonly PreseasonFixtureTeam[]).map((team, index) => {
     const stripped: PreseasonFixtureTeam = {
-      manager: team.manager,
+      manager: LONG_MANAGERS[index] ?? team.manager,
       slot: team.slot,
       grade: team.grade,
-      take: team.take,
+      // Every section is at the limit, so the wrap is measured on all ten
+      // rather than on whichever one happened to be longest.
+      take: LONGEST_TAKE,
       picks: team.picks,
     };
     if (index === 0 && team.bestPickRound !== undefined) {

@@ -168,7 +168,20 @@ function TeamReview({ team }: { team: PreseasonTeamSection }) {
         */}
       <div className="flex items-baseline gap-2.5">
         <span className={`${TYPE.headline} text-red-dark`}>{team.grade}</span>
-        <h3 className={`min-w-0 ${TYPE.subhead} text-ink-900`}>{team.manager}</h3>
+        {/*
+          * `break-words` as well as `min-w-0`, and the pair is the fix rather
+          * than either half.
+          *
+          * `min-w-0` lets the box shrink; nothing in it breaks a **word**. A
+          * display name is whatever somebody typed into Sleeper, so it can be
+          * one unbroken run of characters longer than any phone is wide — and
+          * this heading is set in the display face, which is half again as wide
+          * per character as the prose face. Found by the sparse fixture the day
+          * it grew a name longer than the chalkboard's longest: 22px of
+          * horizontal scroll at 375 and 38px at 360, which is the one thing
+          * this product's layout rule has no exceptions to.
+          */}
+        <h3 className={`min-w-0 break-words ${TYPE.subhead} text-ink-900`}>{team.manager}</h3>
       </div>
 
       {team.slot !== null && (
