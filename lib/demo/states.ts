@@ -40,6 +40,7 @@ export interface DemoState {
     | '/counter/collection'
     | '/counter/showcase'
     | '/profile/character'
+    | '/admin'
     | '/admin/slice';
   /**
    * The seat holds the commissioner's keys.
@@ -222,6 +223,51 @@ export const DEMO_STATES: readonly DemoState[] = [
     shows: 'the press stopped by the manual hold',
     reach: 'driven',
     route: '/admin/slice',
+    commissioner: true,
+  },
+
+  /**
+   * The office queue — *"what needs my approval?"*, in its four answers.
+   *
+   * All four are `arranged` rather than `driven`, and the reason is the same one
+   * `review-empty` records: **an issue belongs to the league, not to a seat**,
+   * and the visual driver loops widths on the outside. A state that meant "one
+   * paper is waiting" would photograph one item at 390 and four at 360 — three
+   * files under one name, all green.
+   *
+   * So three of them are `?queue=<band>`, a preview-only parameter resolved on
+   * the server behind both demo guards that **filters the real queue and
+   * fabricates nothing** (`lib/publication/preview.ts`). `office-queue` takes no
+   * parameter at all: it is the real, whole desk, and it is deterministic
+   * because it runs after the press-desk states and every one of their appliers
+   * is idempotent on a fixed slot.
+   */
+  {
+    key: 'office-ready',
+    shows: 'the office with one paper ready to stamp',
+    reach: 'arranged',
+    route: '/admin',
+    commissioner: true,
+  },
+  {
+    key: 'office-blocked',
+    shows: 'the office with a draft the check refused, and why',
+    reach: 'arranged',
+    route: '/admin',
+    commissioner: true,
+  },
+  {
+    key: 'office-printed',
+    shows: 'the office showing what was recently printed',
+    reach: 'arranged',
+    route: '/admin',
+    commissioner: true,
+  },
+  {
+    key: 'office-queue',
+    shows: 'the whole desk — ready, stamped and printed together',
+    reach: 'arranged',
+    route: '/admin',
     commissioner: true,
   },
 ] as const;
