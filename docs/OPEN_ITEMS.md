@@ -143,6 +143,34 @@ fidelity in place (costs no art, ceilinged by hand-authoring) or add a
 authored masks). **Nothing was done**: the customiser is `CLOSED — production
 verified` and the direction says not to reopen it.
 
+### A5 · Twelve of the twenty-four collectibles have no art, and they are 59.5% of every box opened — **art dependency**
+
+**Measured, 2026-08-10, and it is not the twelve you would guess.** Every epic
+and every legendary is already painted, so the unpainted twelve are exactly the
+**most frequently pulled** twelve: seven commons carrying **42.0%** of all box
+openings and five rares carrying a further **17.5%**. Three boxes in five
+produce the same picture of a closed pizza box, and a median manager's
+season-one collection is **40% real objects and 60% placeholder**.
+
+**This is not a defect and nothing is broken.** `art/ASSET_PIPELINE.md §5`
+deliberately commits to 12-of-24 at launch and `placeholder_pizza_box` is a
+designed in-world stand-in — an item still in its box. What was missing was the
+*number*: nobody had measured what the deferral costs at the surface a manager
+actually looks at. It is here so the commissioner can decide with it rather than
+around it.
+
+**It is the highest-return art in the product per sprite.** One common sprite is
+seen 1.7× as often as a rare one and 6× as often as a legendary one, so the
+order inside the batch matters as much as the batch: commons first, always.
+[`docs/art/BATCH_F_COLLECTIBLE_HANDOFF.md`](art/BATCH_F_COLLECTIBLE_HANDOFF.md)
+briefs all twelve, ready to paste, with one free product win folded in —
+`collectible_paper_menu` rebriefed as a menu board that **hangs**, which gives
+the room's picture frame its first common-tier occupant at no extra art and no
+catalog change.
+
+**Nothing is blocked.** Every unpainted slug resolves today, the loop works, and
+a swap stays a registry row.
+
 **Nothing else is in category A.** Every other v1 system is built, tested and
 reachable; what remains below is polish, activation, or deferred scope.
 
@@ -370,6 +398,29 @@ still pair a 0–0 fixture as a game. Harmless today — the snapshot only feeds
 comeback detection, which needs a result to flip — but it is one rule living in
 one of three places that could each see the payload.
 
+### E5 · The economy gate models a 14-week season and checks a range centred on its own boundary
+
+Two defects in the **release gate**, not in the economy, found by the catalog
+sizing study and **reported rather than fixed** — `16 §8` owns those ranges and
+`docs/ECONOMY_SIMULATION.md` is a signed-off measurement, so changing either
+without a ruling would be the gate approving itself.
+
+1. **`scripts/simulate-economy.ts` defaults to `--weeks=14`**, described as *"the
+   imported-season shape"*. The recorded fixtures score **seventeen** weeks, and
+   `lib/rewards/derive.ts` has no branch on week type — a playoff or consolation
+   win pays the same 150 — so a season has three more paydays than the gate
+   models. At `--weeks=17` boxes per manager measure 11.0 against a 6–12 range;
+   every other range stays green.
+2. **The legendary-rate range is 2–4% and the configured mass is exactly 2%**, so
+   the check sits on its own floor and passes on noise. Measured across twelve
+   seeds at 50 seasons: **5/12 pass at 14 weeks, 6/12 at 17.** More seasons
+   cannot fix a range centred on its boundary — which is the same failure
+   `ECONOMY_SIMULATION.md` diagnosed at five seasons and cured only halfway.
+
+Neither changes a shipped value. The economy's conclusions survive both: at 17
+weeks the price of 200 still lands mid-range, and the legendary rate is exactly
+the 2% the table configures.
+
 ---
 
 ## F — Monitored, not worked
@@ -465,8 +516,34 @@ everyone at once as an announced event — so it can only be spent once.
 
 Twelve of twenty-four collectibles stay `placeholder_pizza_box` **by design** —
 that is the number `art/ASSET_PIPELINE.md §5` commits to at launch, not a gap.
+**What that costs is now measured** rather than assumed: see **A5**.
 
 Group B greeting lines await commissioner approval; seed Group A only.
+
+### G2 · Growing the catalog past twenty-four — a ruling, not a session
+
+**The simulation recommends 32 for season one. Nothing was built.** `16` approves
+*"one loot box and a 24-item catalog"* and `lib/counter/catalog.ts` asserts
+`CATALOG_SIZE = 24` precisely so the seed fails loudly rather than shipping a
+different economy quietly — so this is the commissioner's to say, and
+[`docs/CATALOG_SIZING.md`](CATALOG_SIZING.md) is the evidence to say it against.
+
+**It is not urgent, and the date is measured rather than felt.** The shipped
+catalog first hands somebody tokens instead of an object in **week 12 of season
+one** for the median manager who gets there at all, and only 5.0% of openings at
+season end. Season *two* is where 24 gives way — 25.9% of openings paying tokens
+and 82% of managers hitting the wall. So the deadline for the eight new items is
+**week 12**, not kickoff, and the whole question can wait behind **A5**, which
+needs no ruling at all.
+
+**Adding an item is cheap and additive**: a registry row, that constant, and a
+new content-hashed reward-table version. Every opening already recorded keeps
+pointing at the table it actually rolled against, and the rarity mass is per
+tier — so a legendary stays exactly 2% however many items exist.
+
+**Do not execute it autonomously**, and do not reach for a price change instead:
+a catalog problem is not fixed by moving token economics, which is the standing
+instruction and also what the numbers say.
 
 ---
 

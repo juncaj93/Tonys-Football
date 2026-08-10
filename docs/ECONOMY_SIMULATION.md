@@ -138,3 +138,21 @@ In order of how much it moves the answer:
 - **exactly two grants a season, every season**, for every manager;
 - it **passes on the approved configuration**, reading the canonical `PROVISIONAL_ECONOMY` rather than a copy — so a drift in the real config fails here;
 - and it **fails when a value drifts**: halving the box price back to 50 puts the gate red again, which is what stops a green from meaning nothing.
+
+---
+
+## 7. What this gate does not answer, and where that is answered
+
+This file measures **`16 §8`'s six ranges**. It does not size the catalog: it takes the twenty-four items as given and asks whether the economy around them is in range.
+
+[`docs/CATALOG_SIZING.md`](CATALOG_SIZING.md) is the other half — *how many unique items each rarity needs so a box keeps producing objects* — with its own model (`lib/economy/catalog-sizing.ts`) that reuses this one's PRNG, salvage helper and economy constants. The two do not overlap: **catalog depth and pull odds are independent knobs**, because rarity mass is assigned per tier and split among that tier's items, so nothing that study recommends can move a range this one checks.
+
+### Two defects in *this* gate, found by that study
+
+Reported here rather than fixed, because `16 §8` owns these ranges and this document is a signed-off measurement — correcting either without a ruling would be the gate approving itself. Both are carried in `docs/OPEN_ITEMS.md` **E5**.
+
+1. **`--weeks` defaults to 14, and §5 above calls that "the imported-season shape". It is not.** The recorded fixtures score **seventeen** weeks — weeks 1–14 at five games, then 4, 5 and 2 — and `lib/rewards/derive.ts` contains no branch on week type, so a playoff or consolation win pays the same 150. A season therefore has three more paydays than this gate models. At `--weeks=17` the measured boxes per manager rise from 10.0 to 11.0, still inside 6–12, and every other range stays green.
+
+2. **The legendary-rate range is 2–4% and `PROVISIONAL_RARITY_MASS` sets legendary mass to exactly 2%.** The check therefore sits on its own floor and resolves on sampling noise: across twelve seeds at 50 seasons it passes **5/12** at 14 weeks and **6/12** at 17. §3 above diagnosed exactly this shape of problem at five seasons and cured it by raising the sample — which cannot fix a range centred on its boundary. The rate itself is not in question; it is 2.0% by construction.
+
+Neither finding moves a shipped value, and the ruling of 2026-08-04 survives both.

@@ -1,0 +1,3134 @@
+{
+  "generatedFrom": {
+    "rewardTableVersion": "e768dadb9aec5443",
+    "boxPriceTokens": 200,
+    "catalogSize": 24
+  },
+  "settings": {
+    "seasons": 3,
+    "seeds": 40,
+    "grants": 2,
+    "boxPrice": 200
+  },
+  "audit": {
+    "box": [
+      {
+        "slug": "collectible_arcade_token",
+        "name": "Arcade token",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_booth_cushion",
+        "name": "Red vinyl booth cushion",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_checkered_cloth",
+        "name": "Checkered tablecloth",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_coffee_mug",
+        "name": "Diner coffee mug",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_ketchup_bottle",
+        "name": "Squeeze bottle",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_napkin_dispenser",
+        "name": "Napkin dispenser",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_paper_menu",
+        "name": "Paper menu",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_parmesan_shaker",
+        "name": "Parmesan shaker",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_pizza_cutter",
+        "name": "Pizza cutter",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_receipt_spike",
+        "name": "Receipt spike",
+        "rarity": "common",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 240,
+        "pullShare": 0.06,
+        "salvageTokens": 20,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_cookie_tote",
+        "name": "McDonald’s cookie bag",
+        "rarity": "rare",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": true,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 140,
+        "pullShare": 0.035,
+        "salvageTokens": 40,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_crt_tv",
+        "name": "CRT television",
+        "rarity": "rare",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": true,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 140,
+        "pullShare": 0.035,
+        "salvageTokens": 40,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_freddy_bowl",
+        "name": "Dog bowl",
+        "rarity": "rare",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 140,
+        "pullShare": 0.035,
+        "salvageTokens": 40,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_lava_lamp",
+        "name": "Lava lamp",
+        "rarity": "rare",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 140,
+        "pullShare": 0.035,
+        "salvageTokens": 40,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_pinball_machine",
+        "name": "Pinball machine",
+        "rarity": "rare",
+        "form": "floor",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 140,
+        "pullShare": 0.035,
+        "salvageTokens": 40,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_reddiwip",
+        "name": "Can of whipped cream",
+        "rarity": "rare",
+        "form": "surface",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 140,
+        "pullShare": 0.035,
+        "salvageTokens": 40,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_revolution_poster",
+        "name": "Join the revolution poster",
+        "rarity": "rare",
+        "form": "wall",
+        "batch": "B3",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": true,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 140,
+        "pullShare": 0.035,
+        "salvageTokens": 40,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_singing_fish",
+        "name": "Novelty singing fish",
+        "rarity": "rare",
+        "form": "wall",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 140,
+        "pullShare": 0.035,
+        "salvageTokens": 40,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_arcade_cabinet",
+        "name": "Arcade cabinet",
+        "rarity": "epic",
+        "form": "floor",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": true,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 100,
+        "pullShare": 0.025,
+        "salvageTokens": 70,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_burn_barrel",
+        "name": "Burn barrel",
+        "rarity": "epic",
+        "form": "floor",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": true,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 100,
+        "pullShare": 0.025,
+        "salvageTokens": 70,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_neon_tony_sign",
+        "name": "Neon Tony's Pizza sign",
+        "rarity": "epic",
+        "form": "wall",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": true,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 100,
+        "pullShare": 0.025,
+        "salvageTokens": 70,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_portable_sauna",
+        "name": "Portable sauna",
+        "rarity": "epic",
+        "form": "floor",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": true,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 100,
+        "pullShare": 0.025,
+        "salvageTokens": 70,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_bapple_tree",
+        "name": "The Bapple Tree",
+        "rarity": "legendary",
+        "form": "floor",
+        "batch": "B0",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": false,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 40,
+        "pullShare": 0.01,
+        "salvageTokens": 120,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      },
+      {
+        "slug": "collectible_signed_jersey_legend",
+        "name": "Framed signed jersey",
+        "rarity": "legendary",
+        "form": "wall",
+        "batch": "B3",
+        "artStatus": "generated",
+        "artExists": true,
+        "placeholder": false,
+        "launchPriority": true,
+        "boxEligible": true,
+        "systemLayer": false,
+        "directGrantOnly": false,
+        "seasonal": false,
+        "pullWeight": 40,
+        "pullShare": 0.01,
+        "salvageTokens": 120,
+        "roomSlots": [
+          "shelf_left",
+          "shelf_right",
+          "wall",
+          "bench"
+        ],
+        "showcaseable": true
+      }
+    ],
+    "system": [
+      {
+        "slug": "item_championship_ring",
+        "name": "Championship ring",
+        "rarity": "legendary",
+        "form": "wall",
+        "batch": "B2",
+        "artStatus": "placeholder",
+        "artExists": false,
+        "placeholder": true,
+        "launchPriority": false,
+        "boxEligible": false,
+        "systemLayer": true,
+        "directGrantOnly": true,
+        "seasonal": false,
+        "pullWeight": 0,
+        "pullShare": 0,
+        "salvageTokens": 120,
+        "roomSlots": [],
+        "showcaseable": false
+      }
+    ]
+  },
+  "rarity": [
+    {
+      "rarity": "common",
+      "items": 10,
+      "withArt": 3,
+      "placeholder": 7,
+      "tierShare": 0.6000000000000001,
+      "salvageTokens": 20
+    },
+    {
+      "rarity": "rare",
+      "items": 8,
+      "withArt": 3,
+      "placeholder": 5,
+      "tierShare": 0.28,
+      "salvageTokens": 40
+    },
+    {
+      "rarity": "epic",
+      "items": 4,
+      "withArt": 4,
+      "placeholder": 0,
+      "tierShare": 0.1,
+      "salvageTokens": 70
+    },
+    {
+      "rarity": "legendary",
+      "items": 2,
+      "withArt": 2,
+      "placeholder": 0,
+      "tierShare": 0.02,
+      "salvageTokens": 120
+    }
+  ],
+  "form": [
+    {
+      "form": "wall",
+      "items": 4,
+      "withArt": 3,
+      "byRarity": {
+        "common": 0,
+        "rare": 2,
+        "epic": 1,
+        "legendary": 1
+      }
+    },
+    {
+      "form": "surface",
+      "items": 15,
+      "withArt": 5,
+      "byRarity": {
+        "common": 10,
+        "rare": 5,
+        "epic": 0,
+        "legendary": 0
+      }
+    },
+    {
+      "form": "floor",
+      "items": 5,
+      "withArt": 4,
+      "byRarity": {
+        "common": 0,
+        "rare": 1,
+        "epic": 3,
+        "legendary": 1
+      }
+    }
+  ],
+  "scenarios": [
+    {
+      "name": "shipped",
+      "shape": {
+        "common": 10,
+        "rare": 8,
+        "epic": 4,
+        "legendary": 2
+      },
+      "total": 24,
+      "art": {
+        "common": 3,
+        "rare": 3,
+        "epic": 4,
+        "legendary": 2
+      },
+      "wall": {
+        "common": 0,
+        "rare": 2,
+        "epic": 1,
+        "legendary": 1
+      },
+      "collection": {
+        "art": [
+          {
+            "week": 4,
+            "expectedOwned": 2.0660625000000006,
+            "expectedShare": 0.4041198044009781,
+            "chanceOfAny": 0.9337689732142856
+          },
+          {
+            "week": 8,
+            "expectedOwned": 3.4275625000000036,
+            "expectedShare": 0.4041936910377363,
+            "chanceOfAny": 0.990124255952381
+          },
+          {
+            "week": 12,
+            "expectedOwned": 4.294687500000003,
+            "expectedShare": 0.4050636642301347,
+            "chanceOfAny": 0.9968106398809524
+          },
+          {
+            "week": 14,
+            "expectedOwned": 4.699125,
+            "expectedShare": 0.40466092572658774,
+            "chanceOfAny": 0.9979456845238095
+          },
+          {
+            "week": 17,
+            "expectedOwned": 5.159125000000001,
+            "expectedShare": 0.4059905567578203,
+            "chanceOfAny": 0.998875
+          }
+        ],
+        "wall": [
+          {
+            "week": 4,
+            "expectedOwned": 0.564375,
+            "expectedShare": 0.11039119804400978,
+            "chanceOfAny": 0.4714732142857141
+          },
+          {
+            "week": 8,
+            "expectedOwned": 0.90625,
+            "expectedShare": 0.10686910377358491,
+            "chanceOfAny": 0.6498883928571428
+          },
+          {
+            "week": 12,
+            "expectedOwned": 1.123125,
+            "expectedShare": 0.10593020514029709,
+            "chanceOfAny": 0.7353683035714287
+          },
+          {
+            "week": 14,
+            "expectedOwned": 1.233125,
+            "expectedShare": 0.10618945102260495,
+            "chanceOfAny": 0.7704241071428574
+          },
+          {
+            "week": 17,
+            "expectedOwned": 1.374375,
+            "expectedShare": 0.10815463309069447,
+            "chanceOfAny": 0.8115848214285714
+          }
+        ]
+      },
+      "checkpoints": [
+        {
+          "week": 4,
+          "uniqueMedian": 5,
+          "uniqueLow": 4,
+          "uniqueHigh": 7,
+          "completionMedian": 0.20833333333333334,
+          "openingsMedian": 5,
+          "salvageRate": 0,
+          "managersWithSalvage": 0
+        },
+        {
+          "week": 8,
+          "uniqueMedian": 8,
+          "uniqueLow": 5,
+          "uniqueHigh": 12,
+          "completionMedian": 0.3333333333333333,
+          "openingsMedian": 8,
+          "salvageRate": 0.0029394473838918285,
+          "managersWithSalvage": 0.015
+        },
+        {
+          "week": 12,
+          "uniqueMedian": 10,
+          "uniqueLow": 7,
+          "uniqueHigh": 15,
+          "completionMedian": 0.4166666666666667,
+          "openingsMedian": 10,
+          "salvageRate": 0.015780923648178232,
+          "managersWithSalvage": 0.0875
+        },
+        {
+          "week": 14,
+          "uniqueMedian": 11,
+          "uniqueLow": 8,
+          "uniqueHigh": 16,
+          "completionMedian": 0.4583333333333333,
+          "openingsMedian": 11,
+          "salvageRate": 0.02803933877380205,
+          "managersWithSalvage": 0.145
+        },
+        {
+          "week": 17,
+          "uniqueMedian": 13,
+          "uniqueLow": 8,
+          "uniqueHigh": 17,
+          "completionMedian": 0.5416666666666666,
+          "openingsMedian": 13,
+          "salvageRate": 0.04990654205607477,
+          "managersWithSalvage": 0.2425
+        }
+      ],
+      "perSeason": [
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 5,
+            "uniqueLow": 4,
+            "uniqueHigh": 7,
+            "completionMedian": 0.20833333333333334,
+            "openingsMedian": 5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 8,
+            "uniqueLow": 5,
+            "uniqueHigh": 12,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0.0029394473838918285,
+            "managersWithSalvage": 0.015
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 10,
+            "uniqueLow": 7,
+            "uniqueHigh": 15,
+            "completionMedian": 0.4166666666666667,
+            "openingsMedian": 10,
+            "salvageRate": 0.015780923648178232,
+            "managersWithSalvage": 0.0875
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 16,
+            "completionMedian": 0.4583333333333333,
+            "openingsMedian": 11,
+            "salvageRate": 0.02803933877380205,
+            "managersWithSalvage": 0.145
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 13,
+            "uniqueLow": 8,
+            "uniqueHigh": 17,
+            "completionMedian": 0.5416666666666666,
+            "openingsMedian": 13,
+            "salvageRate": 0.04990654205607477,
+            "managersWithSalvage": 0.2425
+          }
+        ],
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 15,
+            "uniqueLow": 10,
+            "uniqueHigh": 20,
+            "completionMedian": 0.625,
+            "openingsMedian": 16,
+            "salvageRate": 0.09368760559053908,
+            "managersWithSalvage": 0.4075
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 17,
+            "uniqueLow": 13,
+            "uniqueHigh": 21,
+            "completionMedian": 0.7083333333333334,
+            "openingsMedian": 19,
+            "salvageRate": 0.15951539626451286,
+            "managersWithSalvage": 0.6175
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 18,
+            "uniqueLow": 14,
+            "uniqueHigh": 22,
+            "completionMedian": 0.75,
+            "openingsMedian": 21,
+            "salvageRate": 0.20549943883277216,
+            "managersWithSalvage": 0.7325
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 18,
+            "uniqueLow": 14,
+            "uniqueHigh": 22,
+            "completionMedian": 0.75,
+            "openingsMedian": 22,
+            "salvageRate": 0.2302862615728424,
+            "managersWithSalvage": 0.7775
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 19,
+            "uniqueLow": 14,
+            "uniqueHigh": 22,
+            "completionMedian": 0.7916666666666666,
+            "openingsMedian": 24,
+            "salvageRate": 0.2594772545889864,
+            "managersWithSalvage": 0.825
+          }
+        ],
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 20,
+            "uniqueLow": 16,
+            "uniqueHigh": 23,
+            "completionMedian": 0.8333333333333334,
+            "openingsMedian": 27,
+            "salvageRate": 0.3085836527319725,
+            "managersWithSalvage": 0.8925
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 20.5,
+            "uniqueLow": 17,
+            "uniqueHigh": 23,
+            "completionMedian": 0.8541666666666666,
+            "openingsMedian": 31,
+            "salvageRate": 0.36545711592836944,
+            "managersWithSalvage": 0.94
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 21,
+            "uniqueLow": 18,
+            "uniqueHigh": 23,
+            "completionMedian": 0.875,
+            "openingsMedian": 34,
+            "salvageRate": 0.4021344562218673,
+            "managersWithSalvage": 0.96
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 21,
+            "uniqueLow": 18,
+            "uniqueHigh": 23,
+            "completionMedian": 0.875,
+            "openingsMedian": 35,
+            "salvageRate": 0.4186013986013986,
+            "managersWithSalvage": 0.9675
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 21,
+            "uniqueLow": 18,
+            "uniqueHigh": 23,
+            "completionMedian": 0.875,
+            "openingsMedian": 37,
+            "salvageRate": 0.4386152509523491,
+            "managersWithSalvage": 0.975
+          }
+        ]
+      ],
+      "tiers": [
+        {
+          "rarity": "common",
+          "items": 10,
+          "exhaustedShare": 0.98,
+          "exhaustedInSeasonOne": 0.2875,
+          "medianExhaustion": {
+            "season": 2,
+            "week": 4
+          },
+          "pullsPerManager": 22.4445
+        },
+        {
+          "rarity": "rare",
+          "items": 8,
+          "exhaustedShare": 0.76,
+          "exhaustedInSeasonOne": 0.035,
+          "medianExhaustion": {
+            "season": 2,
+            "week": 16
+          },
+          "pullsPerManager": 10.4741
+        },
+        {
+          "rarity": "epic",
+          "items": 4,
+          "exhaustedShare": 0.4825,
+          "exhaustedInSeasonOne": 0.04,
+          "medianExhaustion": {
+            "season": 3,
+            "week": 2
+          },
+          "pullsPerManager": 3.7407500000000002
+        },
+        {
+          "rarity": "legendary",
+          "items": 2,
+          "exhaustedShare": 0.1825,
+          "exhaustedInSeasonOne": 0.03,
+          "medianExhaustion": {
+            "season": 2,
+            "week": 18
+          },
+          "pullsPerManager": 0.74815
+        }
+      ],
+      "byArchetype": {
+        "elite": [
+          {
+            "week": 4,
+            "uniqueMedian": 6.5,
+            "uniqueLow": 4,
+            "uniqueHigh": 8,
+            "completionMedian": 0.2708333333333333,
+            "openingsMedian": 6.5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.4583333333333333,
+            "openingsMedian": 11,
+            "salvageRate": 0.004514672686230248,
+            "managersWithSalvage": 0.05
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 14,
+            "uniqueLow": 11.9,
+            "uniqueHigh": 17,
+            "completionMedian": 0.5833333333333334,
+            "openingsMedian": 14,
+            "salvageRate": 0.0410958904109589,
+            "managersWithSalvage": 0.3
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 15,
+            "uniqueLow": 12.9,
+            "uniqueHigh": 19,
+            "completionMedian": 0.625,
+            "openingsMedian": 16,
+            "salvageRate": 0.06584992343032159,
+            "managersWithSalvage": 0.4
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 16.5,
+            "uniqueLow": 14,
+            "uniqueHigh": 20,
+            "completionMedian": 0.6875,
+            "openingsMedian": 19.5,
+            "salvageRate": 0.1352405721716515,
+            "managersWithSalvage": 0.725
+          }
+        ],
+        "strong": [
+          {
+            "week": 4,
+            "uniqueMedian": 6,
+            "uniqueLow": 4,
+            "uniqueHigh": 8,
+            "completionMedian": 0.25,
+            "openingsMedian": 6,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 10,
+            "uniqueLow": 7,
+            "uniqueHigh": 12.100000000000009,
+            "completionMedian": 0.4166666666666667,
+            "openingsMedian": 10,
+            "salvageRate": 0.007662835249042145,
+            "managersWithSalvage": 0.025
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 12,
+            "uniqueLow": 9,
+            "uniqueHigh": 16,
+            "completionMedian": 0.5,
+            "openingsMedian": 12.5,
+            "salvageRate": 0.0341796875,
+            "managersWithSalvage": 0.175
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 14,
+            "uniqueLow": 10,
+            "uniqueHigh": 17,
+            "completionMedian": 0.5833333333333334,
+            "openingsMedian": 14,
+            "salvageRate": 0.054673721340388004,
+            "managersWithSalvage": 0.2875
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 15,
+            "uniqueLow": 11.9,
+            "uniqueHigh": 19,
+            "completionMedian": 0.625,
+            "openingsMedian": 16,
+            "salvageRate": 0.07769230769230769,
+            "managersWithSalvage": 0.425
+          }
+        ],
+        "average": [
+          {
+            "week": 4,
+            "uniqueMedian": 5,
+            "uniqueLow": 4,
+            "uniqueHigh": 7,
+            "completionMedian": 0.20833333333333334,
+            "openingsMedian": 5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 8,
+            "uniqueLow": 6,
+            "uniqueHigh": 11,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0.0014803849000740192,
+            "managersWithSalvage": 0.0125
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 10.5,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.4375,
+            "openingsMedian": 10.5,
+            "salvageRate": 0.005275498241500586,
+            "managersWithSalvage": 0.05625
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 12,
+            "uniqueLow": 8,
+            "uniqueHigh": 15,
+            "completionMedian": 0.5,
+            "openingsMedian": 12,
+            "salvageRate": 0.014799154334038054,
+            "managersWithSalvage": 0.1125
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 13,
+            "uniqueLow": 9.9,
+            "uniqueHigh": 16,
+            "completionMedian": 0.5416666666666666,
+            "openingsMedian": 13,
+            "salvageRate": 0.026807084729535663,
+            "managersWithSalvage": 0.1875
+          }
+        ],
+        "weak": [
+          {
+            "week": 4,
+            "uniqueMedian": 4,
+            "uniqueLow": 3.9000000000000004,
+            "uniqueHigh": 6,
+            "completionMedian": 0.16666666666666666,
+            "openingsMedian": 4,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 7,
+            "uniqueLow": 5,
+            "uniqueHigh": 10,
+            "completionMedian": 0.2916666666666667,
+            "openingsMedian": 7,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 8,
+            "uniqueLow": 7,
+            "uniqueHigh": 12,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 9,
+            "uniqueLow": 7,
+            "uniqueHigh": 13,
+            "completionMedian": 0.375,
+            "openingsMedian": 9,
+            "salvageRate": 0.001272264631043257,
+            "managersWithSalvage": 0.0125
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 10,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.4166666666666667,
+            "openingsMedian": 10,
+            "salvageRate": 0.006984866123399301,
+            "managersWithSalvage": 0.05
+          }
+        ],
+        "dire": [
+          {
+            "week": 4,
+            "uniqueMedian": 4,
+            "uniqueLow": 3,
+            "uniqueHigh": 5,
+            "completionMedian": 0.16666666666666666,
+            "openingsMedian": 4,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 6,
+            "uniqueLow": 5,
+            "uniqueHigh": 8,
+            "completionMedian": 0.25,
+            "openingsMedian": 6,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 7,
+            "uniqueLow": 5,
+            "uniqueHigh": 9,
+            "completionMedian": 0.2916666666666667,
+            "openingsMedian": 7,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 8,
+            "uniqueLow": 5,
+            "uniqueHigh": 10,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 8,
+            "uniqueLow": 6,
+            "uniqueHigh": 10,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "P0 kickoff — 24 painted",
+      "shape": {
+        "common": 10,
+        "rare": 8,
+        "epic": 4,
+        "legendary": 2
+      },
+      "total": 24,
+      "art": {
+        "common": 10,
+        "rare": 8,
+        "epic": 4,
+        "legendary": 2
+      },
+      "wall": {
+        "common": 1,
+        "rare": 2,
+        "epic": 1,
+        "legendary": 1
+      },
+      "collection": {
+        "art": [
+          {
+            "week": 4,
+            "expectedOwned": 5.1125,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 8,
+            "expectedOwned": 8.48,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 12,
+            "expectedOwned": 10.6025,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 14,
+            "expectedOwned": 11.6125,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 17,
+            "expectedOwned": 12.7075,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          }
+        ],
+        "wall": [
+          {
+            "week": 4,
+            "expectedOwned": 0.8596250000000003,
+            "expectedShare": 0.16814180929095363,
+            "chanceOfAny": 0.639642857142857
+          },
+          {
+            "week": 8,
+            "expectedOwned": 1.4094999999999986,
+            "expectedShare": 0.1662146226415093,
+            "chanceOfAny": 0.8357020089285712
+          },
+          {
+            "week": 12,
+            "expectedOwned": 1.7543749999999991,
+            "expectedShare": 0.16546804998821024,
+            "chanceOfAny": 0.9080078125000001
+          },
+          {
+            "week": 14,
+            "expectedOwned": 1.9238750000000007,
+            "expectedShare": 0.1656727664155006,
+            "chanceOfAny": 0.9311674107142855
+          },
+          {
+            "week": 17,
+            "expectedOwned": 2.1201249999999994,
+            "expectedShare": 0.16684044855400348,
+            "chanceOfAny": 0.9502622767857143
+          }
+        ]
+      },
+      "checkpoints": [
+        {
+          "week": 4,
+          "uniqueMedian": 5,
+          "uniqueLow": 4,
+          "uniqueHigh": 7,
+          "completionMedian": 0.20833333333333334,
+          "openingsMedian": 5,
+          "salvageRate": 0,
+          "managersWithSalvage": 0
+        },
+        {
+          "week": 8,
+          "uniqueMedian": 8,
+          "uniqueLow": 5,
+          "uniqueHigh": 12,
+          "completionMedian": 0.3333333333333333,
+          "openingsMedian": 8,
+          "salvageRate": 0.0029394473838918285,
+          "managersWithSalvage": 0.015
+        },
+        {
+          "week": 12,
+          "uniqueMedian": 10,
+          "uniqueLow": 7,
+          "uniqueHigh": 15,
+          "completionMedian": 0.4166666666666667,
+          "openingsMedian": 10,
+          "salvageRate": 0.015780923648178232,
+          "managersWithSalvage": 0.0875
+        },
+        {
+          "week": 14,
+          "uniqueMedian": 11,
+          "uniqueLow": 8,
+          "uniqueHigh": 16,
+          "completionMedian": 0.4583333333333333,
+          "openingsMedian": 11,
+          "salvageRate": 0.02803933877380205,
+          "managersWithSalvage": 0.145
+        },
+        {
+          "week": 17,
+          "uniqueMedian": 13,
+          "uniqueLow": 8,
+          "uniqueHigh": 17,
+          "completionMedian": 0.5416666666666666,
+          "openingsMedian": 13,
+          "salvageRate": 0.04990654205607477,
+          "managersWithSalvage": 0.2425
+        }
+      ],
+      "perSeason": [
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 5,
+            "uniqueLow": 4,
+            "uniqueHigh": 7,
+            "completionMedian": 0.20833333333333334,
+            "openingsMedian": 5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 8,
+            "uniqueLow": 5,
+            "uniqueHigh": 12,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0.0029394473838918285,
+            "managersWithSalvage": 0.015
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 10,
+            "uniqueLow": 7,
+            "uniqueHigh": 15,
+            "completionMedian": 0.4166666666666667,
+            "openingsMedian": 10,
+            "salvageRate": 0.015780923648178232,
+            "managersWithSalvage": 0.0875
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 16,
+            "completionMedian": 0.4583333333333333,
+            "openingsMedian": 11,
+            "salvageRate": 0.02803933877380205,
+            "managersWithSalvage": 0.145
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 13,
+            "uniqueLow": 8,
+            "uniqueHigh": 17,
+            "completionMedian": 0.5416666666666666,
+            "openingsMedian": 13,
+            "salvageRate": 0.04990654205607477,
+            "managersWithSalvage": 0.2425
+          }
+        ],
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 15,
+            "uniqueLow": 10,
+            "uniqueHigh": 20,
+            "completionMedian": 0.625,
+            "openingsMedian": 16,
+            "salvageRate": 0.09368760559053908,
+            "managersWithSalvage": 0.4075
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 17,
+            "uniqueLow": 13,
+            "uniqueHigh": 21,
+            "completionMedian": 0.7083333333333334,
+            "openingsMedian": 19,
+            "salvageRate": 0.15951539626451286,
+            "managersWithSalvage": 0.6175
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 18,
+            "uniqueLow": 14,
+            "uniqueHigh": 22,
+            "completionMedian": 0.75,
+            "openingsMedian": 21,
+            "salvageRate": 0.20549943883277216,
+            "managersWithSalvage": 0.7325
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 18,
+            "uniqueLow": 14,
+            "uniqueHigh": 22,
+            "completionMedian": 0.75,
+            "openingsMedian": 22,
+            "salvageRate": 0.2302862615728424,
+            "managersWithSalvage": 0.7775
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 19,
+            "uniqueLow": 14,
+            "uniqueHigh": 22,
+            "completionMedian": 0.7916666666666666,
+            "openingsMedian": 24,
+            "salvageRate": 0.2594772545889864,
+            "managersWithSalvage": 0.825
+          }
+        ],
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 20,
+            "uniqueLow": 16,
+            "uniqueHigh": 23,
+            "completionMedian": 0.8333333333333334,
+            "openingsMedian": 27,
+            "salvageRate": 0.3085836527319725,
+            "managersWithSalvage": 0.8925
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 20.5,
+            "uniqueLow": 17,
+            "uniqueHigh": 23,
+            "completionMedian": 0.8541666666666666,
+            "openingsMedian": 31,
+            "salvageRate": 0.36545711592836944,
+            "managersWithSalvage": 0.94
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 21,
+            "uniqueLow": 18,
+            "uniqueHigh": 23,
+            "completionMedian": 0.875,
+            "openingsMedian": 34,
+            "salvageRate": 0.4021344562218673,
+            "managersWithSalvage": 0.96
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 21,
+            "uniqueLow": 18,
+            "uniqueHigh": 23,
+            "completionMedian": 0.875,
+            "openingsMedian": 35,
+            "salvageRate": 0.4186013986013986,
+            "managersWithSalvage": 0.9675
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 21,
+            "uniqueLow": 18,
+            "uniqueHigh": 23,
+            "completionMedian": 0.875,
+            "openingsMedian": 37,
+            "salvageRate": 0.4386152509523491,
+            "managersWithSalvage": 0.975
+          }
+        ]
+      ],
+      "tiers": [
+        {
+          "rarity": "common",
+          "items": 10,
+          "exhaustedShare": 0.98,
+          "exhaustedInSeasonOne": 0.2875,
+          "medianExhaustion": {
+            "season": 2,
+            "week": 4
+          },
+          "pullsPerManager": 22.4445
+        },
+        {
+          "rarity": "rare",
+          "items": 8,
+          "exhaustedShare": 0.76,
+          "exhaustedInSeasonOne": 0.035,
+          "medianExhaustion": {
+            "season": 2,
+            "week": 16
+          },
+          "pullsPerManager": 10.4741
+        },
+        {
+          "rarity": "epic",
+          "items": 4,
+          "exhaustedShare": 0.4825,
+          "exhaustedInSeasonOne": 0.04,
+          "medianExhaustion": {
+            "season": 3,
+            "week": 2
+          },
+          "pullsPerManager": 3.7407500000000002
+        },
+        {
+          "rarity": "legendary",
+          "items": 2,
+          "exhaustedShare": 0.1825,
+          "exhaustedInSeasonOne": 0.03,
+          "medianExhaustion": {
+            "season": 2,
+            "week": 18
+          },
+          "pullsPerManager": 0.74815
+        }
+      ],
+      "byArchetype": {
+        "elite": [
+          {
+            "week": 4,
+            "uniqueMedian": 6.5,
+            "uniqueLow": 4,
+            "uniqueHigh": 8,
+            "completionMedian": 0.2708333333333333,
+            "openingsMedian": 6.5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.4583333333333333,
+            "openingsMedian": 11,
+            "salvageRate": 0.004514672686230248,
+            "managersWithSalvage": 0.05
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 14,
+            "uniqueLow": 11.9,
+            "uniqueHigh": 17,
+            "completionMedian": 0.5833333333333334,
+            "openingsMedian": 14,
+            "salvageRate": 0.0410958904109589,
+            "managersWithSalvage": 0.3
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 15,
+            "uniqueLow": 12.9,
+            "uniqueHigh": 19,
+            "completionMedian": 0.625,
+            "openingsMedian": 16,
+            "salvageRate": 0.06584992343032159,
+            "managersWithSalvage": 0.4
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 16.5,
+            "uniqueLow": 14,
+            "uniqueHigh": 20,
+            "completionMedian": 0.6875,
+            "openingsMedian": 19.5,
+            "salvageRate": 0.1352405721716515,
+            "managersWithSalvage": 0.725
+          }
+        ],
+        "strong": [
+          {
+            "week": 4,
+            "uniqueMedian": 6,
+            "uniqueLow": 4,
+            "uniqueHigh": 8,
+            "completionMedian": 0.25,
+            "openingsMedian": 6,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 10,
+            "uniqueLow": 7,
+            "uniqueHigh": 12.100000000000009,
+            "completionMedian": 0.4166666666666667,
+            "openingsMedian": 10,
+            "salvageRate": 0.007662835249042145,
+            "managersWithSalvage": 0.025
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 12,
+            "uniqueLow": 9,
+            "uniqueHigh": 16,
+            "completionMedian": 0.5,
+            "openingsMedian": 12.5,
+            "salvageRate": 0.0341796875,
+            "managersWithSalvage": 0.175
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 14,
+            "uniqueLow": 10,
+            "uniqueHigh": 17,
+            "completionMedian": 0.5833333333333334,
+            "openingsMedian": 14,
+            "salvageRate": 0.054673721340388004,
+            "managersWithSalvage": 0.2875
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 15,
+            "uniqueLow": 11.9,
+            "uniqueHigh": 19,
+            "completionMedian": 0.625,
+            "openingsMedian": 16,
+            "salvageRate": 0.07769230769230769,
+            "managersWithSalvage": 0.425
+          }
+        ],
+        "average": [
+          {
+            "week": 4,
+            "uniqueMedian": 5,
+            "uniqueLow": 4,
+            "uniqueHigh": 7,
+            "completionMedian": 0.20833333333333334,
+            "openingsMedian": 5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 8,
+            "uniqueLow": 6,
+            "uniqueHigh": 11,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0.0014803849000740192,
+            "managersWithSalvage": 0.0125
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 10.5,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.4375,
+            "openingsMedian": 10.5,
+            "salvageRate": 0.005275498241500586,
+            "managersWithSalvage": 0.05625
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 12,
+            "uniqueLow": 8,
+            "uniqueHigh": 15,
+            "completionMedian": 0.5,
+            "openingsMedian": 12,
+            "salvageRate": 0.014799154334038054,
+            "managersWithSalvage": 0.1125
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 13,
+            "uniqueLow": 9.9,
+            "uniqueHigh": 16,
+            "completionMedian": 0.5416666666666666,
+            "openingsMedian": 13,
+            "salvageRate": 0.026807084729535663,
+            "managersWithSalvage": 0.1875
+          }
+        ],
+        "weak": [
+          {
+            "week": 4,
+            "uniqueMedian": 4,
+            "uniqueLow": 3.9000000000000004,
+            "uniqueHigh": 6,
+            "completionMedian": 0.16666666666666666,
+            "openingsMedian": 4,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 7,
+            "uniqueLow": 5,
+            "uniqueHigh": 10,
+            "completionMedian": 0.2916666666666667,
+            "openingsMedian": 7,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 8,
+            "uniqueLow": 7,
+            "uniqueHigh": 12,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 9,
+            "uniqueLow": 7,
+            "uniqueHigh": 13,
+            "completionMedian": 0.375,
+            "openingsMedian": 9,
+            "salvageRate": 0.001272264631043257,
+            "managersWithSalvage": 0.0125
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 10,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.4166666666666667,
+            "openingsMedian": 10,
+            "salvageRate": 0.006984866123399301,
+            "managersWithSalvage": 0.05
+          }
+        ],
+        "dire": [
+          {
+            "week": 4,
+            "uniqueMedian": 4,
+            "uniqueLow": 3,
+            "uniqueHigh": 5,
+            "completionMedian": 0.16666666666666666,
+            "openingsMedian": 4,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 6,
+            "uniqueLow": 5,
+            "uniqueHigh": 8,
+            "completionMedian": 0.25,
+            "openingsMedian": 6,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 7,
+            "uniqueLow": 5,
+            "uniqueHigh": 9,
+            "completionMedian": 0.2916666666666667,
+            "openingsMedian": 7,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 8,
+            "uniqueLow": 5,
+            "uniqueHigh": 10,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 8,
+            "uniqueLow": 6,
+            "uniqueHigh": 10,
+            "completionMedian": 0.3333333333333333,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "P1 season one — 32",
+      "shape": {
+        "common": 15,
+        "rare": 10,
+        "epic": 4,
+        "legendary": 3
+      },
+      "total": 32,
+      "art": {
+        "common": 15,
+        "rare": 10,
+        "epic": 4,
+        "legendary": 3
+      },
+      "wall": {
+        "common": 4,
+        "rare": 3,
+        "epic": 1,
+        "legendary": 2
+      },
+      "collection": {
+        "art": [
+          {
+            "week": 4,
+            "expectedOwned": 5.1125,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 8,
+            "expectedOwned": 8.4925,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 12,
+            "expectedOwned": 10.7525,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 14,
+            "expectedOwned": 11.8975,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 17,
+            "expectedOwned": 13.2775,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          }
+        ],
+        "wall": [
+          {
+            "week": 4,
+            "expectedOwned": 1.4463333333333364,
+            "expectedShare": 0.28290138549307314,
+            "chanceOfAny": 0.8237920978327226
+          },
+          {
+            "week": 8,
+            "expectedOwned": 2.404375000000002,
+            "expectedShare": 0.28311745657933496,
+            "chanceOfAny": 0.9470472387566137
+          },
+          {
+            "week": 12,
+            "expectedOwned": 3.0326249999999964,
+            "expectedShare": 0.28203906068356166,
+            "chanceOfAny": 0.9747415712759463
+          },
+          {
+            "week": 14,
+            "expectedOwned": 3.357458333333335,
+            "expectedShare": 0.28219864117111454,
+            "chanceOfAny": 0.9825487166768416
+          },
+          {
+            "week": 17,
+            "expectedOwned": 3.7456250000000066,
+            "expectedShare": 0.28210318207493934,
+            "chanceOfAny": 0.9886845721408222
+          }
+        ]
+      },
+      "checkpoints": [
+        {
+          "week": 4,
+          "uniqueMedian": 5,
+          "uniqueLow": 4,
+          "uniqueHigh": 7,
+          "completionMedian": 0.15625,
+          "openingsMedian": 5,
+          "salvageRate": 0,
+          "managersWithSalvage": 0
+        },
+        {
+          "week": 8,
+          "uniqueMedian": 8,
+          "uniqueLow": 5,
+          "uniqueHigh": 12,
+          "completionMedian": 0.25,
+          "openingsMedian": 8,
+          "salvageRate": 0.0005884083553986466,
+          "managersWithSalvage": 0.0025
+        },
+        {
+          "week": 12,
+          "uniqueMedian": 10,
+          "uniqueLow": 7,
+          "uniqueHigh": 15,
+          "completionMedian": 0.3125,
+          "openingsMedian": 10,
+          "salvageRate": 0.0011611704598235022,
+          "managersWithSalvage": 0.0075
+        },
+        {
+          "week": 14,
+          "uniqueMedian": 11,
+          "uniqueLow": 8,
+          "uniqueHigh": 17,
+          "completionMedian": 0.34375,
+          "openingsMedian": 11,
+          "salvageRate": 0.002933165723863398,
+          "managersWithSalvage": 0.02
+        },
+        {
+          "week": 17,
+          "uniqueMedian": 13,
+          "uniqueLow": 8,
+          "uniqueHigh": 19,
+          "completionMedian": 0.40625,
+          "openingsMedian": 13,
+          "salvageRate": 0.0048716507401161705,
+          "managersWithSalvage": 0.0375
+        }
+      ],
+      "perSeason": [
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 5,
+            "uniqueLow": 4,
+            "uniqueHigh": 7,
+            "completionMedian": 0.15625,
+            "openingsMedian": 5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 8,
+            "uniqueLow": 5,
+            "uniqueHigh": 12,
+            "completionMedian": 0.25,
+            "openingsMedian": 8,
+            "salvageRate": 0.0005884083553986466,
+            "managersWithSalvage": 0.0025
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 10,
+            "uniqueLow": 7,
+            "uniqueHigh": 15,
+            "completionMedian": 0.3125,
+            "openingsMedian": 10,
+            "salvageRate": 0.0011611704598235022,
+            "managersWithSalvage": 0.0075
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 17,
+            "completionMedian": 0.34375,
+            "openingsMedian": 11,
+            "salvageRate": 0.002933165723863398,
+            "managersWithSalvage": 0.02
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 13,
+            "uniqueLow": 8,
+            "uniqueHigh": 19,
+            "completionMedian": 0.40625,
+            "openingsMedian": 13,
+            "salvageRate": 0.0048716507401161705,
+            "managersWithSalvage": 0.0375
+          }
+        ],
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 16,
+            "uniqueLow": 10,
+            "uniqueHigh": 22,
+            "completionMedian": 0.5,
+            "openingsMedian": 16,
+            "salvageRate": 0.016037008481110254,
+            "managersWithSalvage": 0.115
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 19,
+            "uniqueLow": 13,
+            "uniqueHigh": 25,
+            "completionMedian": 0.59375,
+            "openingsMedian": 19,
+            "salvageRate": 0.039515615041427664,
+            "managersWithSalvage": 0.2375
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 21,
+            "uniqueLow": 14,
+            "uniqueHigh": 27,
+            "completionMedian": 0.65625,
+            "openingsMedian": 22,
+            "salvageRate": 0.06612133605998637,
+            "managersWithSalvage": 0.345
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 22,
+            "uniqueLow": 14,
+            "uniqueHigh": 28,
+            "completionMedian": 0.6875,
+            "openingsMedian": 22,
+            "salvageRate": 0.08161725067385445,
+            "managersWithSalvage": 0.3875
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 23,
+            "uniqueLow": 15,
+            "uniqueHigh": 28,
+            "completionMedian": 0.71875,
+            "openingsMedian": 24,
+            "salvageRate": 0.10223706852920336,
+            "managersWithSalvage": 0.4675
+          }
+        ],
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 24,
+            "uniqueLow": 17,
+            "uniqueHigh": 29,
+            "completionMedian": 0.75,
+            "openingsMedian": 27,
+            "salvageRate": 0.14454997738579828,
+            "managersWithSalvage": 0.6325
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 26,
+            "uniqueLow": 20,
+            "uniqueHigh": 29,
+            "completionMedian": 0.8125,
+            "openingsMedian": 30,
+            "salvageRate": 0.19680511182108626,
+            "managersWithSalvage": 0.7475
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 27,
+            "uniqueLow": 21,
+            "uniqueHigh": 30,
+            "completionMedian": 0.84375,
+            "openingsMedian": 33,
+            "salvageRate": 0.2329587461185864,
+            "managersWithSalvage": 0.8
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 27,
+            "uniqueLow": 21,
+            "uniqueHigh": 30,
+            "completionMedian": 0.84375,
+            "openingsMedian": 34,
+            "salvageRate": 0.25003563791874556,
+            "managersWithSalvage": 0.825
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 27,
+            "uniqueLow": 21,
+            "uniqueHigh": 30,
+            "completionMedian": 0.84375,
+            "openingsMedian": 35,
+            "salvageRate": 0.27266530334015,
+            "managersWithSalvage": 0.8475
+          }
+        ]
+      ],
+      "tiers": [
+        {
+          "rarity": "common",
+          "items": 15,
+          "exhaustedShare": 0.845,
+          "exhaustedInSeasonOne": 0.035,
+          "medianExhaustion": {
+            "season": 2,
+            "week": 15
+          },
+          "pullsPerManager": 22.005000000000003
+        },
+        {
+          "rarity": "rare",
+          "items": 10,
+          "exhaustedShare": 0.54,
+          "exhaustedInSeasonOne": 0.01,
+          "medianExhaustion": {
+            "season": 3,
+            "week": 5
+          },
+          "pullsPerManager": 10.269
+        },
+        {
+          "rarity": "epic",
+          "items": 4,
+          "exhaustedShare": 0.4575,
+          "exhaustedInSeasonOne": 0.035,
+          "medianExhaustion": {
+            "season": 3,
+            "week": 1
+          },
+          "pullsPerManager": 3.6675
+        },
+        {
+          "rarity": "legendary",
+          "items": 3,
+          "exhaustedShare": 0.0375,
+          "exhaustedInSeasonOne": 0.0025,
+          "medianExhaustion": {
+            "season": 2,
+            "week": 18
+          },
+          "pullsPerManager": 0.7334999999999999
+        }
+      ],
+      "byArchetype": {
+        "elite": [
+          {
+            "week": 4,
+            "uniqueMedian": 6.5,
+            "uniqueLow": 4,
+            "uniqueHigh": 8,
+            "completionMedian": 0.203125,
+            "openingsMedian": 6.5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.34375,
+            "openingsMedian": 11,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 14,
+            "uniqueLow": 12,
+            "uniqueHigh": 18,
+            "completionMedian": 0.4375,
+            "openingsMedian": 14,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 16,
+            "uniqueLow": 13.9,
+            "uniqueHigh": 19,
+            "completionMedian": 0.5,
+            "openingsMedian": 16,
+            "salvageRate": 0.0015337423312883436,
+            "managersWithSalvage": 0.025
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 18.5,
+            "uniqueLow": 14.9,
+            "uniqueHigh": 22,
+            "completionMedian": 0.578125,
+            "openingsMedian": 18.5,
+            "salvageRate": 0.0107095046854083,
+            "managersWithSalvage": 0.15
+          }
+        ],
+        "strong": [
+          {
+            "week": 4,
+            "uniqueMedian": 6,
+            "uniqueLow": 4,
+            "uniqueHigh": 8,
+            "completionMedian": 0.1875,
+            "openingsMedian": 6,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 10,
+            "uniqueLow": 7,
+            "uniqueHigh": 12.100000000000009,
+            "completionMedian": 0.3125,
+            "openingsMedian": 10,
+            "salvageRate": 0.0025575447570332483,
+            "managersWithSalvage": 0.0125
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 12.5,
+            "uniqueLow": 9,
+            "uniqueHigh": 17,
+            "completionMedian": 0.390625,
+            "openingsMedian": 12.5,
+            "salvageRate": 0.0048638132295719845,
+            "managersWithSalvage": 0.0375
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 14,
+            "uniqueLow": 10,
+            "uniqueHigh": 18.10000000000001,
+            "completionMedian": 0.4375,
+            "openingsMedian": 14,
+            "salvageRate": 0.01054481546572935,
+            "managersWithSalvage": 0.075
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 16,
+            "uniqueLow": 12,
+            "uniqueHigh": 20,
+            "completionMedian": 0.5,
+            "openingsMedian": 16,
+            "salvageRate": 0.012223071046600458,
+            "managersWithSalvage": 0.0875
+          }
+        ],
+        "average": [
+          {
+            "week": 4,
+            "uniqueMedian": 5,
+            "uniqueLow": 4,
+            "uniqueHigh": 7,
+            "completionMedian": 0.15625,
+            "openingsMedian": 5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 8,
+            "uniqueLow": 6,
+            "uniqueHigh": 11,
+            "completionMedian": 0.25,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.34375,
+            "openingsMedian": 11,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 12,
+            "uniqueLow": 8,
+            "uniqueHigh": 15,
+            "completionMedian": 0.375,
+            "openingsMedian": 12,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 13,
+            "uniqueLow": 9,
+            "uniqueHigh": 17,
+            "completionMedian": 0.40625,
+            "openingsMedian": 13,
+            "salvageRate": 0.0004764173415912339,
+            "managersWithSalvage": 0.00625
+          }
+        ],
+        "weak": [
+          {
+            "week": 4,
+            "uniqueMedian": 4,
+            "uniqueLow": 3.9000000000000004,
+            "uniqueHigh": 6,
+            "completionMedian": 0.125,
+            "openingsMedian": 4,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 7,
+            "uniqueLow": 5,
+            "uniqueHigh": 10,
+            "completionMedian": 0.21875,
+            "openingsMedian": 7,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 8,
+            "uniqueLow": 7,
+            "uniqueHigh": 12,
+            "completionMedian": 0.25,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 9,
+            "uniqueLow": 7,
+            "uniqueHigh": 13,
+            "completionMedian": 0.28125,
+            "openingsMedian": 9,
+            "salvageRate": 0.0012903225806451613,
+            "managersWithSalvage": 0.0125
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 10,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.3125,
+            "openingsMedian": 10,
+            "salvageRate": 0.001182033096926714,
+            "managersWithSalvage": 0.0125
+          }
+        ],
+        "dire": [
+          {
+            "week": 4,
+            "uniqueMedian": 4,
+            "uniqueLow": 3,
+            "uniqueHigh": 5,
+            "completionMedian": 0.125,
+            "openingsMedian": 4,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 6,
+            "uniqueLow": 5,
+            "uniqueHigh": 8,
+            "completionMedian": 0.1875,
+            "openingsMedian": 6,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 7,
+            "uniqueLow": 5,
+            "uniqueHigh": 9,
+            "completionMedian": 0.21875,
+            "openingsMedian": 7,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 8,
+            "uniqueLow": 5,
+            "uniqueHigh": 10,
+            "completionMedian": 0.25,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 8,
+            "uniqueLow": 6,
+            "uniqueHigh": 10,
+            "completionMedian": 0.25,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "P2 stretch — 38",
+      "shape": {
+        "common": 18,
+        "rare": 12,
+        "epic": 5,
+        "legendary": 3
+      },
+      "total": 38,
+      "art": {
+        "common": 18,
+        "rare": 12,
+        "epic": 5,
+        "legendary": 3
+      },
+      "wall": {
+        "common": 5,
+        "rare": 4,
+        "epic": 1,
+        "legendary": 2
+      },
+      "collection": {
+        "art": [
+          {
+            "week": 4,
+            "expectedOwned": 5.1125,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 8,
+            "expectedOwned": 8.495,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 12,
+            "expectedOwned": 10.7575,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 14,
+            "expectedOwned": 11.915,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          },
+          {
+            "week": 17,
+            "expectedOwned": 13.3225,
+            "expectedShare": 1,
+            "chanceOfAny": 1
+          }
+        ],
+        "wall": [
+          {
+            "week": 4,
+            "expectedOwned": 1.5066388888888855,
+            "expectedShare": 0.2946970931812001,
+            "chanceOfAny": 0.8322364974440956
+          },
+          {
+            "week": 8,
+            "expectedOwned": 2.5012500000000006,
+            "expectedShare": 0.2944379046497941,
+            "chanceOfAny": 0.9487009689959036
+          },
+          {
+            "week": 12,
+            "expectedOwned": 3.1530277777777878,
+            "expectedShare": 0.2931004208949837,
+            "chanceOfAny": 0.9749765740976526
+          },
+          {
+            "week": 14,
+            "expectedOwned": 3.4942222222222363,
+            "expectedShare": 0.29326246095025066,
+            "chanceOfAny": 0.9824972683966965
+          },
+          {
+            "week": 17,
+            "expectedOwned": 3.9060277777777923,
+            "expectedShare": 0.29319030045245204,
+            "chanceOfAny": 0.9884596723537901
+          }
+        ]
+      },
+      "checkpoints": [
+        {
+          "week": 4,
+          "uniqueMedian": 5,
+          "uniqueLow": 4,
+          "uniqueHigh": 7,
+          "completionMedian": 0.13157894736842105,
+          "openingsMedian": 5,
+          "salvageRate": 0,
+          "managersWithSalvage": 0
+        },
+        {
+          "week": 8,
+          "uniqueMedian": 8,
+          "uniqueLow": 5,
+          "uniqueHigh": 12,
+          "completionMedian": 0.21052631578947367,
+          "openingsMedian": 8,
+          "salvageRate": 0.0002942041776993233,
+          "managersWithSalvage": 0.0025
+        },
+        {
+          "week": 12,
+          "uniqueMedian": 10,
+          "uniqueLow": 7,
+          "uniqueHigh": 15,
+          "completionMedian": 0.2631578947368421,
+          "openingsMedian": 10,
+          "salvageRate": 0.0004645760743321719,
+          "managersWithSalvage": 0.0025
+        },
+        {
+          "week": 14,
+          "uniqueMedian": 11,
+          "uniqueLow": 8,
+          "uniqueHigh": 17,
+          "completionMedian": 0.2894736842105263,
+          "openingsMedian": 11,
+          "salvageRate": 0.0006290626965820927,
+          "managersWithSalvage": 0.005
+        },
+        {
+          "week": 17,
+          "uniqueMedian": 13,
+          "uniqueLow": 8,
+          "uniqueHigh": 19,
+          "completionMedian": 0.34210526315789475,
+          "openingsMedian": 13,
+          "salvageRate": 0.0009373828271466067,
+          "managersWithSalvage": 0.005
+        }
+      ],
+      "perSeason": [
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 5,
+            "uniqueLow": 4,
+            "uniqueHigh": 7,
+            "completionMedian": 0.13157894736842105,
+            "openingsMedian": 5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 8,
+            "uniqueLow": 5,
+            "uniqueHigh": 12,
+            "completionMedian": 0.21052631578947367,
+            "openingsMedian": 8,
+            "salvageRate": 0.0002942041776993233,
+            "managersWithSalvage": 0.0025
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 10,
+            "uniqueLow": 7,
+            "uniqueHigh": 15,
+            "completionMedian": 0.2631578947368421,
+            "openingsMedian": 10,
+            "salvageRate": 0.0004645760743321719,
+            "managersWithSalvage": 0.0025
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 17,
+            "completionMedian": 0.2894736842105263,
+            "openingsMedian": 11,
+            "salvageRate": 0.0006290626965820927,
+            "managersWithSalvage": 0.005
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 13,
+            "uniqueLow": 8,
+            "uniqueHigh": 19,
+            "completionMedian": 0.34210526315789475,
+            "openingsMedian": 13,
+            "salvageRate": 0.0009373828271466067,
+            "managersWithSalvage": 0.005
+          }
+        ],
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 16,
+            "uniqueLow": 10,
+            "uniqueHigh": 23,
+            "completionMedian": 0.42105263157894735,
+            "openingsMedian": 16,
+            "salvageRate": 0.00324124093224263,
+            "managersWithSalvage": 0.0275
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 19,
+            "uniqueLow": 13,
+            "uniqueHigh": 26,
+            "completionMedian": 0.5,
+            "openingsMedian": 19,
+            "salvageRate": 0.013931492842535788,
+            "managersWithSalvage": 0.1
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 21,
+            "uniqueLow": 14,
+            "uniqueHigh": 29,
+            "completionMedian": 0.5526315789473685,
+            "openingsMedian": 21,
+            "salvageRate": 0.026030368763557483,
+            "managersWithSalvage": 0.16
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 22,
+            "uniqueLow": 14.900000000000006,
+            "uniqueHigh": 30,
+            "completionMedian": 0.5789473684210527,
+            "openingsMedian": 22,
+            "salvageRate": 0.032244103008006925,
+            "managersWithSalvage": 0.2025
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 24,
+            "uniqueLow": 15,
+            "uniqueHigh": 31,
+            "completionMedian": 0.631578947368421,
+            "openingsMedian": 24,
+            "salvageRate": 0.04471379099612956,
+            "managersWithSalvage": 0.255
+          }
+        ],
+        [
+          {
+            "week": 4,
+            "uniqueMedian": 26,
+            "uniqueLow": 17,
+            "uniqueHigh": 33,
+            "completionMedian": 0.6842105263157895,
+            "openingsMedian": 27,
+            "salvageRate": 0.07220906938626843,
+            "managersWithSalvage": 0.3825
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 28.5,
+            "uniqueLow": 20,
+            "uniqueHigh": 34,
+            "completionMedian": 0.75,
+            "openingsMedian": 30,
+            "salvageRate": 0.1082627972591697,
+            "managersWithSalvage": 0.515
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 30,
+            "uniqueLow": 21,
+            "uniqueHigh": 35,
+            "completionMedian": 0.7894736842105263,
+            "openingsMedian": 32,
+            "salvageRate": 0.13760095722405025,
+            "managersWithSalvage": 0.62
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 30,
+            "uniqueLow": 21.900000000000006,
+            "uniqueHigh": 35,
+            "completionMedian": 0.7894736842105263,
+            "openingsMedian": 33.5,
+            "salvageRate": 0.1529080675422139,
+            "managersWithSalvage": 0.6475
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 31,
+            "uniqueLow": 22,
+            "uniqueHigh": 35,
+            "completionMedian": 0.8157894736842105,
+            "openingsMedian": 35,
+            "salvageRate": 0.1736878453038674,
+            "managersWithSalvage": 0.705
+          }
+        ]
+      ],
+      "tiers": [
+        {
+          "rarity": "common",
+          "items": 18,
+          "exhaustedShare": 0.68,
+          "exhaustedInSeasonOne": 0.005,
+          "medianExhaustion": {
+            "season": 3,
+            "week": 3
+          },
+          "pullsPerManager": 21.720000000000006
+        },
+        {
+          "rarity": "rare",
+          "items": 12,
+          "exhaustedShare": 0.34,
+          "exhaustedInSeasonOne": 0,
+          "medianExhaustion": {
+            "season": 3,
+            "week": 7
+          },
+          "pullsPerManager": 10.136000000000001
+        },
+        {
+          "rarity": "epic",
+          "items": 5,
+          "exhaustedShare": 0.3075,
+          "exhaustedInSeasonOne": 0.0125,
+          "medianExhaustion": {
+            "season": 3,
+            "week": 5
+          },
+          "pullsPerManager": 3.6200000000000006
+        },
+        {
+          "rarity": "legendary",
+          "items": 3,
+          "exhaustedShare": 0.04,
+          "exhaustedInSeasonOne": 0.0025,
+          "medianExhaustion": {
+            "season": 3,
+            "week": 1
+          },
+          "pullsPerManager": 0.7240000000000001
+        }
+      ],
+      "byArchetype": {
+        "elite": [
+          {
+            "week": 4,
+            "uniqueMedian": 6.5,
+            "uniqueLow": 4,
+            "uniqueHigh": 8,
+            "completionMedian": 0.17105263157894737,
+            "openingsMedian": 6.5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.2894736842105263,
+            "openingsMedian": 11,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 14,
+            "uniqueLow": 12,
+            "uniqueHigh": 18,
+            "completionMedian": 0.3684210526315789,
+            "openingsMedian": 14,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 16,
+            "uniqueLow": 13.9,
+            "uniqueHigh": 19,
+            "completionMedian": 0.42105263157894735,
+            "openingsMedian": 16,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 19,
+            "uniqueLow": 14,
+            "uniqueHigh": 23,
+            "completionMedian": 0.5,
+            "openingsMedian": 19,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          }
+        ],
+        "strong": [
+          {
+            "week": 4,
+            "uniqueMedian": 6,
+            "uniqueLow": 4,
+            "uniqueHigh": 8,
+            "completionMedian": 0.15789473684210525,
+            "openingsMedian": 6,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 10,
+            "uniqueLow": 7,
+            "uniqueHigh": 13,
+            "completionMedian": 0.2631578947368421,
+            "openingsMedian": 10,
+            "salvageRate": 0.0012787723785166241,
+            "managersWithSalvage": 0.0125
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 12.5,
+            "uniqueLow": 9,
+            "uniqueHigh": 17,
+            "completionMedian": 0.32894736842105265,
+            "openingsMedian": 12.5,
+            "salvageRate": 0.0019474196689386564,
+            "managersWithSalvage": 0.0125
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 14,
+            "uniqueLow": 10,
+            "uniqueHigh": 19,
+            "completionMedian": 0.3684210526315789,
+            "openingsMedian": 14,
+            "salvageRate": 0.0026455026455026454,
+            "managersWithSalvage": 0.025
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 16,
+            "uniqueLow": 12,
+            "uniqueHigh": 20.10000000000001,
+            "completionMedian": 0.42105263157894735,
+            "openingsMedian": 16,
+            "salvageRate": 0.003852080123266564,
+            "managersWithSalvage": 0.025
+          }
+        ],
+        "average": [
+          {
+            "week": 4,
+            "uniqueMedian": 5,
+            "uniqueLow": 4,
+            "uniqueHigh": 7,
+            "completionMedian": 0.13157894736842105,
+            "openingsMedian": 5,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 8,
+            "uniqueLow": 6,
+            "uniqueHigh": 11,
+            "completionMedian": 0.21052631578947367,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 11,
+            "uniqueLow": 8,
+            "uniqueHigh": 14,
+            "completionMedian": 0.2894736842105263,
+            "openingsMedian": 11,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 12,
+            "uniqueLow": 8.9,
+            "uniqueHigh": 15,
+            "completionMedian": 0.3157894736842105,
+            "openingsMedian": 12,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 13,
+            "uniqueLow": 10,
+            "uniqueHigh": 17,
+            "completionMedian": 0.34210526315789475,
+            "openingsMedian": 13,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          }
+        ],
+        "weak": [
+          {
+            "week": 4,
+            "uniqueMedian": 4,
+            "uniqueLow": 3.9000000000000004,
+            "uniqueHigh": 6,
+            "completionMedian": 0.10526315789473684,
+            "openingsMedian": 4,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 7,
+            "uniqueLow": 5,
+            "uniqueHigh": 10,
+            "completionMedian": 0.18421052631578946,
+            "openingsMedian": 7,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 8,
+            "uniqueLow": 7,
+            "uniqueHigh": 12,
+            "completionMedian": 0.21052631578947367,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 9,
+            "uniqueLow": 7,
+            "uniqueHigh": 13,
+            "completionMedian": 0.23684210526315788,
+            "openingsMedian": 9,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 10,
+            "uniqueLow": 8,
+            "uniqueHigh": 14.100000000000009,
+            "completionMedian": 0.2631578947368421,
+            "openingsMedian": 10,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          }
+        ],
+        "dire": [
+          {
+            "week": 4,
+            "uniqueMedian": 4,
+            "uniqueLow": 3,
+            "uniqueHigh": 5,
+            "completionMedian": 0.10526315789473684,
+            "openingsMedian": 4,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 8,
+            "uniqueMedian": 6,
+            "uniqueLow": 5,
+            "uniqueHigh": 8,
+            "completionMedian": 0.15789473684210525,
+            "openingsMedian": 6,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 12,
+            "uniqueMedian": 7,
+            "uniqueLow": 5,
+            "uniqueHigh": 9,
+            "completionMedian": 0.18421052631578946,
+            "openingsMedian": 7,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 14,
+            "uniqueMedian": 8,
+            "uniqueLow": 5,
+            "uniqueHigh": 10,
+            "completionMedian": 0.21052631578947367,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          },
+          {
+            "week": 17,
+            "uniqueMedian": 8,
+            "uniqueLow": 6,
+            "uniqueHigh": 10,
+            "completionMedian": 0.21052631578947367,
+            "openingsMedian": 8,
+            "salvageRate": 0,
+            "managersWithSalvage": 0
+          }
+        ]
+      }
+    }
+  ]
+}
