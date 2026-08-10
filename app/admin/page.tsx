@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { resetPinAction } from '@/app/actions/auth';
+import { ReviewQueue } from '@/components/admin/review-queue';
 import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page, TAP_TARGET } from '@/components/shell';
@@ -8,13 +9,32 @@ import { TYPE } from '@/lib/design/type';
 import { requireAdmin } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { getDb } from '@/lib/db';
+import { applyQueuePreview, queuePreview } from '@/lib/publication/preview';
+import { commissionerQueue, countPending } from '@/lib/publication/queue';
 
 /**
  * The office out the back, with the key board on the wall.
  *
- * V1 gives it exactly one power: **reset a forgotten PIN** (`09 §8.3`). Not a
- * dashboard, not a settings screen — the admin surface grows with the systems
- * that need administering, and there is only one of those so far.
+ * ## What changed, and why it is not the dashboard this file used to forbid
+ *
+ * The note that stood here said the office had exactly one power — reset a
+ * forgotten PIN (`09 §8.3`) — and that folding the press desk into it would make
+ * it a dashboard. That was right about the press desk and wrong about the
+ * **queue**, and the difference is the whole point:
+ *
+ * - A *dashboard* shows the state of everything, so nothing on it is a task.
+ * - This shows **what is waiting on a decision by the commissioner, and nothing
+ *   else**. It is a to-do list with, most weeks, nothing on it.
+ *
+ * `16 §9` makes commissioner approval mandatory before editorial content reaches
+ * the league, and a gate whose door is behind another door gets routed around.
+ * So the first thing on the first admin screen answers the only question Alex
+ * opens it with — *is there anything for me* — and the press desk stays its own
+ * screen for everything that is not that: drafting by hand, the manual hold, the
+ * full rack, the refused drafts.
+ *
+ * The key board keeps its place below, because it is not a task either. It is a
+ * power you reach for when somebody texts you.
  *
  * The reset clears the hash rather than setting a new one, so the commissioner
  * can never see or choose somebody's PIN. Every session for that manager is
@@ -27,9 +47,34 @@ import { getDb } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 
-export default async function AdminPage() {
+export default async function AdminPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const { user } = await requireAdmin();
-  const managers = await listDoorManagers(getDb());
+  const db = getDb();
+  const query = await searchParams;
+
+  const [managers, full] = await Promise.all([listDoorManagers(db), commissionerQueue(db)]);
+
+  /*
+   * `?queue=<band>` — the review-only narrowing, resolved on the **server**
+   * behind the demo guard and writing nothing. It filters the real queue and
+   * fabricates nothing; `lib/publication/preview.ts` says why the queue needs
+   * one when nothing else on this screen does.
+   */
+  const bands = queuePreview(query['queue'], process.env);
+  const outstanding = applyQueuePreview(full.outstanding, bands);
+  const queue = {
+    outstanding,
+    published: applyQueuePreview(full.published, bands),
+    /*
+     * Counted from what is shown, by the queue's own rule. A filtered list whose
+     * count disagreed with it would be a screenshot that contradicts itself.
+     */
+    pending: bands === null ? full.pending : countPending(outstanding),
+  };
 
   return (
     <>
@@ -44,16 +89,28 @@ export default async function AdminPage() {
             </div>
 
             {/*
-              * The press desk.
+              * The queue, first and above the fold.
               *
-              * `16 §9` makes commissioner approval mandatory before a Slice
-              * publishes, so the office has a second power now. It is a door
-              * rather than a panel: the queue is its own screen with its own
-              * decisions, and folding it in here would make the office a
-              * dashboard — which is exactly what the note at the top of this file
-              * says it is not.
+              * Not behind the press-desk door. `16 §9`'s approval is the one
+              * thing in this product that a person has to do on a schedule, and
+              * the press desk's own history is the evidence for putting it here:
+              * three desk states photographed byte-identically because what told
+              * them apart started below the first screen.
               */}
             <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
+              <ReviewQueue
+                outstanding={queue.outstanding}
+                published={queue.published}
+                pending={queue.pending}
+              />
+            </div>
+
+            {/*
+              * The press desk — everything about the Slice that is not a
+              * decision waiting to be made: drafting a week by hand, the manual
+              * hold, the full rack, the drafts that were refused.
+              */}
+            <div className="mt-5 border-t-2 border-dashed border-ink-300 pt-3">
               <Link
                 href="/admin/slice"
                 className={`pixel-edge flex ${TAP_TARGET} w-full flex-col justify-center border-2 border-wood-dark bg-[#1c1113] px-3 py-2.5 active:translate-y-px`}
@@ -62,7 +119,7 @@ export default async function AdminPage() {
                   The press desk
                 </span>
                 <span className={`mt-1 ${TYPE.bodyCompact} text-paper-mid/70`}>
-                  Read the week&rsquo;s paper before it prints
+                  Draft a week, stop the press, read the rack
                 </span>
               </Link>
             </div>

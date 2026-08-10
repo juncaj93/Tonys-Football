@@ -560,9 +560,21 @@ describe.skipIf(!hasDatabase)('the Slice, against the imported seasons', () => {
     expect(packet.lead?.kind).toBe('nail-biter');
   });
 
-  it('withholds every result while a season is open', async () => {
-    // 2026 is imported and not finalized. `not-final` rather than a soft version
-    // of the story: a number that can still move must not be printed at all.
+  it('withholds a week nothing has closed', async () => {
+    /*
+     * 2026 is imported, open, and holds no closed week. `refusal` rather than a
+     * soft version of the story: a number that can still move must not be
+     * printed at all.
+     *
+     * **The gate is the week, not the season**, and the difference is a defect
+     * the Week 1 lifecycle rehearsal found. This packet used to be built from
+     * `seasons.finalized_at`, which shuts in January — so every week of a live
+     * season refused `not-final` and `16 §4.3`'s Tuesday chain could never have
+     * produced a draft in the season it is about. `lib/stats/finality.ts` is the
+     * rule and always was: a week is final when **its own** finalization exists.
+     * `lib/rehearsal/week-1.test.ts` holds the positive half — a closed week of
+     * an open season prints — and this holds the negative one.
+     */
     const packet = await factPacket(db!, { season: 2026, week: 1 });
     expect(packet.refusal).not.toBeNull();
     expect(packet.lead).toBeNull();

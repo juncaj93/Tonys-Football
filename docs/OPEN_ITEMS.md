@@ -41,6 +41,48 @@ Every item is in exactly one category:
 
 ## A — V1 launch blockers
 
+### A0 · The Slice could never have drafted during the season it is about — **fixed, 2026-08-10**
+
+Found **twice on the same day, independently**, by the two rehearsals that were
+the first things in this repository to drive the chain against a season that was
+*open*: the Week 8 rehearsal (#86, `docs/WEEK8_REHEARSAL.md §5.1`) and the Week 1
+rehearsal (#85, `docs/WEEK_1_REHEARSAL.md §6`).
+
+`lib/slice/packet.ts` built its week from `seasons.finalized_at` — the season's
+own close, which happens in January. `16 §4.3`'s Tuesday chain ends by drafting
+the week that just closed. So for **every week of the 2026 season** the packet
+would have refused `not-final`, the Tuesday job would have written *"That week is
+still open"* into its `skipped` list, and the press desk would have been empty
+every Tuesday until the season was over.
+
+The same shape as A1: `not-final` is the truth in July and looks identical in
+October. `npm run check` and `npm run visual:qa` were both green, and the Tuesday
+job's own integration test asserted the wrong behaviour in passing — *"on an open
+season the Slice will not even draft"* — as though it were a property.
+
+The rule was already written down: `lib/stats/finality.ts` says a week is final
+when **its own** finalization exists and prefers that over the season's, and its
+header names the Slice as one of its two consumers. Rewards and stake settlement
+have called it since they were built; the Slice was the one caller still asking
+the wider question. The fix calls the predicate rather than restating it.
+
+**Nothing is loosened** — a week with no `week_finalizations` row is still
+refused — and **nothing about approval moved**: `16 §9`'s named-person gate is
+untouched, so the change puts a draft on the desk and never past it.
+`lib/rehearsal/week-1.test.ts` holds the positive half and **fails on the pre-fix
+build**; `lib/slice/slice.test.ts` holds the negative half.
+
+**The two rehearsals disagreed about whether to fix it, and that is recorded
+rather than smoothed over.** #86 pinned the defect with a test written to go red
+on repair, because its scope excluded the Slice's editorial architecture. #85's
+scope names the Tuesday Slice handoff, so it made the repair and **inverted** that
+test rather than deleting it — the tripwire worked exactly as intended and this
+is the conversation it demanded. If the commissioner would rather the desk stayed
+dark until January, reverting is one small commit against `lib/slice/packet.ts`
+and the two tests that pin it.
+
+`docs/WEEK_1_REHEARSAL.md` §6. Closed.
+
 ### A1 · The live season could not get into the database — **fixed this session**
 
 `16 §4.3` specifies the Tuesday chain as **sync → finalize → …** and the sync had
@@ -125,23 +167,35 @@ canvas, so the first delivered shell would have been written three times
 oversized. Corrected to **320 × 569**, the size the shipped parlor shell has
 always been on disk, and `lib/rooms/objects.test.ts` now pins it.
 
-### A4 · The manager sprite cannot reach the approved reference by swapping art
+### A4 · The manager sprite cannot reach the approved reference by swapping art — **CLOSED, 2026-08-10**
 
-**A commissioner decision, and stated as one.** Colour in the character system is
-a *runtime parameter* — 4 skin × 8 hair × 8 top ramps, resolved at render and
-never stored — and a layer that resolves to a PNG **bypasses it entirely**. So
-the existing per-layer art-swap contract, which works everywhere else in this
-product, would silently delete seven of eight hair colours the first time a hair
-PNG landed.
+The premise stands and is why a swap was never on the table. Colour in the
+character system is a *runtime parameter* — 4 skin × 8 hair × 8 top ramps,
+resolved at render and never stored — and a layer that resolves to a PNG
+**bypasses it entirely**, so the per-layer art-swap contract that works
+everywhere else would silently delete seven of eight hair colours the first time
+a hair PNG landed. Keeping the traits *and* using PNGs is 132 files before a
+single wearable.
 
-Keeping the traits *and* using PNGs is **132 files** before a single wearable,
-multiplying four ways with every colour added later.
+**What was wrong is the conclusion drawn from it.** `ROOMS_BOUNDARY §14.2`
+offered two routes and dismissed the cheaper one as *"ceilinged by
+hand-authoring"* — reasoning about how the sprite is **drawn** without ever
+measuring how it is **displayed**. At `64 × 96` into a `112 × 168` rectangle, a
+manager pixel covered **1.75 room units** against the painted shell's exactly one:
+the figure was the only object in the world rendered coarser than the world and
+then magnified into it, which is *simplistic, flat and geometric* whatever it is
+drawn like.
 
-`docs/ROOMS_BOUNDARY.md §14` sets out the two real routes — raise the drawn
-fidelity in place (costs no art, ceilinged by hand-authoring) or add a
-**tinted-mask pipeline** (reaches the bar, costs a new rendering path and ~29
-authored masks). **Nothing was done**: the customiser is `CLOSED — production
-verified` and the direction says not to reopen it.
+Closed by **raising the canvas to the room's own resolution** and rewriting the
+shading pass on it. No masks, no new pipeline, no art requested, no trait, index,
+slug, default or guard moved, and the same 11,520 combinations. Twenty-nine
+registry rows changed a `canvas` field and no PNG existed at any of the three
+sizes this canvas has had.
+
+`docs/MANAGER_SPRITE_BOUNDARY.md` is the canonical account, including the
+eighteen defects the render loop found and the ones no test in the suite could
+have. **A tinted-mask pipeline is not refused — it is not needed**, and if
+painted layers are ever commissioned this geometry is what they are painted to.
 
 ### A5 · Twelve of the twenty-four collectibles have no art, and they are 59.5% of every box opened — **art dependency**
 
@@ -172,7 +226,9 @@ catalog change.
 a swap stays a registry row.
 
 **Nothing else is in category A.** Every other v1 system is built, tested and
-reachable; what remains below is polish, activation, or deferred scope.
+reachable; what remains below is polish, activation, or deferred scope. The two
+that remain — **A3** and **A5** — are both art dependencies and neither blocks
+anything: every unpainted slug resolves today.
 
 ---
 
@@ -303,6 +359,14 @@ observed production, and *"probably set"* is not a launch check.
 **Timing: before Tuesday 15 September**, when the first draft lands on the desk.
 Verifiable from a phone in three taps — the profile screen shows a
 *Commissioner's office* button when it is set.
+
+**Unchanged by the 2026-08-10 publication-approval work**, and worth stating
+plainly because that work built the queue this variable unlocks. There is no
+`is_admin` system of its own: commissioner authority is still `users.is_admin`,
+still set only by the deploy seed from this variable, and with it unset every
+seat answers `notFound()`. The generalized queue is **built and inert in
+production** until Alex sets it. `lib/publication/authority.test.ts` asserts the
+fail-closed behaviour; it does not and cannot assert the variable.
 
 ### D3 · One greeting pair still shares a line, and the line is the commissioner's to write
 
@@ -497,6 +561,27 @@ a blanket re-opening.
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
 
+### G2 · Commissioner announcements — specified, unbuilt, and the shape is recommended
+
+`08 §18` lists what the Slice may announce and `18 §6` gives a commissioner
+announcement priority 6 on the Tonight board. **Neither exists**: no table, no
+route, no writer, nothing that reads one.
+
+Recorded here rather than left implicit because the 2026-08-10 publication audit
+had to classify it, and *"it is a publication surface with no rows"* is a
+different answer from *"nobody thought about it."* A kind in
+`lib/publication/kinds.ts` for a surface that can never produce an item would be
+a queue section that is permanently empty — which is how a queue stops being
+believed.
+
+**When it is built, the recommended shape is one explicit *Publish announcement*
+button and no second approval step.** Alex writing the words and Alex approving
+the words are the same act on the same screen; a two-step there is bureaucracy
+rather than intentionality, and the goal of the review path is that nothing
+reaches the league **unintentionally**, not that everything is stamped twice.
+That is a recommendation and not a ruling — the decision belongs with the
+feature. `docs/PUBLICATION_APPROVAL_BOUNDARY.md §5` carries it.
+
 ### G1 · The Underground — the decision that is actually wanted
 
 **Nothing was built and nothing should be until this is answered.** The
@@ -636,6 +721,7 @@ mechanism has never run for real.
 |---|---|
 | The in-season sync is implemented | **source code** |
 | It is idempotent, bounded, refuses stale and unplayed data, and resolves its week after syncing | **local Postgres**, and each guard fails on the pre-fix build |
+| **The whole week — Sunday photograph → Tuesday close → rewards → draft → approval → publication → week 2 — works as one system** | **local Postgres**, forty-two assertions plus nine failure injections (`lib/rehearsal/week-1.test.ts`), with the run itself printed in `docs/evidence/week-1-rehearsal/report.md` |
 | It compiles, lints and passes the suite | **hosted CI** |
 | Every reachable screen renders correctly at three phone widths | **hosted visual QA** |
 | It is deployed to production | **inferred** from a normal merge to `main`; not observed |

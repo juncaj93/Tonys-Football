@@ -105,9 +105,17 @@ It still only submits. `16 §9`'s approval gate has no preseason exemption.
 **What Alex does after the real draft:** ten grades and ten sentences at
 `/admin/slice/draft`, then Approve. Recorded as `docs/OPEN_ITEMS.md` **B0**.
 
-**Next recommended engineering slice:** the full **week-one lifecycle
-rehearsal** — every step of that chain is built and tested in isolation, and the
-*sequence across the preseason boundary* has never been run.
+**Next recommended engineering slice: the preseason scenario on `lib/rehearsal/`.**
+This slice's recommendation was the full week-one lifecycle rehearsal, and **#85
+built it while this branch was open** — which is the good outcome, not a
+collision. What it does not cover is the **handoff across the preseason
+boundary**, because the thing on the far side of that boundary did not exist
+until this slice: a *published* preseason issue, then week one played, then the
+Tuesday job refusing the preseason mode and printing the weekly paper, with two
+kinds of issue on one season's rack. `lib/slice/tuesday.test.ts` covers the
+switch; nothing covers the sequence with a printed issue in front of it.
+`docs/WEEK_1_REHEARSAL.md §8` already says how: **write a season, do not add a
+fifth verb.**
 
 ---
 

@@ -1,6 +1,11 @@
+import { openSeason } from '@/lib/counter/tokens';
 import { type Database } from '@/lib/db';
+import { seasons } from '@/lib/db/schema';
+import { decodeMatchups, decodeState } from '@/lib/sleeper/codec';
+import { type SleeperSource } from '@/lib/sleeper/transport';
 import { captureWeekSnapshot, type CaptureResult, type SnapshotEntry } from '@/lib/stats/snapshot';
 import { type SleeperMatchupEntry } from '@/lib/sleeper/types';
+import { eq } from 'drizzle-orm';
 
 /**
  * The Sunday job — `16 §4.3`'s first cron, as one operation.
@@ -169,4 +174,136 @@ export async function runSunday(
     capture,
     skipped,
   };
+}
+
+/* -------------------------------------------------------------------------
+ * The job, from the season down
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Everything the Sunday cron does once the door has let it in.
+ *
+ * ## Why this is not in the route
+ *
+ * It was, and the route was the only place it could be exercised — which meant
+ * it could not be exercised at all, because the route constructs its own live
+ * Sleeper and a test that ran it would reach the network. So *which season*,
+ * *which week*, and *what an unreadable upstream costs* were three real
+ * decisions with no test on any of them, sitting in a file whose job was
+ * supposed to be the door and the clock.
+ *
+ * The seam is the source. Everything above it — auth, the live source, the
+ * response — stays in `app/api/cron/sunday/route.ts`; everything below it is
+ * here, injected, and driven by the lifecycle rehearsal against a written
+ * season. The route is now short enough to read in one screen, which is the
+ * standard it was already claiming.
+ *
+ * ## The outcomes are three, and the route maps them to two status codes
+ *
+ * `nothing-to-do` is a 200 on purpose: in July there is no open season, and a
+ * non-2xx would have the platform retry an empty job every few minutes until
+ * September. `upstream-failed` is the 500 — a retry might genuinely fix it, and
+ * retrying is safe because the storage refuses a second capture of a week.
+ */
+export type SundayOutcome =
+  | {
+      readonly kind: 'ran';
+      readonly report: SundayReport;
+      readonly warnings: readonly string[];
+    }
+  /** A real, expected state in which there is nothing to photograph. */
+  | { readonly kind: 'nothing-to-do'; readonly why: string }
+  /** Sleeper could not be read. Worth a retry. */
+  | { readonly kind: 'upstream-failed'; readonly why: string };
+
+export async function runSundayJob(
+  db: Database,
+  input: {
+    readonly source: SleeperSource;
+    /** From the injected clock. Stamped onto the photograph. */
+    readonly at: Date;
+    /**
+     * `?week=` — a commissioner re-running a missed Sunday.
+     *
+     * It cannot overwrite anything: `captureWeekSnapshot` refuses a week that
+     * already has a photograph, and refuses it at a constraint rather than in a
+     * branch. Out-of-range values are ignored rather than rejected, because the
+     * fallback below is always available and a 400 on a cron is a job that did
+     * not run.
+     */
+    readonly requestedWeek?: number | null;
+  },
+): Promise<SundayOutcome> {
+  const season = await openSeason(db);
+  if (season === null) {
+    return {
+      kind: 'nothing-to-do',
+      why: 'There is no open season, so there is no week being played.',
+    };
+  }
+
+  const [row] = await db
+    .select({ leagueId: seasons.sleeperLeagueId })
+    .from(seasons)
+    .where(eq(seasons.id, season.id))
+    .limit(1);
+
+  const leagueId = row?.leagueId ?? null;
+  if (leagueId === null || leagueId === '') {
+    /*
+     * An open season with no Sleeper league attached. A real state — a season
+     * row can be created before the league exists — and not a failure to retry.
+     */
+    return {
+      kind: 'nothing-to-do',
+      why: `Season ${String(season.year)} has no Sleeper league id, so there is nothing to read.`,
+    };
+  }
+
+  const week = await weekToPhotograph(input.source, input.requestedWeek ?? null);
+  if (week === null) {
+    return {
+      kind: 'nothing-to-do',
+      why: 'Sleeper did not report a current week, so nothing was photographed.',
+    };
+  }
+
+  const fetched = await input.source.fetch({ kind: 'matchups', leagueId, week });
+  if (fetched.kind !== 'ok') {
+    return { kind: 'upstream-failed', why: 'Sleeper did not answer. See the runtime log.' };
+  }
+
+  const decoded = decodeMatchups(fetched.payload, `matchups(${String(week)})`);
+  const report = await runSunday(db, {
+    season: season.year,
+    week,
+    entries: decoded.value,
+    at: input.at,
+    source: input.source.label,
+  });
+
+  return { kind: 'ran', report, warnings: decoded.warnings };
+}
+
+/**
+ * The overridden week, or the one Sleeper says is being played.
+ *
+ * Sleeper's own `state`, not a stored week. Tuesday asks *"which week has just
+ * been played"* and reads that from the database; Sunday asks *"which week is
+ * being played right now"*, and the only authority on that is the upstream. A
+ * stored answer would be last week's for the entire duration of this one.
+ */
+async function weekToPhotograph(
+  source: SleeperSource,
+  requested: number | null,
+): Promise<number | null> {
+  if (requested !== null && Number.isInteger(requested) && requested >= 1 && requested <= 18) {
+    return requested;
+  }
+
+  const state = await source.fetch({ kind: 'state' });
+  if (state.kind !== 'ok') return null;
+
+  const week = decodeState(state.payload).value.week;
+  return Number.isInteger(week) && week >= 1 && week <= 18 ? week : null;
 }

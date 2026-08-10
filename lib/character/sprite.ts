@@ -24,17 +24,42 @@
  * light is on will get it wrong on the twenty-ninth sprite, and the twenty-ninth
  * sprite is the one nobody looks at twice.
  *
- * Three tones come out of one material:
+ * ## The pass models a form, not an edge
+ *
+ * The first version of this pass marked a pixel `shade` when it failed
+ * `solid(x + 1, y + 1) && solid(x, y + 2) && solid(x + 2, y)` — a one-pixel ring
+ * on the lower right, and `base` everywhere else. That is a **rim**, and a rim is
+ * what a flat cut-out looks like when you trace its bottom edge: every garment
+ * came out one flat colour inside a dark outline, which is exactly what the
+ * commissioner named as *too flat* and *too geometric*.
+ *
+ * What replaces it measures how far a pixel is from the shape's own boundary in
+ * each of the four directions, and reads two numbers off that:
+ *
+ * - **`lit`** — the distance to the boundary in the direction of the light,
+ *   `min(up, left)`
+ * - **`dark`** — the distance to the boundary away from it, `min(down, right)`
+ *
+ * Their sum is the local **thickness** of the form under that pixel, and the
+ * bands are a fraction of it. So an arm ten pixels across gets a one-pixel rim
+ * and a three-pixel shadow, and a torso forty across gets three and six, from the
+ * same constants. Nothing is authored per layer and nothing needs a hand-drawn
+ * shadow to look round.
+ *
+ * Four tones come out of one material:
  *
  * - **outline** where a solid pixel touches empty space — the silhouette read
  *   `VISUAL_ACCEPTANCE` asks for, and what lets a hat sit legibly on hair of a
  *   similar value
- * - **shade** on the inner lower/right edge
- * - **base** everywhere else
+ * - **light** on the inner upper/left edge, one step up the ramp
+ * - **shade** on the inner lower/right region
+ * - **base** in between
  *
- * That is a two-tone ramp plus ink, and two tones is deliberate: every colour in
- * `art/palette.json` is a locked value, and a third tone per material would mean
- * inventing colours the room does not have (`lib/character/palette.ts`).
+ * The third tone was previously refused on the grounds that *"a third tone per
+ * material would mean inventing colours the room does not have"*. It does not:
+ * `lib/character/palette.ts` takes it one step **up** the same ramp the shadow
+ * rule already steps down. What was true, and is what changed, is that at
+ * `64 × 96` a third step landed on too few pixels to read.
  *
  * ## No partial alpha, ever
  *
@@ -47,7 +72,19 @@
 export type Material =
   /** The layer's own colour — skin, hair or garment, per the configuration. */
   | 'main'
-  /** The layer's secondary colour. Always the shade tone, never lit. */
+  /**
+   * The layer's secondary colour. Always the shade tone, never lit.
+   *
+   * For the shadows that are anatomy rather than geometry — under a jaw, down a
+   * temple, where an arm meets a body — which the form pass cannot find because
+   * the shape casting them is continuous with the shape receiving them.
+   *
+   * **There is deliberately no `lit` counterpart.** One was written, and after
+   * the layers were drawn nothing used it: every highlight the figure has, the
+   * form pass finds on its own. A material with no consumer is the shape of the
+   * defect that took every character save down for a month (`docs/CHARACTER_CUSTOMISATION_BOUNDARY.md §0`),
+   * and re-adding one is four lines if a layer ever earns it.
+   */
   | 'alt'
   /** Forced ink. For eyes, a mouth, a drawn seam. */
   | 'ink'
@@ -55,7 +92,42 @@ export type Material =
   | `fixed:${string}`;
 
 /** A rasterised pixel's final role, after shading. */
-export type Tone = 'outline' | 'shade' | 'base' | 'alt' | 'ink' | `fixed:${string}`;
+export type Tone = 'outline' | 'shade' | 'base' | 'light' | 'ink' | `fixed:${string}`;
+
+/**
+ * The three tones the light moves a pixel between, darkest first.
+ *
+ * `composite.ts` walks this to cast one layer's shadow onto the layer beneath
+ * it: a step along this list is the whole of what "in shadow" means, so an
+ * occluded highlight becomes a base rather than becoming ink.
+ */
+export const TONE_RAMP = ['shade', 'base', 'light'] as const;
+export type RampTone = (typeof TONE_RAMP)[number];
+
+export function isRampTone(tone: string): tone is RampTone {
+  return (TONE_RAMP as readonly string[]).includes(tone);
+}
+
+/**
+ * One step darker along {@link TONE_RAMP}. `shade` is already the bottom.
+ *
+ * **A fixed colour steps too**, at its own `key@role` suffix. Leaving it out was
+ * the first version's mistake and it cost exactly the shadow that matters most:
+ * a shirt hem's shadow falls on the **trousers**, and the trousers are the
+ * largest fixed-colour surface on the figure. `outline` and `ink` are deliberate
+ * decisions about a pixel and never move.
+ */
+export function darker(tone: Tone, steps = 1): Tone {
+  const step = (role: string): string =>
+    TONE_RAMP[Math.max(0, TONE_RAMP.indexOf(role as RampTone) - steps)]!;
+
+  if (isRampTone(tone)) return step(tone) as Tone;
+
+  const at = tone.indexOf('@');
+  if (at === -1 || !tone.startsWith('fixed:')) return tone;
+  const role = tone.slice(at + 1);
+  return isRampTone(role) ? (`${tone.slice(0, at)}@${step(role)}` as Tone) : tone;
+}
 
 export interface Shape {
   readonly material: Material;
@@ -217,44 +289,176 @@ export function rasterise(ops: readonly Op[], width: number, height: number): Ma
  * silhouette would merge every layer of similar value into one blob, which is the
  * failure mode of a system whose whole point is that the parts are swappable.
  */
+/**
+ * How much of a form the lit rim and the shadow band each take.
+ *
+ * Fractions rather than pixel counts, because the same layer file draws a
+ * six-pixel drawstring and a forty-pixel torso and a constant band cannot serve
+ * both: three pixels of shadow on the drawstring is the whole drawstring.
+ *
+ * **The clamps are doing more work than the fractions, and that is deliberate.**
+ * `dark` is `min(down, right)`, so on a torso half a hundred pixels across, the
+ * contour where it equals a large number is an L whose corner reads as a
+ * **diagonal wedge across the chest** — a fold, not a form. Photographed at
+ * `shadeMax: 12` it cut every shirt in half on the bias. Capped at six it is what
+ * it should be: a band down the shaded flank and along the hem, the way a shirt
+ * is actually lit.
+ */
+const RIM = Object.freeze({
+  lightFraction: 0.14,
+  lightMax: 3,
+  shadeFraction: 0.22,
+  shadeMax: 6,
+});
+
+/**
+ * Consecutive solid pixels from here in one direction, counting this one.
+ *
+ * The recurrence reads the neighbour **in the direction being measured** —
+ * `up[y][x] = up[y - 1][x] + 1` — and the scan order is chosen so that neighbour
+ * is already done. Reading the neighbour on the *other* side instead is a silent
+ * catastrophe rather than a wrong number: every depth comes back `1`, the edge
+ * test `up === 1` fires on every solid pixel, and the entire figure renders as
+ * outline. It looks like a deliberately flat style and it is a transposed sign.
+ */
+function runDepths(
+  grid: MaterialGrid,
+  width: number,
+  height: number,
+  dx: number,
+  dy: number,
+): Int16Array {
+  const out = new Int16Array(width * height);
+  const rows = [...Array(height).keys()];
+  const cols = [...Array(width).keys()];
+  const ys = dy > 0 ? [...rows].reverse() : rows;
+  const xs = dx > 0 ? [...cols].reverse() : cols;
+
+  for (const y of ys) {
+    for (const x of xs) {
+      if (grid[y]![x] === null) continue;
+      const py = y + dy;
+      const px = x + dx;
+      const before =
+        px < 0 || py < 0 || px >= width || py >= height ? 0 : out[py * width + px]!;
+      out[y * width + x] = before + 1;
+    }
+  }
+  return out;
+}
+
+/**
+ * Turn materials into tones — the one place light direction is decided.
+ *
+ * `ink` passes through, because a deliberate ink pixel is a decision. `alt` pins
+ * a pixel to the dark end of the ramp for the shadows the geometry cannot see
+ * (see {@link Material}).
+ *
+ * **Outlining is per layer, on purpose.** A hat outlined against the hair beneath
+ * it is how a hat reads as a separate object; outlining only the flattened
+ * silhouette would merge every layer of similar value into one blob, which is the
+ * failure mode of a system whose whole point is that the parts are swappable.
+ * Which of those outlines is drawn in *ink* and which in the layer's own shade is
+ * a question about the composite, and `composite.ts` answers it there.
+ */
 export function shade(grid: MaterialGrid): ToneGrid {
   const height = grid.length;
   const width = grid[0]?.length ?? 0;
 
-  const solid = (x: number, y: number): boolean =>
-    x >= 0 && y >= 0 && x < width && y < height && grid[y]![x] !== null;
+  const up = runDepths(grid, width, height, 0, -1);
+  const down = runDepths(grid, width, height, 0, 1);
+  const left = runDepths(grid, width, height, -1, 0);
+  const right = runDepths(grid, width, height, 1, 0);
 
   return grid.map((row, y) =>
     row.map((material, x): Tone | null => {
       if (material === null) return null;
+      const at = y * width + x;
 
       /*
-       * **The silhouette is outlined whatever it is made of.**
-       *
-       * This used to apply only to `main`, and the cost was a class of defect
-       * rather than one instance: a shape in a fixed pale colour had no edge at
-       * all, so the winter beanie's cream pom was invisible against the cream
-       * panel the customiser draws on. A layer's outline is a property of its
-       * shape, not of its material.
+       * A depth of 1 in any direction *is* "the neighbour that way is empty",
+       * so the four run lengths already answer the edge test and no second scan
+       * is needed.
        */
-      if (!solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y - 1) || !solid(x, y + 1)) {
-        return 'outline';
-      }
+      const onEdge = up[at] === 1 || down[at] === 1 || left[at] === 1 || right[at] === 1;
+
+      // How thick the shape is under this pixel, each way. A mark thinner than
+      // three has no interior, so it has no lit side and no shadow side either.
+      const across = Math.min(up[at]! + down[at]!, left[at]! + right[at]!) - 1;
+      const solidEnoughToOutline = across >= 3;
+
+      /*
+       * **The silhouette is outlined whatever it is made of** — but a fixed
+       * colour is an explicit decision about a pixel and a one-pixel mark is
+       * *all* edge, so outlining it silently repaints it in ink.
+       *
+       * Both halves of that are defects this rule has already paid for. The
+       * winter beanie's cream pom went un-outlined and was invisible against the
+       * cream panel the customiser draws on, which is why outlining stopped being
+       * `main`-only. And the hoodie's two cream drawstrings — one pixel wide —
+       * have been rendering as `ink-900` ever since, because every pixel of them
+       * touches empty. A layer's outline is a property of its shape: the pom has
+       * an interior and the drawstring does not.
+       *
+       * The manager's own materials are never exempt. The figure's edge has to
+       * hold against a dark basement wall whatever it is made of.
+       */
+      const ownMaterial = material === 'main' || material === 'alt' || material === 'ink';
+      if (onEdge && (ownMaterial || solidEnoughToOutline)) return 'outline';
 
       if (material === 'ink') return 'ink';
-      if (material === 'alt') return 'alt';
-      if (material !== 'main') return material;
+      if (material === 'alt') return 'shade';
 
-      /*
-       * The inner ring on the lower and right sides. One test, applied
-       * identically everywhere, is what makes thirty sprites look lit by the
-       * same lamp — see the module note.
-       */
-      if (!solid(x + 1, y + 1) || !solid(x, y + 2) || !solid(x + 2, y)) return 'shade';
+      const role = across < 3 ? 'base' : formRole(up[at]!, down[at]!, left[at]!, right[at]!);
 
-      return 'base';
+      if (material === 'main') return role;
+      // A fixed ramp's step travels with the pixel: the tone grid is cached per
+      // slug and computed long before any colour is resolved.
+      return `${material}@${role}`;
     }),
   );
+}
+
+/**
+ * Which step of a ramp a pixel of solid form sits at, given its four depths.
+ *
+ * ## Four independent bands, not two distances
+ *
+ * The obvious formulation is `lit = min(up, left)`, `dark = min(down, right)`,
+ * and band on those. It is wrong in a way that only a picture shows: the contour
+ * where `min(down, right)` equals six is an **L**, and the corner of that L is a
+ * clean 45° line running across the middle of any large form. Photographed on a
+ * T-shirt it is a diagonal crease from the left hip to the right ribs — the eye
+ * reads it as a fold in the fabric, and there is no fold.
+ *
+ * Each edge gets its own band instead, thickened against the form's extent *in
+ * that direction*: a band down the shaded flank, a band along the bottom, and
+ * they meet in a **rectangular** corner. Rectangular corners are what pixel art
+ * is made of; diagonals in a shading pass are always an artefact.
+ *
+ * Shadow wins the two contested corners. A pixel that is both near the top and
+ * near the shaded flank is on a surface turning away from the light, and the
+ * alternative — lighting the bottom-left of every limb, because *left* is small
+ * there — is a second light source, which is the one thing a single light
+ * direction exists to prevent.
+ */
+function formRole(up: number, down: number, left: number, right: number): 'light' | 'base' | 'shade' {
+  const band = (extent: number, fraction: number, cap: number): number =>
+    Math.min(cap, Math.max(1, Math.round(extent * fraction)));
+
+  // How thick the form is under this pixel, each way.
+  const vertical = up + down - 1;
+  const horizontal = left + right - 1;
+
+  const shaded =
+    right - 1 <= band(horizontal, RIM.shadeFraction, RIM.shadeMax) ||
+    down - 1 <= band(vertical, RIM.shadeFraction, RIM.shadeMax);
+  if (shaded) return 'shade';
+
+  const lit =
+    left - 1 <= band(horizontal, RIM.lightFraction, RIM.lightMax) ||
+    up - 1 <= band(vertical, RIM.lightFraction, RIM.lightMax);
+  return lit ? 'light' : 'base';
 }
 
 export interface Run<T extends string> {

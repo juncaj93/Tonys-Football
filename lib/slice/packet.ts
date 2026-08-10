@@ -1,5 +1,5 @@
 import { type Queryable } from '@/lib/db';
-import { seasonMemberships, seasons, weekFinalizations } from '@/lib/db/schema';
+import { seasonMemberships, seasons } from '@/lib/db/schema';
 import { activeManagerIds } from '@/lib/league/membership';
 import { finalizedMarginsCents } from '@/lib/stats/facts';
 import { weekFinality } from '@/lib/stats/finality';
@@ -66,7 +66,13 @@ export type PacketRefusal =
   | 'no-season'
   /** That week was never played. */
   | 'no-week'
-  /** The games exist but the season's books are open, so nothing is settled. */
+  /**
+   * The games exist and **nothing has closed the week**, so nothing is settled.
+   *
+   * The week's own finalization, or the season's close — `lib/stats/finality.ts`
+   * owns the rule and prefers the first. It used to be the season's alone, which
+   * refused every week of a live season; see the note on `isFinal` below.
+   */
   | 'not-final'
   /** Every game in the week names somebody who may not be published. */
   | 'nobody-publishable';
@@ -319,49 +325,43 @@ export async function factPacket(
     snapshotFor.set(weekNumber, await weekSnapshot(db, { season: input.season, week: weekNumber }));
   }
 
-  /*
-   * Finality, **per week**, and this is a defect repair rather than a refinement.
+  /**
+   * Whether this particular week may be printed.
    *
-   * `seasonWeeks().finalized` is `seasons.finalized_at IS NULL` — *the books
-   * closed in January*. Passing that in meant `assemblePacket` refused every
-   * week of a **live** season with `not-final`, so the weekly Slice could not
-   * draft at all until the season was over: the first live Tuesday would close
-   * week one, pay every reward, settle every stake, and then decline to print
-   * the paper with *"that week is still open."*
+   * **This used to read the season's own finality, and that was a defect that
+   * would have cost the league every paper of the 2026 season.** `16 §4.3`'s
+   * Tuesday job ends by drafting the week that just closed; a season's books do
+   * not shut until January; so a packet gated on `seasons.finalized_at` refuses
+   * *every* week of a live season with `not-final` — and `not-final` is the
+   * truth in July and looks identical in October. The Week 1 lifecycle rehearsal
+   * (`lib/rehearsal/`) is what found it, because it is the first thing to run
+   * the whole chain against a season that was open.
    *
-   * `lib/stats/finality.ts` was written for exactly this and says so in its own
-   * header — *"two systems ask whether a result is final, the Slice and weekly
-   * stakes"* — and only stakes ever adopted it. A week is final when the Tuesday
-   * job wrote `week_finalizations` for it, **or** when the season closed; the
-   * job writes that row in step 2 and drafts in step 6, so by the time the paper
-   * is rendered the week it is about is closed.
+   * The rule was already written down and already had a home:
+   * `lib/stats/finality.ts` says a week is final when **its own** finalization
+   * exists, and prefers that over the season's because it is the narrower and
+   * earlier claim. Its own header names the Slice as one of the two consumers.
+   * Rewards and stake settlement have used it since they were built; this was
+   * the one caller still asking the wider question.
    *
-   * Nothing is inferred. *"A later week has games, so this one must be done"*
-   * remains the fabrication `16 §12` forbids — finality is written down or it
-   * does not exist.
-   *
-   * The comparison **populations** are deliberately untouched and stay
-   * season-finalized only (`finalizedMarginsCents`, `finalizedTeamScoresCents`):
-   * an open season's numbers can still move, and a percentile that shifts under
-   * a published fact makes the fact retroactively wrong.
+   * Nothing is loosened by this. A week with no `week_finalizations` row is
+   * still refused, so an in-progress week still cannot be printed — which is
+   * what *"a number that can still move must not be printed"* actually requires.
+   * The predicate is called rather than restated, so this cannot drift from the
+   * rule the ledger and the settler enforce.
    */
-  const closedWeeks = await finalizedWeeks(db, input.season);
+  const isFinal = (weekNumber: number): boolean =>
+    weekFinality({
+      seasonFinalizedAt: season.finalizedAt,
+      weekFinalizedAt: season.weekFinalizedAt.get(weekNumber) ?? null,
+      hasGames: season.rows.some((row) => row.week === weekNumber),
+    }).final;
 
   const forWeek = (weekNumber: number): { raw: WeekRecord; open: WeekRecord } => {
     const raw = buildWeek({
       season: input.season,
       week: weekNumber,
-      finalized: weekFinality({
-        seasonFinalizedAt: season.finalizedAt,
-        weekFinalizedAt: closedWeeks.get(weekNumber) ?? null,
-        /*
-         * `hasGames` is answered by `buildWeek` itself, below — a week with no
-         * rows produces no games and `assemblePacket` refuses it with `no-week`
-         * before finality is ever consulted. Passing `true` here keeps this call
-         * about the one question it is being asked.
-         */
-        hasGames: true,
-      }).final,
+      finalized: isFinal(weekNumber),
       rows: season.rows,
       roster: season.roster,
     });
@@ -421,27 +421,6 @@ function recentLeadKinds(
     if (lead !== null) kinds.push(lead.kind);
   }
   return kinds;
-}
-
-/**
- * Which weeks of a season the Tuesday job has closed.
- *
- * `week_finalizations` is append-only and per week — the record `16 §4.3`'s job
- * writes in its second step. Read once per packet rather than per week, because
- * `recentLeadKinds` re-derives the two previous issues and each of those asks
- * the same question.
- */
-async function finalizedWeeks(
-  db: Queryable,
-  year: number,
-): Promise<ReadonlyMap<number, Date>> {
-  const rows = await db
-    .select({ week: weekFinalizations.week, finalizedAt: weekFinalizations.finalizedAt })
-    .from(weekFinalizations)
-    .innerJoin(seasons, eq(seasons.id, weekFinalizations.seasonId))
-    .where(eq(seasons.year, year));
-
-  return new Map(rows.map((row) => [row.week, row.finalizedAt] as const));
 }
 
 /**

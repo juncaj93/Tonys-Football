@@ -160,7 +160,7 @@ wrote.
 | rewards | 6 paid, **1150 tokens**, 0 already paid |
 | grants | 0 granted, **20 already held** |
 | author | 2 offers written for week 9 |
-| draft | **refused — `not-final`** (see §5.1; fixed 2026-08-10, a closed week now drafts) |
+| draft | **refused — `not-final`** (see §5) |
 | failed | none |
 
 **The bounty was claimed.** Matty B's 158.90 beat the 149.24 frozen in week 5,
@@ -264,33 +264,13 @@ is honest and it is a visible gap — see §5.3.
 ## 5. Contradictions reported, and deliberately not fixed
 
 Each of these is a commissioner-level decision or outside this rehearsal's scope.
-None was fixed here. The first was pinned by a test that would go **red** the day
-it was addressed, which was the point: it should be a decision, not a slip. It
-has since been addressed — see §5.1.
+None is fixed here. The first is pinned by a test that will go **red** the day it
+is addressed, which is the point: it should be a decision, not a slip.
 
-### 5.1 The Slice could not draft any week of a live season — **FIXED**
+### 5.1 The Slice cannot draft any week of a live season
 
-**The largest finding, and it is the one that was acted on.**
-
-> **Resolved 2026-08-10**, in the workstream that owns the Slice's editorial
-> architecture — `docs/PRESEASON_SLICE_BOUNDARY.md`. `factPacket` now takes its
-> finality from `lib/stats/finality.ts`: a week is final when the Tuesday job
-> wrote its `week_finalizations` row **or** the season closed. The job writes
-> that row four steps before it drafts, so by the time the paper is rendered the
-> week it is about is closed.
->
-> Nothing was relaxed and the approval gate is untouched — what changed is that
-> there is now something on the desk to approve. The comparison **populations**
-> are deliberately still season-finalized only: an open season's numbers can
-> still move, and a percentile that shifts under a published fact makes the fact
-> retroactively wrong.
->
-> `lib/slice/midseason-week8.test.ts` now asserts the repaired behaviour. It used
-> to pin the defect, and its own comment asked for exactly this: *"the day the
-> Slice is wired to per-week finality it goes red, which is the point — that is a
-> decision somebody makes, not a change that should slip through."* It was made,
-> deliberately, by the workstream whose scope includes it. The account below is
-> the original finding, kept because the measurement is the evidence.
+**The largest finding, and it is a governance question as much as a technical
+one.**
 
 `factPacket` gates on `seasons.finalized_at` — the season's books, closed in
 January — rather than on `week_finalizations`, the per-week finality
@@ -320,11 +300,30 @@ column.
 **Why it was not fixed here.** Changing which weeks the Slice may print changes
 what the league reads as true, and it turns the approval desk live in September.
 That is `16 §9`'s territory and `docs/SLICE_REVIEW_BOUNDARY.md`'s, and this
-rehearsal's scope explicitly excluded the Slice's editorial architecture. It was
-pinned instead, with the contradiction written into the test so it could not be
-mistaken for working — and the preseason-Slice workstream, whose scope *is* that
-architecture, made the change and flipped the test. See the note at the head of
-this section.
+rehearsal's scope explicitly excludes the Slice's editorial architecture.
+`lib/slice/midseason-week8.test.ts` pinned the current behaviour with the
+contradiction written into the test, so it could not be mistaken for working.
+
+> #### FIXED — 2026-08-10, by the Week 1 lifecycle rehearsal
+>
+> **The finding above stands exactly as written; only its status changed.** The
+> Week 1 rehearsal reached the same defect from the other end, on the same day,
+> with the Tuesday Slice handoff **inside** its scope — so it made the repair
+> this rehearsal deliberately declined to make. `docs/WEEK_1_REHEARSAL.md §6` is
+> the account of it, including the disagreement.
+>
+> The repair is that `factPacket` now calls `weekFinality` rather than reading
+> `seasons.finalized_at` directly, which is the predicate `lib/stats/finality.ts`
+> already owned and already named the Slice as a consumer of. **Nothing is
+> loosened** — a week with no `week_finalizations` row is still refused, so an
+> in-progress week still cannot be printed — and **nothing about approval moved**:
+> `16 §9`'s named-person gate is untouched, so the change puts a draft on the
+> desk and never past it.
+>
+> The tripwire this section describes did exactly what it was for: it made the
+> change impossible to miss. The test above is now **inverted rather than
+> deleted**, so that *which record decides finality* stays pinned whichever way
+> the answer goes.
 
 ### 5.2 The receipt's stated reason expires at kickoff
 

@@ -397,10 +397,10 @@
       }
     },
     "_avatarLayers_B2": {
-      "$comment": "Free/starter layers available to every manager at claim time. Canvas raised from 32x48 to 64x96 in the character-customisation rebuild -- no art existed at the old size, every row was art_status placeholder, so the change cost nothing to re-cut. See lib/character/art/geometry.ts for the measurement it was chosen by. art_status placeholder means there is no PNG: these layers are drawn at runtime from lib/character/art/, and a PNG dropped in with a path takes over per layer without a code change.",
+      "$comment": "Free/starter layers available to every manager at claim time. Canvas raised 32x48 -> 64x96 (character-customisation rebuild) -> 112x168 (sprite-quality pass, 2026-08-10). The last raise is a measurement rather than a preference: roomObject('manager').rect is 112x168 room units, so at 64x96 a manager pixel covered 1.75 room units while the painted shell behind them covered exactly 1 -- the only thing in the world drawn coarser than the world, then magnified into it. No art existed at any of the three sizes; every row here is art_status placeholder, so each raise cost nothing to re-cut. See lib/character/art/geometry.ts for the derivation. art_status placeholder means there is no PNG: these layers are drawn at runtime from lib/character/art/, and a PNG dropped in with a path takes over per layer without a code change.",
       "avatar_body_base": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "body",
         "batch": "B2",
@@ -409,7 +409,7 @@
       },
       "avatar_hair_01": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
@@ -418,7 +418,7 @@
       },
       "avatar_hair_02": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
@@ -427,7 +427,7 @@
       },
       "avatar_hair_03": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
@@ -436,7 +436,7 @@
       },
       "avatar_hair_04": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
@@ -445,7 +445,7 @@
       },
       "avatar_hair_05": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
@@ -454,7 +454,7 @@
       },
       "avatar_hair_06": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hair",
@@ -463,7 +463,7 @@
       },
       "avatar_face_hair_01": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "facial-hair",
         "batch": "B2",
@@ -472,7 +472,7 @@
       },
       "avatar_face_hair_02": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "facial-hair",
         "batch": "B2",
@@ -481,7 +481,7 @@
       },
       "avatar_face_hair_03": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "facial-hair",
         "batch": "B2",
@@ -490,7 +490,7 @@
       },
       "avatar_face_hair_04": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "facial-hair",
         "batch": "B2",
@@ -499,7 +499,7 @@
       },
       "avatar_body_starter_02": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "top",
@@ -508,7 +508,7 @@
       },
       "avatar_body_starter_03": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "top",
@@ -517,7 +517,7 @@
       },
       "avatar_body_starter_04": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "top",
         "batch": "B2",
@@ -526,7 +526,7 @@
       },
       "avatar_body_starter_05": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "top",
         "batch": "B2",
@@ -535,7 +535,7 @@
       },
       "avatar_body_starter_06": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "top",
         "batch": "B2",
@@ -544,7 +544,7 @@
       },
       "avatar_body_starter_07": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "top",
         "batch": "B2",
@@ -553,10 +553,10 @@
       }
     },
     "_wearables_B2": {
-      "$comment": "12 earned wearables for the modular character system (M3). COMMISSIONER RULING 2026-07-31: these are NOT part of the 24-item pizza-box collectible catalog. Collectibles and wearables are separate product families — a pizza box awards collectible_*, character equipment uses wear_*. This comment previously claimed the opposite; that claim was wrong and contradicted the seeded reward table. Crossover rewards are not approved and must not be implemented without a later explicit ruling. Canvas raised to 64x96 alongside the free starter layers.",
+      "$comment": "12 earned wearables for the modular character system (M3). COMMISSIONER RULING 2026-07-31: these are NOT part of the 24-item pizza-box collectible catalog. Collectibles and wearables are separate product families — a pizza box awards collectible_*, character equipment uses wear_*. This comment previously claimed the opposite; that claim was wrong and contradicted the seeded reward table. Crossover rewards are not approved and must not be implemented without a later explicit ruling. Canvas raised to 112x168 alongside the free starter layers.",
       "wear_head_pizza_visor": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "head",
@@ -566,7 +566,7 @@
       },
       "wear_head_beanie_winter": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "head",
@@ -576,7 +576,7 @@
       },
       "wear_head_paper_hat": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "head",
@@ -586,7 +586,7 @@
       },
       "wear_body_apron_tony": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "body",
@@ -596,7 +596,7 @@
       },
       "wear_body_jersey_blank": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "body",
@@ -606,7 +606,7 @@
       },
       "wear_body_tracksuit": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "body",
@@ -616,7 +616,7 @@
       },
       "wear_body_delivery_uniform": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "body",
@@ -629,7 +629,7 @@
       },
       "wear_face_shades": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "face",
@@ -639,7 +639,7 @@
       },
       "wear_face_mustache_fake": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "face",
@@ -649,7 +649,7 @@
       },
       "wear_hand_pizza_peel": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hand",
@@ -659,7 +659,7 @@
       },
       "wear_hand_slice": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hand",
@@ -669,7 +669,7 @@
       },
       "wear_hand_trophy_mini": {
         "family": "avatar",
-        "canvas": "64x96",
+        "canvas": "112x168",
         "batch": "B2",
         "art_status": "placeholder",
         "slot": "hand",

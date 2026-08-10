@@ -29,16 +29,26 @@ import {
  *
  * ## Why the size is a scale rather than a width
  *
- * The canvas is `64 × 96`. Displayed at any size that is not a whole multiple of
- * it, every edge lands between device pixels and the character goes soft — the
- * exact defect recorded against the clipboard on `/profile` (*"art below its
- * display size is worse than no art"*) and against the collectibles' 1.4375×
- * resample. A scale cannot express a non-integer multiple, so the mistake is not
- * available.
+ * Displayed at a size that does not divide the canvas cleanly, every edge lands
+ * between CSS pixels and the character goes soft — the defect recorded against
+ * the clipboard on `/profile` (*"art below its display size is worse than no
+ * art"*) and against the collectibles' 1.4375× resample. A scale cannot express
+ * an arbitrary width, so the mistake is not available.
+ *
+ * **Half steps are offered and whole ones are not required.** The canvas is
+ * `112 × 168` and both numbers are even, so every scale below lands on a whole
+ * number of CSS pixels in both directions — which is the property that actually
+ * matters. Insisting on integers instead would fix the row avatar at `112 × 168`,
+ * which is not an avatar, it is a poster.
  */
 
-/** Whole multiples of the 64 × 96 canvas. Nothing else is offered. */
-export const CHARACTER_SCALES = { row: 1, card: 2, customiser: 3, hero: 3 } as const;
+/**
+ * The four sizes a character is drawn at, as multiples of the `112 × 168` canvas.
+ *
+ * Every one of them must produce a whole number of CSS pixels on both axes;
+ * `checkCharacter` measures the rendered box and fails otherwise.
+ */
+export const CHARACTER_SCALES = { row: 0.5, card: 1, customiser: 1.5, hero: 1.5 } as const;
 export type CharacterScale = keyof typeof CHARACTER_SCALES;
 
 /**

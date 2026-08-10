@@ -222,16 +222,25 @@ export async function seasonWeeks(
   year: number,
 ): Promise<{
   readonly found: boolean;
-  /** The season's books are closed. **Season-level**, not per week. */
   readonly finalized: boolean;
   /**
-   * When they closed, or null.
+   * When the books were shut, or null while they are open.
    *
-   * Carried as well as the boolean because `weekFinality` takes the instant:
-   * *"which record made this final"* is stored on a stake resolution, and a
-   * caller that only had a boolean would have to invent a date to ask.
+   * The same fact as {@link finalized} and not a duplicate of it: `weekFinality`
+   * takes the instant rather than the boolean, so a caller that wants the
+   * canonical predicate can pass this straight through instead of reconstructing
+   * a date it does not have.
    */
   readonly finalizedAt: Date | null;
+  /**
+   * Weeks this season closed on a Tuesday, and when.
+   *
+   * `16 §4.3`'s Tuesday job writes these, and `lib/stats/finality.ts` prefers
+   * them over the season's own close because they are the narrower claim. A
+   * caller asking *"may this week be printed / paid / settled"* needs both this
+   * and {@link finalizedAt}, which is why they are read together.
+   */
+  readonly weekFinalizedAt: ReadonlyMap<number, Date>;
   readonly rows: readonly StoredWeekGame[];
   readonly roster: ReadonlyMap<number, { userId: string; displayName: string }>;
 }> {
@@ -242,7 +251,14 @@ export async function seasonWeeks(
     .limit(1);
 
   if (season === undefined) {
-    return { found: false, finalized: false, finalizedAt: null, rows: [], roster: new Map() };
+    return {
+      found: false,
+      finalized: false,
+      finalizedAt: null,
+      weekFinalizedAt: new Map(),
+      rows: [],
+      roster: new Map(),
+    };
   }
 
   const rows = await db
@@ -266,10 +282,16 @@ export async function seasonWeeks(
       asc(fantasyMatchups.rosterAId),
     );
 
+  const closed = await db
+    .select({ week: weekFinalizations.week, finalizedAt: weekFinalizations.finalizedAt })
+    .from(weekFinalizations)
+    .where(eq(weekFinalizations.seasonId, season.id));
+
   return {
     found: true,
     finalized: season.finalizedAt !== null,
     finalizedAt: season.finalizedAt,
+    weekFinalizedAt: new Map(closed.map((row) => [row.week, row.finalizedAt])),
     rows,
     roster: await rosterNames(db, season.id),
   };

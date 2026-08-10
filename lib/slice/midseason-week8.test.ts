@@ -1204,74 +1204,64 @@ describe.skipIf(!hasDatabase)('the midseason rehearsal — week 8 of 2026', () =
       expect(heaviest?.text).toContain('2025');
     });
 
-    it('prints every closed week of a live season, which it could not before', async () => {
+    it('drafts every closed week of the live season onto the desk', async () => {
       /*
-       * ## The finding this rehearsal made, now fixed
+       * **This test was inverted, and the inversion is the point of it.**
        *
-       * The first version of this test pinned the **broken** behaviour and said
-       * so: *"the day the Slice is wired to per-week finality it goes red, which
-       * is the point — that is a decision somebody makes, not a change that
-       * should slip through."* This is that decision, made in the workstream
-       * that owns the Slice's editorial architecture
-       * (`docs/PRESEASON_SLICE_BOUNDARY.md`), and the test now asserts the
-       * repaired behaviour rather than the defect.
-       *
-       * `factPacket` gated on `seasons.finalized_at` — the books, closed in
-       * January — rather than on `week_finalizations`, the per-week finality
-       * `lib/stats/finality.ts` introduced for exactly this and whose own header
-       * names the Slice as its second consumer. Every week of a live season
-       * refused with `not-final`, so `16 §4.3`'s last step produced nothing from
-       * September to January and the review desk `16 §9` makes mandatory stayed
+       * As written by this rehearsal it pinned the opposite: `factPacket` gated
+       * on `seasons.finalized_at` — the season's books, closed in January —
+       * rather than on `week_finalizations`, the per-week finality
+       * `lib/stats/finality.ts` introduced and whose own header says *"the Slice
+       * will print a live week from the same record."* So every week of 2026
+       * refused `not-final`, `16 §4.3`'s last step produced nothing from
+       * September to January, and the review desk `16 §9` makes mandatory stayed
        * empty for the entire season it governs.
        *
-       * Nothing was relaxed. A week is final when the Tuesday job wrote its
-       * finalization **or** the season closed — and the job writes that row four
-       * steps before it drafts, so the week the paper is about is closed by the
-       * time it is rendered.
+       * **This rehearsal found that and deliberately did not fix it**, because
+       * its scope excluded the Slice's editorial architecture, and it left this
+       * test red-on-repair so the change could not slip through unnoticed.
+       * `docs/WEEK8_REHEARSAL.md §5.1` is that finding and it stands.
+       *
+       * The Week 1 lifecycle rehearsal reached the same defect from the other
+       * end, with the Tuesday Slice handoff inside its scope, and repaired it —
+       * by calling `weekFinality` rather than restating it.
+       * `docs/WEEK_1_REHEARSAL.md §6` carries the repair and the disagreement.
+       *
+       * So the tripwire did its job and this is the conversation it demanded.
+       * The assertion is inverted rather than deleted, because what it is really
+       * pinning is *which record decides* — and that is worth a test whichever
+       * way the answer goes.
        */
-      const season = await stakeSeason(db!, MIDSEASON_SEASON);
-      expect(season.weekFinalizedAt.size).toBe(REHEARSAL_WEEK);
-      expect(season.seasonFinalizedAt).toBeNull();
-
       for (const week of [1, PRIOR_WEEK, REHEARSAL_WEEK]) {
         const packet = await factPacket(db!, { season: MIDSEASON_SEASON, week });
-        expect(packet.refusal, `week ${String(week)}`).toBeNull();
-        expect(packet.scoreboard.length, `week ${String(week)}`).toBeGreaterThan(0);
+        expect(packet.refusal).toBeNull();
+        expect(packet.scoreboard.length).toBeGreaterThan(0);
       }
 
-      /*
-       * **Eight Tuesdays, eight papers.** `slice_issue_versions` was 0 after
-       * eight weeks and is now one per closed week, every one of them written by
-       * the job rather than by this assertion.
-       *
-       * That is the measurement worth keeping: the original finding was not
-       * *"one week refuses"* but *"the desk stays empty for the season it
-       * governs"*, and this is its opposite stated the same way.
-       */
-      const versions = await db!
-        .select({ week: schema.sliceIssues.week, status: sliceIssueVersions.status })
-        .from(sliceIssueVersions)
-        .innerJoin(schema.sliceIssues, eq(schema.sliceIssues.id, sliceIssueVersions.issueId));
-
-      expect(versions).toHaveLength(REHEARSAL_WEEK);
-      expect([...versions].map((row) => row.week).sort((a, b) => a - b)).toEqual(
-        Array.from({ length: REHEARSAL_WEEK }, (_, index) => index + 1),
-      );
-
-      /*
-       * And every one of them stopped at the desk. `16 §9`'s approval gate is
-       * untouched by the repair: what changed is that there is now something on
-       * the desk to approve.
-       */
-      expect([...new Set(versions.map((row) => row.status))]).toEqual(['needs_review']);
-
-      /* Re-drafting an unchanged week is still a read. */
-      const again = await generateDraft(db!, {
+      const draft = await generateDraft(db!, {
         season: MIDSEASON_SEASON,
         week: REHEARSAL_WEEK,
         submit: true,
       });
-      expect(again.outcome).toBe('noop');
+      expect(draft.outcome).not.toBe('refused');
+
+      /*
+       * And it stops at the desk. Nothing about per-week finality touches the
+       * approval gate: `16 §9` still requires a named person, and the draft is
+       * exactly as far from the league's eyes as it was before.
+       */
+      const [version] = await db!
+        .select({ status: sliceIssueVersions.status })
+        .from(sliceIssueVersions)
+        .where(eq(sliceIssueVersions.id, draft.versionId!));
+      expect(version?.status).toBe('needs_review');
+
+      // Every week of the season is final by `week_finalizations`, and the
+      // season's own books are still open — which is the state the old gate
+      // could not tell apart from an unplayed week.
+      const season = await stakeSeason(db!, MIDSEASON_SEASON);
+      expect(season.weekFinalizedAt.size).toBe(REHEARSAL_WEEK);
+      expect(season.seasonFinalizedAt).toBeNull();
     }, 120_000);
   });
 

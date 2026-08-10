@@ -191,7 +191,7 @@ A completed draft's picks are immutable outright (`draft_picks_immutable`): a re
 
 ---
 
-## 12. The defect that would have cost the whole season
+## 12. The defect that would have cost the whole season — found here, fixed elsewhere
 
 **The Slice could not draft any week of a live season.** `factPacket` took its
 finality from `seasons.finalized_at` — the books, closed in January — rather
@@ -205,23 +205,30 @@ print the paper with *"that week is still open."* `16 §4.3`'s last step would
 have produced nothing from September to January, and the review desk `16 §9`
 makes mandatory would have stayed empty for the entire season it governs.
 
-Found twice, independently: the week-8 rehearsal measured it and pinned it
-(`docs/WEEK8_REHEARSAL.md §5.1`), deliberately leaving it for whoever owns the
-Slice's editorial architecture; this workstream hit it from the other side,
-because a preseason issue that hands over to a weekly pipeline which can never
-print is not a finished feature.
+**Three workstreams reached it independently, which is the interesting part.**
+The week-8 rehearsal measured it and *pinned it as a known defect*
+(`docs/WEEK8_REHEARSAL.md §5.1`), deliberately leaving the repair to whoever
+owned the Slice's editorial architecture. This workstream hit it from the other
+side — a preseason issue that hands over to a weekly pipeline which can never
+print is not a finished feature — and repaired it. The **week-1 lifecycle
+rehearsal (#85) repaired it too**, arriving on `main` first, and **its version
+is the one that shipped**: the duplicate was discarded during the merge in
+favour of `main`'s, which reaches the same predicate through the same
+`weekFinality` call and carries the better account of why
+(`docs/WEEK_1_REHEARSAL.md §6`, and the header on `factPacket`'s `isFinal`).
 
-**Nothing was relaxed.** A week is final when the Tuesday job wrote its
-finalization **or** the season closed, and the job writes that row four steps
-before it drafts — so the week the paper is about is closed by the time it is
-rendered. The approval gate is untouched: what changed is that there is now
-something on the desk to approve. The comparison **populations** stay
-season-finalized only, because an open season's numbers can still move and a
-percentile that shifts under a published fact makes the fact retroactively
-wrong.
+Recorded here rather than deleted, because *"the same defect was found three
+times from three directions before anybody fixed it"* is a fact about how the
+Slice was built, and because this document would otherwise be silent about a
+condition the preseason feature depends on: the moment week one is played, the
+weekly paper must be able to print, or the preseason issue is the only one the
+league ever gets.
 
-The rehearsal's test now asserts the repair — eight Tuesdays, eight papers, all
-of them waiting on a stamp — where it used to assert the defect.
+**Nothing was relaxed by the repair.** A week is final when the Tuesday job
+wrote its finalization **or** the season closed, and the job writes that row four
+steps before it drafts. The comparison **populations** stay season-finalized
+only, because an open season's numbers can still move and a percentile that
+shifts under a published fact makes the fact retroactively wrong.
 
 ---
 

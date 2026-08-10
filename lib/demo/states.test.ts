@@ -96,6 +96,29 @@ describe('the demo catalog', () => {
     const CHAMPIONSHIPS = 3;
 
     /*
+     * The office queue, added with the generalized commissioner review path.
+     *
+     * The press desk's six are about **one draft and the decision on it**. These
+     * four are about the screen that answers a different question — *"is there
+     * anything for me at all"* — which is the question `16 §9`'s approval gate is
+     * actually found through, and which has four distinct answers:
+     *
+     *  - **nothing waiting** — `office`, which is what a commissioner meets
+     *    today, and the state a queue is most often reviewed *without*.
+     *  - **one paper ready** — the row a stamp is about to be pressed on, and
+     *    the only place *"facts verified"* is printed.
+     *  - **something the check refused** — a decision that is wanted and cannot
+     *    be completed, which has to say why on the row rather than be a quiet
+     *    grey line.
+     *  - **the whole desk** — ready, stamped and printed together, where the
+     *    priority order is the thing being reviewed.
+     *
+     * Plus recently-printed on its own, so the archive's row style is looked at
+     * rather than only ever seen under three louder ones.
+     */
+    const OFFICE_QUEUE = 4;
+
+    /*
      * The draft review, added with the preseason issue
      * (`docs/PRESEASON_SLICE_BOUNDARY.md`).
      *
@@ -123,7 +146,12 @@ describe('the demo catalog', () => {
     const PRESEASON = 5;
 
     expect(DEMO_STATES.length).toBe(
-      REQUIRED.length + CARRIED_BEYOND_THE_LIST + PRESS_DESK + CHAMPIONSHIPS + PRESEASON,
+      REQUIRED.length +
+        CARRIED_BEYOND_THE_LIST +
+        PRESS_DESK +
+        CHAMPIONSHIPS +
+        OFFICE_QUEUE +
+        PRESEASON,
     );
   });
 

@@ -97,6 +97,23 @@ export interface QueuedIssue {
   readonly publishable: boolean;
   readonly headline: string;
   readonly createdAt: Date;
+  /**
+   * When the version last moved, or null while it has never moved.
+   *
+   * Carried so the commissioner queue can sort by *"what happened most
+   * recently"* rather than by when a draft was first rendered. Those differ the
+   * moment a week is drafted once and decided a day later, which is the ordinary
+   * case rather than an edge one.
+   */
+  readonly decidedAt: Date | null;
+  /**
+   * The digest of the stored bytes — what an approval names.
+   *
+   * On the list row rather than only on the detail, because the queue is a place
+   * decisions are launched from and a decision has to be able to say which copy
+   * it is about.
+   */
+  readonly contentHash: string;
   readonly publishedVersionId: string | null;
 }
 
@@ -545,7 +562,9 @@ async function listIssues(
       status: sliceIssueVersions.status,
       publishable: sliceIssueVersions.publishable,
       content: sliceIssueVersions.content,
+      contentHash: sliceIssueVersions.contentHash,
       createdAt: sliceIssueVersions.createdAt,
+      decidedAt: sliceIssueVersions.decidedAt,
       publishedVersionId: sliceIssues.publishedVersionId,
     })
     .from(sliceIssueVersions)
@@ -565,6 +584,8 @@ async function listIssues(
     publishable: row.publishable,
     headline: headlineOf(row.content),
     createdAt: row.createdAt,
+    decidedAt: row.decidedAt,
+    contentHash: row.contentHash,
     publishedVersionId: row.publishedVersionId,
   }));
 }
