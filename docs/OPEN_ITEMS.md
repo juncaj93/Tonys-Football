@@ -617,8 +617,6 @@ tier — so a legendary stays exactly 2% however many items exist.
 a catalog problem is not fixed by moving token economics, which is the standing
 instruction and also what the numbers say.
 
----
-
 ### G3 · Commissioner announcements — specified, unbuilt, and the shape is recommended
 
 `08 §18` lists what the Slice may announce and `18 §6` gives a commissioner
@@ -632,13 +630,19 @@ different answer from *"nobody thought about it."* A kind in
 a queue section that is permanently empty — which is how a queue stops being
 believed.
 
-**When it is built, the recommended shape is one explicit *Publish announcement*
-button and no second approval step.** Alex writing the words and Alex approving
-the words are the same act on the same screen; a two-step there is bureaucracy
-rather than intentionality, and the goal of the review path is that nothing
-reaches the league **unintentionally**, not that everything is stamped twice.
-That is a recommendation and not a ruling — the decision belongs with the
-feature. `docs/PUBLICATION_APPROVAL_BOUNDARY.md §5` carries it.
+**Commissioner ruling, 2026-08-10: announcements remain DEFERRED, and the shape
+is settled if they are ever approved.** One explicit *Publish announcement*
+action, **no redundant second approval step**, the publication action audited, no
+cron publication, and no generic editorial framework unless several real
+consumers justify one. Writing and approving one's own explicit announcement may
+be treated as **the same intentional human act** — which is the reasoning this
+entry had already reached and the ruling confirms.
+
+**This is product direction, not authorization to build.** Nothing here may be
+implemented without a separate instruction.
+`docs/PUBLICATION_APPROVAL_BOUNDARY.md §5` carries the longer form.
+
+---
 
 ## H — Closed, or stale documentation now corrected
 
