@@ -71,10 +71,24 @@ export function PreseasonBody({ sections }: { sections: PreseasonSections }) {
 
       {sections.snapshot.length > 0 && (
         <PreseasonSection label="From the draft room" data-preseason-snapshot="">
+          {/*
+            * The fact goes **under** the label, not beside it.
+            *
+            * Two reasons, and the second is the one that matters. A ledger value
+            * is `whitespace-nowrap`, so `Ja'Marr Chase — Matt Lee` squeezed
+            * `First off the board` to nothing and printed straight through it.
+            * And a ledger value is set in the **display** face, which is
+            * all-caps by design — correct for a score, wrong for a person, and
+            * `LedgerRow`'s own contract says why: a league where somebody is
+            * `MATT LEE` on one surface and `Matt Lee` on every other has two
+            * names for one manager.
+            */}
           <div className="mt-2.5">
             <Ledger>
               {sections.snapshot.map((row) => (
-                <LedgerRow key={row.label} label={row.label} value={row.value} />
+                <LedgerRow key={row.label} label={row.label}>
+                  {row.value}
+                </LedgerRow>
               ))}
             </Ledger>
           </div>
@@ -94,7 +108,10 @@ export function PreseasonBody({ sections }: { sections: PreseasonSections }) {
           <div className="mt-2.5">
             <Ledger>
               {sections.history.map((row) => (
-                <LedgerRow key={row.label} label={row.label} value={row.value} />
+                /* Prose under the label, for the reason the snapshot gives. */
+                <LedgerRow key={row.label} label={row.label}>
+                  {row.value}
+                </LedgerRow>
               ))}
             </Ledger>
           </div>

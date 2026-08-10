@@ -3678,6 +3678,19 @@ async function checkDraftBoard(page: Page, width: number, state: string): Promis
 }
 
 /**
+ * The states that carry a draft-review issue.
+ *
+ * Two previews and the published one. `slice-preseason` is deliberately absent:
+ * it is the **empty rack** before the season, which is a different state with a
+ * different name that happens to share five letters.
+ */
+const PRESEASON_ISSUE_STATES: ReadonlySet<string> = new Set([
+  'slice-preseason-draft-review',
+  'slice-preseason-sparse',
+  'preseason-rack',
+]);
+
+/**
  * The draft-review issue must actually be a draft review.
  *
  * `?edition=` resolves on the **server** behind the demo guard, so a run without
@@ -5262,10 +5275,17 @@ async function run(): Promise<void> {
           }
 
           /*
-           * Every preseason issue must actually be one — whether it arrived as a
-           * server-resolved preview or off the rack through the approval chain.
+           * Every draft-review issue must actually be one — whether it arrived
+           * as a server-resolved preview or off the rack through the approval
+           * chain.
+           *
+           * Named rather than prefixed, and the prefix is why: `slice-preseason`
+           * is a **different** state that predates this one — the rack in the
+           * weeks before the season, carrying nothing at all — and
+           * `startsWith('slice-preseason')` swept it in and failed it for having
+           * no draft board, which is exactly what an empty rack should not have.
            */
-          if (state.startsWith('slice-preseason') || state === 'preseason-rack') {
+          if (PRESEASON_ISSUE_STATES.has(state)) {
             await checkPreseasonIssue(page, width, state);
           }
         }
