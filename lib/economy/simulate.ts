@@ -70,6 +70,60 @@ export const PROFILES = {
 export type ProfileName = keyof typeof PROFILES;
 
 /**
+ * How many weeks of a season pay.
+ *
+ * **Seventeen, corrected by commissioner ruling on 2026-08-10.** It was 14,
+ * described in `docs/ECONOMY_SIMULATION.md §5` as *"the imported-season shape"*,
+ * and that description was simply wrong: the recorded fixtures hold **paired
+ * games in weeks 1 through 17** and only week 18 is unscored.
+ *
+ * The number matters because **a playoff or consolation win pays exactly like a
+ * regular one** — `lib/rewards/derive.ts` contains no branch on `weekType`,
+ * deliberately, since `03 §4` prices a matchup win once and does not qualify it.
+ * So a season has three more paydays than this gate used to model, and a gate
+ * measuring a shorter season measures an economy the product does not have.
+ *
+ * `simulate.test.ts` asserts this against the fixture files rather than against
+ * itself, so returning it to 14 fails on the evidence.
+ *
+ * **The reward amounts were not touched to compensate.** The ruling is explicit:
+ * the gate is corrected to evaluate the real economy, not the economy adjusted
+ * to fit a stale model.
+ *
+ * ## What this number still simplifies, and why that is safe here
+ *
+ * The last three weeks do not pay *everybody* — the fixtures show 8 rosters
+ * playing in week 15 and 4 in week 17, because of byes and a shrinking bracket.
+ * `simulate()` models a flat league week, so it slightly **overstates** the
+ * postseason. That is the conservative direction for every range this gate
+ * checks (more tokens means more boxes, and the boxes range has a ceiling), and
+ * the model that resolves participation properly already exists next door in
+ * `lib/economy/catalog-sizing.ts` for the question that needs it.
+ */
+export const SCORED_WEEKS = 17;
+
+/**
+ * The legendary tier's configured share of the reward table.
+ *
+ * `PROVISIONAL_RARITY_MASS.legendary` is 2 out of 100, and this is that same
+ * fact stated where the gate can check it. It is **not** a second copy: the
+ * check below reads the real table and compares, so a re-weighting fails here
+ * rather than being restated here.
+ */
+export const CONFIGURED_LEGENDARY_RATE = 0.02;
+
+/**
+ * How many standard deviations of sampling noise the gate tolerates.
+ *
+ * See {@link checkRanges} for the derivation. Four, which is wide enough that
+ * an honest run essentially never fails (a two-sided false-failure rate of
+ * about 6 in 100,000) and narrow enough that halving or doubling the configured
+ * legendary mass is caught by more than five sigma at the sample size the gate
+ * actually runs.
+ */
+export const LEGENDARY_SIGMA_TOLERANCE = 4;
+
+/**
  * How a duplicate is handled.
  *
  * - `specified` — what `16 §8` requires and what `openBox` now does: *"roll
@@ -161,7 +215,7 @@ export interface SimulationInput {
   readonly seasons: number;
   /** `16 §4.3`'s league: ten seats. */
   readonly managers: number;
-  /** Scored weeks in a season, from the imported 2024/2025 shape. */
+  /** Scored weeks in a season. See {@link SCORED_WEEKS}. */
   readonly weeks: number;
   readonly policy: DuplicatePolicy;
   readonly seed: number;
@@ -407,11 +461,57 @@ function median(values: readonly number[]): number {
 }
 
 /**
+ * The legendary tier's mass in a table, as an exact rational.
+ *
+ * Integer arithmetic on the stored weights, so it is the configuration itself
+ * rather than a measurement of it — no sampling, no seed, no tolerance.
+ */
+export function configuredLegendaryRate(table: RewardTableConfig): number {
+  const mass = rarityMass(table).get('legendary') ?? 0;
+  return table.totalWeight === 0 ? 0 : mass / table.totalWeight;
+}
+
+/**
  * The six ranges from `16 §8`, measured.
  *
  * Vending prices are the seventh and are **not** checked: the vending machine is
  * deferred to P7 and has no prices to derive from anything yet. Stating that is
  * better than reporting a pass on a feature that does not exist.
+ *
+ * ## The legendary check is two checks, and that is a correction
+ *
+ * **Commissioner ruling, 2026-08-10.** It used to be one: *"legendary rate per
+ * opening, 2–4%"*, measured from the simulation. `PROVISIONAL_RARITY_MASS` sets
+ * legendary mass to **exactly 2%**, so the range's floor sat on the true value
+ * and the check resolved on Monte Carlo noise — it passed **5 seeds in 12** at
+ * fifty seasons, and no amount of extra seasons can fix a bound centred on the
+ * thing it is bounding.
+ *
+ * The ruling's own preference decides the shape: *"if an exact deterministic
+ * probability assertion can validate the configured distribution before
+ * simulation, prefer asserting the configuration exactly and using simulation
+ * only for emergent economy outcomes."* So:
+ *
+ * 1. **The configuration is asserted exactly**, from the stored integer weights.
+ *    This is the check that catches a real regression — a re-weighted table, a
+ *    tier added, a mass edited — and it catches it with no seed, no sample and
+ *    no possibility of a lucky pass.
+ * 2. **The sampled rate is checked against a band derived from the sample
+ *    size**, `p ± kσ` with `σ = sqrt(p(1−p)/N)` over the run's own `N`
+ *    openings. It exists to catch the case the first check cannot see: a
+ *    *drawing* defect, where the table says 2% and `drawRarity` hands out
+ *    something else.
+ *
+ * **The tolerance is derived, not chosen to make the number pass.** At the gate's
+ * own configuration — 50 seasons, 10 managers, ~7,000 openings — `σ` is about
+ * 0.17 percentage points, so a 4σ band is roughly **1.33% – 2.67%**. Halving the
+ * mass to 1% or raising it to 3% lands more than **five sigma** outside it and
+ * fails; ordinary noise does not. The band **narrows automatically as the sample
+ * grows**, so a longer run is a stricter gate rather than a more forgiving one —
+ * which is the property the old fixed range did not have.
+ *
+ * `16 §8`'s stated 2–4% is not overridden: the configured 2% sits inside it, and
+ * check 1 pins it there exactly.
  */
 export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
   const perSeason = result.managers.flatMap((m) => m.boxesPerSeason);
@@ -424,6 +524,17 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
   const openings = result.managers.reduce((n, m) => n + m.openings, 0);
   const legendaries = result.managers.reduce((n, m) => n + m.legendaries, 0);
   const legendaryRate = openings === 0 ? 0 : legendaries / openings;
+
+  /*
+   * The configured probability, read from the table, and the sampling error a
+   * run of this size carries. `σ = sqrt(p(1−p)/n)` is the binomial standard
+   * error: `n` openings, each a legendary with probability `p`.
+   */
+  const configured = configuredLegendaryRate(result.input.table);
+  const tolerance =
+    openings === 0
+      ? 0
+      : LEGENDARY_SIGMA_TOLERANCE * Math.sqrt((configured * (1 - configured)) / openings);
 
   const grantsPerSeason =
     result.managers.reduce((n, m) => n + m.grants, 0) /
@@ -459,10 +570,26 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
       withinRange: result.nonTuesdayRewards === 0,
     },
     {
-      name: 'Legendary rate per opening',
-      range: '2–4%',
+      /*
+       * Deterministic. No seed, no sample and no tolerance — the stored integer
+       * weights either say 2% or they do not.
+       */
+      name: 'Legendary mass, configured',
+      range: 'exactly 2%',
+      measured: `${(configured * 100).toFixed(3)}%`,
+      withinRange: Math.abs(configured - CONFIGURED_LEGENDARY_RATE) < 1e-12,
+    },
+    {
+      /*
+       * Sampled, and bounded by the run's own sample size rather than by a fixed
+       * range. It exists to catch a *drawing* defect — a table that says 2% and
+       * a draw that hands out something else — and it cannot be passed or
+       * failed by luck at the sample sizes the gate runs.
+       */
+      name: 'Legendary rate per opening (sampled)',
+      range: `${(configured * 100).toFixed(2)}% ± ${(tolerance * 100).toFixed(2)} (${String(LEGENDARY_SIGMA_TOLERANCE)}σ, n=${String(openings)})`,
       measured: `${(legendaryRate * 100).toFixed(2)}%`,
-      withinRange: legendaryRate >= 0.02 && legendaryRate <= 0.04,
+      withinRange: openings === 0 || Math.abs(legendaryRate - configured) <= tolerance,
     },
     {
       name: 'Legendaries league-wide per season',

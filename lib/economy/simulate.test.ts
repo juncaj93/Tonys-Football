@@ -1,3 +1,6 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { CATALOG_SIZE } from '@/lib/counter/catalog';
@@ -7,8 +10,13 @@ import { PROVISIONAL_ECONOMY } from '@/lib/counter/tokens';
 import {
   type DuplicatePolicy,
   type SimulationInput,
+  type SimulationResult,
+  CONFIGURED_LEGENDARY_RATE,
+  LEGENDARY_SIGMA_TOLERANCE,
   PROFILES,
+  SCORED_WEEKS,
   checkRanges,
+  configuredLegendaryRate,
   salvageFor,
   generator,
   rarityMass,
@@ -35,7 +43,7 @@ function input(over: Partial<SimulationInput> = {}): SimulationInput {
     table: standardRewardTable(),
     seasons: 5,
     managers: 10,
-    weeks: 14,
+    weeks: SCORED_WEEKS,
     salvage: salvageFor(PROVISIONAL_ECONOMY.standardBoxPriceTokens),
     grantsPerSeason: 2,
     // The rule the product now follows (`0014`). The counterfactual is asked
@@ -155,7 +163,7 @@ describe('the simulation', () => {
      * opening and midseason. Not earned, not conditional — so every manager has
      * the same two in every season, and the count is seasons x 2.
      */
-    const result = simulate(input({ seasons: 4, weeks: 14, grantsPerSeason: 2 }));
+    const result = simulate(input({ seasons: 4, grantsPerSeason: 2 }));
     for (const manager of result.managers) expect(manager.grants).toBe(8);
   });
 
@@ -226,7 +234,8 @@ describe('the range checks', () => {
     const checks = checkRanges(simulate(input()));
     const names = checks.map((c) => c.name);
     expect(names).toContain('Boxes per manager per season (median)');
-    expect(names).toContain('Legendary rate per opening');
+    expect(names).toContain('Legendary mass, configured');
+    expect(names).toContain('Legendary rate per opening (sampled)');
     expect(names).toContain('Non-weekly reward rate');
     expect(names).toContain('Direct item grants per manager per season');
   });
@@ -277,5 +286,166 @@ describe('the profiles', () => {
     expect(PROFILES.median.highScoreRate).toBeCloseTo(0.1);
     expect(PROFILES.best.winRate).toBeGreaterThan(PROFILES.median.winRate);
     expect(PROFILES.worst.winRate).toBeLessThan(PROFILES.median.winRate);
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* The two corrections of 2026-08-10, and the assumptions they replaced.      */
+/* ------------------------------------------------------------------------- */
+
+describe('the season the gate models', () => {
+  it('is seventeen weeks, counted off the recorded fixtures', () => {
+    /*
+     * The evidence, not the constant. This reads the same files the historical
+     * import reads and counts the weeks that actually hold paired games — so a
+     * return to fourteen fails against the league's own record rather than
+     * against a number somebody typed here.
+     */
+    const root = 'fixtures/sleeper/league';
+    const leagues = readdirSync(root).filter((entry) => existsSync(join(root, entry, 'matchups')));
+    expect(leagues.length).toBeGreaterThanOrEqual(2);
+
+    for (const league of leagues) {
+      const weeks = readdirSync(join(root, league, 'matchups'));
+      let scored = 0;
+      for (const file of weeks) {
+        const raw = JSON.parse(
+          readFileSync(join(root, league, 'matchups', file), 'utf8'),
+        ) as { matchup_id: number | null }[];
+        if (raw.some((row) => row.matchup_id !== null)) scored += 1;
+      }
+      expect(scored, `league ${league}`).toBe(SCORED_WEEKS);
+    }
+  });
+
+  it('rejects the fourteen-week assumption it replaced', () => {
+    // The old default. It is not an alternative reading of the fixtures; it is
+    // three paydays short of them, and `lib/rewards/derive.ts` pays every one.
+    expect(SCORED_WEEKS).not.toBe(14);
+    expect(SCORED_WEEKS).toBe(17);
+  });
+
+  it('measures a bigger economy than the short season did, without any value moving', () => {
+    const short = simulate(input({ seasons: 50, weeks: 14 }));
+    const real = simulate(input({ seasons: 50 }));
+    const boxes = (r: SimulationResult): number =>
+      r.managers.reduce((n, m) => n + m.openings, 0);
+
+    expect(boxes(real)).toBeGreaterThan(boxes(short));
+    // And the correction is to the model only: the prices are the same object.
+    expect(real.input.economy).toBe(short.input.economy);
+  });
+});
+
+describe('the legendary checks', () => {
+  const seeds = Array.from({ length: 24 }, (_, index) => 20260804 + index * 1013);
+
+  const gateRun = (seed: number) =>
+    checkRanges(simulate(input({ seasons: 50, policy: 'specified', seed })));
+
+  const rateOf = (seed: number): number => {
+    const result = simulate(input({ seasons: 50, policy: 'specified', seed }));
+    const openings = result.managers.reduce((n, m) => n + m.openings, 0);
+    const legendaries = result.managers.reduce((n, m) => n + m.legendaries, 0);
+    return legendaries / openings;
+  };
+
+  it('replaces a bound that sat on the value it was bounding', () => {
+    /*
+     * The old check was `rate >= 0.02 && rate <= 0.04` against a configured mass
+     * of **exactly** 0.02, so it resolved on Monte Carlo noise. This asserts
+     * that failure as a fact rather than describing it: over twenty-four fixed
+     * seeds at fifty seasons the old predicate is not stable, and the two
+     * checks that replaced it are.
+     */
+    const rates = seeds.map(rateOf);
+    const oldPredicate = rates.filter((rate) => rate >= 0.02 && rate <= 0.04).length;
+    expect(oldPredicate).toBeLessThan(seeds.length);
+
+    for (const seed of seeds) {
+      const checks = gateRun(seed);
+      expect(checks.find((c) => c.name === 'Legendary mass, configured')?.withinRange).toBe(true);
+      expect(
+        checks.find((c) => c.name === 'Legendary rate per opening (sampled)')?.withinRange,
+        `seed ${String(seed)}`,
+      ).toBe(true);
+    }
+  });
+
+  it('asserts the configured distribution exactly, with no sampling at all', () => {
+    expect(configuredLegendaryRate(standardRewardTable())).toBeCloseTo(
+      CONFIGURED_LEGENDARY_RATE,
+      12,
+    );
+  });
+
+  it('fails on a re-weighted table, which is the regression it exists for', () => {
+    // A table that hands out legendaries twice as often. Nothing about the
+    // simulation changes; the configuration is simply wrong, and the
+    // deterministic check says so without needing a single opening.
+    const doubled = {
+      version: 'test',
+      entries: [
+        { slug: 'c', rarity: 'common', weight: 58 },
+        { slug: 'r', rarity: 'rare', weight: 28 },
+        { slug: 'e', rarity: 'epic', weight: 10 },
+        { slug: 'l', rarity: 'legendary', weight: 4 },
+      ],
+      totalWeight: 100,
+      provisional: true,
+    } as const;
+
+    expect(configuredLegendaryRate(doubled)).toBeCloseTo(0.04, 12);
+
+    const checks = checkRanges(simulate(input({ seasons: 5, table: doubled })));
+    expect(checks.find((c) => c.name === 'Legendary mass, configured')?.withinRange).toBe(false);
+  });
+
+  it('still catches a draw that disagrees with the table it was given', () => {
+    /*
+     * The half the configuration check cannot see: the table says 2% and the
+     * *drawing* hands out something else. Built directly, because the point is
+     * a result whose measurement contradicts its own input.
+     */
+    const real = simulate(input({ seasons: 5 }));
+    const openings = real.managers.reduce((n, m) => n + m.openings, 0);
+
+    const wrong: SimulationResult = {
+      ...real,
+      managers: real.managers.map((manager, index) => ({
+        ...manager,
+        // Five percent of openings, spread over the roster. Far outside 4σ.
+        legendaries: index === 0 ? Math.round(openings * 0.05) : 0,
+      })),
+    };
+
+    const checks = checkRanges(wrong);
+    expect(checks.find((c) => c.name === 'Legendary mass, configured')?.withinRange).toBe(true);
+    expect(checks.find((c) => c.name === 'Legendary rate per opening (sampled)')?.withinRange).toBe(
+      false,
+    );
+  });
+
+  it('gets stricter as the sample grows, which the fixed range never did', () => {
+    const bandOf = (seasons: number): number => {
+      const checks = checkRanges(simulate(input({ seasons, policy: 'specified' })));
+      const range = checks.find((c) => c.name === 'Legendary rate per opening (sampled)')?.range;
+      return Number.parseFloat(/± ([0-9.]+)/.exec(range ?? '')?.[1] ?? '0');
+    };
+
+    const short = bandOf(5);
+    const long = bandOf(50);
+    expect(long).toBeGreaterThan(0);
+    expect(long).toBeLessThan(short);
+    // Binomial error falls as 1/sqrt(n): ten times the seasons, about a third
+    // of the band. Asserted loosely because the openings do not scale exactly.
+    expect(short / long).toBeGreaterThan(2);
+  });
+
+  it('documents its tolerance in the range it prints', () => {
+    const checks = checkRanges(simulate(input({ seasons: 50, policy: 'specified' })));
+    const range = checks.find((c) => c.name === 'Legendary rate per opening (sampled)')?.range;
+    expect(range).toContain(`${String(LEGENDARY_SIGMA_TOLERANCE)}σ`);
+    expect(range).toMatch(/n=\d+/);
   });
 });
