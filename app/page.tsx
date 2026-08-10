@@ -39,7 +39,12 @@ import { featureFlags } from '@/lib/flags';
 import { BoardPanel, ChalkSlate } from '@/components/scene/chalkboard';
 import { chalkboardFor } from '@/lib/stakes/chalkboard';
 import { previewBoard } from '@/lib/stakes/boards';
-import { featuredMatchup, matchupLine } from '@/lib/stats/board';
+import {
+  currentMatchupLine,
+  featuredCurrentMatchup,
+  featuredMatchup,
+  matchupLine,
+} from '@/lib/stats/board';
 import { currentWeekOf } from '@/lib/stats/week';
 import { currentSeasonYear } from '@/lib/league/membership';
 import { loadTags } from '@/lib/tags/repository';
@@ -91,6 +96,34 @@ export const dynamic = 'force-dynamic';
 
 /** The fraction of the room that sits behind Tony. */
 const CUT = COUNTER_EDGE / ROOM.height;
+
+/**
+ * The board's face during the season.
+ *
+ * Two reads and one preference, kept out of the page body because the ordering
+ * *is* the rule: the current season's featured matchup first, and the archived
+ * fact only as the thing that is allowed to be there when no season is being
+ * announced. In season the second is always null — `matchupLine` refuses a fact
+ * from another season — so it is kept in the chain as the guard rather than as a
+ * fallback anybody expects to fire.
+ */
+async function inSeasonFace(
+  db: ReturnType<typeof getDb>,
+  boardYear: number | null,
+  featured: Awaited<ReturnType<typeof featuredMatchup>>,
+) {
+  const week = await currentWeekOf(db, boardYear ?? 0);
+  const current =
+    boardYear === null
+      ? null
+      : currentMatchupLine(await featuredCurrentMatchup(db, { season: boardYear, week }));
+
+  return boardFace({
+    daysUntilKickoff: null,
+    week,
+    matchup: current ?? matchupLine(featured, { season: boardYear }),
+  });
+}
 
 export default async function ParlorPage({
   searchParams,
@@ -243,11 +276,7 @@ export default async function ParlorPage({
   const face =
     clock.daysUntilKickoff !== null
       ? boardFace({ daysUntilKickoff: clock.daysUntilKickoff })
-      : boardFace({
-          daysUntilKickoff: null,
-          week: await currentWeekOf(db, boardYear ?? 0),
-          matchup: matchupLine(featured, { season: boardYear }),
-        });
+      : await inSeasonFace(db, boardYear, featured);
   const shell = resolveAsset('zone_parlor_shell');
 
   return (
