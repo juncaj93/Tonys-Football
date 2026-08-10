@@ -1,4 +1,4 @@
-import { toneGrid } from './art';
+import { layerBounds, toneGrid } from './art';
 import {
   BODY_SLUG,
   isKnownOption,
@@ -26,7 +26,7 @@ import {
   topColours,
   type LayerColours,
 } from './palette';
-import { toRuns, type Run } from './sprite';
+import { darker, toRuns, type Run, type Tone } from './sprite';
 
 /**
  * A character configuration, resolved into pixels.
@@ -264,43 +264,169 @@ function coloursFor(paint: Paint): LayerColours {
 export type ColourRun = Run<string>;
 
 /**
+ * How far a layer's shadow reaches onto what is under it.
+ *
+ * The light is upper-left (`sprite.ts`), so an occluder shadows the pixels
+ * **down and right** of it: a pixel is in shadow when the occluder covers any of
+ * the eight cells of the 3 × 3 block up and to the left of it. Two pixels rather
+ * than one, because at `112 × 168` a single pixel of contact shadow under a
+ * sleeve is a seam and two is an arm going behind a cuff.
+ *
+ * Used to bound the scan; the eight lookups themselves are written out in the
+ * loop rather than driven from a table, because a table meant a closure per
+ * pixel and this runs a hundred thousand times per character.
+ */
+const CONTACT_REACH = 2;
+
+/**
  * Flatten a composite to the fewest coloured rectangles that draw it.
  *
  * Every layer's tone grid is cached by slug (`art/index.ts`), so this is a walk
- * over 6,144 cells per layer and a run-length pass — no rasterising, no shading,
- * no allocation of shapes. Measured at a few hundred rectangles for a full
- * character, against 6,144 for one node per pixel.
+ * over the canvas per layer and a run-length pass — no rasterising, no shading,
+ * no allocation of shapes.
+ *
+ * ## Tones are carried through the stack, and colour is decided at the end
+ *
+ * This used to resolve each layer to hex as it drew it, which made the composite
+ * a stack of independently-lit cut-outs: nothing in it knew that the hair was
+ * *on* the head or the sleeve *over* the arm, so no layer ever cast a shadow on
+ * another and every internal boundary was the same hard `ink-900` as the outer
+ * edge. Both are what made a character read as stacked shapes rather than as a
+ * person, and both are decisions about the **composite**, so neither can be made
+ * inside a layer.
+ *
+ * Two passes now happen here and nowhere else:
+ *
+ * 1. **Contact shadow.** Before a layer is drawn, whatever it is about to sit
+ *    over is darkened one step along the tone ramp within {@link CONTACT_REACH}
+ *    of it.
+ *    That is the shadow of the fringe on the brow, the beard on the neck, the
+ *    cuff on the wrist and the hem on the trousers — none of them authored.
+ * 2. **Selective outline.** An outline pixel that touches nothing empty is not
+ *    the figure's edge, it is a seam between two layers, and it draws in the
+ *    upper layer's own **shade** rather than in ink. Ink is reserved for the
+ *    silhouette, which is what has to hold up against a dark basement wall.
  */
 export function compositeRuns(composite: Composite): readonly ColourRun[] {
   const { width, height } = composite.canvas;
+
+  const tones: (Tone | null)[][] = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => null),
+  );
+  const paint: (LayerColours | null)[][] = Array.from({ length: height }, () =>
+    Array.from({ length: width }, () => null),
+  );
+
+  /*
+   * Every pass below is bounded by the layer's own occupied box.
+   *
+   * Not premature: measured at 15.6ms per character when each pass walked the
+   * whole canvas, which is a *server component on every page view* and roughly
+   * five times what the old `64 × 96` compositor cost. Three of the four layers
+   * on a plain character occupy under a third of the canvas, and the contact
+   * pass is eight neighbour lookups per pixel, so the bound is most of the
+   * difference. `bounds` is cached per slug beside the tone grid.
+   */
+  let top: number = height;
+  let bottom = 0;
+  let left: number = width;
+  let right = 0;
+
+  for (const layer of composite.layers) {
+    const above = toneGrid(layer.slug);
+    // A slug with no artwork draws nothing. It is not an error here — see
+    // `toneGrid` — and `art-contract.test.ts` is what stops it happening at all.
+    if (above === null) continue;
+    const box = layerBounds(layer.slug);
+    if (box === null) continue;
+
+    top = Math.min(top, box.top);
+    bottom = Math.max(bottom, box.bottom);
+    left = Math.min(left, box.left);
+    right = Math.max(right, box.right);
+
+    /*
+     * Pass 1 — the shadow this layer throws, computed against the stack as it
+     * stands. Deliberately before the layer is written, or it shadows itself.
+     *
+     * Only pixels within `CONTACT_REACH` of the layer can be affected, so the
+     * scan is the layer's box grown by that much on the down-right side.
+     */
+    const shadowBottom = Math.min(height, box.bottom + CONTACT_REACH);
+    const shadowRight = Math.min(width, box.right + CONTACT_REACH);
+
+    for (let y = box.top; y < shadowBottom; y++) {
+      const here = tones[y]!;
+      const own = above[y];
+      const up1 = above[y - 1];
+      const up2 = above[y - 2];
+      for (let x = box.left; x < shadowRight; x++) {
+        if (here[x] === null) continue;
+        if (own?.[x] != null) continue;
+        const occluded =
+          up1?.[x - 1] != null ||
+          up1?.[x] != null ||
+          own?.[x - 1] != null ||
+          up2?.[x - 2] != null ||
+          up1?.[x - 2] != null ||
+          up2?.[x - 1] != null ||
+          up2?.[x] != null ||
+          own?.[x - 2] != null;
+        if (occluded) here[x] = darker(here[x]!);
+      }
+    }
+
+    // Pass 2 — the layer itself.
+    const colours = coloursFor(layer.paint);
+    for (let y = box.top; y < box.bottom; y++) {
+      const row = above[y];
+      if (row === undefined) continue;
+      const toneRow = tones[y]!;
+      const paintRow = paint[y]!;
+      for (let x = box.left; x < box.right; x++) {
+        const tone = row[x];
+        if (tone === null || tone === undefined) continue;
+        toneRow[x] = tone;
+        paintRow[x] = colours;
+      }
+    }
+  }
+
+  // Pass 3 — colour. `outline` is the only tone whose answer depends on where it
+  // sits rather than on what it is.
   const grid: (string | null)[][] = Array.from({ length: height }, () =>
     Array.from({ length: width }, () => null),
   );
 
-  for (const layer of composite.layers) {
-    const tones = toneGrid(layer.slug);
-    // A slug with no artwork draws nothing. It is not an error here — see
-    // `toneGrid` — and `art-contract.test.ts` is what stops it happening at all.
-    if (tones === null) continue;
+  const empty = (x: number, y: number): boolean =>
+    x < 0 || y < 0 || x >= width || y >= height || tones[y]![x] === null;
 
-    const colours = coloursFor(layer.paint);
-    for (let y = 0; y < height; y++) {
-      const row = tones[y];
-      if (row === undefined) continue;
-      for (let x = 0; x < width; x++) {
-        const tone = row[x];
-        if (tone === null || tone === undefined) continue;
-        grid[y]![x] =
-          tone === 'outline'
-            ? colours.outline
-            : tone === 'shade' || tone === 'alt'
-              ? colours.shade
-              : tone === 'base'
-                ? colours.base
-                : tone === 'ink'
-                  ? colours.outline
-                  : fixedColour(tone.slice('fixed:'.length));
+  for (let y = top; y < bottom; y++) {
+    const toneRow = tones[y]!;
+    const paintRow = paint[y]!;
+    const out = grid[y]!;
+    for (let x = left; x < right; x++) {
+      const tone = toneRow[x];
+      const colours = paintRow[x];
+      if (tone == null || colours == null) continue;
+
+      if (tone === 'outline') {
+        const onSilhouette =
+          empty(x - 1, y) || empty(x + 1, y) || empty(x, y - 1) || empty(x, y + 1);
+        out[x] = onSilhouette ? colours.outline : colours.shade;
+        continue;
       }
+
+      out[x] =
+        tone === 'shade'
+          ? colours.shade
+          : tone === 'base'
+            ? colours.base
+            : tone === 'light'
+              ? colours.light
+              : tone === 'ink'
+                ? colours.outline
+                : fixedColour(tone.slice('fixed:'.length));
     }
   }
 

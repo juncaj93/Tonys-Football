@@ -152,14 +152,58 @@ export function ManagerInRoom({
   composite: Composite;
   name: string;
 }) {
+  const [x, y, width, height] = roomObject('manager').rect;
+
   return (
-    <span
-      aria-hidden="true"
-      data-room-character=""
-      className="pointer-events-none absolute z-10"
-      style={place(roomObject('manager').rect)}
-    >
-      <CharacterView composite={composite} fit="container" label={name} />
-    </span>
+    <>
+      {/*
+       * The shadow the manager casts on the rug.
+       *
+       * **It belongs to the floor, not to the figure**, which is why it is here
+       * and not a row of the sprite. A shadow inside the composite would follow
+       * the character onto `/profile` and into the customiser, where there is no
+       * floor for it to fall on, and it would be recoloured by whatever ramp the
+       * layer under it happened to use.
+       *
+       * It is the last thing between a figure that is standing in a room and a
+       * figure that has been placed on top of a photograph of one — the single
+       * cue no amount of work on the sprite itself could supply.
+       *
+       * ## Two hard ellipses, no blur
+       *
+       * The first version was one blurred ellipse and it was invisible in the
+       * capture, for two reasons worth writing down. `rounded-[50%]` is an
+       * arbitrary value Tailwind did not emit, so it was a **rectangle**; and a
+       * blurred one at that, which is the treatment `globals.css`'s house-edge
+       * note says *"made the interiors read as a different product from the room
+       * the moment the room became real pixel art."*
+       *
+       * A penumbra out of two flat steps is the same trick `.pixel-edge` uses for
+       * a bevel and the same trick the sprite uses for a curve. It survives
+       * `image-rendering: pixelated`, it costs no filter, and it is the house
+       * style rather than an exception to it.
+       *
+       * The radii are inline because a percentage border-radius has no utility.
+       */}
+      <span
+        aria-hidden="true"
+        data-room-shadow=""
+        className="pointer-events-none absolute z-0 bg-ink-900/30"
+        style={{ ...place([x + width * 0.16, y + height - 7, width * 0.68, 11]), borderRadius: '50%' }}
+      />
+      <span
+        aria-hidden="true"
+        className="pointer-events-none absolute z-0 bg-ink-900/45"
+        style={{ ...place([x + width * 0.24, y + height - 5, width * 0.52, 7]), borderRadius: '50%' }}
+      />
+      <span
+        aria-hidden="true"
+        data-room-character=""
+        className="pointer-events-none absolute z-10"
+        style={place([x, y, width, height])}
+      >
+        <CharacterView composite={composite} fit="container" label={name} />
+      </span>
+    </>
   );
 }

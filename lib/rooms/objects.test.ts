@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { overlaps } from '@/lib/parlor/objects';
 
 import { assetRegistry } from '@/lib/assets/registry';
+import { CHARACTER_CANVAS } from '@/lib/character/layers';
 
 import {
   CEILING,
@@ -120,8 +121,43 @@ describe('the room’s map', () => {
 
     expect(feet, 'feet above the horizon').toBeGreaterThan(HORIZON);
     expect(feet, 'feet off the bottom of the room').toBeLessThan(MANAGER_ROOM.height - 40);
-    // The sprite's own 64 × 96 aspect, so nothing is stretched.
-    expect(width * 96, 'the figure is not the sprite’s aspect').toBe(height * 64);
+    // The sprite's own aspect, so nothing is stretched.
+    expect(width * CHARACTER_CANVAS.height, 'the figure is not the sprite’s aspect').toBe(
+      height * CHARACTER_CANVAS.width,
+    );
+  });
+
+  it('draws the manager at one sprite pixel per room unit', () => {
+    /*
+     * **The invariant of the 2026-08-10 sprite-quality pass**, and the one thing
+     * in it that a screenshot cannot show going wrong slowly.
+     *
+     * `art/ASSET_PIPELINE.md`'s rule 4 is *one art pixel is one room unit*, and
+     * everything else in this room obeys it: the painted shell is 320 × 569 into
+     * a 320 × 569 room, and every collectible is 46 × 46 into 46 × 46. The
+     * manager did not — 64 × 96 into this rectangle is **1.75** room units per
+     * sprite pixel, so the figure was the one object in the world rendered
+     * coarser than the world and then magnified into it. That is the measurement
+     * under *"too simplistic, too flat, too geometric, not convincingly part of
+     * the same pixel-art world"*.
+     *
+     * Either number may move — a differently framed room, a differently
+     * proportioned sprite — but they move **together**, or the figure goes back
+     * to being a lower-resolution picture pasted on a higher-resolution one.
+     */
+    const [, , width, height] = roomObject('manager').rect;
+
+    expect(width, 'the manager rect is not the sprite canvas').toBe(CHARACTER_CANVAS.width);
+    expect(height, 'the manager rect is not the sprite canvas').toBe(CHARACTER_CANVAS.height);
+  });
+
+  it('draws a collectible at one art pixel per room unit too, which is the same rule', () => {
+    // Stated beside the manager's so the two cannot drift into two rules.
+    for (const slot of SLOTS) {
+      const [, , width, height] = slotArtRect(slot);
+      expect(width, `${slot} art width`).toBe(46);
+      expect(height, `${slot} art height`).toBe(46);
+    }
   });
 
   it('draws the manager smaller than Tony and bigger than furniture', () => {

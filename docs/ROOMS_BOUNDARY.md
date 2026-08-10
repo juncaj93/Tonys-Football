@@ -449,6 +449,30 @@ a real manager uses the feature, which is also the first time it would matter.
 
 ## 14. The manager sprite — why Image 2's fidelity is not a swap
 
+> **Resolved 2026-08-10 — and by a third option this section did not consider.**
+> `docs/MANAGER_SPRITE_BOUNDARY.md` is the canonical account from here on; what
+> follows is kept because §14.1's argument against a naive PNG swap is still
+> exactly right and still governs.
+>
+> What §14.2 got wrong is its case against Option A, and the correction is one
+> number. This section reasoned about how the sprite is **drawn** and never
+> measured how it is **displayed**: at `64 × 96` into a `112 × 168` rectangle, a
+> manager pixel covered **1.75 room units** while the painted shell behind it
+> covered exactly one. The figure was the only thing in the world rendered
+> coarser than the world and then magnified into it — so *"it will get closer to
+> the reference; it will not reach a painted sprite"* was diagnosing the
+> authoring when the problem was the resolution.
+>
+> The ceiling it quotes — *"a set of thirty layers at that size is not authorable
+> by hand"* — is inherited from the `32 × 48 → 64 × 96` raise and is true of a
+> system whose layers are pixels. **These layers are shapes.** An ellipse with
+> `rx: 13` costs what one with `rx: 7` costs. Resolution was close to free, which
+> is what made Option B's pipeline unnecessary rather than merely expensive.
+>
+> **Option B is not refused; it is not needed yet.** If painted layers are ever
+> commissioned, the mask convention below is still the design to reach for, and
+> the per-layer art-swap contract is intact.
+
 **Commissioner direction, 2026-08-09** supplies an approved manager-sprite
 reference and asks that managers *"feel substantially more illustrated"* and
 *"clearly part of the same world as Tony"*. This section records what stands
