@@ -883,10 +883,11 @@ export async function persistChain(
  * again** — the deliberate half of *"Sleeper seeds; Tony's owns"*. What was
  * missing is the other half: nothing in the product ever wrote it, so a season
  * created during the preseason stayed `DRAFT_PREP` through its whole year *and
- * through its own finalization*. Four surfaces read `status = 'ARCHIVED'` to
+ * through its own finalization*. Five readers take `status = 'ARCHIVED'` to
  * mean *"this season is history"* — the receipt's finish, Tonight's champion
- * and history lines, and the board's featured matchup — and all four would have
- * gone on ignoring 2026 after the books were shut on it.
+ * and history lines, the board's featured matchup, and the derived-tag layer's
+ * `isComplete` — and every one of them would have gone on ignoring 2026 after
+ * the books were shut on it.
  *
  * So the close writes both. Not Sleeper's `complete`, which is refused above
  * for reasons that have not changed; the **decision** to close is what moves the

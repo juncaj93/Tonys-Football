@@ -79,10 +79,15 @@ nothing for the four still alive.
 half of *"Sleeper seeds; Tony's owns"*. The other half was missing: nothing in
 the product ever wrote it. A season created during the preseason stays
 `DRAFT_PREP` through its whole year **and through its own finalization**, and
-four surfaces read `status = 'ARCHIVED'` to mean *"this is history"*: the
-receipt's finish line, Tonight's champion line, Tonight's history line, and the
-board's featured matchup. All four would have gone on ignoring 2026 after the
-books were shut on it.
+five readers take `status = 'ARCHIVED'` to mean *"this is history"*: the
+receipt's finish line, Tonight's champion line, Tonight's history line, the
+board's featured matchup, and the derived-tag layer's `isComplete`. Every one of
+them would have gone on ignoring 2026 after the books were shut on it.
+
+**#94 deepened the dependency rather than removing it.** It rewrote the receipt
+and gave the board an importance-ranked featured matchup, and both still filter
+on `ARCHIVED` — so the surfaces this fix serves are now doing more with the
+season it would have hidden.
 
 **Fixed at the close, not at Sleeper's signal.** `finalizeSeason` and the
 importer's `finalizeYears` path write `status: 'ARCHIVED'` alongside
