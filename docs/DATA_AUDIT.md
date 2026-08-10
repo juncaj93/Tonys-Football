@@ -322,6 +322,20 @@ Ordered by value-per-unit-of-work. Every one is a pure function over imported da
 
 **Not recommended:** all-play / median records (the league has none — labelling required and the payoff is low), luck indices, projection deltas (`07 §3` calls projections unreliable), and anything implying win probability (`16 §9` bans the language).
 
+> **All-play is OVERRULED IN PART — COMMISSIONER RULING, 2026-08-10 (R2).**
+> This row and `07 §7.5` disagreed, and the disagreement is resolved in favour of
+> keeping the measurement. Play-everyone is permitted as a **secondary contextual
+> historical measurement**, explicitly labelled and derived from the same verified
+> eligible games — which is the labelling this row asked for, now enforced rather
+> than requested (`COMPUTED_NOT_PLAYED` is a required field on the fact).
+>
+> **The rest of the row stands unchanged.** *Luck indices* remain refused:
+> `lib/stats/luck.ts` emits two records and a signed difference, and no luck
+> score, fraud flag or ranking by desert. Projection deltas and win-probability
+> language remain banned.
+>
+> `docs/HISTORICAL_ANALYSIS_BOUNDARY.md §9`
+
 ---
 
 ## 10. Proposed phased plan
@@ -381,6 +395,29 @@ Two things it inherits from this audit: it renders `final_rank = null` as *"Miss
 6. **Sleeper username → canon name for the remaining four accounts.** Blocks Group B greetings and any manager-specific fact. Already open in `content/counter-greetings.md`.
 7. **Seasonal team names** — persist them (recommended; they are already lost upstream) or accept that old seasons are described by permanent names only?
 8. **How far back does "league records" claim to reach?** Recommended wording: *"since we started recording"* — the league may predate 2024, and the chain terminates there.
+
+> **Questions 4, 5 and 8 are RESOLVED — 2026-08-10.** Recorded here so they are
+> not carried forward as open.
+>
+> - **4 · Streaks across seasons** — they **reset each season**. `§15` below
+>   already encoded the policy; `lib/stats/history.ts`'s `seasonStreaks` is the
+>   implementation, and there is deliberately no cross-season streak. A run
+>   spanning an offseason, a draft and a different ten-man roster is a
+>   coincidence of the calendar dressed as momentum.
+> - **5 · Playoff games in records** — **regular season by default, playoffs
+>   separate and labelled**, exactly as recommended. `DEFAULT_RECORD_STAGES` is
+>   `['regular']`, and every answer carries the `stages` it used, so a
+>   playoff-inclusive record cannot be printed as a regular-season one. The 2024
+>   playoff high of 188.02 is real and is not the record; the record is 183.94.
+> - **8 · How far back records reach** — resolved by making the scope a **typed
+>   value on the fact** rather than a wording convention. `HistoricalScope`
+>   carries the seasons and the approved label, and `all-time`, `ever`, `in
+>   league history` and `franchise record` are refused by the Slice validator.
+>   Both recommended forms stay approved; `since 2024` is preferred because a
+>   reader can check it.
+>
+> `docs/HISTORICAL_ANALYSIS_BOUNDARY.md` — canonical account and source-of-truth
+> matrix. Questions 1, 2, 3, 6 and 7 are unaffected by this ruling.
 
 ---
 
@@ -485,7 +522,7 @@ Encoded: week classification, scored-entry determination, bye handling, the fina
 - streaks reset each season, use finalized results, and are never recomputed from the mutable weekly snapshot; a bye neither counts nor breaks a streak;
 - record books default to the regular season; playoff records are separate and labelled;
 - unscored week-18 entries never count;
-- **banned historical overclaims:** `all-time`, `ever`, `in league history`, `franchise record`. Approved wording is `since 2024` or `since we started recording`. These belong in the Slice's banned-phrase validator (`16 §9`), which does not exist yet — adding it now would mean building the validation system, materially widening the slice. **Phase C or the Slice slice must add these four terms to that scan.**
+- **banned historical overclaims:** `all-time`, `ever`, `in league history`, `franchise record`. Approved wording is `since 2024` or `since we started recording`. ~~These belong in the Slice's banned-phrase validator (`16 §9`), which does not exist yet — adding it now would mean building the validation system, materially widening the slice. **Phase C or the Slice slice must add these four terms to that scan.**~~ **BUILT 2026-08-10.** The four terms live in `lib/stats/scope.ts` as `HISTORICAL_OVERCLAIMS` and are imported into `lib/slice/validate.ts`'s `BANNED` scan — one list, not two — so every surface that validates prose refuses them. `lib/slice/validate-overclaims.test.ts` pins each term and the near-negative pair (*"ever"* refused and *"since 2024"* passed around an identical, correctly derived number). Struck through rather than deleted because the *reasoning* — that the qualifier cannot be left to whoever writes the sentence — is what the scope layer implements.
 
 ### Deferred to Phase B and beyond
 

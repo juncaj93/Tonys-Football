@@ -247,6 +247,26 @@ Suggested starting guidance:
 
 Thresholds must be configurable and evaluated against league scoring norms.
 
+> **SUPERSEDED on the numbers — COMMISSIONER RULING, 2026-08-10 (R1).**
+>
+> The four bands above are **not** the thresholds. They were a starting
+> suggestion, and the sentence immediately above them — *evaluated against league
+> scoring norms* — is what was actually carried out.
+>
+> Measured over the **162** real finalized games of 2024 and 2025, the median
+> margin is **~20.6** and **~54%** of games clear 20. A bare `>= 20` therefore
+> labels half the league a blowout, which is a synonym for *a game happened*
+> rather than a classification.
+>
+> **`lib/stats/significance.ts` is the authority**: every absolute floor here is
+> kept verbatim and each tier above `beat` additionally requires a league-relative
+> percentile. **No subjective AI classification of blowouts, and no thresholds
+> that move week to week.** Recalibration is an intentional, documented product
+> decision, never a silent change to what history meant.
+>
+> **This question is closed. Do not reopen the 20 / 40 / 60 bands as unresolved.**
+> `docs/HISTORICAL_ANALYSIS_BOUNDARY.md §9` · `docs/TECH_LEAD_OPERATING_MODEL.md §8`
+
 Context that raises importance:
 
 - rivalry;
@@ -322,6 +342,29 @@ Possible measures:
 - expected wins from a documented method.
 
 The fact packet must include the metric and calculation. Tony may joke, but the UI or article should not imply the label is an objective truth.
+
+> **RESOLVED — COMMISSIONER RULING, 2026-08-10 (R2).**
+>
+> This section and `docs/DATA_AUDIT.md §9` disagreed: §9 listed all-play records
+> as *"not recommended"*. Resolved in favour of keeping it, **as the neutral half
+> only**.
+>
+> Play-everyone is permitted as a **secondary contextual measurement**, explicitly
+> labelled and derived from the same verified eligible games. Verified Sleeper
+> results remain authoritative. It is **not** an alternative standings system, a
+> replacement for wins and losses, a *"true record"*, a luck ranking, a
+> manager-quality ranking, a fraud detector, or evidence anybody *deserved* a
+> different record.
+>
+> `lib/stats/luck.ts` ships the measurement and a **signed difference**, and
+> nothing else — no `fraud` field, no luck score, no ordering by desert. The
+> editorial layer may note the contrast; it may not make a factual claim about
+> luck, skill, fraud or deservingness out of it.
+>
+> A week whose data integrity makes the comparison unreliable is excluded
+> **whole**, never made asymmetric.
+>
+> `docs/HISTORICAL_ANALYSIS_BOUNDARY.md §9` · `docs/TECH_LEAD_OPERATING_MODEL.md §8`
 
 ### 7.6 Legendary performance
 
