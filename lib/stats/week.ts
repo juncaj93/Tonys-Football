@@ -221,7 +221,16 @@ export async function seasonWeeks(
   year: number,
 ): Promise<{
   readonly found: boolean;
+  /** The season's books are closed. **Season-level**, not per week. */
   readonly finalized: boolean;
+  /**
+   * When they closed, or null.
+   *
+   * Carried as well as the boolean because `weekFinality` takes the instant:
+   * *"which record made this final"* is stored on a stake resolution, and a
+   * caller that only had a boolean would have to invent a date to ask.
+   */
+  readonly finalizedAt: Date | null;
   readonly rows: readonly StoredWeekGame[];
   readonly roster: ReadonlyMap<number, { userId: string; displayName: string }>;
 }> {
@@ -232,7 +241,7 @@ export async function seasonWeeks(
     .limit(1);
 
   if (season === undefined) {
-    return { found: false, finalized: false, rows: [], roster: new Map() };
+    return { found: false, finalized: false, finalizedAt: null, rows: [], roster: new Map() };
   }
 
   const rows = await db
@@ -259,6 +268,7 @@ export async function seasonWeeks(
   return {
     found: true,
     finalized: season.finalizedAt !== null,
+    finalizedAt: season.finalizedAt,
     rows,
     roster: await rosterNames(db, season.id),
   };

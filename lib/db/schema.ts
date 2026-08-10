@@ -16,6 +16,7 @@ import {
 } from 'drizzle-orm/pg-core';
 
 import { type RosterMetadata } from '@/lib/sleeper/metadata';
+import { TONY_GRADES } from '@/lib/slice/draft-vocabulary';
 
 /**
  * Identity core.
@@ -1862,6 +1863,15 @@ export const sliceVersionStatus = pgEnum('slice_version_status', [
  */
 export const sliceRenderer = pgEnum('slice_renderer', ['template', 'llm']);
 
+/**
+ * Which kind of paper an issue is (`0018`).
+ *
+ * `weekly` is the default so every row written before the preseason special
+ * existed keeps its meaning, and so a caller that forgets to say produces the
+ * ordinary thing rather than a special edition.
+ */
+export const sliceIssueKind = pgEnum('slice_issue_kind', ['weekly', 'preseason']);
+
 /** What happened to a version. `08 §22`: all edits and approvals are audit logged. */
 export const sliceReviewAction = pgEnum('slice_review_action', [
   'generated',
@@ -1887,7 +1897,24 @@ export const sliceIssues = pgTable(
       .notNull()
       .references(() => seasons.id, { onDelete: 'restrict' }),
 
+    /**
+     * The week this issue is about. **Zero is the preseason slot.**
+     *
+     * Never printed as a number — the preseason dateline says `Draft Review`.
+     * It exists so both kinds share `UNIQUE(season_id, week)` untouched: weekly
+     * issues are week >= 1, the preseason issue is week 0, and the constraint
+     * that already kept two Tuesdays apart keeps them apart too.
+     */
     week: integer('week').notNull(),
+
+    /**
+     * Weekly recap, or the preseason draft-review special.
+     *
+     * Immutable once created (`0018`). A weekly issue that became a preseason
+     * one would leave a published version whose stored content no longer
+     * matches the kind it is served as.
+     */
+    kind: sliceIssueKind('kind').notNull().default('weekly'),
 
     /** What is on the rack. Null until something is published. */
     publishedVersionId: uuid('published_version_id'),
@@ -1899,7 +1926,11 @@ export const sliceIssues = pgTable(
   },
   (table) => [
     unique('slice_issues_one_per_week').on(table.seasonId, table.week),
-    check('slice_issues_week_positive', sql`${table.week} > 0`),
+    check('slice_issues_week_not_negative', sql`${table.week} >= 0`),
+    check(
+      'slice_issues_preseason_is_week_zero',
+      sql`(${table.kind} = 'preseason') = (${table.week} = 0)`,
+    ),
   ],
 );
 
@@ -2369,3 +2400,212 @@ export const roomPlacements = pgTable(
 );
 
 export type RoomPlacement = typeof roomPlacements.$inferSelect;
+
+// ---------------------------------------------------------------------------
+// The draft, and Tony's judgment of it (`0018`)
+// ---------------------------------------------------------------------------
+
+/**
+ * Where a draft is in its life. Sleeper's own vocabulary, not a translation.
+ *
+ * Only `complete` is actionable: the preseason issue reviews a finished board,
+ * and a draft that stopped at pick 90 is not one.
+ */
+export const draftStatus = pgEnum('draft_status', [
+  'pre_draft',
+  'drafting',
+  'complete',
+  'unknown',
+]);
+
+/**
+ * Tony's grade domain — thirteen values, the ordinary report-card scale.
+ *
+ * Built from `TONY_GRADES` in `lib/slice/draft-vocabulary.ts` rather than
+ * written out here, so the enum the database enforces and the thirteen buttons
+ * the editor renders are provably the same list. Two copies of a closed domain
+ * is how a fourteenth value reaches one end and not the other.
+ */
+export const tonyGrade = pgEnum('tony_grade', TONY_GRADES);
+
+/**
+ * One season's draft, as Sleeper recorded it.
+ *
+ * Sleeper's, entirely. Nothing in this table or the one below is derived, and
+ * nothing editorial is stored here — that is `sliceDraftReviews`, and the
+ * separation is the rule `CLAUDE.md` states as *"do not overwrite
+ * Sleeper-derived facts with editorial data."*
+ */
+export const seasonDrafts = pgTable(
+  'season_drafts',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    /** Sleeper's own id. A draft belongs to one league, a league to one season. */
+    sleeperDraftId: text('sleeper_draft_id').notNull(),
+
+    status: draftStatus('status').notNull(),
+
+    /**
+     * `snake` · `linear` · `auction`.
+     *
+     * Recorded rather than assumed: the shape of a draft decides whether
+     * *"picked from the 7 spot"* means anything at all, and this league snakes.
+     */
+    type: text('type').notNull(),
+
+    rounds: integer('rounds'),
+
+    /** When the last pick landed. The draft's real end, and the date the paper prints. */
+    completedAt: timestamp('completed_at', { withTimezone: true }),
+
+    /** When the payload was read. Provenance, per `MANDATE §9`. */
+    capturedAt: timestamp('captured_at', { withTimezone: true }),
+
+    ...timestamps,
+  },
+  (table) => [
+    unique('season_drafts_one_per_season').on(table.seasonId),
+    unique('season_drafts_sleeper_id_unique').on(table.sleeperDraftId),
+    check('season_drafts_rounds_positive', sql`${table.rounds} is null or ${table.rounds} > 0`),
+  ],
+);
+
+export type SeasonDraft = typeof seasonDrafts.$inferSelect;
+
+/**
+ * One pick.
+ *
+ * Immutable once written (`0018`): a completed draft does not change, so a
+ * re-sync inserts what is missing and never rewrites what is there.
+ */
+export const draftPicks = pgTable(
+  'draft_picks',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    draftId: uuid('draft_id')
+      .notNull()
+      .references(() => seasonDrafts.id, { onDelete: 'restrict' }),
+
+    /** 1..N across the whole draft. The natural key, with the draft. */
+    pickNo: integer('pick_no').notNull(),
+
+    round: integer('round').notNull(),
+
+    /** The board position that made it. Null only where Sleeper omitted it. */
+    draftSlot: integer('draft_slot'),
+
+    /**
+     * The seat, not the person.
+     *
+     * Every seat-shaped fact resolves through the roster (`16 §4`); the review
+     * joins this to `season_memberships` to find out whose pick it was.
+     */
+    rosterId: integer('roster_id'),
+
+    /** `7564` for a person, `DEN` for a defense. */
+    sleeperPlayerId: text('sleeper_player_id'),
+
+    /**
+     * As printed.
+     *
+     * It arrives inside the pick's own metadata, which is why this feature needs
+     * no join against the 14.6 MB player catalog.
+     */
+    playerName: text('player_name').notNull(),
+
+    /** `QB` · `RB` · `WR` · `TE` · `DEF`. Never `K` — enforced by CHECK. */
+    position: text('position'),
+
+    nflTeam: text('nfl_team'),
+
+    isKeeper: boolean('is_keeper').notNull().default(false),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique('draft_picks_numbered_once').on(table.draftId, table.pickNo),
+    index('draft_picks_roster_idx').on(table.draftId, table.rosterId, table.pickNo),
+    check('draft_picks_pick_no_positive', sql`${table.pickNo} > 0`),
+    check('draft_picks_round_positive', sql`${table.round} > 0`),
+    check('draft_picks_named', sql`length(btrim(${table.playerName})) > 0`),
+    check(
+      'draft_picks_no_kickers',
+      sql`${table.position} is null or upper(${table.position}) <> 'K'`,
+    ),
+  ],
+);
+
+export type DraftPick = typeof draftPicks.$inferSelect;
+
+/**
+ * Tony's judgment of one manager's draft.
+ *
+ * **The only editorial table in the product**, and the reason it may exist is
+ * that the alternative is worse: a draft grade cannot be derived. There is no
+ * ADP, no projection, no consensus source and no roster-value model here, and
+ * the commissioner's ruling is that there never will be — so the grade is an
+ * opinion, it is Tony's, and a person supplies it.
+ *
+ * Mutable, unlike almost everything else in this schema, because a grade is
+ * edited right up until the issue is approved. What makes that safe is that
+ * publication snapshots the rendered edition into `slice_issue_versions`, whose
+ * content is immutable by trigger: editing a grade changes the next paper and
+ * cannot touch the one already printed.
+ */
+export const sliceDraftReviews = pgTable(
+  'slice_draft_reviews',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    /** The **person** being reviewed. A review is about a manager, and a manager is permanent. */
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+
+    grade: tonyGrade('grade').notNull(),
+
+    /** Tony's short take. Required: an issue is not publishable without one. */
+    take: text('take').notNull(),
+
+    /**
+     * Optional. Tony's favourite pick of theirs — a **real pick**, referenced,
+     * so the paper cannot praise a player this manager never drafted. A trigger
+     * (`0018`) checks it is theirs; the foreign key can only check it exists.
+     */
+    bestPickId: uuid('best_pick_id').references(() => draftPicks.id, { onDelete: 'restrict' }),
+
+    /** Optional. One concern, in Tony's words. */
+    concern: text('concern'),
+
+    /**
+     * Who wrote it — the commissioner ghost-writing Tony.
+     *
+     * An implementation fact. It is kept off the paper entirely and is visible
+     * only on the desk: in print, Tony is the author.
+     */
+    updatedBy: uuid('updated_by').references(() => users.id, { onDelete: 'restrict' }),
+
+    ...timestamps,
+  },
+  (table) => [
+    unique('slice_draft_reviews_one_per_manager').on(table.seasonId, table.userId),
+    check('slice_draft_reviews_take_present', sql`length(btrim(${table.take})) > 0`),
+    check('slice_draft_reviews_take_bounded', sql`length(${table.take}) <= 240`),
+    check(
+      'slice_draft_reviews_concern_present_if_set',
+      sql`${table.concern} is null or (length(btrim(${table.concern})) > 0 and length(${table.concern}) <= 160)`,
+    ),
+  ],
+);
+
+export type SliceDraftReview = typeof sliceDraftReviews.$inferSelect;

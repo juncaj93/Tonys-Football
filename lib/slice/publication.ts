@@ -5,6 +5,7 @@ import { and, desc, eq, inArray, sql } from 'drizzle-orm';
 import { now } from '@/lib/clock';
 import { type Database, type Queryable } from '@/lib/db';
 import { DemoRefused, assertDemoAllowed } from '@/lib/demo/guard';
+import { type SchedulePairing } from '@/lib/sleeper/schedule';
 import { latestStoredWeek } from '@/lib/sleeper/weekly';
 import {
   seasons,
@@ -17,6 +18,7 @@ import {
 
 import { assembleIssue, latestEdition } from './edition';
 import { type FactPacket } from './packet';
+import { assemblePreseason, type PreseasonPacket } from './preseason';
 import { type Edition } from './render';
 import { type Verdict } from './validate';
 
@@ -86,7 +88,9 @@ export interface DraftResult {
 export interface QueuedIssue {
   readonly issueId: string;
   readonly season: number;
+  /** Zero on the preseason special — a slot, never a printed number (`0018`). */
   readonly week: number;
+  readonly kind: (typeof sliceIssues.$inferSelect)['kind'];
   readonly versionId: string;
   readonly version: number;
   readonly status: (typeof sliceIssueVersions.$inferSelect)['status'];
@@ -101,6 +105,7 @@ export interface ReviewDetail {
   readonly issueId: string;
   readonly season: number;
   readonly week: number;
+  readonly kind: (typeof sliceIssues.$inferSelect)['kind'];
   readonly versionId: string;
   readonly version: number;
   readonly status: (typeof sliceIssueVersions.$inferSelect)['status'];
@@ -109,7 +114,15 @@ export interface ReviewDetail {
   readonly publishable: boolean;
   readonly edition: Edition;
   readonly verdict: Verdict;
-  readonly packet: FactPacket;
+  /**
+   * What the prose was built from.
+   *
+   * A weekly issue's `FactPacket` or a preseason issue's `PreseasonPacket`.
+   * Discriminated by `kind` on the packet itself (`isPreseasonPacket`) rather
+   * than by the issue's, so a screen reading the JSON never has to trust a
+   * column to know what shape it is holding.
+   */
+  readonly packet: FactPacket | PreseasonPacket;
   readonly createdAt: Date;
   readonly history: readonly ReviewEvent[];
   /** Other versions of the same issue, newest first. What a correction replaced. */
@@ -225,6 +238,72 @@ export async function generateDraft(
 }
 
 /**
+ * Render the draft-review special and record it as a draft.
+ *
+ * ## Why this is a second entry point and not a parameter on the first
+ *
+ * `generateDraft` takes a week and asks the weekly pipeline for it. There is no
+ * week here — the whole point of the preseason issue is that none has been
+ * played — so a `kind` parameter on that function would be a branch at the top
+ * that ran an entirely different pipeline and ignored the argument it was
+ * given.
+ *
+ * What the two **share** is everything downstream: `recordVersion` writes both,
+ * with the same numbering, the same content hash, the same audit row and the
+ * same optional submit, into the same table under the same guarantees. The
+ * approval chain does not know or care which pipeline produced the bytes, and
+ * that is the property worth having.
+ *
+ * ## It refuses more often than the weekly one, and every refusal is a state
+ *
+ * `reviews-incomplete` is the one that matters: nine grades in, and the paper
+ * does not exist yet. That is not an error — it is Tuesday morning with work
+ * left — and the desk shows it as a count rather than as a failure.
+ */
+export async function generatePreseasonDraft(
+  db: Database,
+  input: {
+    readonly season: number;
+    /** Week one's fixtures, when the caller holds a Sleeper source. Optional. */
+    readonly weekOne?: readonly SchedulePairing[];
+    readonly actorUserId?: string | null;
+    /** Put it straight in front of the commissioner. What the Tuesday job does. */
+    readonly submit?: boolean;
+  },
+): Promise<DraftResult> {
+  const assembled = await assemblePreseason(db, {
+    season: input.season,
+    ...(input.weekOne === undefined ? {} : { weekOne: input.weekOne }),
+  });
+
+  if (assembled.edition === null) {
+    return {
+      outcome: 'refused',
+      issueId: null,
+      versionId: null,
+      version: null,
+      publishable: false,
+      refusal: assembled.packet.refusal,
+    };
+  }
+
+  return recordVersion(db, {
+    season: input.season,
+    /*
+     * Week zero — the preseason slot (`0018`). Never printed; it exists so both
+     * kinds share `slice_issues`' existing `UNIQUE(season_id, week)`.
+     */
+    week: 0,
+    kind: 'preseason',
+    edition: assembled.edition,
+    packet: assembled.packet,
+    verdict: assembled.verdict,
+    actorUserId: input.actorUserId ?? null,
+    submit: input.submit ?? false,
+  });
+}
+
+/**
  * Write one rendering into the chain, or find the one already there.
  *
  * Extracted from `generateDraft` so that **everything which creates a version
@@ -245,8 +324,18 @@ export async function recordVersion(
   input: {
     readonly season: number;
     readonly week: number;
+    /**
+     * Which kind of paper. Defaults to `weekly`, so every existing caller keeps
+     * writing exactly what it wrote before this field existed.
+     *
+     * It must agree with the week: `slice_issues_preseason_is_week_zero` refuses
+     * `(weekly, week 0)` and `(preseason, week 3)` alike, so a caller that set
+     * one and forgot the other is stopped by the database rather than by
+     * whichever screen noticed first.
+     */
+    readonly kind?: (typeof sliceIssues.$inferSelect)['kind'];
     readonly edition: Edition;
-    readonly packet: FactPacket;
+    readonly packet: FactPacket | PreseasonPacket;
     readonly verdict: Verdict;
     readonly actorUserId: string | null;
     readonly submit: boolean;
@@ -271,6 +360,7 @@ export async function recordVersion(
     const issueId = await ensureIssue(tx, {
       seasonId: season.id,
       week: input.week,
+      kind: input.kind ?? 'weekly',
       at,
     });
 
@@ -374,7 +464,12 @@ export async function recordVersion(
  */
 async function ensureIssue(
   tx: Queryable,
-  input: { readonly seasonId: string; readonly week: number; readonly at: Date },
+  input: {
+    readonly seasonId: string;
+    readonly week: number;
+    readonly kind: (typeof sliceIssues.$inferSelect)['kind'];
+    readonly at: Date;
+  },
 ): Promise<string> {
   const [found] = await tx
     .select({ id: sliceIssues.id })
@@ -389,6 +484,7 @@ async function ensureIssue(
     .values({
       seasonId: input.seasonId,
       week: input.week,
+      kind: input.kind,
       createdAt: input.at,
       updatedAt: input.at,
     })
@@ -443,6 +539,7 @@ async function listIssues(
       issueId: sliceIssues.id,
       season: seasons.year,
       week: sliceIssues.week,
+      kind: sliceIssues.kind,
       versionId: sliceIssueVersions.id,
       version: sliceIssueVersions.version,
       status: sliceIssueVersions.status,
@@ -461,6 +558,7 @@ async function listIssues(
     issueId: row.issueId,
     season: row.season,
     week: row.week,
+    kind: row.kind,
     versionId: row.versionId,
     version: row.version,
     status: row.status,
@@ -493,6 +591,7 @@ export async function reviewDetail(
       issueId: sliceIssues.id,
       season: seasons.year,
       week: sliceIssues.week,
+      kind: sliceIssues.kind,
       versionId: sliceIssueVersions.id,
       version: sliceIssueVersions.version,
       status: sliceIssueVersions.status,
@@ -546,6 +645,7 @@ export async function reviewDetail(
     issueId: row.issueId,
     season: row.season,
     week: row.week,
+    kind: row.kind,
     versionId: row.versionId,
     version: row.version,
     status: row.status,
@@ -554,7 +654,7 @@ export async function reviewDetail(
     publishable: row.publishable,
     edition: row.content as unknown as Edition,
     verdict: row.verdict as unknown as Verdict,
-    packet: row.packet as unknown as FactPacket,
+    packet: row.packet as unknown as FactPacket | PreseasonPacket,
     createdAt: row.createdAt,
     history,
     siblings,

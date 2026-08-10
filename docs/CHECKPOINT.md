@@ -14,6 +14,103 @@ Update it whenever a slice lands, a gate result changes, or the next task change
 
 ---
 
+## Where the product is — 2026-08-10 (twentieth session)
+
+### The first issue of 2026 was the one that would never have printed
+
+`16 §4.3`'s Tuesday chain recaps **the week that just closed**. On the Tuesday
+before the opener there is no week — `factPacket` refuses with `no-week`, the
+press desk stays empty, and the league's first ever paper is one nobody sees.
+That is the weekly pipeline being *correct* about a season that has not started,
+which is exactly why it would not have been noticed until September.
+
+The commissioner's ruling made the first issue a **Draft Review and Season
+Preview**, and this session built it.
+
+### It is the same architecture, deliberately
+
+A preseason issue is an `Edition`, stored in `slice_issue_versions`, hashed the
+same way, approved by a person the same way, served by `rackIssue`. The whole
+guarantee set from `0011` applies because it **is** one of those issues. What is
+new is one packet builder, one fact layer, one editorial store and one renderer.
+
+Two decisions kept it that way rather than making it a second newspaper:
+
+- **`Edition.preseason` is optional.** `canonical()` drops `undefined`, so every
+  weekly issue already published hashes to exactly what it hashed to before. A
+  required `kind` on `Edition` would have moved all of them, and a version's
+  hash is what a commissioner's approval names.
+- **The preseason issue is week 0** — a slot, never a printed number. That is
+  what lets both kinds share `slice_issues`' existing `UNIQUE(season_id, week)`
+  **untouched**; two CHECKs tie the zero to the kind in both directions.
+
+### The line between what is counted and what is judged
+
+This is the one surface in the product where an opinion and a fact sit in the
+same paragraph, so the line is drawn in the schema and not in a convention:
+`draft_picks` is Sleeper's and immutable, `slice_draft_reviews` is Tony's and
+editable.
+
+**The software never grades a draft, and never will.** There is no ADP, no
+projection, no consensus source and no value model here; a grade the software
+computed would be `MANDATE §9`'s forbidden thing — the interface deriving a
+fantasy judgement for itself — asserted in the same typeface as a score. Reach,
+steal, sleeper, bust, projected points and winner-of-the-draft are permanently
+absent for the same reason.
+
+What the paper *does* state is countable: draft slots, pick labels, positional
+counts, a position somebody loaded up on early, who went first, what round one
+was made of, when the first defense went. Each is **guarded** — an observation
+whose condition fails is absent rather than hedged, because *"one wide receiver
+went in round one"* costs a reader a line and tells them nothing.
+
+### Two kinds of prose, checked differently — and that is the interesting part
+
+Everything the renderer built goes through the full scan. `take` and `concern`
+are Tony's voice typed by the commissioner, and checking those against a fact
+packet would refuse Tony his own opinions: he is allowed to think the running
+back room is thin, and no packet will ever contain the word *thin*.
+
+So they are checked against the half of `16 §9` that is about the **product**
+rather than the renderer — banned terms and quotation marks, which hold whoever
+is typing — and refused at input, in the editor, with the reason shown. The
+number-and-name scan still runs and its findings are stored with the version as
+**advisories**: shown on the review screen, never blocking.
+
+### Two defects the work surfaced
+
+- **`MetadataStrip` dropped every attribute passed to it.** Three `data-`
+  markers written for gates were in the source, read correctly in review, and
+  did not exist in the DOM. One of them — the press desk's docket — had been
+  decoration since it was written. Found because a new gate queried one and
+  timed out.
+- **The name scanner refused the league's own draft board.** `Ja'Marr Chase`
+  scans as `Ja` then the pair `Marr Chase`; `Amon-Ra St. Brown` as `Amon`,
+  `Ra St`, `Brown`. Every piece was in the packet and the *pair* was an artefact
+  of how the scanner walks a string. It now permits a multi-word match whose
+  parts are each permitted — the right rule rather than a workaround, since the
+  question it asks is *"was that permitted"*.
+
+### No third cron, and no exemption from the gate
+
+The Tuesday job attempts the weekly paper first and drafts the preseason issue
+only when that one *refuses* — the honest test rather than a calendar one. It
+also syncs the draft, two requests, every week rather than on the one week the
+draft happens, for the reason `grantSeasonalBoxes` runs every week.
+
+It still only submits. `16 §9`'s approval gate has no preseason exemption.
+
+`docs/PRESEASON_SLICE_BOUNDARY.md` is the canonical account.
+
+**What Alex does after the real draft:** ten grades and ten sentences at
+`/admin/slice/draft`, then Approve. Recorded as `docs/OPEN_ITEMS.md` **B0**.
+
+**Next recommended engineering slice:** the full **week-one lifecycle
+rehearsal** — every step of that chain is built and tested in isolation, and the
+*sequence across the preseason boundary* has never been run.
+
+---
+
 ## Where the product is — 2026-08-08 (eighteenth session)
 
 ### The season could not have got into the database

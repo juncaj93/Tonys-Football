@@ -1,0 +1,59 @@
+[
+  {
+    "created": 1719781819903,
+    "creators": [
+      "450049619838103552",
+      "705813167879553024"
+    ],
+    "draft_id": "1113249276181803008",
+    "draft_order": {
+      "1113259910768238592": 2,
+      "1113354275289223168": 8,
+      "1113986962647654400": 10,
+      "1119321313341976576": 9,
+      "450049619838103552": 5,
+      "690209715904417792": 1,
+      "705813167879553024": 3,
+      "729470601756037120": 6,
+      "963870811994046464": 4,
+      "993992889480904704": 7
+    },
+    "last_message_id": "1133281540047179776",
+    "last_message_time": 1724557883801,
+    "last_picked": 1724557882461,
+    "league_id": "1113249275284205568",
+    "metadata": {
+      "description": "",
+      "name": "Tony’s Pizza Fantasy Bonanza",
+      "scoring_type": "half_ppr"
+    },
+    "season": "2024",
+    "season_type": "regular",
+    "settings": {
+      "alpha_sort": 0,
+      "autopause_enabled": 0,
+      "autopause_end_time": 540,
+      "autopause_start_time": 1260,
+      "autostart": 0,
+      "cpu_autopick": 1,
+      "enforce_position_limits": 1,
+      "nomination_timer": 60,
+      "pick_timer": 0,
+      "player_type": 0,
+      "reversal_round": 0,
+      "rounds": 16,
+      "slots_bn": 6,
+      "slots_def": 1,
+      "slots_flex": 2,
+      "slots_qb": 1,
+      "slots_rb": 2,
+      "slots_te": 1,
+      "slots_wr": 3,
+      "teams": 10
+    },
+    "sport": "nfl",
+    "start_time": 1724557882461,
+    "status": "complete",
+    "type": "snake"
+  }
+]

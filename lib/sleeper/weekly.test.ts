@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs';
+
 import { and, eq } from 'drizzle-orm';
 import { afterAll, beforeEach, describe, expect, it } from 'vitest';
 
@@ -6,7 +8,7 @@ import { fantasyMatchups, seasonMemberships, seasons } from '@/lib/db/schema';
 import { resetDatabase } from '@/lib/db/test-helpers';
 
 import { traverseChain } from './chain';
-import { createFixtureSource } from './fixtures';
+import { createFixtureSource, FIXTURE_ROOT, manifestPath } from './fixtures';
 import { persistChain } from './persist';
 import { type SleeperEndpoint } from './endpoints';
 import { seasonInProgress } from './test-source';
@@ -50,8 +52,23 @@ const db = hasDatabase ? getDb() : null;
 const LEAGUE_2026 = '1385016656425668608';
 const SEASON = 2026;
 
-/** The recording's own moment. Everything the fixtures serve is stamped with it. */
-const FIXTURE_CAPTURE = new Date('2026-07-28T14:00:06.435Z');
+/**
+ * The recording's own moment. Everything the fixtures serve is stamped with it.
+ *
+ * Read from the manifest rather than written out, because it **is** the
+ * manifest's `recordedAt` — `createFixtureSource` stamps every result with it —
+ * and a copy of it here goes stale the next time anybody records a fixture.
+ * That happened: recording the draft endpoints moved `recordedAt` and this
+ * assertion failed with a timestamp mismatch in a test about stale captures,
+ * which is a confusing way to find out that a constant was duplicated.
+ *
+ * The assertion is unchanged in strength. It says *"the stored capture is the
+ * fixture's own capture"*, and this is where the fixture's own capture lives.
+ */
+const FIXTURE_CAPTURE = new Date(
+  (JSON.parse(readFileSync(manifestPath(FIXTURE_ROOT), 'utf8')) as { recordedAt: string })
+    .recordedAt,
+);
 const WEEK_5_TUESDAY = new Date('2026-10-13T09:00:00Z');
 
 afterAll(async () => {

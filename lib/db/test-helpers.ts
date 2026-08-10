@@ -84,6 +84,13 @@ export async function resetDatabase(db: Database): Promise<void> {
       slice_publication_holds,
       slice_issue_versions,
       slice_issues,
+      -- The draft and Tony's judgment of it. draft_picks refuses UPDATE and
+      -- DELETE by trigger — a completed draft does not change — so TRUNCATE is
+      -- again the only way a harness that owns the database resets it. The
+      -- reviews are listed before the picks they reference.
+      slice_draft_reviews,
+      draft_picks,
+      season_drafts,
       token_transactions,
       economy_configs,
       season_memberships,

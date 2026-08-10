@@ -1,7 +1,8 @@
 import { type Queryable } from '@/lib/db';
-import { seasonMemberships, seasons } from '@/lib/db/schema';
+import { seasonMemberships, seasons, weekFinalizations } from '@/lib/db/schema';
 import { activeManagerIds } from '@/lib/league/membership';
 import { finalizedMarginsCents } from '@/lib/stats/facts';
+import { weekFinality } from '@/lib/stats/finality';
 import { standardPolicy } from '@/lib/stats/significance';
 import { weekSnapshot, type WeekSnapshotMap } from '@/lib/stats/snapshot';
 import { deriveStories, type StoryCandidate } from '@/lib/stats/stories';
@@ -318,11 +319,49 @@ export async function factPacket(
     snapshotFor.set(weekNumber, await weekSnapshot(db, { season: input.season, week: weekNumber }));
   }
 
+  /*
+   * Finality, **per week**, and this is a defect repair rather than a refinement.
+   *
+   * `seasonWeeks().finalized` is `seasons.finalized_at IS NULL` — *the books
+   * closed in January*. Passing that in meant `assemblePacket` refused every
+   * week of a **live** season with `not-final`, so the weekly Slice could not
+   * draft at all until the season was over: the first live Tuesday would close
+   * week one, pay every reward, settle every stake, and then decline to print
+   * the paper with *"that week is still open."*
+   *
+   * `lib/stats/finality.ts` was written for exactly this and says so in its own
+   * header — *"two systems ask whether a result is final, the Slice and weekly
+   * stakes"* — and only stakes ever adopted it. A week is final when the Tuesday
+   * job wrote `week_finalizations` for it, **or** when the season closed; the
+   * job writes that row in step 2 and drafts in step 6, so by the time the paper
+   * is rendered the week it is about is closed.
+   *
+   * Nothing is inferred. *"A later week has games, so this one must be done"*
+   * remains the fabrication `16 §12` forbids — finality is written down or it
+   * does not exist.
+   *
+   * The comparison **populations** are deliberately untouched and stay
+   * season-finalized only (`finalizedMarginsCents`, `finalizedTeamScoresCents`):
+   * an open season's numbers can still move, and a percentile that shifts under
+   * a published fact makes the fact retroactively wrong.
+   */
+  const closedWeeks = await finalizedWeeks(db, input.season);
+
   const forWeek = (weekNumber: number): { raw: WeekRecord; open: WeekRecord } => {
     const raw = buildWeek({
       season: input.season,
       week: weekNumber,
-      finalized: season.finalized,
+      finalized: weekFinality({
+        seasonFinalizedAt: season.finalizedAt,
+        weekFinalizedAt: closedWeeks.get(weekNumber) ?? null,
+        /*
+         * `hasGames` is answered by `buildWeek` itself, below — a week with no
+         * rows produces no games and `assemblePacket` refuses it with `no-week`
+         * before finality is ever consulted. Passing `true` here keeps this call
+         * about the one question it is being asked.
+         */
+        hasGames: true,
+      }).final,
       rows: season.rows,
       roster: season.roster,
     });
@@ -382,6 +421,27 @@ function recentLeadKinds(
     if (lead !== null) kinds.push(lead.kind);
   }
   return kinds;
+}
+
+/**
+ * Which weeks of a season the Tuesday job has closed.
+ *
+ * `week_finalizations` is append-only and per week — the record `16 §4.3`'s job
+ * writes in its second step. Read once per packet rather than per week, because
+ * `recentLeadKinds` re-derives the two previous issues and each of those asks
+ * the same question.
+ */
+async function finalizedWeeks(
+  db: Queryable,
+  year: number,
+): Promise<ReadonlyMap<number, Date>> {
+  const rows = await db
+    .select({ week: weekFinalizations.week, finalizedAt: weekFinalizations.finalizedAt })
+    .from(weekFinalizations)
+    .innerJoin(seasons, eq(seasons.id, weekFinalizations.seasonId))
+    .where(eq(seasons.year, year));
+
+  return new Map(rows.map((row) => [row.week, row.finalizedAt] as const));
 }
 
 /**

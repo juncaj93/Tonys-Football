@@ -363,7 +363,26 @@ type StateName =
   | 'review-published'
   | 'review-held'
   /** One draft, opened from the queue. The screen where the decision is made. */
-  | 'review-draft';
+  | 'review-draft'
+  /*
+   * The draft-review special (`docs/PRESEASON_SLICE_BOUNDARY.md`).
+   *
+   * Nine states, and each one answers a question no other does: the two rack
+   * editions are the **issue** at its fullest and at its sparsest; the three
+   * board states are `0`, `4` and `10` of ten, which is the only number on that
+   * screen; the two editor states are a manager Tony has written and one he has
+   * not, photographed from the same database; and the last two are the issue on
+   * the desk and the issue on the rack.
+   */
+  | 'slice-preseason-draft-review'
+  | 'slice-preseason-sparse'
+  | 'draft-board-empty'
+  | 'draft-board-partial'
+  | 'draft-board-complete'
+  | 'draft-editor-blank'
+  | 'draft-editor-written'
+  | 'preseason-review'
+  | 'preseason-rack';
 
 /**
  * States photographed on a demo seat rather than on a manager.
@@ -487,6 +506,24 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'review-draft': 'review-waiting',
   // The office. Borrowed for the commissioner's keys — see `reach`.
   office: 'review-empty',
+
+  /*
+   * Tony's draft board. Commissioner seats, like the press desk, and for the
+   * same reason: `requireAdmin()` answers `notFound()` and a 404 photographs
+   * cleanly.
+   *
+   * The two editor screens share `draft-board-partial`'s seat deliberately —
+   * *"written"* and *"blank"* are two rows of one board, and photographing them
+   * from two different databases would make the pair prove less than either one
+   * alone.
+   */
+  'draft-board-empty': 'draft-board-empty',
+  'draft-board-partial': 'draft-board-partial',
+  'draft-board-complete': 'draft-board-complete',
+  'draft-editor-blank': 'draft-board-partial',
+  'draft-editor-written': 'draft-board-partial',
+  'preseason-review': 'preseason-review',
+  'preseason-rack': 'preseason-published',
 };
 
 interface DemoApplied {
@@ -1549,7 +1586,9 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'slice-no-stories':
     case 'slice-one-story':
     case 'slice-competing-stories':
-    case 'slice-monday-comeback': {
+    case 'slice-monday-comeback':
+    case 'slice-preseason-draft-review':
+    case 'slice-preseason-sparse': {
       const key = state.slice('slice-'.length);
       await page.goto(`${BASE}/slice?edition=${key}`, { waitUntil: 'networkidle' });
       await page.waitForSelector('[data-slice-edition]', { state: 'attached' });
@@ -1635,6 +1674,95 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForSelector(`[data-character-preview="${key}"]`, { state: 'attached' });
       return;
     }
+
+    /*
+     * Tony's draft board, in its three states.
+     *
+     * The wait is on the board's own marker rather than on a timeout, for the
+     * reason the press desk's is: `requireAdmin()` answers `notFound()`, and a
+     * 404 photographs cleanly and files under the state's name.
+     */
+    case 'draft-board-empty':
+    case 'draft-board-partial':
+    case 'draft-board-complete':
+      await page.goto(`${BASE}/admin/slice/draft`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-draft-board]', { state: 'attached' });
+      await page.waitForTimeout(400);
+      return;
+
+    /*
+     * One manager's editor, opened the way a commissioner opens it — from the
+     * board.
+     *
+     * Navigated rather than deep-linked, because the user id is a uuid the
+     * driver has no business knowing and because *"can you get from the board to
+     * the person"* is part of what is being reviewed. Each picks its row out of
+     * the half of the board that names the state it is about, so `blank` really
+     * is somebody Tony has not written and `written` really is somebody he has.
+     */
+    case 'draft-editor-blank':
+    case 'draft-editor-written': {
+      await page.goto(`${BASE}/admin/slice/draft`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-draft-board]', { state: 'attached' });
+
+      const wanted = state === 'draft-editor-blank' ? 'todo' : 'done';
+      const row = page.locator(`[data-draft-row="${wanted}"]`);
+
+      if ((await row.count()) === 0) {
+        throw new Error(
+          `${state}: the board had no ${wanted} row to open. The applier ran but the board is ` +
+            `all one way, which means the state was not produced — not that the screen is broken.`,
+        );
+      }
+
+      await row.first().click();
+      await page.waitForSelector('[data-draft-editor]', { state: 'attached' });
+      await page.waitForTimeout(400);
+      return;
+    }
+
+    /*
+     * The draft review on the press desk, opened from the queue.
+     *
+     * The one row in `waiting` whose filing line says `Draft review` rather than
+     * a week — which is also the assertion, because a preseason issue that
+     * queued as `Week 0` would be the internal shape of the record leaking onto
+     * the screen.
+     */
+    case 'preseason-review': {
+      await page.goto(`${BASE}/admin/slice`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-review-queue]', { state: 'attached' });
+
+      const row = page
+        .locator('[data-review-section="waiting"] a')
+        .filter({ hasText: /Draft review/ });
+
+      if ((await row.count()) === 0) {
+        throw new Error(
+          'preseason-review: no draft review is waiting on the desk. The applier ran but the ' +
+            'queue does not hold it, which means the state was not produced.',
+        );
+      }
+
+      await row.first().click();
+      await page.waitForSelector('[data-review-version]', { state: 'attached' });
+      await page.waitForTimeout(400);
+      return;
+    }
+
+    /*
+     * The draft review on the rack — what the league actually reads.
+     *
+     * `/slice` with no parameter, so this is the **published** issue coming
+     * through `rackIssue` rather than a preview. That is the whole point of the
+     * state: the two `?edition=` previews prove the renderer, and this proves
+     * the approval chain put it on the shelf.
+     */
+    case 'preseason-rack':
+      await page.goto(`${BASE}/slice`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-preseason-board]', { state: 'attached' });
+      await page.waitForTimeout(600);
+      return;
 
     case 'slice':
       await page.goto(`${BASE}/slice`, { waitUntil: 'networkidle' });
@@ -1952,6 +2080,8 @@ const ALL_STATES: readonly StateName[] = [
   'slice-one-story',
   'slice-competing-stories',
   'slice-monday-comeback',
+  'slice-preseason-draft-review',
+  'slice-preseason-sparse',
   // The four rarity treatments, side by side and repeatable. Signed in as
   // whoever the previous demo state left us as, which is fine: the payload is
   // synthesised and does not depend on what that seat owns.
@@ -2001,6 +2131,22 @@ const ALL_STATES: readonly StateName[] = [
   'review-approved',
   'review-published',
   'review-held',
+  /*
+   * Tony's draft board, after the press desk.
+   *
+   * The order is load-bearing in one direction only: `preseason-published` puts
+   * an issue for the **open** season on the rack, and `rackIssue` prefers the
+   * most recently published issue over the historical fallback — so `rack` and
+   * `slice`, which photograph the offseason shelf, must run before it. They do:
+   * both are near the top of this list.
+   */
+  'draft-board-empty',
+  'draft-board-partial',
+  'draft-editor-blank',
+  'draft-editor-written',
+  'draft-board-complete',
+  'preseason-review',
+  'preseason-rack',
   // The office, last of the commissioner-seated states for the same reason.
   'office',
 
@@ -3377,7 +3523,217 @@ const DESK_EXPECTATIONS: Record<
   'review-refused': { version: 'needs_review', publishable: 'no' },
   'review-approved': { version: 'approved' },
   'review-published': { version: 'published' },
+  /*
+   * The draft review, on the desk.
+   *
+   * Listed here rather than in the preseason table because it *is* a press-desk
+   * state — the point of the screenshot is that the special edition arrives in
+   * the same queue, on the same screen, needing the same stamp. `publishable:
+   * yes` is the assertion that matters: it is the deterministic validator having
+   * passed a page whose facts came from a draft rather than from a week.
+   */
+  'preseason-review': { version: 'needs_review', publishable: 'yes' },
 };
+
+
+/**
+ * What each draft-board state must actually contain.
+ *
+ * The progress count is the whole screen, so it is the whole assertion. An
+ * **exact** count rather than an at-least, unlike the press desk's: a review
+ * belongs to a `(season, manager)` pair and `writeDemoReviews` clears the rest,
+ * so unlike an issue these states do not accumulate — and a board that showed
+ * ten under a name claiming four would be the exact false green this file has
+ * been bitten by twice.
+ */
+const DRAFT_BOARD_EXPECTATIONS: Record<
+  string,
+  {
+    readonly reviewed: number;
+    readonly total: number;
+    /** Is the league in the state a draft review is for? */
+    readonly board: 'ready' | 'waiting' | 'none';
+    /** The editor screens: has Tony written this one? */
+    readonly editor?: 'blank' | 'written';
+  }
+> = {
+  'draft-board-empty': { reviewed: 0, total: 10, board: 'ready' },
+  'draft-board-partial': { reviewed: 4, total: 10, board: 'ready' },
+  'draft-board-complete': { reviewed: 10, total: 10, board: 'ready' },
+  'draft-editor-blank': { reviewed: 4, total: 10, board: 'ready', editor: 'blank' },
+  'draft-editor-written': { reviewed: 4, total: 10, board: 'ready', editor: 'written' },
+};
+
+/**
+ * The gate against a draft-board false green.
+ *
+ * Three separate things can silently produce a clean screenshot here and each
+ * one is checked rather than trusted:
+ *
+ * - **the 404.** `requireAdmin()` answers `notFound()`, so a seat without the
+ *   commissioner's keys photographs a tidy page under this state's name. The
+ *   marker is only present on the real screen.
+ * - **the wrong count.** `0 of 10` and `4 of 10` differ by two glyphs at
+ *   thumbnail size, and three states that all photographed `10 of 10` would look
+ *   like three states.
+ * - **the wrong row.** The editor states are told apart by whether a take is on
+ *   the screen, which is a *presence* rather than a layout — so it is read from
+ *   the DOM, not looked for in the picture.
+ */
+async function checkDraftBoard(page: Page, width: number, state: string): Promise<void> {
+  const expected = DRAFT_BOARD_EXPECTATIONS[state];
+  if (expected === undefined) return;
+
+  if (expected.editor === undefined) {
+    const marker = await page.getAttribute('[data-draft-board]', 'data-draft-board');
+    if (marker === null) {
+      fail(
+        'draft-board',
+        `@${String(width)} ${state}: the draft board did not render — most likely a 404 from ` +
+          `requireAdmin(), which photographs cleanly and would file under this state's name`,
+      );
+      return;
+    }
+    if (marker !== expected.board) {
+      fail(
+        'draft-board',
+        `@${String(width)} ${state}: the board says "${marker}" and the state claims ` +
+          `"${expected.board}"`,
+      );
+    }
+
+    const progress = await page.getAttribute('[data-draft-progress]', 'data-draft-progress');
+    const want = `${String(expected.reviewed)}/${String(expected.total)}`;
+    if (progress !== want) {
+      fail(
+        'draft-board',
+        `@${String(width)} ${state}: the board reports ${progress ?? 'nothing'} reviewed and the ` +
+          `state claims ${want}`,
+      );
+    }
+
+    /*
+     * The print button is present exactly when the board is complete.
+     *
+     * The negative is the half worth photographing: it is absent at `0 of 10`
+     * and at `4 of 10`, which is what makes its presence at `10 of 10` mean
+     * *"completeness turned it on"* rather than *"somebody set a flag"*.
+     */
+    const canPrint = await page
+      .locator('form button', { hasText: /Print a draft review/i })
+      .count();
+    const shouldPrint = expected.reviewed === expected.total;
+    if (shouldPrint !== canPrint > 0) {
+      fail(
+        'draft-board',
+        `@${String(width)} ${state}: the print control is ${canPrint > 0 ? 'present' : 'absent'} ` +
+          `and ${shouldPrint ? 'should be present' : 'should not be'} at ` +
+          `${String(expected.reviewed)} of ${String(expected.total)}`,
+      );
+    }
+    return;
+  }
+
+  const editor = await page.getAttribute('[data-draft-editor]', 'data-draft-editor');
+  if (editor === null) {
+    fail(
+      'draft-board',
+      `@${String(width)} ${state}: the editor did not render — most likely a 404 from ` +
+        `requireAdmin()`,
+    );
+    return;
+  }
+  if (editor !== expected.editor) {
+    fail(
+      'draft-board',
+      `@${String(width)} ${state}: the editor is "${editor}" and the state claims ` +
+        `"${expected.editor}"`,
+    );
+  }
+
+  /*
+   * The grade grid holds the whole domain, always.
+   *
+   * Thirteen taps is the reason the grade is not typed, and a grid that silently
+   * rendered eleven would still look like a grid. Read from the DOM rather than
+   * counted in the picture, because at 360 the fourth column is the one at risk
+   * and a missing one is invisible.
+   */
+  const grades = await page.locator('[data-grade-picker] label').count();
+  if (grades !== 13) {
+    fail(
+      'draft-board',
+      `@${String(width)} ${state}: the grade picker offers ${String(grades)} grades, not 13`,
+    );
+  }
+
+  /* The draft is on the screen the take is written on. That is the whole layout claim. */
+  if ((await page.locator('[data-draft-snapshot]').count()) === 0) {
+    fail(
+      'draft-board',
+      `@${String(width)} ${state}: the editor shows no draft snapshot, so a take would be ` +
+        `written with nothing to write it about`,
+    );
+  }
+}
+
+/**
+ * The draft-review issue must actually be a draft review.
+ *
+ * `?edition=` resolves on the **server** behind the demo guard, so a run without
+ * `DEMO_FIXTURES` on the server process answers with the ordinary rack — which
+ * photographs cleanly, files under the edition's name and passes. The nine
+ * `reveal-*` states cost a milestone to exactly that.
+ *
+ * So the marker is read, and then the two things that make it *this* issue: ten
+ * grades on the board, and a section per manager. A preseason page with nine of
+ * ten sections is a page missing a manager, and the missing manager is the one
+ * who would notice.
+ */
+async function checkPreseasonIssue(page: Page, width: number, state: string): Promise<void> {
+  if ((await page.locator('[data-preseason-board]').count()) === 0) {
+    fail(
+      'preseason',
+      `@${String(width)} ${state}: no draft board on the page — the issue is not a draft review, ` +
+        `most likely because the preview did not resolve on the server`,
+    );
+    return;
+  }
+
+  const grades = await page.locator('[data-preseason-grade]').count();
+  const teams = await page.locator('[data-preseason-team]').count();
+
+  if (grades !== teams) {
+    fail(
+      'preseason',
+      `@${String(width)} ${state}: ${String(grades)} grades on the board and ${String(teams)} ` +
+        `team sections — every manager on the board must have a section`,
+    );
+  }
+
+  if (teams < 10) {
+    fail(
+      'preseason',
+      `@${String(width)} ${state}: ${String(teams)} team sections, and the league has ten. A ` +
+        `manager missing from their own draft review is the defect this state exists to catch`,
+    );
+  }
+
+  /*
+   * Every section carries a take.
+   *
+   * The take is the required field, so a section without one is an issue that
+   * should never have been publishable — and the packet refuses exactly that,
+   * which makes this an assertion about the gate rather than about the page.
+   */
+  const takes = await page.locator('[data-preseason-take]').count();
+  if (takes !== teams) {
+    fail(
+      'preseason',
+      `@${String(width)} ${state}: ${String(takes)} takes across ${String(teams)} sections`,
+    );
+  }
+}
 
 /**
  * The gate against a press-desk false green.
@@ -4896,6 +5252,21 @@ async function run(): Promise<void> {
           // Every press-desk state must actually be that desk.
           if (state.startsWith('review-')) {
             await checkReviewDesk(page, width, state);
+          }
+
+          // Every draft-board state must actually be that board.
+          if (state.startsWith('draft-')) {
+            await checkDraftBoard(page, width, state);
+            // The board and the editor are both forms under a thumb.
+            await checkTargets(page, width);
+          }
+
+          /*
+           * Every preseason issue must actually be one — whether it arrived as a
+           * server-resolved preview or off the rack through the approval chain.
+           */
+          if (state.startsWith('slice-preseason') || state === 'preseason-rack') {
+            await checkPreseasonIssue(page, width, state);
           }
         }
 

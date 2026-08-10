@@ -94,9 +94,22 @@ const NOT_A_MANAGER: ReadonlySet<string> = new Set([...houseWords(), 'Tony', 'To
 
 const CAPITALISED = /\b[A-Z][a-z]+(?:\s[A-Z][a-z]+)?\b/g;
 
+/**
+ * The two sets a piece of prose is checked against.
+ *
+ * Structural rather than `FactPacket`, because the preseason issue's packet is a
+ * different shape carrying the same two lists (`lib/slice/preseason.ts`). The
+ * validator has never needed to know what kind of packet it was handed — it asks
+ * *"was that permitted"*, and permission is these two arrays.
+ */
+export interface AllowedValues {
+  readonly allowedNumbers: readonly string[];
+  readonly allowedNames: readonly string[];
+}
+
 function scan(
   text: string,
-  packet: FactPacket,
+  packet: AllowedValues,
   into: Violation[],
   ordinary: ReadonlySet<string> = NOT_A_MANAGER,
 ): void {
@@ -117,11 +130,33 @@ function scan(
    */
   const nameParts = new Set(packet.allowedNames.flatMap((name) => name.split(' ')));
 
+  /** One capitalised word: allowed outright, a piece of an allowed name, or house copy. */
+  const permitted = (word: string): boolean =>
+    packet.allowedNames.includes(word) || nameParts.has(word) || ordinary.has(word);
+
   for (const match of text.matchAll(CAPITALISED)) {
     const value = match[0];
-    if (packet.allowedNames.includes(value)) continue;
-    if (ordinary.has(value)) continue;
-    if (nameParts.has(value)) continue;
+    if (permitted(value)) continue;
+
+    /*
+     * A two-word match whose halves are each permitted.
+     *
+     * `CAPITALISED` greedily pairs adjacent capitalised words, and real names
+     * are not two clean words: `Ja'Marr Chase` scans as `Ja`, then the pair
+     * `Marr Chase`; `Amon-Ra St. Brown` scans as `Amon`, `Ra St`, `Brown`. Every
+     * one of those pieces is in the packet — they came out of a stored draft
+     * pick — and the *pair* is an artefact of how the scanner walks the string
+     * rather than a claim anybody made. The draft board refused itself as six
+     * invented names until this existed.
+     *
+     * It is the right rule rather than a workaround: the question this module
+     * asks is *"was that permitted"*, and a pair of separately permitted words
+     * is permitted. It admits nothing new — a pair containing one unknown word
+     * is still refused, which is every case that matters, including a retired
+     * manager sharing a first name with a current one.
+     */
+    if (value.split(/\s+/).every(permitted)) continue;
+
     into.push({ kind: 'unknown-name', value });
   }
 
@@ -142,6 +177,64 @@ function scan(
   for (const match of text.matchAll(/["“”]/g)) {
     into.push({ kind: 'invented-quote', value: match[0] });
   }
+}
+
+/**
+ * The half of the scan that applies to prose nobody derived: banned terms and
+ * quotation marks.
+ *
+ * Extracted because three callers need exactly this and no more — an empty
+ * rack's house copy, and the two pieces of **editorial** text a commissioner
+ * writes in Tony's voice (his take and his concern on a draft review).
+ *
+ * ## Why a human-authored sentence is checked at all
+ *
+ * The number-and-name half of the scan asks *"did a renderer invent this"*, and
+ * for a sentence a person typed the answer is *"a person wrote it, and they are
+ * the author"* — checking it against a packet would refuse Tony's own opinions.
+ *
+ * This half asks something different and still applies: **`16 §9`'s banned
+ * terms are product rules, not renderer rules.** The league has no kickers
+ * whoever is typing; win-probability language implies a model that does not
+ * exist whoever is typing; and naming an unreleased feature in print is a
+ * promise the shop cannot keep whoever is typing. A quotation mark is fabricated
+ * testimony for the same reason it is when a model writes one — nobody in this
+ * league said anything on the record.
+ */
+export function scanEditorialCopy(text: string): readonly Violation[] {
+  const violations: Violation[] = [];
+
+  for (const { pattern, why } of BANNED) {
+    const found = pattern.exec(text);
+    if (found !== null) violations.push({ kind: 'banned-term', value: found[0], why });
+  }
+  for (const match of text.matchAll(/["“”]/g)) {
+    violations.push({ kind: 'invented-quote', value: match[0] });
+  }
+
+  return violations;
+}
+
+/** {@link scanEditorialCopy}, as a verdict. What the editor checks before it stores. */
+export function validateEditorialCopy(texts: readonly string[]): Verdict {
+  const violations = texts.flatMap((text) => scanEditorialCopy(text));
+  return { publishable: violations.length === 0, violations };
+}
+
+/**
+ * Check derived prose against what a packet allowed. The whole scan.
+ *
+ * Public so the preseason renderer can check the sentences **it** built without
+ * routing them through `validateEdition`, whose `prose()` enumerates a weekly
+ * issue's fields.
+ */
+export function scanDerivedProse(
+  texts: readonly string[],
+  allowed: AllowedValues,
+): readonly Violation[] {
+  const violations: Violation[] = [];
+  for (const text of texts) scan(text, allowed, violations);
+  return violations;
 }
 
 /**

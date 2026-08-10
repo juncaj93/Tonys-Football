@@ -9,8 +9,9 @@ import {
   SectionHeading,
   SLICE_MASTHEAD,
 } from '@/components/scene/text-surface';
+import { PreseasonBody } from '@/components/slice/preseason';
 import { TYPE } from '@/lib/design/type';
-import { type Edition } from '@/lib/slice/render';
+import { PRESEASON, type Edition } from '@/lib/slice/render';
 
 /**
  * One issue of the Slice, printed.
@@ -78,6 +79,12 @@ const HEADLINE_ROLE: Record<Edition['character'], string> = {
   ordinary: TYPE.headline,
   quiet: TYPE.headlineQuiet,
   empty: TYPE.headlineQuiet,
+  /*
+   * Loud, like a title week and for the same reason: a special edition is one of
+   * the two or three papers the league will remember, and the front page should
+   * say so before a word of it is read.
+   */
+  preseason: TYPE.headlineLoud,
 };
 
 /**
@@ -100,6 +107,7 @@ const MASTHEAD_FLAG: Record<Edition['character'], string | null> = {
   ordinary: null,
   quiet: null,
   empty: null,
+  preseason: PRESEASON.flag,
 };
 
 export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: string | null }) {
@@ -126,6 +134,22 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
 
             <p className={`mt-3 ${TYPE.bodyLead} text-ink-700`}>{issue.body}</p>
           </article>
+
+          {/*
+            * The draft-review special's middle.
+            *
+            * Present only when the edition carries preseason sections, which is
+            * the discriminator `Edition` itself uses — an optional field rather
+            * than a `kind`, so no weekly issue's content hash moved when this
+            * was added (`lib/slice/render.ts`).
+            *
+            * It replaces the secondary stories and the board, because a
+            * preseason issue has neither: nothing has been played, so there is
+            * no result to lead with and nothing to put on a scoreboard. The
+            * masthead above and Tony's column below are unchanged, which is what
+            * makes it the same paper.
+            */}
+          {issue.preseason !== undefined && <PreseasonBody sections={issue.preseason} />}
 
           {issue.secondary.length > 0 && (
             <Section label="Also this week" weight="heavy">

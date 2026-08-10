@@ -156,7 +156,24 @@ Every remaining v1 system named in `CLAUDE.md`'s "In v1" list is built: the
 six-zone shop, Tonight, the Slice with Tony's Line, bounties and the chalkboard,
 the token ledger and weekly rewards, one loot box and a 24-item catalog,
 wearables and championship rings, the Showcase, the Timeline, the content engine,
-historical seasons, and persistent login.
+historical seasons, persistent login, and the **preseason draft-review special**
+(`docs/PRESEASON_SLICE_BOUNDARY.md`).
+
+### B0 · Tony's ten real draft grades — **Alex, after the league drafts**
+
+Not an engineering item and not a blocker for anything else. The feature is
+built, demonstrated and tested against a real Postgres; what it is waiting for is
+a draft that has not happened.
+
+**When:** after the 2026 draft, before the Tuesday of week one.
+**Where:** `/admin/slice/draft`.
+**What:** tap *Pull the draft*; then, per manager, a grade and a sentence — the
+best pick and the concern are optional. `Save, and next` ten times. When the
+board reads `10 of 10`, *Print a draft review*, read it, and approve.
+
+Until then the Tuesday job runs, records that the draft has not finished, and
+prints nothing — which is the correct behaviour in August and is
+indistinguishable from it in July only in the sense that both are true.
 
 ---
 

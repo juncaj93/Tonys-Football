@@ -6,7 +6,21 @@ import { type SnapshotEntry } from '@/lib/stats/snapshot';
 import { deriveStories, type StoryKind } from '@/lib/stats/stories';
 import { buildWeek, publishableWeek, type StoredWeekGame } from '@/lib/stats/week';
 
+import {
+  draftObservations,
+  managerDraftFacts,
+  pickLabel,
+  type DraftFacts,
+  type DraftPickFact,
+} from './draft-facts';
 import { editionFor, latestEdition } from './edition';
+import {
+  assemblePreseasonPacket,
+  renderPreseason,
+  validatePreseason,
+  type PreseasonTeamFacts,
+} from './preseason';
+import { type TonyGrade } from './preseason-reviews';
 import {
   assemblePacket,
   factPacket,
@@ -66,6 +80,8 @@ export const SLICE_EDITIONS = [
   'one-story',
   'competing-stories',
   'monday-comeback',
+  'preseason-draft-review',
+  'preseason-sparse',
 ] as const;
 
 export type SliceEditionKey = (typeof SLICE_EDITIONS)[number];
@@ -403,16 +419,35 @@ export const SLICE_EDITION_DESCRIPTIONS: Readonly<Record<SliceEditionKey, string
   'one-story': 'an issue carrying exactly one story',
   'competing-stories': 'three strong stories of different shapes, and the desk choosing',
   'monday-comeback': 'a week photographed before Monday, where one game turned over and three did not',
+  'preseason-draft-review':
+    'the draft-review special, ten teams graded, every optional field supplied',
+  'preseason-sparse':
+    'the same issue with most of the optional fields empty — the state Tony really files',
 };
 
-/** The catalog, for the CLI and for the visual driver's exhaustiveness check. */
-export const SLICE_EDITION_CATALOG: readonly SliceEditionEntry[] = SLICE_EDITIONS.map(
-  (key): SliceEditionEntry => ({
-    key,
-    shows: SLICE_EDITION_DESCRIPTIONS[key],
-    source: key in RACK ? 'rack' : key in FIXTURES ? 'fixture' : 'historical',
-  }),
-);
+/**
+ * The catalog, for the CLI and for the visual driver's exhaustiveness check.
+ *
+ * A **function**, not a constant, because it reads the fixture tables and one of
+ * them is declared at the foot of this file. A module-level constant evaluated
+ * before that declaration threw `Cannot access 'PRESEASON_FIXTURES' before
+ * initialization` at import time — which is the kind of failure that takes a
+ * whole surface down rather than one state.
+ */
+export function sliceEditionCatalog(): readonly SliceEditionEntry[] {
+  return SLICE_EDITIONS.map(
+    (key): SliceEditionEntry => ({
+      key,
+      shows: SLICE_EDITION_DESCRIPTIONS[key],
+      source:
+        key in RACK
+          ? 'rack'
+          : key in PRESEASON_FIXTURES || key in FIXTURES
+            ? 'fixture'
+            : 'historical',
+    }),
+  );
+}
 
 function isEditionKey(value: string): value is SliceEditionKey {
   return (SLICE_EDITIONS as readonly string[]).includes(value);
@@ -481,6 +516,9 @@ export async function resolveEdition(
     return { mode: 'issue', issue, leadKind: packet.lead?.kind ?? null };
   }
 
+  const preseason = PRESEASON_FIXTURES[key];
+  if (preseason !== undefined) return renderPreseasonFixture(db, preseason);
+
   const fixture = FIXTURES[key];
   if (fixture === undefined) {
     /*
@@ -494,7 +532,7 @@ export async function resolveEdition(
      */
     throw new Error(
       `slice edition "${key}" is declared but not implemented — it is in ` +
-        'SLICE_EDITIONS and in none of RACK, HISTORICAL or FIXTURES.',
+        'SLICE_EDITIONS and in none of RACK, HISTORICAL, FIXTURES or PRESEASON_FIXTURES.',
     );
   }
 
@@ -637,4 +675,388 @@ export async function allEditions(
   const out: { key: SliceEditionKey; preview: PreviewEdition }[] = [];
   for (const key of SLICE_EDITIONS) out.push({ key, preview: await resolveEdition(db, key) });
   return out;
+}
+
+/* -------------------------------------------------------------------------- *
+ * The draft-review special
+ * -------------------------------------------------------------------------- */
+
+/**
+ * One manager's draft, written out.
+ *
+ * Real player names, deliberately, and for the same reason the manager names are
+ * real: the reason to look at this page is to find out whether *"Amon-Ra
+ * St. Brown"* breaks a row at 360 and whether ten sections of it are readable on
+ * a phone. `Player One` would render correctly at every width and tell you
+ * nothing.
+ *
+ * They are also the **validator's** hardest case, and that is not incidental: a
+ * name with an apostrophe or a full stop in it scans as three capitalised words,
+ * so a fixture full of clean two-word names would pass a check the real draft
+ * board would fail. `lib/slice/preseason.ts` splits every stored name into
+ * fragments precisely because of these, and this fixture is what proves it.
+ */
+interface PreseasonFixtureTeam {
+  readonly manager: string;
+  readonly slot: number;
+  readonly grade: TonyGrade;
+  readonly take: string;
+  /** `[round, player, position]`, in pick order. */
+  readonly picks: readonly (readonly [number, string, string])[];
+  /** Which of their picks Tony named, by round. Absent when he named none. */
+  readonly bestPickRound?: number;
+  readonly concern?: string;
+}
+
+interface PreseasonFixture {
+  readonly season: number;
+  readonly rounds: number;
+  readonly teams: readonly PreseasonFixtureTeam[];
+  readonly champion?: { readonly displayName: string; readonly season: number };
+  /** Week one's fixtures, by manager name. Absent when the schedule is not out. */
+  readonly weekOne?: readonly (readonly [string, string])[];
+}
+
+/**
+ * The picks every fixture team shares, as a shape rather than as a roster.
+ *
+ * Six rounds is enough: the paper prints five and the sixth proves the sixth is
+ * not printed. Sixteen would be sixteen times the fixture for no additional
+ * question answered.
+ */
+const DRAFT_2026 = {
+  season: 2026,
+  rounds: 16,
+  champion: { displayName: 'Matty B', season: 2025 },
+  weekOne: [
+    ['Matt Lee', 'Nick'],
+    ['Matty B', 'Joe'],
+    ['Cheese', 'Nathan'],
+    ['Brandon', 'Ryan'],
+    ['Alex', 'Zack'],
+  ],
+  teams: [
+    {
+      manager: 'Matt Lee',
+      slot: 1,
+      grade: 'A+',
+      take: 'Took the best receiver alive and then never reached once. Tony has read a hundred boards and this is what one looks like when somebody has a plan.',
+      picks: [
+        [1, "Ja'Marr Chase", 'WR'],
+        [2, 'Brian Thomas', 'WR'],
+        [3, 'Kyren Williams', 'RB'],
+        [4, 'Ladd McConkey', 'WR'],
+        [5, 'Tucker Kraft', 'TE'],
+        [14, 'Denver Broncos', 'DEF'],
+      ],
+      bestPickRound: 3,
+      concern: 'One bad Sunday from that receiver room and the whole thing gets quiet.',
+    },
+    {
+      manager: 'Matty B',
+      slot: 2,
+      grade: 'A-',
+      take: 'Back-to-back running backs and then let the board come to him. The defending champion drafted like one.',
+      picks: [
+        [1, 'Bijan Robinson', 'RB'],
+        [2, 'Jonathan Taylor', 'RB'],
+        [3, 'A.J. Brown', 'WR'],
+        [4, 'Trey McBride', 'TE'],
+        [5, 'Jaylen Waddle', 'WR'],
+        [15, 'Houston Texans', 'DEF'],
+      ],
+      bestPickRound: 1,
+    },
+    {
+      manager: 'Cheese',
+      slot: 3,
+      grade: 'B+',
+      take: 'Solid all the way down and nothing that made Tony put the paper down. That is a compliment and it is also the whole review.',
+      picks: [
+        [1, 'Jahmyr Gibbs', 'RB'],
+        [2, "De'Von Achane", 'RB'],
+        [3, 'Garrett Wilson', 'WR'],
+        [4, 'Courtland Sutton', 'WR'],
+        [5, 'Sam LaPorta', 'TE'],
+        [13, 'Baltimore Ravens', 'DEF'],
+      ],
+      concern: 'Two small running backs carrying the whole thing.',
+    },
+    {
+      manager: 'Brandon',
+      slot: 4,
+      grade: 'B',
+      take: 'Receivers, receivers, and then a look around the room to see who else wanted a running back. Nobody did, which is the only reason this works.',
+      picks: [
+        [1, 'Saquon Barkley', 'RB'],
+        [2, 'Drake London', 'WR'],
+        [3, 'Chase Brown', 'RB'],
+        [4, 'Tee Higgins', 'WR'],
+        [5, 'Jerry Jeudy', 'WR'],
+        [16, 'Philadelphia Eagles', 'DEF'],
+      ],
+      bestPickRound: 2,
+      concern: 'Thin behind the first running back, and Tony says that every year to somebody.',
+    },
+    {
+      manager: 'Zack',
+      slot: 5,
+      grade: 'B-',
+      take: 'Went early on a tight end and spent the rest of the night catching up. It might work. Tony is not saying it will.',
+      picks: [
+        [1, 'Malik Nabers', 'WR'],
+        [2, 'Brock Bowers', 'TE'],
+        [3, 'Kenneth Walker', 'RB'],
+        [4, 'Rome Odunze', 'WR'],
+        [5, 'Tony Pollard', 'RB'],
+        [14, 'Minnesota Vikings', 'DEF'],
+      ],
+    },
+    {
+      manager: 'Nathan',
+      slot: 6,
+      grade: 'C+',
+      take: 'A quarterback in the fourth round is a decision, and Tony would like it noted that it was a decision.',
+      picks: [
+        [1, 'Justin Jefferson', 'WR'],
+        [2, 'Bucky Irving', 'RB'],
+        [3, 'Omarion Hampton', 'RB'],
+        [4, 'Josh Allen', 'QB'],
+        [5, 'Jakobi Meyers', 'WR'],
+        [15, 'Pittsburgh Steelers', 'DEF'],
+      ],
+      concern: 'Spent a fourth on a position everybody else waited eight rounds for.',
+    },
+    {
+      manager: 'Joe',
+      slot: 7,
+      grade: 'C',
+      take: 'Nothing wrong with any single pick. Tony read the whole board twice and could not find the plan.',
+      picks: [
+        [1, 'Ashton Jeanty', 'RB'],
+        [2, 'Nico Collins', 'WR'],
+        [3, 'Travis Etienne', 'RB'],
+        [4, 'Jameson Williams', 'WR'],
+        [5, 'Dallas Goedert', 'TE'],
+        [16, 'Green Bay Packers', 'DEF'],
+      ],
+    },
+    {
+      manager: 'Nick',
+      slot: 8,
+      grade: 'C-',
+      take: 'Three tight ends. Tony counted them twice because he did not believe it the first time.',
+      picks: [
+        [1, 'Amon-Ra St. Brown', 'WR'],
+        [2, 'Josh Jacobs', 'RB'],
+        [3, 'James Cook', 'RB'],
+        [4, 'Mark Andrews', 'TE'],
+        [5, 'Colston Loveland', 'TE'],
+        [13, 'Buffalo Bills', 'DEF'],
+      ],
+      concern: 'Two of those tight ends are going to sit on a bench all year.',
+    },
+    {
+      manager: 'Alex',
+      slot: 9,
+      grade: 'D+',
+      take: 'Waited on a quarterback until the fourteenth round and then acted surprised. The rest of it is fine. That part is not.',
+      picks: [
+        [1, 'Derrick Henry', 'RB'],
+        [2, 'Puka Nacua', 'WR'],
+        [3, 'Breece Hall', 'RB'],
+        [4, 'DK Metcalf', 'WR'],
+        [5, 'David Njoku', 'TE'],
+        [14, 'Detroit Lions', 'DEF'],
+      ],
+      bestPickRound: 2,
+    },
+    {
+      manager: 'Ryan',
+      slot: 10,
+      grade: 'F',
+      take: 'Tony does not hand these out lightly and is handing one out.',
+      picks: [
+        [1, 'Christian McCaffrey', 'RB'],
+        [2, 'Jaxon Smith-Njigba', 'WR'],
+        [3, 'Chuba Hubbard', 'RB'],
+        [4, 'Khalil Shakir', 'WR'],
+        [5, 'Rachaad White', 'RB'],
+        [15, 'Los Angeles Chargers', 'DEF'],
+      ],
+      concern: 'Every one of those running backs is somebody else’s backup by November.',
+    },
+  ],
+} as const satisfies PreseasonFixture;
+
+/**
+ * The same draft with most of the optional fields empty.
+ *
+ * **This is the state Tony really files.** The commissioner's workload rule is a
+ * grade and a take per manager, with the best pick and the concern optional — so
+ * the page has to look finished when eight of ten sections carry neither, and
+ * the only way to know whether it does is to photograph it.
+ *
+ * The two teams that keep theirs are deliberate: one keeps only a best pick and
+ * one keeps only a concern, so the two asides are each proved to stand alone
+ * rather than only as a pair.
+ */
+const DRAFT_2026_SPARSE: PreseasonFixture = {
+  ...DRAFT_2026,
+  weekOne: [],
+  teams: (DRAFT_2026.teams as readonly PreseasonFixtureTeam[]).map((team, index) => {
+    const stripped: PreseasonFixtureTeam = {
+      manager: team.manager,
+      slot: team.slot,
+      grade: team.grade,
+      take: team.take,
+      picks: team.picks,
+    };
+    if (index === 0 && team.bestPickRound !== undefined) {
+      return { ...stripped, bestPickRound: team.bestPickRound };
+    }
+    if (index === 2 && team.concern !== undefined) {
+      return { ...stripped, concern: team.concern };
+    }
+    return stripped;
+  }),
+};
+
+const PRESEASON_FIXTURES: Readonly<Partial<Record<SliceEditionKey, PreseasonFixture>>> = {
+  'preseason-draft-review': DRAFT_2026,
+  'preseason-sparse': DRAFT_2026_SPARSE,
+};
+
+/**
+ * Render a written-out draft through the production pipeline.
+ *
+ * The same rule the weekly fixtures follow: `managerDraftFacts`,
+ * `draftObservations`, `assemblePreseasonPacket`, `renderPreseason` and
+ * `validatePreseason` are the **shipping** functions, so what is a fixture is
+ * the draft and what is real is everything that happens to it. A preview that
+ * ran its own assembly would be evidence about the preview.
+ *
+ * It writes nothing and never touches the database, which is stronger isolation
+ * than the seat-based demos need — a newspaper has no state to isolate.
+ */
+function renderPreseasonFixture(db: Queryable, fixture: PreseasonFixture): PreviewEdition {
+  void db;
+
+  const rosterOf = new Map(fixture.teams.map((team, index) => [team.manager, index + 1] as const));
+
+  /* Every pick, in board order, so the label and the pick number are real. */
+  const flat = fixture.teams
+    .flatMap((team) =>
+      team.picks.map(([round, playerName, position]) => ({
+        team,
+        round,
+        playerName,
+        position,
+        /*
+         * A snake draft: odd rounds run down the board and even rounds run back
+         * up it. Written out rather than assumed, because `1.01` next to a slot
+         * that could not have made that pick is exactly the kind of small wrong
+         * fact this page must not carry.
+         */
+        indexInRound: round % 2 === 1 ? team.slot : fixture.teams.length + 1 - team.slot,
+      })),
+    )
+    .sort((a, b) => a.round - b.round || a.indexInRound - b.indexInRound);
+
+  const picksById = new Map<string, DraftPickFact & { rosterId: number | null }>();
+  flat.forEach((entry, index) => {
+    const id = `fixture-${String(index + 1)}`;
+    picksById.set(id, {
+      id,
+      pickNo: index + 1,
+      round: entry.round,
+      label: pickLabel(entry.round, entry.indexInRound),
+      playerName: entry.playerName,
+      position: entry.position,
+      nflTeam: null,
+      isKeeper: false,
+      rosterId: rosterOf.get(entry.team.manager) ?? null,
+    });
+  });
+
+  const ordered = [...picksById.values()];
+
+  const managers = fixture.teams.map((team) => {
+    const rosterId = rosterOf.get(team.manager)!;
+    return managerDraftFacts({
+      userId: `fixture:${team.manager}`,
+      displayName: team.manager,
+      rosterId,
+      draftSlot: team.slot,
+      picks: ordered.filter((entry) => entry.rosterId === rosterId),
+    });
+  });
+
+  const nameByRoster = new Map(
+    fixture.teams.map((team) => [rosterOf.get(team.manager)!, team.manager] as const),
+  );
+
+  const facts: DraftFacts = {
+    season: fixture.season,
+    sleeperDraftId: 'fixture',
+    status: 'complete',
+    type: 'snake',
+    rounds: fixture.rounds,
+    completedAt: null,
+    totalPicks: ordered.length,
+    managers: [...managers].sort((a, b) => (a.draftSlot ?? 0) - (b.draftSlot ?? 0)),
+    observations: draftObservations(ordered, (rosterId) =>
+      rosterId === null ? null : (nameByRoster.get(rosterId) ?? null),
+    ),
+  };
+
+  const teams: PreseasonTeamFacts[] = fixture.teams.map((team) => {
+    const theirs = managers.find((manager) => manager.displayName === team.manager)!;
+    return {
+      facts: theirs,
+      grade: team.grade,
+      take: team.take,
+      bestPick:
+        team.bestPickRound === undefined
+          ? null
+          : (theirs.picks.find((entry) => entry.round === team.bestPickRound) ?? null),
+      concern: team.concern ?? null,
+    };
+  });
+
+  const packet = assemblePreseasonPacket({
+    season: fixture.season,
+    facts,
+    teams,
+    champion: fixture.champion ?? null,
+    weekOne: (fixture.weekOne ?? []).map(([left, right]) => ({ left, right })),
+    outstanding: [],
+    reviewed: teams.length,
+    total: teams.length,
+    complete: true,
+  });
+
+  const issue = renderPreseason(packet);
+  if (issue === null) {
+    throw new Error('the preseason fixture rendered nothing — a defect in the fixture, not the demo');
+  }
+
+  const checked = validatePreseason(issue, packet);
+  if (!checked.verdict.publishable) {
+    /*
+     * A preview the validator refuses is a **defect in the fixture**, and it
+     * throws rather than rendering: a demo that quietly printed prose the real
+     * gate would refuse is a demo of something this product does not do. It has
+     * already caught one — a player name whose apostrophe made the scanner see a
+     * proper noun the packet had not declared.
+     */
+    throw new Error(
+      'the preseason fixture does not validate: ' +
+        checked.verdict.violations
+          .map((violation) => `${violation.kind} ${violation.value}`)
+          .join(', '),
+    );
+  }
+
+  return { mode: 'issue', issue, leadKind: null };
 }

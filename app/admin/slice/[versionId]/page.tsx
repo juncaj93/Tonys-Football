@@ -126,8 +126,18 @@ export default async function SliceReviewPage({
             </div>
 
             <div className="mt-3.5">
+              {/*
+                * What issue this is.
+                *
+                * The preseason special has no week — it is week zero, a slot
+                * rather than a number (`0018`) — so it names itself instead.
+                * Printing `Week 0` would be the internal shape of the record
+                * leaking onto the one screen whose job is to be the record.
+                */}
               <PanelHeading>
-                Season {detail.season} &middot; Week {detail.week}
+                {detail.kind === 'preseason'
+                  ? `Season ${String(detail.season)} · Draft review`
+                  : `Season ${String(detail.season)} · Week ${String(detail.week)}`}
               </PanelHeading>
             </div>
 
@@ -344,14 +354,30 @@ export default async function SliceReviewPage({
               {detail.status === 'rejected' && (
                 <>
                   <p className={`mt-2 ${TYPE.body} text-ink-700`}>
-                    Refused, and it stays refused. Drafting the week again writes a new copy beside
-                    this one rather than overwriting it.
+                    Refused, and it stays refused. Drafting it again writes a new copy beside this
+                    one rather than overwriting it.
                   </p>
-                  <form action={draftIssueAction} className="mt-3">
-                    <input type="hidden" name="season" value={String(detail.season)} />
-                    <input type="hidden" name="week" value={String(detail.week)} />
-                    <StampButton tone="quiet">Draft this week again</StampButton>
-                  </form>
+                  {/*
+                    * Regenerating a refused draft review means going back to the
+                    * grades: the prose is assembled from them, so *"draft it
+                    * again"* with nothing changed produces the identical bytes
+                    * and `UNIQUE(issue_id, content_hash)` reads the same version
+                    * back. The board is where the change is made, so the board is
+                    * where the button goes.
+                    */}
+                  {detail.kind === 'preseason' ? (
+                    <div className="mt-3">
+                      <DeskExit href="/admin/slice/draft">
+                        Tony’s draft board&nbsp;&nbsp;&rarr;
+                      </DeskExit>
+                    </div>
+                  ) : (
+                    <form action={draftIssueAction} className="mt-3">
+                      <input type="hidden" name="season" value={String(detail.season)} />
+                      <input type="hidden" name="week" value={String(detail.week)} />
+                      <StampButton tone="quiet">Draft this week again</StampButton>
+                    </form>
+                  )}
                 </>
               )}
 
