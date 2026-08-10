@@ -9,6 +9,30 @@ layer order, the editor, the defaults and both regression guards are untouched.
 
 ---
 
+## The ruling
+
+Two sentences, kept at the top because everything below is the evidence for
+them and a later session should not have to read the evidence to find the rule.
+
+> **1. A manager is authored and rendered at the room's own coordinate density.**
+> The canvas is currently `112 × 168`, which is `roomObject('manager').rect`
+> exactly — one sprite unit is one room unit. **Character rendering must not
+> regress to a coarser internal canvas that is then magnified into the room.**
+> If the room's framing changes, the canvas moves with it.
+>
+> **2. Colour is a runtime parameter, and the parametric shape system is what
+> makes that possible.** Layers are authored as shapes and recoloured per ramp at
+> render time, which is why 11,520 combinations come out of twenty-nine layers
+> and no PNG. **A PNG or tinted-mask pipeline is not required and is not a
+> prerequisite for quality** — it remains available if painted layers are ever
+> commissioned, and this geometry is what they would be painted to.
+
+Both are held by tests rather than by this document: `lib/rooms/objects.test.ts`
+pins the canvas to the room rectangle, and `checkManagerBelongsInTheRoom`
+measures the rendered ratio in a browser.
+
+---
+
 ## 0. The report, and the measurement under it
 
 The commissioner supplied a generic sprite as a quality benchmark and a
