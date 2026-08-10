@@ -10,6 +10,7 @@ import { requireUser } from '@/lib/auth/current-user';
 import { listDevices } from '@/lib/auth/service';
 import { characterFor } from '@/lib/character/service';
 import { getDb } from '@/lib/db';
+import { pendingDecisions } from '@/lib/publication/queue';
 
 /**
  * Your key ring, on the clipboard by the office door.
@@ -36,6 +37,22 @@ export default async function ProfilePage() {
     listDevices(db, user.id, session.id),
     characterFor(db, user.id),
   ]);
+
+  /*
+   * The one hint anywhere in the product that something is waiting on the
+   * commissioner.
+   *
+   * Here and nowhere else, and the *nowhere else* is the decision. `18 §3` fixes
+   * the homepage at eight objects and gives the glow to Doors only, so a badge
+   * on the parlor would be a ninth thing on a screen the navigation map closed.
+   * The office door on the key ring is the one surface only the commissioner
+   * sees, that already leads there, and that is not part of the room.
+   *
+   * Counted only when the viewer is the commissioner — an ordinary manager never
+   * runs the query, so this cannot become a side channel that tells the league
+   * an issue is pending before it is printed.
+   */
+  const pending = user.isAdmin ? await pendingDecisions(db) : 0;
 
   return (
     <>
@@ -127,9 +144,25 @@ export default async function ProfilePage() {
             {user.isAdmin && (
               <Link
                 href="/admin"
+                data-office-pending={String(pending)}
                 className={`${ACTION} border-wood-dark bg-paper-mid text-ink-900`}
               >
+                {/*
+                  * A count, not a dot.
+                  *
+                  * A dot says *"something"*, which sends you to the office to
+                  * find out what — and most weeks the answer is one paper. The
+                  * number answers the question on the page you are already on.
+                  * It is absent entirely at zero rather than showing a nought,
+                  * for the same reason the press desk's docket omits its empty
+                  * parts: a permanent badge stops being read.
+                  */}
                 Commissioner&rsquo;s office
+                {pending > 0 && (
+                  <span className={`ml-2 ${TYPE.stamp} text-red-dark`}>
+                    {pending} waiting
+                  </span>
+                )}
               </Link>
             )}
 

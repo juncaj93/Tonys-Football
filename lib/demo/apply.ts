@@ -1079,7 +1079,112 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
     });
     return { evidence: { ...draft, held: true } };
   },
+
+  /* --- the office queue ------------------------------------------------- */
+
+  /**
+   * The four office-queue states, and what each one actually arranges.
+   *
+   * Every one of them **releases the hold and makes sure the desk holds one of
+   * each kind of thing**, then leaves the narrowing to the preview parameter the
+   * driver appends. That is deliberate: the four screens differ in *what they
+   * show*, not in what is in the database, so applying them in any order at any
+   * width lands on the same rows — which is the property `review-*` had to work
+   * for and got wrong once.
+   *
+   * The slots are the press desk's own, re-used rather than duplicated. Drafting
+   * the same week again is a no-op by content hash, and `advanceTo` is written as
+   * *"what is missing"*, so a state applied after the press-desk pass adds
+   * nothing and moves nothing.
+   */
+  'office-ready': async (db, seat) => deskWithOneOfEach(db, seat),
+  'office-blocked': async (db, seat) => deskWithOneOfEach(db, seat),
+  'office-printed': async (db, seat) => deskWithOneOfEach(db, seat),
+  'office-queue': async (db, seat) => deskWithOneOfEach(db, seat),
 };
+
+/**
+ * A desk holding one paper of every kind the queue can show.
+ *
+ * Waiting, refused, approved and printed — built from the press desk's own
+ * slots so the two families of states cannot fight over an issue, and idempotent
+ * throughout so re-applying at the second and third widths changes nothing.
+ *
+ * The hold is **released**, because it is the one piece of state on this screen
+ * that persists league-wide and would otherwise leak from `review-held` into
+ * every office screenshot taken after it.
+ */
+async function deskWithOneOfEach(db: Database, seat: DemoSeat): Promise<Applied> {
+  await releaseHold(db, seat);
+
+  const ready = await draftWeek(db, REVIEW_SLOTS['review-waiting']!);
+
+  const approved = await draftWeek(db, REVIEW_SLOTS['review-approved']!);
+  await advanceTo(db, approved.versionId, seat.userId, 'approved');
+
+  const printed = await draftWeek(db, REVIEW_SLOTS['review-published']!);
+  await advanceTo(db, printed.versionId, seat.userId, 'published');
+
+  /*
+   * The refused draft, produced the way `review-refused` produces it: the
+   * renderer and the validator agree on every week of both finalized seasons, so
+   * a refused draft has to be asked for by doctoring the prose and letting the
+   * **real** validator find it. Skipped when one is already on the desk, so
+   * running this after `review-refused` writes nothing.
+   */
+  const blocked = await ensureRefusedDraft(db, REVIEW_SLOTS['review-refused']!);
+
+  return {
+    evidence: {
+      ready: ready.versionId,
+      approved: approved.versionId,
+      printed: printed.versionId,
+      blocked,
+    },
+  };
+}
+
+/**
+ * A draft on the desk that the deterministic check refused, made once.
+ *
+ * `recordVersion` is idempotent by content hash, so calling this after
+ * `review-refused` reads the existing row back rather than appending a second
+ * one — which is what makes the office states safe to apply in any order.
+ */
+async function ensureRefusedDraft(db: Database, slot: number): Promise<string> {
+  const { season, week } = await reviewWeek(db, slot);
+  const assembled = await assembleIssue(db, { season, week });
+
+  if (assembled.edition === null) {
+    throw new DemoRefused(`season ${String(season)} week ${String(week)} has nothing to render`);
+  }
+
+  const doctored: Edition = {
+    ...assembled.edition,
+    deck: 'Somebody 213.77, Somebody Else 96.10',
+  };
+
+  const verdict = validateEdition(doctored, assembled.packet);
+  if (verdict.publishable) {
+    throw new DemoRefused(
+      'the doctored issue passed validation — the office queue would photograph a clean ' +
+        'draft under a name claiming the check refused it. Fix the fixture, not the assertion.',
+    );
+  }
+
+  const recorded = await recordVersion(db, {
+    season,
+    week,
+    edition: doctored,
+    packet: assembled.packet,
+    verdict,
+    actorUserId: null,
+    submit: true,
+  });
+
+  if (recorded.versionId === null) throw new DemoRefused('the refused draft was not written');
+  return recorded.versionId;
+}
 
 /**
  * Which week each press-desk state drafts.

@@ -1,10 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
+import { approveAndPublishAction } from '@/app/actions/publication';
 import {
   approveIssueAction,
   draftIssueAction,
-  publishIssueAction,
   rejectIssueAction,
   submitIssueAction,
 } from '@/app/actions/slice';
@@ -79,6 +79,17 @@ export default async function SliceReviewPage({
   const hold = await publicationHold(getDb());
   const error = typeof query['error'] === 'string' ? query['error'] : null;
   const published = query['published'] === '1';
+  /*
+   * What the stamp actually did, when it did not print.
+   *
+   * Both come back on the URL rather than in a session flash, because the state
+   * they describe is already visible on the page beneath them — the stamp is a
+   * caption on a screen that has re-rendered from the database, not the only
+   * record of what happened. A refusal that arrived and then vanished on refresh
+   * would leave a commissioner looking at an unchanged screen with no reason.
+   */
+  const refused = typeof query['refused'] === 'string' ? query['refused'] : null;
+  const heldBack = typeof query['held'] === 'string' ? query['held'] : null;
 
   return (
     <>
@@ -189,6 +200,23 @@ export default async function SliceReviewPage({
               </div>
             )}
 
+            {heldBack !== null && (
+              <div className="mt-4">
+                <WarningBlock tone="stop" title="Approved, not printed">
+                  Your stamp is on the record — {heldBack}. Release the hold on the desk and stamp
+                  it again to print it.
+                </WarningBlock>
+              </div>
+            )}
+
+            {refused !== null && (
+              <div className="mt-4">
+                <WarningBlock tone="stop" title="Nothing was stamped">
+                  {refused}
+                </WarningBlock>
+              </div>
+            )}
+
             <div className="mt-4">
               <VerdictPanel detail={detail} />
             </div>
@@ -265,24 +293,58 @@ export default async function SliceReviewPage({
                     */}
                   {detail.publishable ? (
                     <p className={`mt-2 ${TYPE.body} text-ink-700`}>
-                      Approve it and it can be printed. Refuse it and it stays on the record with
-                      your reason beside it.
+                      {hold.held
+                        ? 'The press is stopped, so stamping it will approve it and leave it waiting. Refuse it and it stays on the record with your reason beside it.'
+                        : 'Stamping it prints it — every manager in the league reads this copy. Refuse it and it stays on the record with your reason beside it.'}
                     </p>
                   ) : (
                     <div className="mt-2.5">
                       <WarningBlock tone="stop" title="Approving is not available">
-                        The check refused this copy, so the Approve stamp is locked. Refuse it, fix
-                        what the findings name, and draft the week again.
+                        The check refused this copy, so the stamp is locked. Refuse it, fix what the
+                        findings name, and draft the week again.
                       </WarningBlock>
                     </div>
                   )}
 
-                  <form action={approveIssueAction} className="mt-4">
-                    <input type="hidden" name="versionId" value={detail.versionId} />
-                    <DeskField label="A note, if you want one on the record" name="note" />
+                  {/*
+                    * One stamp, not two.
+                    *
+                    * `16 §9` requires a person to approve; nothing in it requires
+                    * a second gesture between approving and printing, and this is
+                    * a ten-person private league where every extra tap is a tap
+                    * on which the paper is approved and not on the rack. The
+                    * **backend** keeps the two apart — `lib/publication/queue.ts`
+                    * says why, and the manual hold is the reason — so what the
+                    * hold produces here is a stamp that approves and stops, with
+                    * the item then sitting in the queue saying so.
+                    *
+                    * The digest travels with the decision. What the server refuses
+                    * to print is anything other than the bytes rendered above it.
+                    */}
+                  <form action={approveAndPublishAction} className="mt-4">
+                    <input type="hidden" name="kind" value="slice" />
+                    <input type="hidden" name="id" value={detail.versionId} />
+                    <input type="hidden" name="digest" value={detail.contentHash} />
                     <div className="mt-2.5">
                       <StampButton tone="go" disabled={!detail.publishable}>
-                        Approve
+                        {hold.held ? 'Approve — the press is stopped' : 'Approve & print'}
+                      </StampButton>
+                    </div>
+                  </form>
+
+                  {/*
+                    * Approving *without* printing, for a commissioner who wants
+                    * the note on the record or wants to stamp now and print
+                    * later while the press runs. Kept because the two operations
+                    * are genuinely separate underneath and one of them takes a
+                    * note; not promoted, because it is the rarer intent.
+                    */}
+                  <form action={approveIssueAction} className="mt-3">
+                    <input type="hidden" name="versionId" value={detail.versionId} />
+                    <DeskField label="Or approve it with a note, and print it after" name="note" />
+                    <div className="mt-2.5">
+                      <StampButton tone="quiet" disabled={!detail.publishable}>
+                        Approve only
                       </StampButton>
                     </div>
                   </form>
@@ -314,8 +376,20 @@ export default async function SliceReviewPage({
                       this copy.
                     </p>
                   )}
-                  <form action={publishIssueAction} className="mt-3">
-                    <input type="hidden" name="versionId" value={detail.versionId} />
+                  {/*
+                    * The same composite, arriving at its second half.
+                    *
+                    * `decide` sees an already-approved version and skips straight
+                    * to the press, so this is one operation reached twice rather
+                    * than a second code path — which is what makes an interrupted
+                    * Approve & print finish by being tapped again, and what puts
+                    * the digest check on the printing step as well as on the
+                    * approving one.
+                    */}
+                  <form action={approveAndPublishAction} className="mt-3">
+                    <input type="hidden" name="kind" value="slice" />
+                    <input type="hidden" name="id" value={detail.versionId} />
+                    <input type="hidden" name="digest" value={detail.contentHash} />
                     <StampButton tone="go" disabled={hold.held}>
                       Print it
                     </StampButton>

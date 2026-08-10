@@ -90,16 +90,26 @@ describe('the visual driver and the press-desk catalog agree', () => {
     expect([...deskExpectations()].sort()).toEqual([...DESK_STATES, 'review-draft'].sort());
   });
 
-  it('marks every press-desk seat as a commissioner', () => {
-    // `requireAdmin()` answers `notFound()`. A press-desk state on an ordinary
-    // seat renders a 404 under the state's name.
-    for (const state of DEMO_STATES.filter((entry) => entry.route === '/admin/slice')) {
+  /*
+   * Both admin routes, not just the press desk.
+   *
+   * The office grew a review queue, so `/admin` is now a screen `requireAdmin()`
+   * gates for a reason rather than a screen that happens to be behind it — and a
+   * queue photographed on an ordinary seat is a 404 under a name claiming to
+   * show what needs the commissioner's approval.
+   */
+  const ADMIN_ROUTES = ['/admin', '/admin/slice'];
+
+  it('marks every admin seat as a commissioner', () => {
+    // `requireAdmin()` answers `notFound()`. An admin state on an ordinary seat
+    // renders a 404 under the state's name.
+    for (const state of DEMO_STATES.filter((entry) => ADMIN_ROUTES.includes(entry.route))) {
       expect(state.commissioner, state.key).toBe(true);
     }
   });
 
   it('gives the commissioner keys to nothing else', () => {
-    for (const state of DEMO_STATES.filter((entry) => entry.route !== '/admin/slice')) {
+    for (const state of DEMO_STATES.filter((entry) => !ADMIN_ROUTES.includes(entry.route))) {
       expect(state.commissioner, state.key).toBeUndefined();
     }
   });
