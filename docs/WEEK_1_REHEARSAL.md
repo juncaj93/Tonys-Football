@@ -38,9 +38,13 @@ So this is a driver over the whole chain, not another unit test.
 
 ## 2. The harness
 
-`lib/rehearsal/` — three modules, and nothing in `app/` imports any of them, so
-none of it is in a bundle. The same standing `lib/db/test-helpers.ts` and
-`lib/sleeper/test-source.ts` already hold.
+`lib/rehearsal/` — the harness plus one module per scenario, and nothing in
+`app/` imports any of them, so none of it is in a bundle. The same standing
+`lib/db/test-helpers.ts` and `lib/sleeper/test-source.ts` already hold.
+
+**Scenarios that exist:** `week-1.ts` (this document) and `week-16.ts` (the
+playoffs — `docs/PLAYOFF_REHEARSAL.md`). Week 8 is the midseason fixture named
+in §8 and lives elsewhere. Check this list before writing a third season.
 
 ### `script.ts` — a season somebody wrote down
 
@@ -412,11 +416,14 @@ the duplication both sessions have now spent effort removing.
 
 For a **new** scenario, write a `SeasonScript` and call the same four verbs:
 
-- **The playoffs** need the league's `playoff_week_start` (15 in 2026) and a
-  winners bracket, which come from the recorded fixtures already. Expect
-  `weekType` to change and expect unpaired rosters — `pairMatchups` and
-  `fantasy_matchups` both refuse a non-game, and a playoff rehearsal should
-  assert that rather than work around it.
+- ~~**The playoffs**~~ **— done, and it needed two additions to `script.ts`.**
+  `lib/rehearsal/week-16.ts` is the scenario. The prediction above was right
+  about `weekType` and the unpaired rosters, and wrong about the brackets: the
+  recorded ones are a **preseason draw with no result**, so a scenario that
+  served them could never move `made_playoffs` or `final_rank`. `ScriptedBrackets`
+  is a bracket that advances, and `ScriptedWeek.postseason` keeps a playoff week
+  out of the official record `reconcileSeason` compares against. Both are
+  scenario data; no fifth verb was added. `docs/PLAYOFF_REHEARSAL.md §8`.
 - **A scenario that needs a league which has *been somewhere*** — accumulated
   records, live streaks, an order statistic with a real sample behind it — should
   copy the midseason fixture's approach rather than this one's. A written

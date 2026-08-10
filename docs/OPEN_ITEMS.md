@@ -81,7 +81,13 @@ is the conversation it demanded. If the commissioner would rather the desk staye
 dark until January, reverting is one small commit against `lib/slice/packet.ts`
 and the two tests that pin it.
 
-`docs/WEEK_1_REHEARSAL.md` §6. Closed.
+**The playoff rehearsal found it a third time**, independently and on the same
+day, and its implementation was discarded in favour of this one. What it
+contributes instead is the range: `lib/rehearsal/week-16.test.ts` proves the
+repair holds to the **semifinal**, where sixteen closed weeks produce sixteen
+pending-review drafts and nothing is published.
+
+`docs/WEEK_1_REHEARSAL.md` §6 and `docs/PLAYOFF_REHEARSAL.md` §1. Closed.
 
 ### A1 · The live season could not get into the database — **fixed this session**
 
@@ -538,6 +544,43 @@ a tolerance around a derived expectation the way the legendary-rate check now is
 or accept that the real economy produces ~2.8 legendaries a season and restate
 `16 §8`. **Reporting it is the whole action taken.**
 
+### E7 · The elimination story is retrospective, and live bracket state is ruled out
+
+**The candidate was fixed; the limitation is a ruling, not a defect.**
+
+`elimination` had been derived from *"the loser meets no other playoff team
+again this season"*, which this league's bracket makes permanently false — the
+first-round losers meet each other in week 16 for fifth and the semifinal losers
+meet each other in week 17 for third. Measured rather than reasoned: it appears
+nowhere in the six playoff weeks of the two recorded seasons. It now reads the
+recorded placement, and two headline templates changed with it because
+*"{l} is done for the year"* would have been false the first time it fired.
+
+It fires only once ranks one and two exist, so the paper printed on the Tuesday
+of the semifinal cannot carry it. **Commissioner ruling, 2026-08-10: do not add
+a `playoff_bracket` table for v1.** Retrospective playoff facts are acceptable
+where the persisted data proves them, and a live *"who advanced this week"*
+story is a deferred feature opportunity rather than a launch blocker. Building
+it needs a scoped decision of its own — source of truth, schema, sync semantics,
+idempotency, stale-data behaviour and its own rehearsal coverage. **Nothing of
+the sort was introduced here.**
+
+`docs/PLAYOFF_REHEARSAL.md §3.2` and `§5`.
+
+### E8 · A stale standings payload moves the table backwards for a week
+
+Injected and observed. `reconcileSeason` catches it and names both records for
+all ten rosters, but the disagreement is a *warning* rather than a *conflict*, so
+`sync_runs.status` stays `SUCCEEDED`. Deliberate — 2024's records and its weekly
+points disagree permanently, and a run reading `NEEDS_REVIEW` every week would
+teach whoever reads it to stop reading — but a commissioner reading only the
+status would not see it. Recorded as behaviour, not filed as a defect.
+
+**Commissioner ruling, 2026-08-10: the policy is not to be changed in a playoff
+PR.** A historical permanent disagreement is not a reason to make all standings
+drift fatal. If it deserves stronger visibility, that is a separate hardening
+task.
+
 ---
 
 ## F — Monitored, not worked
@@ -564,6 +607,33 @@ fixed per-capture rate now expects proportionally more. **The ceiling and the
 rate want re-deriving together**, against a fresh measurement, by whoever picks
 this up. Do not move either alone, and do not move either to unblock a branch.
 The table is in `docs/VISUAL_DEBT.md`.
+
+**A second, independent measurement says the same thing, and adds the control.**
+The playoff rehearsal ran three sweeps the same afternoon and — not knowing this
+entry was being written — reached the identical conclusion from the other side:
+
+| Sweep | Commit | Sightings | Where |
+|---|---|---|---|
+| playoff branch | `91c8a3f` | **3** — over the ceiling, **failed** | `/profile@390` · `/admin/slice@375` · `/door@360` |
+| **clean `main`** | `10d3466` | **2** — exactly on the ceiling, passed | `/admin@390` · `/profile@375` |
+| playoff branch, again | `91c8a3f` | **0** — passed clean | — |
+
+The middle row is the one the five-sweep run above cannot supply: a **baseline
+of unmodified `main` on the same runner and the same freshly seeded database**,
+landing one sighting from failing. That is what turns *"this gate is noisy"* into
+*"this gate does not discriminate"* — the branch under test and the branch it
+would merge into are drawn from the same distribution, and on that afternoon
+`main` passed by luck.
+
+Five sightings across the two non-empty runs, on **five different
+route/state/width combinations, none repeated** — the signature
+`scripts/visual-qa-quarantine.ts` describes, and the opposite of a newly
+introduced mismatch, which is deterministic and fires on the *same* state at all
+three widths. At the 345 captures a sweep held before #89, the documented
+one-per-two-hundred rate expects ~1.7 and gives a **~24% chance of three or
+more**.
+
+Neither session changed the number.
 
 ### F2 · Visual debt 1, 2 and 14
 
@@ -601,6 +671,34 @@ a blanket re-opening.
 | **Vending machine** | **LATER — gated on an economy simulation** | It does have a distinct purpose (a **deterministic** purchase against the box's random one, which is the anti-frustration valve), so it is not the duplicate surface the mission warns about. But `16 §8`'s seventh range derives vending prices from box EV, and `docs/ECONOMY_SIMULATION.md §115` records that the simulation deliberately does not check them because the feature does not exist. Building it without extending the simulation would put a second token sink beside a box whose price was fixed at 200 four days ago |
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
+
+### G4 · Tonight has no playoff voice — deferred, and what is actually missing is copy
+
+The board's five possible lines are the kickoff countdown, the standing
+champion, the heaviest finalized game, who has picked up their keys, and which
+seasons are on the books. **There is no playoff or elimination line at all**, so
+there is no precedence rule about the postseason to get right or wrong.
+
+**Commissioner ruling, 2026-08-10.** Playoff-specific board messaging is
+desirable — verified championship, advancement and elimination context may
+outrank an ordinary matchup detail during the postseason — but deterministic
+state and Tony's authored wording are separate layers, and an engineering
+session may not invent the second. Nothing unsupported may be claimed, and the
+board must not assert live bracket facts the persisted data cannot prove.
+
+**Nothing was prepared behind a typed interface either, and that is deliberate.**
+The deterministic half such a line would need — *who advanced this week* — is
+exactly the bracket state **E7**'s ruling declines to persist. What remains
+available without new persistence is three states, and all three are copy slots
+rather than data gaps:
+
+- **championship week** — derivable from `playoff_week_start` and the bracket's round count;
+- **champion confirmed** — `final_rank = 1` on a finalized season, which the banner rail already reads;
+- **season complete** — `seasons.finalized_at`.
+
+Those are the exact slots to fill. Final wording must be commissioner-approved
+before publication. `lib/rehearsal/week-16.test.ts` pins the current set of five
+so the day one is added it reads as a change rather than as a surprise.
 
 ### G1 · The Underground — the decision that is actually wanted
 

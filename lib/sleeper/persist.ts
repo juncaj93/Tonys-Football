@@ -776,7 +776,9 @@ export async function persistChain(
         if (finalizeYears.has(season.year) && !wasFinalized) {
           await tx
             .update(seasons)
-            .set({ finalizedAt: now(), updatedAt: now() })
+            // `ARCHIVED` travels with the close. See `finalizeSeason` below for
+            // why the status is written here and not seeded from Sleeper's.
+            .set({ finalizedAt: now(), status: 'ARCHIVED', updatedAt: now() })
             .where(eq(seasons.id, seasonId));
           finalized = true;
           recordsChanged++;
@@ -874,6 +876,22 @@ export async function persistChain(
  *
  * Returns false when the season does not exist or was already finalized, so
  * calling it twice is safe.
+ *
+ * ## The status travels with the close, and it had been left behind
+ *
+ * `status` is seeded from Sleeper's own lifecycle **on insert and never
+ * again** — the deliberate half of *"Sleeper seeds; Tony's owns"*. What was
+ * missing is the other half: nothing in the product ever wrote it, so a season
+ * created during the preseason stayed `DRAFT_PREP` through its whole year *and
+ * through its own finalization*. Five readers take `status = 'ARCHIVED'` to
+ * mean *"this season is history"* — the receipt's finish, Tonight's champion
+ * and history lines, the board's featured matchup, and the derived-tag layer's
+ * `isComplete` — and every one of them would have gone on ignoring 2026 after
+ * the books were shut on it.
+ *
+ * So the close writes both. Not Sleeper's `complete`, which is refused above
+ * for reasons that have not changed; the **decision** to close is what moves the
+ * status, which is the same authority `finalized_at` already carries.
  */
 export async function finalizeSeason(db: Database, year: number): Promise<boolean> {
   const [season] = await db
@@ -885,7 +903,7 @@ export async function finalizeSeason(db: Database, year: number): Promise<boolea
 
   await db
     .update(seasons)
-    .set({ finalizedAt: now(), updatedAt: now() })
+    .set({ finalizedAt: now(), status: 'ARCHIVED', updatedAt: now() })
     .where(eq(seasons.id, season.id));
 
   return true;
@@ -909,7 +927,11 @@ export async function unfinalizeSeason(db: Database, year: number): Promise<bool
 
   await db
     .update(seasons)
-    .set({ finalizedAt: null, updatedAt: now() })
+    // Back to `ACTIVE` rather than to whatever it was before. A season being
+    // reopened is one somebody is correcting, which is not a draft, and the four
+    // "this is history" surfaces must stop treating it as settled the moment its
+    // record can move again.
+    .set({ finalizedAt: null, status: 'ACTIVE', updatedAt: now() })
     .where(eq(seasons.id, season.id));
 
   return true;

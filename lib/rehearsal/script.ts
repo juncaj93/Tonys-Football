@@ -68,12 +68,109 @@ export interface ScriptedGame {
 export interface ScriptedWeek {
   readonly week: number;
   readonly games: readonly ScriptedGame[];
+  /**
+   * A postseason week, which the **official record does not count**.
+   *
+   * `settings.fpts` and the W/L on a Sleeper roster are regular-season totals —
+   * verified to the cent against weeks 1–14 of both recorded seasons — and
+   * `reconcileSeason` compares them against the sum of the weeks. A playoff week
+   * folded into that sum manufactures a disagreement on every roster in the
+   * league, which then marks real games `disputed`. So the standings this source
+   * computes skip it, exactly as Sleeper's do.
+   *
+   * It says nothing about `week_type` in the database: that is derived at import
+   * from the league's own `playoff_week_start` (`lib/sleeper/weeks.ts`), and a
+   * script that contradicted it would be scripting the answer.
+   */
+  readonly postseason?: boolean;
+  /**
+   * Rosters that score but play nobody — `[rosterId, points]`.
+   *
+   * **Not an omission to be tidied away.** `lib/sleeper/weeks.ts` opens with it:
+   * Sleeper keeps reporting points for a roster whose week is over, and reading
+   * those as results is how the league's lowest score ever becomes a
+   * fabrication. It happens in exactly two shapes — a **bye** in the first
+   * playoff week, and an **eliminated** roster still accruing NFL scoring
+   * beside the real games — and both are states the product has to classify
+   * rather than states it can arrange never to see.
+   *
+   * Written out per week rather than derived from "everybody not in a game",
+   * because the score is the point: `explainUnpaired` has to tell a bye from an
+   * elimination, and a rehearsal that supplied neither could not exercise
+   * either.
+   */
+  readonly unpaired?: readonly (readonly [number, number])[];
+}
+
+/**
+ * One bracket game, and what has become of it.
+ *
+ * Deliberately close to Sleeper's own shape rather than an idealised one,
+ * because the shape is the trap. `placement` is **bracket-relative** — `p=1` in
+ * the winners bracket is the championship and `p=1` in the losers bracket is
+ * seventh in a ten-team league — and `lib/sleeper/placements.ts` exists because
+ * reading one as the other reports the seventh-place finisher as the champion.
+ */
+export interface ScriptedBracketMatch {
+  readonly round: number;
+  readonly matchId: number;
+  /** The week this round is played. Decides when a result becomes visible. */
+  readonly week: number;
+  readonly team1: ScriptedSlot;
+  readonly team2: ScriptedSlot;
+  /** The league position this game settles, bracket-relative. */
+  readonly placement?: number;
+  /** Who won it. Served only once `played` has reached this match's week. */
+  readonly winner?: number;
+}
+
+/**
+ * One side of a bracket game: a roster from the draw, or whoever comes out of
+ * an earlier match.
+ *
+ * The distinction is the one Sleeper itself draws and the reason a preseason
+ * bracket is not empty. `t1_from: { w: 1 }` — *"the winner of match 1"* — is
+ * served as `null` until match 1 has been played, while a slot filled by the
+ * **draw** carries its roster id from the moment the bracket exists. The
+ * recorded 2026 bracket is exactly this shape: four first-round rosters and two
+ * byes named in the preseason, every later slot null.
+ *
+ * Modelling it as a union rather than as `number | null` plus a visibility rule
+ * means a scenario cannot accidentally publish a semifinalist before the
+ * quarter-final: what is knowable is a property of the slot, not of the author's
+ * care.
+ */
+export type ScriptedSlot =
+  /** Filled by the draw. Visible from the moment the bracket is published. */
+  | number
+  /** Filled by a result. Null until that match has been played. */
+  | { readonly fromMatch: number; readonly take: 'winner' | 'loser' };
+
+/**
+ * A written postseason.
+ *
+ * Optional, and its absence is the ordinary case: a regular-season scenario
+ * wants the recorded preseason brackets passed straight through, which is what
+ * every rehearsal before this one relied on.
+ *
+ * Where it *is* supplied, the source serves both endpoints from it and filters
+ * by how far the season has been played — a bracket read on the Tuesday of the
+ * semifinal knows who is in the final and one read a week earlier does not.
+ * That progression is the whole reason this exists: `made_playoffs` and
+ * `final_rank` are written at import from the bracket, so a scenario that cannot
+ * move the bracket cannot rehearse a placement being settled.
+ */
+export interface ScriptedBrackets {
+  readonly winners: readonly ScriptedBracketMatch[];
+  readonly losers: readonly ScriptedBracketMatch[];
 }
 
 export interface SeasonScript {
   readonly year: number;
   readonly leagueId: string;
   readonly weeks: readonly ScriptedWeek[];
+  /** The postseason, when the scenario has one. See {@link ScriptedBrackets}. */
+  readonly brackets?: ScriptedBrackets;
 }
 
 /**
@@ -172,7 +269,7 @@ export function scriptedSeason(options: ScriptedSourceOptions): ScriptedSource {
     const scripted = weekOf(script, week);
     if (scripted === undefined) return [];
 
-    return scripted.games.flatMap((game) => {
+    const rows = scripted.games.flatMap((game) => {
       const points = scoresOf(game, phase);
       return game.rosters.map((rosterId, side) => ({
         roster_id: rosterId,
@@ -183,6 +280,28 @@ export function scriptedSeason(options: ScriptedSourceOptions): ScriptedSource {
         players: [],
       }));
     });
+
+    /*
+     * The rosters with a score and no game. See `ScriptedWeek.unpaired`.
+     *
+     * A scheduled week has none by construction: the state being staged is
+     * *"Sleeper published the fixtures"*, and it publishes them at zero for
+     * everybody who has one rather than inventing a bye.
+     */
+    if (phase !== 'scheduled') {
+      for (const [rosterId, points] of scripted.unpaired ?? []) {
+        rows.push({
+          roster_id: rosterId,
+          matchup_id: null as unknown as number,
+          points,
+          custom_points: null,
+          starters: [],
+          players: [],
+        });
+      }
+    }
+
+    return rows.sort((left, right) => left.roster_id - right.roster_id);
   }
 
   /**
@@ -209,6 +328,8 @@ export function scriptedSeason(options: ScriptedSourceOptions): ScriptedSource {
 
     for (const scripted of script.weeks) {
       if (scripted.week > played) continue;
+      // The official record is the regular season's. See `ScriptedWeek.postseason`.
+      if (scripted.postseason === true) continue;
       for (const game of scripted.games) {
         const points = scoresOf(game, phase);
         const [a, b] = game.rosters;
@@ -233,6 +354,57 @@ export function scriptedSeason(options: ScriptedSourceOptions): ScriptedSource {
   }
 
   const fault = options.fault;
+
+  /**
+   * A scripted bracket as Sleeper serialises it, at this point in the season.
+   *
+   * A match's result is withheld until `played` reaches its week, and its
+   * participants with it — which is what makes the two brackets a *progression*
+   * rather than a fixture. `l` is derived from the pairing rather than written
+   * down, because a loser that disagreed with its own match would be a fixture
+   * defect that reads as a placement defect.
+   */
+  function bracketRows(matches: readonly ScriptedBracketMatch[]): unknown[] {
+    const decidedIn = (match: ScriptedBracketMatch): boolean =>
+      match.winner !== undefined && match.week <= options.played;
+
+    /** A slot's roster id, or null while whatever fills it has not happened. */
+    function resolve(slot: ScriptedSlot): number | null {
+      if (typeof slot === 'number') return slot;
+
+      const feeder = matches.find((match) => match.matchId === slot.fromMatch);
+      if (feeder === undefined || !decidedIn(feeder)) return null;
+
+      const winner = feeder.winner!;
+      if (slot.take === 'winner') return winner;
+
+      const one = resolve(feeder.team1);
+      const two = resolve(feeder.team2);
+      return one === winner ? two : one;
+    }
+
+    return matches.map((match) => {
+      const one = resolve(match.team1);
+      const two = resolve(match.team2);
+      const decided = decidedIn(match);
+
+      // The loser follows from the pairing rather than being written down: a
+      // loser that disagreed with its own match would be a fixture defect that
+      // reads as a placement defect.
+      const loser =
+        decided && one !== null && two !== null ? (match.winner === one ? two : one) : null;
+
+      return {
+        r: match.round,
+        m: match.matchId,
+        t1: one,
+        t2: two,
+        w: decided ? match.winner : null,
+        l: loser,
+        p: match.placement ?? null,
+      };
+    });
+  }
 
   return {
     label: `scripted(${String(script.year)} through week ${String(options.played)}, ${phase})`,
@@ -275,6 +447,24 @@ export function scriptedSeason(options: ScriptedSourceOptions): ScriptedSource {
           kind: 'ok',
           endpoint,
           payload: endpoint.week <= options.played ? matchupRows(endpoint.week) : [],
+          status: 200,
+          fetchedAt: capturedAt,
+        };
+      }
+
+      if (
+        script.brackets !== undefined &&
+        (endpoint.kind === 'winners_bracket' || endpoint.kind === 'losers_bracket') &&
+        endpoint.leagueId === script.leagueId
+      ) {
+        return {
+          kind: 'ok',
+          endpoint,
+          payload: bracketRows(
+            endpoint.kind === 'winners_bracket'
+              ? script.brackets.winners
+              : script.brackets.losers,
+          ),
           status: 200,
           fetchedAt: capturedAt,
         };

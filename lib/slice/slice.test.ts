@@ -10,10 +10,11 @@ import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
 import { persistChain } from '@/lib/sleeper/persist';
 import { LEAD_FLOOR, STORY_FLOOR, type StoryCandidate } from '@/lib/stats/stories';
+import { buildWeek } from '@/lib/stats/week';
 
 import { latestEdition } from './edition';
 import { SLICE_EDITIONS, allEditions, resolveEdition } from './editions';
-import { factPacket, margin, points, type FactPacket } from './packet';
+import { assemblePacket, factPacket, margin, points, type FactPacket } from './packet';
 import { MATERIAL, MAX_STORIES, selectStories } from './select';
 import {
   COLOUR,
@@ -576,9 +577,53 @@ describe.skipIf(!hasDatabase)('the Slice, against the imported seasons', () => {
      * an open season prints — and this holds the negative one.
      */
     const packet = await factPacket(db!, { season: 2026, week: 1 });
-    expect(packet.refusal).not.toBeNull();
+    expect(packet.refusal).toBe('no-season');
     expect(packet.lead).toBeNull();
     expect(packet.scoreboard).toEqual([]);
+  });
+
+  it('withholds a week that was played and has not been closed', () => {
+    /*
+     * The rule the name above used to claim, stated where it can actually be
+     * exercised: a week with games whose Tuesday has not run prints nothing.
+     *
+     * Asserted against `assemblePacket` because it is the pure half. The
+     * database round trip — a live season whose week *has* been closed, and
+     * therefore does print — is exercised in the lifecycle rehearsals:
+     * `lib/rehearsal/week-1.test.ts` on the opening week and
+     * `lib/rehearsal/week-16.test.ts` on the semifinal.
+     */
+    const roster = new Map([
+      [1, { userId: 'u1', displayName: 'One' }],
+      [2, { userId: 'u2', displayName: 'Two' }],
+    ]);
+
+    const rows = [
+      {
+        week: 9,
+        weekType: 'regular',
+        sleeperMatchupId: 1,
+        rosterAId: 1,
+        rosterBId: 2,
+        pointsACents: 12000,
+        pointsBCents: 9000,
+        winnerRosterId: 1,
+        marginCents: 3000,
+        disputed: false,
+      },
+    ];
+
+    const unclosed = buildWeek({ season: 2026, week: 9, finalized: false, rows, roster });
+    const closed = buildWeek({ season: 2026, week: 9, finalized: true, rows, roster });
+    const shared = {
+      candidates: [],
+      publishableManagerIds: new Set(['u1', 'u2']),
+    };
+
+    expect(
+      assemblePacket({ week: unclosed, rawWeek: unclosed, ...shared }).refusal,
+    ).toBe('not-final');
+    expect(assemblePacket({ week: closed, rawWeek: closed, ...shared }).refusal).toBeNull();
   });
 
   it('renders the same issue twice for the same week', async () => {
