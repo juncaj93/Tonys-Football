@@ -72,14 +72,19 @@ untouched, so the change puts a draft on the desk and never past it.
 `lib/rehearsal/week-1.test.ts` holds the positive half and **fails on the pre-fix
 build**; `lib/slice/slice.test.ts` holds the negative half.
 
+**Ruled on by the commissioner, 2026-08-10: keep the fix.** Weekly Slice drafting
+uses **week** finality; it does not wait for `seasons.finalized_at`. The cron may
+prepare a draft and may never publish it — human approval is unchanged and
+mandatory. `docs/WEEK_1_REHEARSAL.md §6.1` carries the ruling and §6.2 records
+what it explicitly does *not* license.
+
 **The two rehearsals disagreed about whether to fix it, and that is recorded
 rather than smoothed over.** #86 pinned the defect with a test written to go red
 on repair, because its scope excluded the Slice's editorial architecture. #85's
 scope names the Tuesday Slice handoff, so it made the repair and **inverted** that
 test rather than deleting it — the tripwire worked exactly as intended and this
-is the conversation it demanded. If the commissioner would rather the desk stayed
-dark until January, reverting is one small commit against `lib/slice/packet.ts`
-and the two tests that pin it.
+is the conversation it demanded. The commissioner has since ruled to keep it, so the
+reversal path recorded at the time no longer applies.
 
 `docs/WEEK_1_REHEARSAL.md` §6. Closed.
 

@@ -267,6 +267,15 @@ Each of these is a commissioner-level decision or outside this rehearsal's scope
 None is fixed here. The first is pinned by a test that will go **red** the day it
 is addressed, which is the point: it should be a decision, not a slip.
 
+> **Status update, 2026-08-10.** The first *has since been addressed*, and the
+> tripwire did exactly what it was built to do — it forced the decision instead of
+> letting the change slip through. The Week 1 lifecycle rehearsal reached the same
+> defect with the Slice handoff inside its scope and made the repair; the
+> commissioner then ruled to **keep** it (`docs/WEEK_1_REHEARSAL.md §6.1`). This
+> rehearsal's finding below stands exactly as written, and the pinning test was
+> **inverted rather than deleted**, so *which record decides finality* is still
+> pinned — now on the other side. See the notice at the end of §5.1.
+
 ### 5.1 The Slice cannot draft any week of a live season
 
 **The largest finding, and it is a governance question as much as a technical
