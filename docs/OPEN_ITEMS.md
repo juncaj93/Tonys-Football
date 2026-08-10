@@ -550,6 +550,36 @@ and printed, and a dev build's message still fails on sight.
 **element name**, and only a dev build produces one. Do not restart the hunt
 merely because the defect still exists. `docs/VISUAL_DEBT.md` item 16.
 
+#### The ceiling has not moved with the sweep, and the sweep has grown
+
+**New measurement, 2026-08-10, and it is about the *quarantine* rather than the
+defect.** Three full local sweeps on one afternoon, same runner, same freshly
+seeded database:
+
+| Sweep | Commit | Sightings | Where |
+|---|---|---|---|
+| playoff branch | `91c8a3f` | **3** — over the ceiling, **failed** | `/profile@390` · `/admin/slice@375` · `/door@360` |
+| clean `main` | `10d3466` | **2** — exactly on the ceiling, passed | `/admin@390` · `/profile@375` |
+| playoff branch, again | `91c8a3f` | **0** — passed clean | — |
+
+Five sightings across the two non-empty runs, on **five different
+route/state/width combinations, none repeated** — the signature
+`scripts/visual-qa-quarantine.ts` describes, and the opposite of a newly
+introduced mismatch, which is deterministic and fires on the *same* state at all
+three widths.
+
+The arithmetic is the point. The ceiling of **2** was set when a sweep was
+261–279 captures; a sweep is now **345**. At the documented background rate of
+roughly one per two hundred captures that is ~1.7 expected sightings per run and
+a **~24% chance of three or more** — so the gate now fails about one run in four
+for reasons unrelated to the change under test, and `main` passed today by one
+draw of the same dice.
+
+**Nothing was changed.** Raising `QUARANTINE_CEILING` to make a run green is
+indistinguishable from manufacturing green, and re-deriving it from the sweep
+size is a commissioner decision rather than a side effect of whichever pull
+request happens to draw a three. Recorded here so the decision has its numbers.
+
 ### F2 · Visual debt 1, 2 and 14
 
 The collection's empty-state scroll rhythm; the reveal plate's caption
