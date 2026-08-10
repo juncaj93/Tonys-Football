@@ -125,7 +125,24 @@ describe.skipIf(!hasDatabase)('requireAdmin', () => {
   type Loaded = Awaited<ReturnType<typeof load>>;
   let mod: Loaded;
 
+  /**
+   * The session secret, set by the test rather than by the environment.
+   *
+   * `mintSession` refuses to sign without one — deliberately, so a deployment
+   * cannot ship cookies nobody can invalidate — and `ci.yml` does not set it,
+   * because until now nothing in the ordinary suite minted a session. This is
+   * the convention `lib/auth/session.test.ts` and `service.test.ts` already
+   * follow: the secret belongs to the test, not to the runner, so the suite
+   * passes on any machine and no shared workflow file grows a variable for one
+   * file's benefit. Restored afterwards, since vitest shares the process.
+   */
+  const SECRET = 'a-test-secret-not-a-real-one-thirty-two';
+  let previousSecret: string | undefined;
+
   beforeEach(async () => {
+    previousSecret = process.env['SESSION_SECRET'];
+    process.env['SESSION_SECRET'] = SECRET;
+
     mod = await load();
     await mod.helpers.resetDatabase(mod.db);
     mod.clock.setFixedClock('2026-08-01T12:00:00Z');
@@ -134,6 +151,8 @@ describe.skipIf(!hasDatabase)('requireAdmin', () => {
 
   afterEach(() => {
     mod.clock.clearClock();
+    if (previousSecret === undefined) delete process.env['SESSION_SECRET'];
+    else process.env['SESSION_SECRET'] = previousSecret;
   });
 
   afterAll(async () => {
