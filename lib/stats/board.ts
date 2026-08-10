@@ -6,6 +6,15 @@ import { seasons } from '@/lib/db/schema';
 import { activeManagerIds } from '@/lib/league/membership';
 
 import { type MatchupFact, finalizedMarginsCents, seasonFacts } from './facts';
+import {
+  pairKey,
+  rankMatchups,
+  type ImportanceResult,
+  type MatchupCandidate,
+} from './importance';
+import { weekSnapshot } from './snapshot';
+import { standingsThrough } from './standings';
+import { seasonWeeks } from './week';
 
 /**
  * The board's matchup of the week — the fact layer's first consumer.
@@ -122,4 +131,138 @@ export async function featuredMatchup(db: Queryable): Promise<MatchupFact | null
       (fact) => active.has(fact.winnerManagerId) && active.has(fact.loserManagerId),
     ) ?? null
   );
+}
+
+/* -------------------------------------------------------------------------
+ * The current season's featured matchup
+ * ---------------------------------------------------------------------- */
+
+/**
+ * The most important game of the week the board is naming, or nothing.
+ *
+ * Commissioner ruling, 2026-08-10. `lib/stats/importance.ts` owns the rule; this
+ * owns the reads, so the rule stays drivable from a fixture.
+ *
+ * ## Where a not-yet-final week's pairings come from
+ *
+ * This is the constraint that shapes the whole function, and it is worth stating
+ * plainly because it bounds what the feature can do.
+ *
+ * **The league's schedule is not stored.** `persistWeeks` drops an all-zero
+ * pairing as an unplayed fixture — deliberately, and it is the one thing
+ * standing between the in-season sync and a finalized week of ties nobody played
+ * — so `fantasy_matchups` learns a week's pairings only once that week has been
+ * played. By then the Tuesday job has closed it and the board has moved on.
+ *
+ * So the pairings for the week the board is naming come from the two records
+ * that legitimately hold them before it is final, in this order:
+ *
+ *   1. **`week_snapshots`** — Sunday's photograph. `16 §4.3`'s first cron writes
+ *      one row per paired game of the current week, which is exactly the
+ *      schedule for that week, verified, from Sleeper, on the sanctioned read.
+ *   2. **`fantasy_matchups`** — the week's stored games, for the degraded case
+ *      where a week has been synced but its Tuesday declined to close it.
+ *
+ * Neither is a projection and neither is inferred. Where neither exists, the
+ * answer is `null` and the board prints nothing, which is the ruling's own
+ * instruction and the board's own documented behaviour.
+ *
+ * **The honest cost, stated:** between the Tuesday that closes a week and the
+ * Sunday that photographs the next one, no pairing for the named week is on
+ * record and the detail slot is empty. Removing that gap means persisting the
+ * schedule, which is new storage and is not in this ruling's scope.
+ *
+ * ## The standings it ranks against are strictly earlier
+ *
+ * Finalized weeks **before** the named week, and only those. A week ranks
+ * against what was known going into it; letting the week's own result inform its
+ * importance would make the board a report rather than a card.
+ */
+export async function featuredCurrentMatchup(
+  db: Queryable,
+  input: { readonly season: number; readonly week: number },
+): Promise<ImportanceResult> {
+  const season = await seasonWeeks(db, input.season);
+  if (!season.found) return { selected: false, reason: 'no-candidates' };
+
+  const basis = [...season.weekFinalizedAt.keys()]
+    .filter((week) => week < input.week)
+    .sort((a, b) => a - b);
+
+  const closed = new Set(basis);
+  const standings =
+    basis.length === 0
+      ? []
+      : standingsThrough({
+          rows: season.rows.filter((row) => closed.has(row.week)),
+          throughWeek: basis[basis.length - 1]!,
+          roster: season.roster,
+        });
+
+  /*
+   * Sunday's photograph first, the week's stored games second. Both are sorted
+   * by matchup id, so the candidate order this hands to the ranker never depends
+   * on what the planner returned.
+   */
+  const snapshot = await weekSnapshot(db, { season: input.season, week: input.week });
+  const candidates: MatchupCandidate[] =
+    snapshot.size > 0
+      ? [...snapshot.values()]
+          .map((entry) => ({
+            sleeperMatchupId: entry.sleeperMatchupId,
+            rosterAId: entry.rosterAId,
+            rosterBId: entry.rosterBId,
+          }))
+          .sort((x, y) => x.sleeperMatchupId - y.sleeperMatchupId)
+      : season.rows
+          .filter((row) => row.week === input.week && row.weekType === 'regular')
+          .map((row) => ({
+            sleeperMatchupId: row.sleeperMatchupId,
+            rosterAId: row.rosterAId,
+            rosterBId: row.rosterBId,
+          }))
+          .sort((x, y) => x.sleeperMatchupId - y.sleeperMatchupId);
+
+  // Prior meetings this season, from finalized weeks only. Evidence, not a key.
+  const priorMeetings = new Map<string, number>();
+  for (const row of season.rows) {
+    if (!closed.has(row.week)) continue;
+    const key = pairKey(row.rosterAId, row.rosterBId);
+    priorMeetings.set(key, (priorMeetings.get(key) ?? 0) + 1);
+  }
+
+  return rankMatchups({
+    season: input.season,
+    week: input.week,
+    candidates,
+    standings,
+    basisWeeks: basis.length,
+    eligible: await activeManagerIds(db),
+    priorMeetings,
+  });
+}
+
+/**
+ * The featured matchup as the board's face may print it — two names, or null.
+ *
+ * The same twenty-character contract `matchupLine` carries, for the same reason:
+ * a truncated name is worse than an empty board. Written separately rather than
+ * shared, because the two take different objects and a single function taking a
+ * union would be one call site pretending to be two.
+ *
+ * The order is **standings order** — the better-placed manager is named first —
+ * so the line reads the way the table does and never depends on which roster
+ * Sleeper happened to put in column A.
+ */
+export function currentMatchupLine(result: ImportanceResult): string | null {
+  if (!result.selected) return null;
+
+  const { matchup } = result;
+  const [first, second] =
+    matchup.aRank <= matchup.bRank
+      ? [matchup.aDisplayName, matchup.bDisplayName]
+      : [matchup.bDisplayName, matchup.aDisplayName];
+
+  const line = `${first} v ${second}`;
+  return line.length <= 20 ? line : null;
 }

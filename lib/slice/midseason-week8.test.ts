@@ -39,7 +39,12 @@ import { finalizeWeek, stakeBasis, stakeSeason } from '@/lib/stakes/facts';
 import { factPacket } from '@/lib/slice/packet';
 import { generateDraft } from '@/lib/slice/publication';
 import { finalizedMarginsCents } from '@/lib/stats/facts';
-import { featuredMatchup, matchupLine } from '@/lib/stats/board';
+import {
+  currentMatchupLine,
+  featuredCurrentMatchup,
+  featuredMatchup,
+  matchupLine,
+} from '@/lib/stats/board';
 import { standingsThrough, winStreak } from '@/lib/stats/standings';
 import { currentWeekOf } from '@/lib/stats/week';
 import { runSunday } from '@/lib/slice/sunday';
@@ -1299,28 +1304,122 @@ describe.skipIf(!hasDatabase)('the midseason rehearsal — week 8 of 2026', () =
       expect(lines.length).toBeGreaterThan(0);
     });
 
-    it('never prints a half-played season on a receipt', async () => {
+    it('prints this season on the receipt, not the last one', async () => {
       /*
-       * `receiptFor` reads the most recent **archived** season, so eight weeks
-       * into 2026 it still shows 2025 — deliberately, because a receipt is a
-       * finished result and 7–1 is not one yet. What matters here is the
-       * negative: no receipt anywhere claims 2026.
+       * **This test was inverted, and the inversion is the ruling.**
        *
-       * A manager with no archived season at all gets **null**, which is a real
-       * state rather than a gap. Zack holds roster 4 in 2026 and did not play in
-       * 2024 or 2025 — roster ids are seasonal (`16 §5.1`) and the seat he holds
-       * belonged to two other people. `docs/WEEK8_REHEARSAL.md` records what the
-       * surface does with that.
+       * As written by this rehearsal it pinned the opposite: `receiptFor` always
+       * read the most recent **archived** season, so eight weeks into a 2026
+       * season that was 7–1 every manager's slip still said 2025. The
+       * justification was real and **preseason-scoped** — a row of zeroes reads
+       * as a result — and nothing re-evaluated it once the season started.
+       * `docs/WEEK8_REHEARSAL.md §5.2` is that finding.
+       *
+       * Commissioner ruling, 2026-08-10: show the current season once the
+       * current season has finalized game data. `lib/parlor/receipt.test.ts`
+       * carries the four ruled states; what belongs *here* is the midseason one,
+       * against a season this file actually played.
        */
-      let withReceipt = 0;
+      const expected = new Map(midseasonRecords(REHEARSAL_WEEK).map((row) => [row.rosterId, row]));
+
       for (const manager of await activeLeagueManagers(db!)) {
         const receipt = await receiptFor(db!, manager.id);
-        if (receipt === null) continue;
-        withReceipt += 1;
-        expect(receipt.year).toBeLessThan(MIDSEASON_SEASON);
-        expect(receipt.year).toBe(2025);
+        expect(receipt, manager.displayName).not.toBeNull();
+
+        const want = expected.get(receipt!.rosterId)!;
+        expect(receipt!.year).toBe(MIDSEASON_SEASON);
+        expect(receipt!.inProgress).toBe(true);
+        expect(receipt!.throughWeek).toBe(REHEARSAL_WEEK);
+        expect(receipt!.record).toBe(`${String(want.wins)}\u2013${String(want.losses)}`);
+        // A standing, never a finish. A season in progress has no placement and
+        // one may not be inferred from the table.
+        expect(receipt!.finalRank).toBeNull();
+        expect(receipt!.finish).toContain('through week 8');
       }
-      expect(withReceipt).toBeGreaterThanOrEqual(8);
+    });
+
+    it('features the biggest game of the week the board is naming', async () => {
+      /*
+       * The other half of the 2026-08-10 ruling: a deterministic in-season
+       * matchup-importance selector, filling the detail slot that correctly went
+       * blank when stale prior-season matchups were excluded.
+       *
+       * The pairings for a week that has not been finalized come from **Sunday's
+       * photograph** — the only record that holds them, because the schedule
+       * itself is not stored (`lib/stats/board.ts` records why). So this
+       * photographs week 9 and then asks the board about week 9.
+       */
+      const week = REHEARSAL_WEEK + 1;
+      expect(await currentWeekOf(db!, MIDSEASON_SEASON)).toBe(week);
+
+      // Nothing to feature before the week's card is on record.
+      const beforeSunday = await featuredCurrentMatchup(db!, { season: MIDSEASON_SEASON, week });
+      expect(beforeSunday.selected).toBe(false);
+      if (!beforeSunday.selected) expect(beforeSunday.reason).toBe('no-candidates');
+
+      await runSunday(db!, {
+        season: MIDSEASON_SEASON,
+        week,
+        entries: midseasonMatchupRows(week).map((row) => {
+          const entry = row as { roster_id: number; matchup_id: number; points: number };
+          return {
+            rosterId: entry.roster_id,
+            matchupId: entry.matchup_id,
+            points: entry.points,
+            customPoints: null,
+            starters: [],
+            startersPoints: [],
+            players: [],
+            playerPoints: {},
+          };
+        }),
+        at: tuesdayOf(week),
+        source: 'rehearsal',
+      });
+
+      const featured = await featuredCurrentMatchup(db!, { season: MIDSEASON_SEASON, week });
+      expect(featured.selected).toBe(true);
+      if (!featured.selected) return;
+
+      /*
+       * Week 9's card is Alex–Matt Lee, Matty B–Cheese, Nathan–Brandon,
+       * Joe–Ryan and Zack–Nick, and it exercises **both** football keys.
+       *
+       * Matty B (1st, 7–1) v Cheese (5th, 4–4) and Nathan (3rd, 6–2) v Brandon
+       * (4th, 5–3) both carry **eleven** combined wins, so the primary key
+       * cannot separate them. Standings proximity does: ranks 1 and 5 are four
+       * apart, ranks 3 and 4 are one. The other three games are 9, 5 and 4.
+       */
+      expect(featured.matchup.season).toBe(MIDSEASON_SEASON);
+      expect(featured.matchup.week).toBe(week);
+      expect([featured.matchup.aDisplayName, featured.matchup.bDisplayName].sort()).toEqual([
+        'Brandon',
+        'Nathan',
+      ]);
+      expect(featured.matchup.combinedWins).toBe(11);
+      expect(featured.matchup.basisWeeks).toBe(REHEARSAL_WEEK);
+
+      // The board prints it, better-placed manager first, and the hero names the
+      // same week the matchup belongs to.
+      expect(currentMatchupLine(featured)).toBe('Nathan v Brandon');
+      expect(
+        boardFace({ daysUntilKickoff: null, week, matchup: currentMatchupLine(featured) }),
+      ).toEqual({ hero: 'WEEK 9', detail: 'Nathan v Brandon' });
+    }, 120_000);
+
+    it('never features a game from a season the board is not naming', async () => {
+      /*
+       * The Week 8 fix that must survive this feature. The selector is scoped to
+       * one season by construction — it reads that season's weeks — and the
+       * archived-fact guard is still in the chain behind it.
+       */
+      const week = REHEARSAL_WEEK + 1;
+      const featured = await featuredCurrentMatchup(db!, { season: MIDSEASON_SEASON, week });
+      if (featured.selected) expect(featured.matchup.season).toBe(MIDSEASON_SEASON);
+
+      const archived = await featuredMatchup(db!);
+      expect(archived?.season).toBe(2025);
+      expect(matchupLine(archived, { season: MIDSEASON_SEASON })).toBeNull();
     });
   });
 });
