@@ -1,3 +1,5 @@
+import { HISTORICAL_OVERCLAIMS } from '@/lib/stats/scope';
+
 import { type FactPacket } from './packet';
 import { houseWords, type Edition } from './render';
 
@@ -62,6 +64,27 @@ const BANNED: readonly { readonly pattern: RegExp; readonly why: string }[] = [
     pattern: /\blikely\b|\bshould win\b|\bfavou?rite to\b|\bon pace for\b/i,
     why: 'a prediction dressed as a fact; the chalkboard is where predictions live',
   },
+  /*
+   * Historical overclaims.
+   *
+   * `docs/DATA_AUDIT.md §15` listed `all-time`, `ever`, `in league history` and
+   * `franchise record` as banned, and recorded them as **documented, not
+   * built** — this validator did not exist on 2026-07-29, so the four terms
+   * were written down and left to whoever remembered them.
+   *
+   * They are the subtlest failure the paper can produce. Every other banned
+   * term names something the product does not have; these name something it
+   * *nearly* has. The chain terminates at 2024 (`16 §12`) and the league is
+   * older, so "the highest score ever" is produced by exactly the same correct
+   * query as "the highest score since 2024" — the number is right, the
+   * evidence is right, and the sentence is false. Nothing but the wording can
+   * catch it, so the wording is checked.
+   *
+   * `lib/stats/scope.ts` owns the list and the approved alternatives, because
+   * the module that derives a scoped fact is the one that should say how far it
+   * reaches.
+   */
+  ...HISTORICAL_OVERCLAIMS,
 ];
 
 /**

@@ -1,0 +1,154 @@
+
+  CATALOG AUDIT — from the asset registry, the reward table and the economy
+
+  reward table e768dadb9aec · box 200 tokens · 24 box items · 1 system-granted
+
+  rarity       items   art   placeholder   tier share   salvage
+  common          10     3             7        60.0%        20
+  rare             8     3             5        28.0%        40
+  epic             4     4             0        10.0%        70
+  legendary        2     2             0         2.0%       120
+
+  form        items   art   common   rare   epic   legendary
+  wall            4     3        0      2      1      1
+  surface        15     5       10      5      0      0
+  floor           5     4        0      1      3      1
+
+  system-granted, excluded from every box and from all sizing:
+    item_championship_ring       legendary  Championship ring
+
+
+  SIZING — 3 season(s) · 40 leagues · 10 managers · box 200 · 2 grants
+  archetypes: elite 72% · strong 62% · average 50% · weak 38% · dire 28%
+
+  shipped  ·  24 = 10c/8r/4e/2l
+    season week   unique (p10/med/p90)   complete   opened   no-object rate   managers hit
+         1    4      4 /   5.0 /   7        21%      5.0            0.0%            0%
+         1    8      5 /   8.0 /  12        33%      8.0            0.3%            2%
+         1   12      7 /  10.0 /  15        42%     10.0            1.6%            9%
+         1   14      8 /  11.0 /  16        46%     11.0            2.8%           14%
+         1   17      8 /  13.0 /  17        54%     13.0            5.0%           24%
+         2    4     10 /  15.0 /  20        63%     16.0            9.4%           41%
+         2    8     13 /  17.0 /  21        71%     19.0           16.0%           62%
+         2   12     14 /  18.0 /  22        75%     21.0           20.5%           73%
+         2   14     14 /  18.0 /  22        75%     22.0           23.0%           78%
+         2   17     14 /  19.0 /  22        79%     24.0           25.9%           83%
+         3    4     16 /  20.0 /  23        83%     27.0           30.9%           89%
+         3    8     17 /  20.5 /  23        85%     31.0           36.5%           94%
+         3   12     18 /  21.0 /  23        88%     34.0           40.2%           96%
+         3   14     18 /  21.0 /  23        88%     35.0           41.9%           97%
+         3   17     18 /  21.0 /  23        88%     37.0           43.9%           98%
+    tier         items   pulls/mgr   ran out   in S1   median exhaustion
+    common          10        22.4       98%     29%         S2 week  4
+    rare             8        10.5       76%      4%         S2 week 16
+    epic             4         3.7       48%      4%         S3 week  2
+    legendary        2         0.7       18%      3%         S2 week 18
+
+  P0 kickoff — 24 painted  ·  24 = 10c/8r/4e/2l
+    season week   unique (p10/med/p90)   complete   opened   no-object rate   managers hit
+         1    4      4 /   5.0 /   7        21%      5.0            0.0%            0%
+         1    8      5 /   8.0 /  12        33%      8.0            0.3%            2%
+         1   12      7 /  10.0 /  15        42%     10.0            1.6%            9%
+         1   14      8 /  11.0 /  16        46%     11.0            2.8%           14%
+         1   17      8 /  13.0 /  17        54%     13.0            5.0%           24%
+         2    4     10 /  15.0 /  20        63%     16.0            9.4%           41%
+         2    8     13 /  17.0 /  21        71%     19.0           16.0%           62%
+         2   12     14 /  18.0 /  22        75%     21.0           20.5%           73%
+         2   14     14 /  18.0 /  22        75%     22.0           23.0%           78%
+         2   17     14 /  19.0 /  22        79%     24.0           25.9%           83%
+         3    4     16 /  20.0 /  23        83%     27.0           30.9%           89%
+         3    8     17 /  20.5 /  23        85%     31.0           36.5%           94%
+         3   12     18 /  21.0 /  23        88%     34.0           40.2%           96%
+         3   14     18 /  21.0 /  23        88%     35.0           41.9%           97%
+         3   17     18 /  21.0 /  23        88%     37.0           43.9%           98%
+    tier         items   pulls/mgr   ran out   in S1   median exhaustion
+    common          10        22.4       98%     29%         S2 week  4
+    rare             8        10.5       76%      4%         S2 week 16
+    epic             4         3.7       48%      4%         S3 week  2
+    legendary        2         0.7       18%      3%         S2 week 18
+
+  P1 season one — 32  ·  32 = 15c/10r/4e/3l
+    season week   unique (p10/med/p90)   complete   opened   no-object rate   managers hit
+         1    4      4 /   5.0 /   7        16%      5.0            0.0%            0%
+         1    8      5 /   8.0 /  12        25%      8.0            0.1%            0%
+         1   12      7 /  10.0 /  15        31%     10.0            0.1%            1%
+         1   14      8 /  11.0 /  17        34%     11.0            0.3%            2%
+         1   17      8 /  13.0 /  19        41%     13.0            0.5%            4%
+         2    4     10 /  16.0 /  22        50%     16.0            1.6%           12%
+         2    8     13 /  19.0 /  25        59%     19.0            4.0%           24%
+         2   12     14 /  21.0 /  27        66%     22.0            6.6%           35%
+         2   14     14 /  22.0 /  28        69%     22.0            8.2%           39%
+         2   17     15 /  23.0 /  28        72%     24.0           10.2%           47%
+         3    4     17 /  24.0 /  29        75%     27.0           14.5%           63%
+         3    8     20 /  26.0 /  29        81%     30.0           19.7%           75%
+         3   12     21 /  27.0 /  30        84%     33.0           23.3%           80%
+         3   14     21 /  27.0 /  30        84%     34.0           25.0%           83%
+         3   17     21 /  27.0 /  30        84%     35.0           27.3%           85%
+    tier         items   pulls/mgr   ran out   in S1   median exhaustion
+    common          15        22.0       85%      4%         S2 week 15
+    rare            10        10.3       54%      1%         S3 week  5
+    epic             4         3.7       46%      4%         S3 week  1
+    legendary        3         0.7        4%      0%         S2 week 18
+
+  P2 stretch — 38  ·  38 = 18c/12r/5e/3l
+    season week   unique (p10/med/p90)   complete   opened   no-object rate   managers hit
+         1    4      4 /   5.0 /   7        13%      5.0            0.0%            0%
+         1    8      5 /   8.0 /  12        21%      8.0            0.0%            0%
+         1   12      7 /  10.0 /  15        26%     10.0            0.0%            0%
+         1   14      8 /  11.0 /  17        29%     11.0            0.1%            1%
+         1   17      8 /  13.0 /  19        34%     13.0            0.1%            1%
+         2    4     10 /  16.0 /  23        42%     16.0            0.3%            3%
+         2    8     13 /  19.0 /  26        50%     19.0            1.4%           10%
+         2   12     14 /  21.0 /  29        55%     21.0            2.6%           16%
+         2   14     15 /  22.0 /  30        58%     22.0            3.2%           20%
+         2   17     15 /  24.0 /  31        63%     24.0            4.5%           26%
+         3    4     17 /  26.0 /  33        68%     27.0            7.2%           38%
+         3    8     20 /  28.5 /  34        75%     30.0           10.8%           52%
+         3   12     21 /  30.0 /  35        79%     32.0           13.8%           62%
+         3   14     22 /  30.0 /  35        79%     33.5           15.3%           65%
+         3   17     22 /  31.0 /  35        82%     35.0           17.4%           71%
+    tier         items   pulls/mgr   ran out   in S1   median exhaustion
+    common          18        21.7       68%      1%         S3 week  3
+    rare            12        10.1       34%      0%         S3 week  7
+    epic             5         3.6       31%      1%         S3 week  5
+    legendary        3         0.7        4%      0%         S3 week  1
+
+  BY ARCHETYPE — unique items at season end, shipped catalog
+
+    archetype    week 4   week 8   week 12   week 14   season end
+    elite            6.5     11.0     14.0     15.0     16.5
+    strong           6.0     10.0     12.0     14.0     15.0
+    average          5.0      8.0     10.5     12.0     13.0
+    weak             4.0      7.0      8.0      9.0     10.0
+    dire             4.0      6.0      7.0      8.0      8.0
+
+  WHAT A SEASON-ONE COLLECTION LOOKS LIKE
+
+    scenario                week   owned   with art   art share   holds a wall item
+    shipped                    4     5.0        2.1         40%                 47%
+                               8     8.0        3.4         40%                 65%
+                              12    10.0        4.3         41%                 74%
+                              14    11.0        4.7         40%                 77%
+                              17    13.0        5.2         41%                 81%
+
+    P0 kickoff — 24 painted    4     5.0        5.1        100%                 64%
+                               8     8.0        8.5        100%                 84%
+                              12    10.0       10.6        100%                 91%
+                              14    11.0       11.6        100%                 93%
+                              17    13.0       12.7        100%                 95%
+
+    P1 season one — 32         4     5.0        5.1        100%                 82%
+                               8     8.0        8.5        100%                 95%
+                              12    10.0       10.8        100%                 97%
+                              14    11.0       11.9        100%                 98%
+                              17    13.0       13.3        100%                 99%
+
+    P2 stretch — 38            4     5.0        5.1        100%                 83%
+                               8     8.0        8.5        100%                 95%
+                              12    10.0       10.8        100%                 97%
+                              14    11.0       11.9        100%                 98%
+                              17    13.0       13.3        100%                 99%
+
+
+  wrote docs/evidence/catalog-sizing/report.json
+

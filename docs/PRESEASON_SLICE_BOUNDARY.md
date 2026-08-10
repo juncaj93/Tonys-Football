@@ -43,7 +43,7 @@ What is new is one packet builder (`lib/slice/preseason.ts`), one fact layer (`l
 
 The preseason issue is `week = 0` — a slot, never a printed number. It is what lets both kinds share `slice_issues`' existing `UNIQUE(season_id, week)` **untouched**: weekly issues are week ≥ 1. Two CHECKs make the pairing exact in both directions (`slice_issues_preseason_is_week_zero`), so `(weekly, 0)` and `(preseason, 3)` are equally unwritable.
 
-No surface prints the zero. The dateline says `Draft Review`; the queue row says `Draft review`; the review screen's heading says `Season 2026 · Draft review`.
+No surface prints the zero. The dateline says `Season 2026 · Preseason` under a masthead flag reading `Draft review` — two different facts, *when* and *what kind*, rather than the same two words four rows apart. The queue row says `Draft review`; the review screen's heading says `Season 2026 · Draft review`.
 
 ---
 
@@ -191,7 +191,41 @@ A completed draft's picks are immutable outright (`draft_picks_immutable`): a re
 
 ---
 
-## 12. Two defects found by looking
+## 12. The defect that would have cost the whole season
+
+**The Slice could not draft any week of a live season.** `factPacket` took its
+finality from `seasons.finalized_at` — the books, closed in January — rather
+than from `week_finalizations`, the per-week record `lib/stats/finality.ts`
+introduced and whose own header names the Slice as its second consumer. That
+wiring was never done.
+
+The consequence is only visible with a season in motion: the first live Tuesday
+would close week one, pay every reward, settle every stake, and then decline to
+print the paper with *"that week is still open."* `16 §4.3`'s last step would
+have produced nothing from September to January, and the review desk `16 §9`
+makes mandatory would have stayed empty for the entire season it governs.
+
+Found twice, independently: the week-8 rehearsal measured it and pinned it
+(`docs/WEEK8_REHEARSAL.md §5.1`), deliberately leaving it for whoever owns the
+Slice's editorial architecture; this workstream hit it from the other side,
+because a preseason issue that hands over to a weekly pipeline which can never
+print is not a finished feature.
+
+**Nothing was relaxed.** A week is final when the Tuesday job wrote its
+finalization **or** the season closed, and the job writes that row four steps
+before it drafts — so the week the paper is about is closed by the time it is
+rendered. The approval gate is untouched: what changed is that there is now
+something on the desk to approve. The comparison **populations** stay
+season-finalized only, because an open season's numbers can still move and a
+percentile that shifts under a published fact makes the fact retroactively
+wrong.
+
+The rehearsal's test now asserts the repair — eight Tuesdays, eight papers, all
+of them waiting on a stamp — where it used to assert the defect.
+
+---
+
+## 13. Two more defects found by looking
 
 **`MetadataStrip` dropped every attribute passed to it.** It named the four props it wanted and discarded the rest, so three `data-` markers written for gates — the press desk's docket, the draft board's progress count and its draft status — were in the source, looked correct in review, and **did not exist in the DOM**. Found because a new gate queried one and timed out; the older one had been decoration since it was written. Every other primitive on that sheet already spread.
 
@@ -199,7 +233,7 @@ A completed draft's picks are immutable outright (`draft_picks_immutable`): a re
 
 ---
 
-## 13. After the real draft — the whole of Alex's job
+## 14. After the real draft — the whole of Alex's job
 
 1. Open `/admin/slice/draft`.
 2. Tap **Pull the draft**. (Or wait: the Tuesday job does it.)

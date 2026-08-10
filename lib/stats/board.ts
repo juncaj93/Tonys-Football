@@ -29,9 +29,38 @@ import { type MatchupFact, finalizedMarginsCents, seasonFacts } from './facts';
  * evidence that earns it. The word travels with its fact or not at all.
  */
 
-/** Two names, short enough for the board's face. Null when nothing qualifies. */
-export function matchupLine(fact: MatchupFact | null): string | null {
+/**
+ * Two names, short enough for the board's face. Null when nothing qualifies.
+ *
+ * ## `announcing` is required, and it is a correctness argument
+ *
+ * The face is a **hero and one short fact**, and the hero names a week. Two bare
+ * names underneath it are read as *that week's* game — there is no room on the
+ * face for the season, which is exactly why {@link featuredMatchup}'s panel line
+ * says *"in week 16, 2025"* and this one cannot.
+ *
+ * `featuredMatchup` only ever returns a fact from the most recent **archived**
+ * season, which was right while the product only ever ran in the offseason. The
+ * midseason rehearsal photographed what it becomes once a season is under way:
+ * the board read `WEEK 8` over `Brandon v Matt Lee`, a game played in week 16 of
+ * 2025. Nothing about that is a false *fact* — the fact is true and evidenced —
+ * and it is a false *claim*, which is the distinction this module already exists
+ * to police.
+ *
+ * So the caller states which season the board is announcing, and a fact from any
+ * other season yields nothing. **Null is a designed outcome here**, not a
+ * degradation: `boardFace` renders an empty detail rather than prose, and the
+ * panel behind the board still carries the whole fact with its season on it.
+ *
+ * `null` means the board is not announcing a season — the offseason, where the
+ * detail is the countdown and this is not consulted.
+ */
+export function matchupLine(
+  fact: MatchupFact | null,
+  announcing: { readonly season: number | null },
+): string | null {
   if (fact === null) return null;
+  if (announcing.season === null || fact.season !== announcing.season) return null;
 
   const line = `${fact.winnerDisplayName} v ${fact.loserDisplayName}`;
 
