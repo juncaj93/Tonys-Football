@@ -41,7 +41,9 @@ export interface DemoState {
     | '/counter/showcase'
     | '/profile/character'
     | '/admin'
-    | '/admin/slice';
+    | '/admin/slice'
+    | '/admin/slice/draft'
+    | '/slice';
   /**
    * The seat holds the commissioner's keys.
    *
@@ -268,6 +270,57 @@ export const DEMO_STATES: readonly DemoState[] = [
     shows: 'the whole desk — ready, stamped and printed together',
     reach: 'arranged',
     route: '/admin',
+    commissioner: true,
+  },
+
+  /*
+   * Tony's draft board (`docs/PRESEASON_SLICE_BOUNDARY.md`).
+   *
+   * The draft itself is `arranged` and says so: the league drafts in late August
+   * and these states have to exist before then, so a **recorded real draft** —
+   * 2025's, 160 picks — is re-seated onto this season's rosters and served as a
+   * Sleeper payload through the real decoder and the real persister
+   * (`lib/demo/draft-fixture.ts`). What is a fixture is the draft; what is real
+   * is everything that happens to it.
+   *
+   * The grades are fixture editorial and marked as such. They are **not** real
+   * commissioner opinions and must never be seeded outside a demo — the guard
+   * refuses production outright, and the draft id carries a `demo:` prefix so a
+   * database holding one says so in the row.
+   */
+  {
+    key: 'draft-board-empty',
+    shows: 'the draft in, and Tony has not read a single board',
+    reach: 'arranged',
+    route: '/admin/slice/draft',
+    commissioner: true,
+  },
+  {
+    key: 'draft-board-partial',
+    shows: 'four of ten graded — the state a real Tuesday morning is in',
+    reach: 'arranged',
+    route: '/admin/slice/draft',
+    commissioner: true,
+  },
+  {
+    key: 'draft-board-complete',
+    shows: 'every draft graded, and the issue ready to print',
+    reach: 'arranged',
+    route: '/admin/slice/draft',
+    commissioner: true,
+  },
+  {
+    key: 'preseason-review',
+    shows: 'the draft review drafted and waiting on the commissioner',
+    reach: 'driven',
+    route: '/admin/slice',
+    commissioner: true,
+  },
+  {
+    key: 'preseason-published',
+    shows: 'the draft review approved, printed, and on the rack',
+    reach: 'driven',
+    route: '/slice',
     commissioner: true,
   },
 ] as const;

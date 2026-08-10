@@ -171,6 +171,79 @@ export interface SleeperTransaction {
   readonly consenterRosterIds: readonly number[];
 }
 
+/**
+ * One draft the league has held.
+ *
+ * Everything here is a fact Sleeper states about the draft itself. Nothing is
+ * derived — a draft that has not finished says so in `status`, and the adapter
+ * refuses it rather than treating a half-finished board as a completed one.
+ */
+export interface SleeperDraft {
+  readonly draftId: string;
+  readonly leagueId: string | null;
+  /** `pre_draft` · `drafting` · `complete`. The only one the product acts on is the last. */
+  readonly status: string;
+  /** `snake` · `linear` · `auction`. Recorded, never assumed. */
+  readonly type: string;
+  readonly season: number | null;
+  /** Rounds the draft was configured for. Null when Sleeper omits it. */
+  readonly rounds: number | null;
+  /** When the first pick was made, epoch milliseconds. */
+  readonly startTimeMs: number | null;
+  /** When the last pick was made, epoch milliseconds. The draft's real end. */
+  readonly lastPickedMs: number | null;
+}
+
+/*
+ * There is deliberately no `slotToRosterId` here.
+ *
+ * Sleeper carries it on `/draft/{id}` and sends `null` for it in
+ * `/league/{id}/drafts`, which is the endpoint this adapter reads — so a field
+ * would have been permanently empty and would have read as *"this league had no
+ * draft order"*.
+ *
+ * Nothing wants it either. **Which seat picked where is a fact about each
+ * pick**, and every pick carries its own `draft_slot`; deriving the board from
+ * the picks means the slot beside a player is the slot that took them rather
+ * than a second table agreeing with the first. `draft_order` — the other
+ * candidate — maps a *user* to a slot, and a user is a person while a slot
+ * belongs to a seat (`16 §4`).
+ */
+
+/**
+ * One pick, as Sleeper records it.
+ *
+ * The player's name arrives **inside the pick**, in `metadata`, which is the
+ * reason this whole feature needs no second lookup: `/players/nfl` is a 14.6 MB
+ * response (`lib/sleeper/fixtures.ts`) and a draft review that had to join
+ * against it could not be built from a cron. A pick carries who was taken.
+ */
+export interface SleeperDraftPick {
+  readonly draftId: string;
+  /** 1..N across the whole draft. The natural key, with `draftId`. */
+  readonly pickNo: number;
+  readonly round: number;
+  readonly draftSlot: number | null;
+  readonly rosterId: number | null;
+  /** Sleeper's own player id. `"7564"` for a person, `"DEN"` for a defense. */
+  readonly playerId: string | null;
+  /** As printed: `Ja'Marr Chase`, `Denver Broncos`. Empty when Sleeper sent no name. */
+  readonly playerName: string;
+  /** `QB` · `RB` · `WR` · `TE` · `DEF`. Never `K` — this league has no kickers. */
+  readonly position: string | null;
+  /** The NFL team, as an abbreviation. */
+  readonly nflTeam: string | null;
+  /**
+   * A kept player rather than a fresh selection.
+   *
+   * `max_keepers: 1` is set on the 2026 league, so this is reachable. Recorded
+   * rather than flattened, because *"their round-four pick"* and *"the player
+   * they kept"* are different claims and printing one as the other would be the
+   * kind of quiet falsehood `16 §12` forbids.
+   */
+  readonly isKeeper: boolean;
+}
+
 /** The NFL's current position in the calendar. */
 export interface SleeperState {
   readonly season: number;

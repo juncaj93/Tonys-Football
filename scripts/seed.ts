@@ -43,6 +43,7 @@ import { seasonMemberships, users } from '@/lib/db/schema';
 import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
 import { persistChain } from '@/lib/sleeper/persist';
+import { DRAFT_SYNC_REFUSALS, syncSeasonDraft } from '@/lib/sleeper/persist-draft';
 
 const DEFAULT_LEAGUE_ID = '1385016656425668608';
 
@@ -116,6 +117,35 @@ async function main(): Promise<void> {
     );
     for (const season of imported.seasons.filter((candidate) => candidate.finalized)) {
       console.log(`         ${String(season.year)} finalized — official record now immutable`);
+    }
+
+    // --- 1b. The drafts ---------------------------------------------------
+    //
+    // Read from the same recorded fixtures the history came from, and stored
+    // beside it. Two requests a season, idempotent by `(draft_id, pick_no)`, so
+    // a redeploy adds nothing.
+    //
+    // It runs **after** `persistChain` because a draft pick resolves to a
+    // manager through `season_memberships`, which persistChain writes. A draft
+    // stored first would be ten rows nobody could attribute.
+    //
+    // 2026 is the one that matters and it is the one that will be empty for a
+    // while: the league has not drafted, so Sleeper returns a draft in
+    // `pre_draft` with no picks, this stores the status and nothing else, and
+    // the preseason issue stays correctly unavailable.
+    for (const season of chain.seasons) {
+      const draft = await syncSeasonDraft(db, {
+        source,
+        seasonYear: season.year,
+        leagueId: season.leagueId,
+      });
+      console.log(
+        `Draft    ${String(season.year)} · ` +
+          (draft.refusal === null
+            ? `${String(draft.picksStored)} picks · ${draft.outcome ?? 'unchanged'}`
+            : DRAFT_SYNC_REFUSALS[draft.refusal]),
+      );
+      for (const warning of draft.warnings) console.warn(`         ${warning}`);
     }
 
     // --- 2. The names Tony uses -------------------------------------------

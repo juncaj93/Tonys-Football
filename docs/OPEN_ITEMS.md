@@ -240,7 +240,24 @@ Every remaining v1 system named in `CLAUDE.md`'s "In v1" list is built: the
 six-zone shop, Tonight, the Slice with Tony's Line, bounties and the chalkboard,
 the token ledger and weekly rewards, one loot box and a 24-item catalog,
 wearables and championship rings, the Showcase, the Timeline, the content engine,
-historical seasons, and persistent login.
+historical seasons, persistent login, and the **preseason draft-review special**
+(`docs/PRESEASON_SLICE_BOUNDARY.md`).
+
+### B0 · Tony's ten real draft grades — **Alex, after the league drafts**
+
+Not an engineering item and not a blocker for anything else. The feature is
+built, demonstrated and tested against a real Postgres; what it is waiting for is
+a draft that has not happened.
+
+**When:** after the 2026 draft, before the Tuesday of week one.
+**Where:** `/admin/slice/draft`.
+**What:** tap *Pull the draft*; then, per manager, a grade and a sentence — the
+best pick and the concern are optional. `Save, and next` ten times. When the
+board reads `10 of 10`, *Print a draft review*, read it, and approve.
+
+Until then the Tuesday job runs, records that the draft has not finished, and
+prints nothing — which is the correct behaviour in August and is
+indistinguishable from it in July only in the sense that both are true.
 
 ---
 
@@ -534,6 +551,19 @@ and printed, and a dev build's message still fails on sight.
 **Restart condition is unchanged:** the next evidence that would move it is the
 **element name**, and only a dev build produces one. Do not restart the hunt
 merely because the defect still exists. `docs/VISUAL_DEBT.md` item 16.
+
+**New as of 2026-08-10, and it is about the *gate* rather than the defect.**
+Five local sweeps of one build produced 3, 2, 2, 4 and 1 sightings — **two of
+five runs failed on a build whose every other gate was green**, which is the
+condition the quarantine's own header names as a gate that has stopped
+protecting anything. Nothing was changed in response: the ceiling is the reason
+a new mismatch cannot hide, and raising it to make a branch green is exactly the
+move that header argues against. But the arithmetic under it has moved — the
+sweep is **375 captures against the 261 the ceiling was reasoned about**, so a
+fixed per-capture rate now expects proportionally more. **The ceiling and the
+rate want re-deriving together**, against a fresh measurement, by whoever picks
+this up. Do not move either alone, and do not move either to unblock a branch.
+The table is in `docs/VISUAL_DEBT.md`.
 
 ### F2 · Visual debt 1, 2 and 14
 

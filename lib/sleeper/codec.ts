@@ -21,6 +21,8 @@ import {
   type FaabTransfer,
   SleeperDecodeError,
   type SleeperBracketMatch,
+  type SleeperDraft,
+  type SleeperDraftPick,
   type SleeperLeague,
   type SleeperMatchupEntry,
   type SleeperRoster,
@@ -443,6 +445,125 @@ export function decodeTransactions(
   // import that reorders between runs produces spurious diffs downstream.
   transactions.sort((a, b) => a.transactionId.localeCompare(b.transactionId));
   return { value: transactions, warnings };
+}
+
+// --------------------------------------------------------------------------
+// Drafts
+// --------------------------------------------------------------------------
+
+export function decodeDrafts(
+  payload: unknown,
+  endpointKey = 'drafts',
+): Decoded<readonly SleeperDraft[]> {
+  const rows = expectArray(payload, endpointKey);
+  const warnings: string[] = [];
+  const drafts: SleeperDraft[] = [];
+
+  rows.forEach((row, index) => {
+    if (!isObject(row)) {
+      warnings.push(`drafts[${String(index)}] was not an object and was skipped`);
+      return;
+    }
+
+    const draftId = str(row, 'draft_id');
+    if (draftId === null) {
+      warnings.push(`drafts[${String(index)}] had no draft_id and was skipped`);
+      return;
+    }
+
+    const settings = isObject(row['settings']) ? row['settings'] : {};
+
+    drafts.push({
+      draftId,
+      leagueId: str(row, 'league_id'),
+      status: str(row, 'status') ?? 'unknown',
+      type: str(row, 'type') ?? 'unknown',
+      season: num(row, 'season'),
+      rounds: num(settings, 'rounds'),
+      startTimeMs: num(row, 'start_time'),
+      lastPickedMs: num(row, 'last_picked'),
+    });
+  });
+
+  // Newest first, so "the league's current draft" is the head of the list.
+  // Sleeper documents no order, and an import that reordered between runs would
+  // produce spurious diffs in everything downstream.
+  drafts.sort((a, b) => (b.startTimeMs ?? 0) - (a.startTimeMs ?? 0) || a.draftId.localeCompare(b.draftId));
+  return { value: drafts, warnings };
+}
+
+/**
+ * The player's name, from the pick's own metadata.
+ *
+ * Both halves, joined, and **never fabricated**: a pick whose metadata carries
+ * no name yields an empty string and the caller drops it. Filling in
+ * `"Player 7564"` would put a proper noun on the page that names nobody, which
+ * is the precise failure `16 §12` forbids.
+ *
+ * A defense arrives as `first_name: "Denver", last_name: "Broncos"`, so the same
+ * join produces `Denver Broncos` with no special case.
+ */
+function pickPlayerName(metadata: Record<string, unknown>): string {
+  const first = str(metadata, 'first_name') ?? '';
+  const last = str(metadata, 'last_name') ?? '';
+  return `${first} ${last}`.trim();
+}
+
+export function decodeDraftPicks(
+  payload: unknown,
+  endpointKey = 'draft_picks',
+): Decoded<readonly SleeperDraftPick[]> {
+  const rows = expectArray(payload, endpointKey);
+  const warnings: string[] = [];
+  const picks: SleeperDraftPick[] = [];
+
+  rows.forEach((row, index) => {
+    if (!isObject(row)) {
+      warnings.push(`draft_picks[${String(index)}] was not an object and was skipped`);
+      return;
+    }
+
+    const draftId = str(row, 'draft_id');
+    const pickNo = num(row, 'pick_no');
+    const round = num(row, 'round');
+
+    if (draftId === null || pickNo === null || round === null) {
+      warnings.push(
+        `draft_picks[${String(index)}] is missing draft_id, pick_no or round and was skipped`,
+      );
+      return;
+    }
+
+    const metadata = isObject(row['metadata']) ? row['metadata'] : {};
+    const playerName = pickPlayerName(metadata);
+
+    if (playerName === '') {
+      warnings.push(
+        `pick ${String(pickNo)} names no player in its metadata and was skipped — a pick the ` +
+          `paper cannot name is a pick the paper cannot print`,
+      );
+      return;
+    }
+
+    picks.push({
+      draftId,
+      pickNo,
+      round,
+      draftSlot: num(row, 'draft_slot'),
+      // Sleeper sends `roster_id` as a number here and as a string in some
+      // payloads; `num` reads both.
+      rosterId: num(row, 'roster_id'),
+      playerId: str(row, 'player_id') ?? str(metadata, 'player_id'),
+      playerName,
+      position: str(metadata, 'position'),
+      nflTeam: str(metadata, 'team'),
+      // `is_keeper` is `null` on every ordinary pick and `true` on a kept one.
+      isKeeper: bool(row, 'is_keeper'),
+    });
+  });
+
+  picks.sort((a, b) => a.pickNo - b.pickNo);
+  return { value: picks, warnings };
 }
 
 // --------------------------------------------------------------------------

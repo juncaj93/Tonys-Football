@@ -9,6 +9,7 @@ import {
   lootBoxes,
   seasonMemberships,
   seasons,
+  sliceDraftReviews,
   tokenTransactions,
 } from '@/lib/db/schema';
 import { RARITIES, type Rarity, catalog } from '@/lib/counter/catalog';
@@ -19,10 +20,16 @@ import { standardRewardTable } from '@/lib/counter/rewards';
 import { clearRandomSource, setFixedRoll } from '@/lib/counter/rng';
 import { setShowcase, showcaseChoices } from '@/lib/counter/showcase';
 import { applyTokenDelta, economyFor, ensureEconomyConfig, wallet } from '@/lib/counter/tokens';
+import { activeLeagueManagers } from '@/lib/league/membership';
+import { draftFacts } from '@/lib/slice/draft-facts';
 import { assembleIssue } from '@/lib/slice/edition';
+import { seasonLeagueId } from '@/lib/slice/preseason-desk';
+import { saveDraftReview, type TonyGrade } from '@/lib/slice/preseason-reviews';
+import { syncSeasonDraft } from '@/lib/sleeper/persist-draft';
 import {
   approveVersion,
   generateDraft,
+  generatePreseasonDraft,
   publishVersion,
   recordVersion,
   reviewDetail,
@@ -31,6 +38,7 @@ import {
 import { type Edition } from '@/lib/slice/render';
 import { validateEdition } from '@/lib/slice/validate';
 
+import { demoDraftSource } from './draft-fixture';
 import { DemoRefused, assertDemoSeat, assertDemoWritesAllowed } from './guard';
 import { type DemoSeat, demoPin, ensureDemoSeat } from './seat';
 import { BLOCKED_ON_M3, DEMO_STATES, type DemoState, demoState } from './states';
@@ -1101,7 +1109,126 @@ const APPLIERS: Readonly<Record<string, Applier>> = {
   'office-blocked': async (db, seat) => deskWithOneOfEach(db, seat),
   'office-printed': async (db, seat) => deskWithOneOfEach(db, seat),
   'office-queue': async (db, seat) => deskWithOneOfEach(db, seat),
-};
+
+  /* --- Tony's draft board ---------------------------------------------- */
+
+  /**
+   * The draft is in and nobody has read a board.
+   *
+   * The state a commissioner meets on the Sunday after draft night, and the one
+   * the whole editor exists to move out of. `0 of 10` is the point of the
+   * screenshot: a progress line that only ever showed a healthy number would be
+   * a progress line nobody had checked.
+   */
+  'draft-board-empty': async (db, seat) => {
+    const stored = await seedDemoDraft(db, seat);
+    await writeDemoReviews(db, seat, 0);
+    return { evidence: { picks: stored, reviewed: 0 } };
+  },
+
+  /**
+   * Four of ten, which is what a real session looks like when it is interrupted.
+   *
+   * It is also the state the two editor screenshots are taken from: the driver
+   * opens a row Tony has written and a row he has not, from the same database,
+   * so the two screens are photographed against one another rather than against
+   * two different worlds.
+   */
+  'draft-board-partial': async (db, seat) => {
+    const stored = await seedDemoDraft(db, seat);
+    const written = await writeDemoReviews(db, seat, 4);
+    return { evidence: { picks: stored, reviewed: written } };
+  },
+
+  /**
+   * Every draft graded, and the print button live.
+   *
+   * The **negative** this proves is the one worth having: the button is absent
+   * in the two states above, so a screenshot of it here is evidence that
+   * completeness is what turns it on rather than a flag somebody set.
+   */
+  'draft-board-complete': async (db, seat) => {
+    const stored = await seedDemoDraft(db, seat);
+    const written = await writeDemoReviews(db, seat, DEMO_REVIEWS.length);
+    return { evidence: { picks: stored, reviewed: written } };
+  },
+
+  /**
+   * The draft review, drafted and waiting on a stamp.
+   *
+   * `generatePreseasonDraft` with `submit: true` — the same call the Tuesday job
+   * makes, and the same gate: it lands on the press desk and stops. Nothing here
+   * publishes, which is the property being demonstrated.
+   */
+  'preseason-review': async (db, seat) => {
+    await releaseHold(db, seat);
+    const stored = await seedDemoDraft(db, seat);
+    await writeDemoReviews(db, seat, DEMO_REVIEWS.length);
+
+    const drafted = await generatePreseasonDraft(db, {
+      season: seat.seasonYear,
+      submit: true,
+    });
+
+    if (drafted.versionId === null) {
+      throw new DemoRefused(
+        `the preseason issue would not draft: ${drafted.refusal ?? 'no reason given'}`,
+      );
+    }
+
+    /*
+     * The version has to be **waiting**, and that is worth checking here.
+     *
+     * There is exactly one preseason issue per season — no week to separate two
+     * states with, unlike the press desk's five — so this state and
+     * `preseason-published` are two *versions* of one issue, kept apart by one
+     * corrected grade. On a fresh database that is airtight. On a database where
+     * an older build published this version's content, `generatePreseasonDraft`
+     * reads that published version back and the desk has nothing waiting.
+     *
+     * Caught here rather than left to the driver, which would find an empty
+     * queue and report it as *"the state was not produced"* — true, and three
+     * layers away from the reason.
+     */
+    const landed = await reviewDetail(db, drafted.versionId);
+    if (landed !== null && landed.status !== 'draft' && landed.status !== 'needs_review') {
+      throw new DemoRefused(
+        `the draft review is already ${landed.status}, so nothing is waiting on the desk. ` +
+          'Reset the database: a published version cannot be returned to the queue.',
+      );
+    }
+
+    return { evidence: { picks: stored, versionId: drafted.versionId, status: landed?.status ?? 'needs_review' } };
+  },
+
+  /**
+   * The draft review on the rack, which is what the league actually sees.
+   *
+   * Driven the whole way — draft, approve, publish — so the screenshot is
+   * evidence that the preseason issue goes through the identical approval chain
+   * a weekly one does. It shares the seat with nothing: publishing is
+   * league-level, so this runs after every other Slice state for the same reason
+   * `review-published` does.
+   */
+  'preseason-published': async (db, seat) => {
+    await releaseHold(db, seat);
+    await seedDemoDraft(db, seat);
+    await writeDemoReviews(db, seat, DEMO_REVIEWS.length, { corrected: true });
+
+    const drafted = await generatePreseasonDraft(db, {
+      season: seat.seasonYear,
+      submit: true,
+    });
+
+    if (drafted.versionId === null) {
+      throw new DemoRefused(
+        `the preseason issue would not draft: ${drafted.refusal ?? 'no reason given'}`,
+      );
+    }
+
+    await advanceTo(db, drafted.versionId, seat.userId, 'published');
+    return { evidence: { versionId: drafted.versionId, status: 'published' } };
+  },};
 
 /**
  * A desk holding one paper of every kind the queue can show.
@@ -1326,3 +1453,225 @@ async function draftWeek(
 
 /** Every state the appliers cover. The coverage test compares this to the catalog. */
 export const APPLIED_STATES: readonly string[] = Object.keys(APPLIERS);
+
+/* -------------------------------------------------------------------------
+ * Tony's draft board — the fixture draft, and the fixture grades
+ * ---------------------------------------------------------------------- */
+
+/**
+ * Fixture editorial, and marked as fixture editorial.
+ *
+ * **These are not Alex's opinions and must never be read as such.** They exist
+ * so ten sections of a real page can be photographed before the league drafts,
+ * and `assertDemoWritesAllowed` refuses to run at all in production
+ * (`lib/demo/guard.ts`), so they cannot reach a database a manager can see.
+ *
+ * They are written to be *useful as a test*, which is a different job from being
+ * good copy: the grades span the whole domain from `A+` to `F` so the widest and
+ * narrowest glyphs are both on the page, one take is at the character limit so
+ * the longest legal section is photographed rather than imagined, and the
+ * optional fields are supplied on some and left off others so both shapes appear
+ * in one issue.
+ */
+const DEMO_REVIEWS: readonly {
+  readonly grade: TonyGrade;
+  readonly take: string;
+  readonly concern?: string;
+  /** Which of their picks Tony named, by round. Absent when he named none. */
+  readonly bestPickRound?: number;
+}[] = [
+  {
+    grade: 'A+',
+    /*
+     * Exactly `TAKE_MAX` characters. The longest legal take, so the tallest
+     * section a manager can produce is a thing somebody has looked at rather
+     * than a number in a CHECK.
+     */
+    take:
+      'Took the best player on the board and then never once reached for a name he liked more ' +
+      'than the pick in front of him. Tony has read a hundred boards in this shop and this is ' +
+      'what one looks like when a plan survives a whole night at a table.',
+    bestPickRound: 3,
+    concern: 'One bad Sunday from that receiver room and the whole thing gets very quiet.',
+  },
+  {
+    grade: 'A-',
+    take: 'Back-to-back running backs and then let the board come to him. The defending champion drafted like one.',
+    bestPickRound: 1,
+  },
+  {
+    grade: 'B+',
+    take: 'Solid all the way down and nothing that made Tony put the paper down. That is a compliment and it is also the whole review.',
+    concern: 'Two small running backs carrying the whole thing.',
+  },
+  {
+    grade: 'B',
+    take: 'Receivers, receivers, and then a look around the room to see who else wanted a running back.',
+    bestPickRound: 2,
+  },
+  { grade: 'B-', take: 'Went early on a tight end and spent the rest of the night catching up.' },
+  {
+    grade: 'C+',
+    take: 'A quarterback that early is a decision, and Tony would like it noted that it was a decision.',
+    concern: 'Spent a high pick on a position everybody else waited eight rounds for.',
+  },
+  { grade: 'C', take: 'Nothing wrong with any single pick. Tony read it twice and could not find the plan.' },
+  {
+    grade: 'C-',
+    take: 'Three tight ends. Tony counted them twice because he did not believe it the first time.',
+    concern: 'Two of those are going to sit on a bench all year.',
+  },
+  { grade: 'D+', take: 'Waited on a quarterback until nearly the end and then acted surprised.' },
+  {
+    grade: 'F',
+    take: 'Tony does not hand these out lightly and is handing one out.',
+    concern: 'Every one of those running backs is somebody else’s backup by November.',
+  },
+];
+
+/**
+ * Put a completed draft in front of the product, through the real import path.
+ *
+ * The picks are 2025's, re-seated onto this season's rosters and served as a
+ * Sleeper payload — so `decodeDraftPicks` decodes them, `persistDraft` stores
+ * them, and `draft_picks_immutable` governs them exactly as it will govern the
+ * real thing. Idempotent for the same reason the live sync is:
+ * `UNIQUE(draft_id, pick_no)` with `ON CONFLICT DO NOTHING`.
+ */
+async function seedDemoDraft(db: Database, seat: DemoSeat): Promise<number> {
+  const leagueId = await seasonLeagueId(db, seat.seasonYear);
+  if (leagueId === null) {
+    throw new DemoRefused(
+      `${String(seat.seasonYear)} has no Sleeper league id, so a draft cannot be seated against it`,
+    );
+  }
+
+  /*
+   * The seats, in roster order, one per draft slot.
+   *
+   * `activeLeagueManagers` rather than every membership, so the demo seat this
+   * applier is running as does not take a slot in the league's own draft.
+   */
+  const managers = [...(await activeLeagueManagers(db))].sort((a, b) => a.rosterId - b.rosterId);
+  if (managers.length === 0) {
+    throw new DemoRefused('no active manager holds a seat, so there is nobody to draft');
+  }
+
+  const report = await syncSeasonDraft(db, {
+    source: demoDraftSource(managers.map((manager) => manager.rosterId)),
+    seasonYear: seat.seasonYear,
+    leagueId,
+  });
+
+  if (report.refusal !== null) {
+    throw new DemoRefused(`the demo draft would not store: ${report.refusal}`);
+  }
+
+  return report.picksStored;
+}
+
+/**
+ * Write the first `count` fixture reviews, and clear the rest.
+ *
+ * ## The one delete in this file, and why it is here
+ *
+ * Everything else in `apply.ts` composes product calls, deliberately — a demo
+ * that hand-writes the state it demonstrates proves the screenshot rather than
+ * the product. This deletes, and the reason is that **there is no product path
+ * to un-write a review, and there should not be**: Alex edits a grade, he never
+ * removes one.
+ *
+ * Without it the three board states would depend on running in order —
+ * `draft-board-empty` after `draft-board-complete` would photograph ten grades
+ * under a name claiming none, pass, and file it. That is the shape of false
+ * green the nine `reveal-*` states cost a milestone to, and an ordering
+ * dependency is exactly how it arrives.
+ *
+ * The writes themselves are the real `saveDraftReview`, so the grades, the
+ * lengths, the banned-term scan and the best-pick trigger are all the shipping
+ * ones.
+ */
+async function writeDemoReviews(
+  db: Database,
+  seat: DemoSeat,
+  count: number,
+  /**
+   * `corrected` changes one grade, which is what makes two states possible.
+   *
+   * ## Why this exists, and why it is not a hack
+   *
+   * The press-desk states keep out of each other's way by drafting **different
+   * weeks** — an issue is unique on `(season, week)`, so five states get five
+   * issues. A preseason issue has no week: there is exactly **one** per season,
+   * forever, so `preseason-review` and `preseason-published` are necessarily
+   * about the same issue.
+   *
+   * The review chain already has a name for that: they are two **versions**.
+   * `preseason-published` prints a board with one grade corrected, so it writes
+   * a version of its own and leaves the pristine one waiting — and the desk then
+   * shows the real state a correction produces, which is a printed issue with a
+   * revision on the desk beside it.
+   *
+   * Without it, the second width's pass would find the draft already published,
+   * the waiting section empty, and `preseason-review` would have nothing to
+   * open. That is how it was found: the driver loops widths on the outside, so
+   * the 390 pass published the issue the 375 pass then went looking for.
+   */
+  options: { readonly corrected?: boolean } = {},
+): Promise<number> {
+  const [season] = await db
+    .select({ id: seasons.id })
+    .from(seasons)
+    .where(eq(seasons.year, seat.seasonYear))
+    .limit(1);
+
+  if (season === undefined) throw new DemoRefused('the demo seat has no season');
+
+  await db.delete(sliceDraftReviews).where(eq(sliceDraftReviews.seasonId, season.id));
+
+  const facts = await draftFacts(db, seat.seasonYear);
+  if (facts.facts === null) {
+    throw new DemoRefused(`the demo draft did not produce facts: ${facts.refusal ?? 'unknown'}`);
+  }
+
+  /*
+   * Board order — draft-slot order, which is the order the desk lists them in.
+   * So *"four of ten"* is the first four rows of the board rather than four
+   * rows scattered through it, which is what a person part-way through a
+   * session actually has.
+   */
+  const managers = [...facts.facts.managers].sort((a, b) =>
+    a.displayName.localeCompare(b.displayName),
+  );
+
+  let written = 0;
+  for (const [index, manager] of managers.entries()) {
+    if (index >= count) break;
+    const base = DEMO_REVIEWS[index % DEMO_REVIEWS.length]!;
+    /*
+     * Tony slept on the first one. A single changed grade is enough to make a
+     * different content hash, and it is the smallest correction a real one can
+     * be.
+     */
+    const review =
+      options.corrected === true && index === 0 ? { ...base, grade: 'A' as const } : base;
+
+    const bestPick =
+      review.bestPickRound === undefined
+        ? null
+        : (manager.picks.find((pick) => pick.round === review.bestPickRound)?.id ?? null);
+
+    await saveDraftReview(db, {
+      seasonYear: seat.seasonYear,
+      userId: manager.userId,
+      grade: review.grade,
+      take: review.take,
+      bestPickId: bestPick,
+      concern: review.concern ?? null,
+      actorUserId: seat.userId,
+    });
+    written++;
+  }
+
+  return written;
+}

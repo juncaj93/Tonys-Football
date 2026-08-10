@@ -2,7 +2,19 @@ import { grantSeasonalBoxes, type GrantRefusal, type GrantReport } from '@/lib/c
 import { type Database } from '@/lib/db';
 import { featureFlags } from '@/lib/flags';
 import { awardWeek, type RewardRefusal, type RewardReport } from '@/lib/rewards/service';
-import { generateDraft, type DraftResult } from '@/lib/slice/publication';
+import {
+  generateDraft,
+  generatePreseasonDraft,
+  type DraftResult,
+} from '@/lib/slice/publication';
+import { preseasonEligibility } from '@/lib/slice/preseason';
+import { seasonLeagueId } from '@/lib/slice/preseason-desk';
+import {
+  DRAFT_SYNC_REFUSALS,
+  syncSeasonDraft,
+  type DraftSyncReport,
+} from '@/lib/sleeper/persist-draft';
+import { readSchedule, type SchedulePairing } from '@/lib/sleeper/schedule';
 import { type SleeperSource } from '@/lib/sleeper/transport';
 import {
   latestStoredWeek,
@@ -123,6 +135,24 @@ const GRANT_REFUSALS: Record<GrantRefusal, () => string> = {
  * **Only a thrown error is a failure.** The route turns that into a non-2xx so
  * the platform retries, which is safe precisely because every step is
  * idempotent.
+ *
+ * ## The preseason branch, and why it is not a third cron
+ *
+ * `16 §4.3` allows exactly two scheduled jobs and this is the second. The
+ * Tuesday before the opener needs a paper drafted and it is not a recap, so the
+ * question was whether that needs a scheduler of its own. It does not: this job
+ * already runs on that Tuesday, already holds a Sleeper source, and already
+ * ends in *"draft something and put it on the desk"*.
+ *
+ * So the weekly draft is attempted first and the preseason issue is what happens
+ * when it **refuses** — which is the honest test rather than a calendar one.
+ * `generateDraft` declines with `no-week` or `not-final` exactly when no week has
+ * been played, and `preseasonEligibility` then asks whether the league has
+ * actually drafted. A league that has not drafted gets neither paper and the
+ * report says so in a sentence.
+ *
+ * It **still does not publish**, and that is the same `submit: true` the weekly
+ * paper gets. `16 §9`'s approval gate does not have a preseason exemption.
  */
 
 export interface TuesdayReport {
@@ -130,6 +160,23 @@ export interface TuesdayReport {
   readonly week: number;
   /** What came in from Sleeper, or why nothing did. Null when the step threw. */
   readonly sync: SyncReport | null;
+  /**
+   * The draft, read and stored. Null when there was no source or the step threw.
+   *
+   * Cheap — two requests — and checked every week rather than on the one week the
+   * draft happens, for the same reason `grantSeasonalBoxes` is: a job that only
+   * ran on the right week would silently skip a retry, a redeploy, and a league
+   * that drafted on a Wednesday.
+   */
+  readonly draftSync: DraftSyncReport | null;
+  /**
+   * Which paper this Tuesday drafted.
+   *
+   * `weekly` on every ordinary Tuesday. `preseason` on the one before the opener,
+   * when there is no week to recap and the league has a completed draft
+   * (`lib/slice/preseason.ts`). `none` when neither could be drafted.
+   */
+  readonly issueKind: 'weekly' | 'preseason' | 'none';
   /** The week was closed by *this* run. False when it was already closed. */
   readonly finalized: boolean;
   /** Publishable games in the week. Zero means it could not be finalized at all. */
@@ -159,6 +206,52 @@ export interface TuesdayReport {
    * The route turns a non-empty list into a 500 so the platform retries.
    */
   readonly failed: readonly { readonly step: string; readonly why: string }[];
+}
+
+/**
+ * Why the preseason pipeline declined, in one sentence.
+ *
+ * Keyed by `PreseasonRefusal`, so a reason a commissioner reads at 8am is a
+ * sentence rather than a slug. `reviews-incomplete` is the one that will
+ * actually happen: the Tuesday job runs, the draft is in, and Tony has graded
+ * six of ten.
+ */
+const PRESEASON_REFUSALS: Readonly<Record<string, string | undefined>> = {
+  'no-draft': 'The league has not drafted yet, so there is no draft review to print.',
+  'draft-incomplete': 'The draft has not finished, so there is no draft review to print.',
+  'no-picks': 'The draft is on record with no picks, so there is nothing to review.',
+  'nobody-publishable': 'No manager in the league picked in that draft.',
+  'reviews-incomplete':
+    'Tony has not graded every draft yet, so the draft review is not ready to print.',
+  'season-underway': 'The season has started, so the weekly paper is the paper.',
+  'season-closed': 'That season is finalized, so there is no preview to write.',
+};
+
+/**
+ * Week one's fixtures, when they can be had.
+ *
+ * The one thing a season preview wants that the database cannot supply, because
+ * the sync deliberately refuses to store a drafted-but-unplayed week
+ * (`docs/IN_SEASON_SYNC_BOUNDARY.md`). Read here rather than in a render path,
+ * and folded into the **snapshot** the version stores, which is what every other
+ * published sentence in this product is.
+ *
+ * Returns an empty object rather than an empty array when there is nothing to
+ * read, so the caller spreads nothing and `generatePreseasonDraft` sees the
+ * field as absent — the difference between *"no schedule"* and *"a schedule with
+ * no games in it"*.
+ */
+async function weekOneFixtures(
+  db: Database,
+  seasonYear: number,
+  source: SleeperSource | undefined,
+): Promise<{ weekOne?: readonly SchedulePairing[] }> {
+  if (source === undefined) return {};
+  const leagueId = await seasonLeagueId(db, seasonYear);
+  if (leagueId === null) return {};
+
+  const weekOne = await readSchedule(source, { leagueId, week: 1 });
+  return weekOne.length === 0 ? {} : { weekOne };
 }
 
 /**
@@ -250,6 +343,38 @@ export async function runTuesday(
     skipped.push('No Sleeper source was supplied, so no new results were read.');
   } else if (sync !== null && sync.refusal !== null) {
     skipped.push(SYNC_REFUSALS[sync.refusal](input.season));
+  }
+
+  // --- 1b. Bring the draft in ---------------------------------------------
+  /*
+   * Two requests, every week, and the reason it is every week rather than once
+   * is the reason `grantSeasonalBoxes` runs every week: a job that fired only on
+   * the week the draft happened would silently skip a retry, a redeploy, a
+   * league that drafted on a Wednesday, and an environment seeded afterwards.
+   *
+   * Idempotent through `UNIQUE(draft_id, pick_no)` and `draft_picks_immutable`,
+   * so the fifteen runs after the draft cost fifteen no-ops.
+   *
+   * It runs **before** the week is resolved because nothing downstream reads it
+   * — the draft matters only to the preseason issue, at the end — and putting it
+   * beside the other Sleeper read keeps every network call this job makes in one
+   * place.
+   */
+  const draftSync =
+    input.sleeper === undefined
+      ? null
+      : await attempt('draft-sync', failed, async () => {
+          const leagueId = await seasonLeagueId(db, input.season);
+          if (leagueId === null) return null;
+          return syncSeasonDraft(db, {
+            source: input.sleeper!,
+            seasonYear: input.season,
+            leagueId,
+          });
+        });
+
+  if (draftSync !== null && draftSync !== undefined && draftSync.refusal !== null) {
+    skipped.push(DRAFT_SYNC_REFUSALS[draftSync.refusal]);
   }
 
   /*
@@ -362,20 +487,77 @@ export async function runTuesday(
   }
 
   // --- 6. Draft the Slice, and stop at the desk ----------------------------
-  const draft = await attempt('draft', failed, () =>
+  /*
+   * The weekly paper first, always.
+   *
+   * A Tuesday in October has a week to recap and that is the paper. The
+   * preseason branch below is reached only when this one **refuses**, which is
+   * the honest test: `generateDraft` declines on `no-week` and `not-final`, and
+   * those are exactly the states a season that has not started is in.
+   *
+   * Ordering it the other way — check the preseason first — would work today and
+   * would put a calendar-shaped decision ahead of a data-shaped one.
+   */
+  let issueKind: TuesdayReport['issueKind'] = 'none';
+
+  let draft = await attempt('draft', failed, () =>
     generateDraft(db, { season: input.season, week, submit: true }),
   );
-  if (draft !== null && draft.outcome === 'refused') {
-    skipped.push(
-      draft.refusal ??
-        `Week ${String(week)} holds no result that may be printed yet.`,
-    );
+
+  if (draft !== null && draft.outcome !== 'refused') {
+    issueKind = 'weekly';
+  } else {
+    /*
+     * No week to recap. Is this the Tuesday before the season instead?
+     *
+     * `preseasonEligibility` answers from product state rather than from the
+     * calendar: an open season, a completed draft with picks, no week closed and
+     * no result stored. A league that has not drafted is not eligible, and the
+     * report then carries *that* sentence rather than the weekly pipeline's —
+     * because on the Tuesday before the opener *"the league has not drafted"* is
+     * the useful answer and *"no week"* is the obvious one.
+     *
+     * **It still does not publish.** `submit: true` puts the draft review on the
+     * press desk exactly like the weekly paper, and `16 §9`'s approval gate is
+     * the same gate — the preseason issue reaches the rack when a person stamps
+     * it and not before.
+     */
+    const eligibility = await preseasonEligibility(db, input.season);
+
+    if (!eligibility.eligible) {
+      skipped.push(
+        PRESEASON_REFUSALS[eligibility.refusal ?? ''] ??
+          `Week ${String(week)} holds no result that may be printed yet.`,
+      );
+    } else {
+      const preseason = await attempt('preseason-draft', failed, async () =>
+        generatePreseasonDraft(db, {
+          season: input.season,
+          ...(await weekOneFixtures(db, input.season, input.sleeper)),
+          submit: true,
+        }),
+      );
+
+      if (preseason !== null) {
+        draft = preseason;
+        if (preseason.outcome === 'refused') {
+          skipped.push(
+            PRESEASON_REFUSALS[preseason.refusal ?? ''] ??
+              'The draft review could not be printed.',
+          );
+        } else {
+          issueKind = 'preseason';
+        }
+      }
+    }
   }
 
   return {
     season: input.season,
     week,
     sync,
+    draftSync: draftSync ?? null,
+    issueKind,
     finalized: closed.closed,
     games: closed.games,
     settled,

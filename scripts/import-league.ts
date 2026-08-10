@@ -20,6 +20,7 @@ import { seasonMemberships, seasons, users } from '@/lib/db/schema';
 import { traverseChain } from '@/lib/sleeper/chain';
 import { createFixtureSource } from '@/lib/sleeper/fixtures';
 import { persistChain } from '@/lib/sleeper/persist';
+import { DRAFT_SYNC_REFUSALS, syncSeasonDraft } from '@/lib/sleeper/persist-draft';
 import { createLiveSource, type SleeperSource } from '@/lib/sleeper/transport';
 
 const DEFAULT_LEAGUE_ID = '1385016656425668608';
@@ -102,6 +103,24 @@ async function main(): Promise<void> {
           `${pad(String(season.membershipsUnchanged), 8)}` +
           `${season.finalized ? 'yes' : '—'}`,
       );
+    }
+
+    // The draft, per season. After the memberships, because a pick resolves to
+    // a manager through one.
+    console.log('\nDrafts');
+    for (const season of chain.seasons) {
+      const draft = await syncSeasonDraft(db, {
+        source,
+        seasonYear: season.year,
+        leagueId: season.leagueId,
+      });
+      console.log(
+        `  ${pad(String(season.year), 6)}` +
+          (draft.refusal === null
+            ? `${pad(String(draft.picksStored), 6)}picks · ${draft.outcome ?? 'unchanged'}`
+            : DRAFT_SYNC_REFUSALS[draft.refusal]),
+      );
+      for (const warning of draft.warnings) console.warn(`         ${warning}`);
     }
 
     // The reconciliation is commissioner-facing diagnostics. Ordinary manager

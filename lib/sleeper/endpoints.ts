@@ -29,6 +29,26 @@ export type SleeperEndpoint =
   | { readonly kind: 'losers_bracket'; readonly leagueId: string }
   | { readonly kind: 'matchups'; readonly leagueId: string; readonly week: number }
   | { readonly kind: 'transactions'; readonly leagueId: string; readonly week: number }
+  /**
+   * Every draft the league has held, newest first.
+   *
+   * A list rather than `/draft/{league.draft_id}`, and the difference matters:
+   * the league payload names *one* draft id, and a league that redrafts, holds a
+   * rookie draft or restarts a botched one has more than one. Reading the list
+   * means the adapter never has to decide which single id was the real one — it
+   * takes the completed one, and says so when there is none.
+   */
+  | { readonly kind: 'drafts'; readonly leagueId: string }
+  /**
+   * One draft's picks.
+   *
+   * The only endpoint in this file keyed by something other than a league id,
+   * because Sleeper hangs picks off the **draft** rather than off the league.
+   * That is why it is absent from {@link seasonEndpoints}: the draft id is not
+   * knowable until `drafts` has been read, so the recorder discovers it in a
+   * second pass. See `scripts/record-fixtures.ts`.
+   */
+  | { readonly kind: 'draft_picks'; readonly draftId: string }
   | { readonly kind: 'state' };
 
 /** The path segment appended to {@link SLEEPER_API_BASE}. */
@@ -48,6 +68,10 @@ export function endpointPath(endpoint: SleeperEndpoint): string {
       return `/league/${endpoint.leagueId}/matchups/${String(endpoint.week)}`;
     case 'transactions':
       return `/league/${endpoint.leagueId}/transactions/${String(endpoint.week)}`;
+    case 'drafts':
+      return `/league/${endpoint.leagueId}/drafts`;
+    case 'draft_picks':
+      return `/draft/${endpoint.draftId}/picks`;
     case 'state':
       return '/state/nfl';
   }
@@ -78,6 +102,10 @@ export function endpointKey(endpoint: SleeperEndpoint): string {
       return `league/${endpoint.leagueId}/matchups/${week(endpoint.week)}`;
     case 'transactions':
       return `league/${endpoint.leagueId}/transactions/${week(endpoint.week)}`;
+    case 'drafts':
+      return `league/${endpoint.leagueId}/drafts`;
+    case 'draft_picks':
+      return `draft/${endpoint.draftId}/picks`;
     case 'state':
       return 'state/nfl';
   }
@@ -96,6 +124,15 @@ export function seasonEndpoints(leagueId: string): readonly SleeperEndpoint[] {
     { kind: 'rosters', leagueId },
     { kind: 'winners_bracket', leagueId },
     { kind: 'losers_bracket', leagueId },
+    /*
+     * The draft list, but not its picks.
+     *
+     * `draft_picks` needs an id this function cannot know, so the caller reads
+     * what came back here and asks for the picks itself. Leaving the picks out
+     * is the honest shape: this function returns *"every endpoint reachable from
+     * a league id"*, and the picks are not one of them.
+     */
+    { kind: 'drafts', leagueId },
   ];
 
   for (let week = 1; week <= MAX_WEEK; week++) {

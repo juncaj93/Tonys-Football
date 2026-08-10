@@ -150,6 +150,7 @@ export function MetadataStrip({
   className = '',
   ink = INK.paper.quiet,
   role = 'metadata',
+  ...rest
 }: {
   children: React.ReactNode;
   className?: string;
@@ -162,8 +163,26 @@ export function MetadataStrip({
    * colours, which Tailwind gives silently and wrongly.
    */
   role?: Extract<TypeRole, 'metadata' | 'machine' | 'eyebrow'>;
-}) {
-  return <p className={`${TYPE[role]} ${ink} ${className}`}>{children}</p>;
+} & React.HTMLAttributes<HTMLParagraphElement>) {
+  /*
+   * `...rest` reaches the element, and it did not used to.
+   *
+   * Three callers pass a `data-` marker for a gate to read — the press desk's
+   * docket, the draft board's progress count and its draft status — and every
+   * one of them was **silently dropped**, because this component named the four
+   * props it wanted and threw the rest away. The markers were in the source,
+   * looked correct in review, and did not exist in the DOM.
+   *
+   * That is the quiet half of a false green: a gate that queries a marker which
+   * is never rendered fails loudly, which is how this was found — but a gate
+   * nobody wrote against a marker nobody rendered would simply have been
+   * decoration. Every other primitive on this sheet already spreads.
+   */
+  return (
+    <p className={`${TYPE[role]} ${ink} ${className}`} {...rest}>
+      {children}
+    </p>
+  );
 }
 
 /**
