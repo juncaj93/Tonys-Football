@@ -138,13 +138,14 @@ describe('the basement handoff', () => {
   });
 
   it('briefs them at the canvas the room is authored in', () => {
-    // `960 x 1707` is `320 x 569` at the pipeline's 3x authoring scale. A shell
-    // generated to any other number is resampled into the room and stops being
-    // pixel art — the same defect the collectibles' 32-into-46 slot would have been.
-    expect(document).toContain('960 × 1707');
+    // The **logical** size, which is what the shipped `zone_parlor_shell` is on
+    // disk and what `process-art.ts` resizes to. A shell generated to any other
+    // number is resampled into the room and stops being pixel art — the same
+    // defect the collectibles' 32-into-46 slot would have been.
+    expect(document).toContain('320 × 569');
 
     for (const theme of THEMES) {
-      expect(assetRegistry.get(THEME_SPECS[theme].shell)?.canvas).toBe('960x1707');
+      expect(assetRegistry.get(THEME_SPECS[theme].shell)?.canvas).toBe('320x569');
     }
   });
 

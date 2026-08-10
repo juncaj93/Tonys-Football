@@ -67,14 +67,17 @@ export function ManagerRoomScene({ theme }: { theme: Theme }) {
  * direction.
  */
 const STEPS: readonly { y: number; width: number }[] = [
-  { y: 330, width: 84 },
-  { y: 298, width: 78 },
-  { y: 266, width: 72 },
-  { y: 234, width: 66 },
-  { y: 202, width: 60 },
-  { y: 170, width: 54 },
-  { y: 138, width: 48 },
+  { y: 300, width: 70 },
+  { y: 268, width: 65 },
+  { y: 236, width: 60 },
+  { y: 204, width: 55 },
+  { y: 172, width: 50 },
+  { y: 140, width: 45 },
+  { y: 108, width: 40 },
 ];
+
+/** The stairwell's inner left edge — the stairs rect inset by its own frame. */
+const STEP_X = 54;
 
 /**
  * One woven border on the rug — four thin spans rather than a CSS border.
@@ -187,14 +190,15 @@ function DrawnBasement({ theme }: { theme: Theme }) {
       <span className={`absolute ${spec.rail}`} style={place([0, HORIZON - 5, 320, 5])} />
 
       {/* ---- Pipes along the ceiling and down the left wall -------------- */}
-      <span className="absolute bg-ink-500/70" style={place([0, 14, 320, 6])} />
-      <span className="absolute bg-ink-500/55" style={place([0, 26, 320, 4])} />
-      <span className="absolute bg-ink-500/60" style={place([278, 20, 6, 40])} />
+      <span className="absolute bg-ink-500/70" style={place([0, 20, 320, 6])} />
+      <span className="absolute bg-ink-500/55" style={place([0, 34, 320, 4])} />
+      <span className="absolute bg-ink-500/60" style={place([282, 26, 6, 44])} />
 
-      {/* ---- The window, high on the left wall --------------------------- */}
-      <span className="absolute bg-ink-700" style={place([32, 54, 48, 30])} />
-      <span className="absolute bg-blue-mid/50" style={place([35, 57, 42, 24])} />
-      <span className="absolute bg-ink-700" style={place([55, 57, 2, 24])} />
+      {/* ---- The window, high on the back wall --------------------------- */}
+      {/* Where the delivered shell puts it: centred, just above the rod. */}
+      <span className="absolute bg-ink-700" style={place([184, 98, 38, 26])} />
+      <span className="absolute bg-blue-mid/50" style={place([187, 101, 32, 20])} />
+      <span className="absolute bg-ink-700" style={place([202, 101, 2, 20])} />
 
       {/* ---- The one hanging lamp ---------------------------------------- */}
       {/*
@@ -202,23 +206,23 @@ function DrawnBasement({ theme }: { theme: Theme }) {
         * single difference between the three themes — the cold store's is blue,
         * and that changes the room more than the tiling does.
         */}
-      <span className="absolute bg-ink-500" style={place([189, 0, 3, 30])} />
-      <span className={`absolute ${spec.fitting}`} style={place([174, 30, 34, 12])} />
+      <span className="absolute bg-ink-500" style={place([211, 0, 3, 76])} />
+      <span className={`absolute ${spec.fitting}`} style={place([196, 76, 34, 12])} />
       <span
         className="absolute rounded-full"
         style={{
-          ...place([142, 36, 98, 66]),
+          ...place([164, 82, 98, 66]),
           background: `radial-gradient(closest-side, ${spec.glow}, transparent)`,
         }}
       />
 
       {/* ---- The pennant rail -------------------------------------------- */}
       {/* A rod with two brackets. What hangs from it is drawn by the page. */}
-      <span className="absolute bg-ink-300" style={place([rail[0], rail[1] + 8, rail[2], 4])} />
-      <span className="absolute bg-ink-300" style={place([rail[0], rail[1] + 4, 4, 12])} />
+      <span className="absolute bg-ink-300" style={place([rail[0], rail[1] + 22, rail[2], 4])} />
+      <span className="absolute bg-ink-300" style={place([rail[0], rail[1] + 18, 4, 12])} />
       <span
         className="absolute bg-ink-300"
-        style={place([rail[0] + rail[2] - 4, rail[1] + 4, 4, 12])}
+        style={place([rail[0] + rail[2] - 4, rail[1] + 18, 4, 12])}
       />
 
       {/* ---- The framed board on the back wall --------------------------- */}
@@ -238,9 +242,9 @@ function DrawnBasement({ theme }: { theme: Theme }) {
 
       {/* ---- The shelf under it ------------------------------------------ */}
       {/* One plank on two brackets, spanning both shelf slots. */}
-      <span className={`absolute ${spec.timber}`} style={place([120, 262, 110, 6])} />
-      <span className="absolute bg-ink-900/55" style={place([128, 268, 6, 12])} />
-      <span className="absolute bg-ink-900/55" style={place([216, 268, 6, 12])} />
+      <span className={`absolute ${spec.timber}`} style={place([134, 262, 114, 6])} />
+      <span className="absolute bg-ink-900/55" style={place([142, 268, 6, 12])} />
+      <span className="absolute bg-ink-900/55" style={place([234, 268, 6, 12])} />
 
       {/* ---- The cork noticeboard, right wall ---------------------------- */}
       {/*
@@ -255,12 +259,12 @@ function DrawnBasement({ theme }: { theme: Theme }) {
         style={place([board[0] + 4, board[1] + 4, board[2] - 8, board[3] - 8])}
       />
       {/* Notes pinned to it. Scenery — the names are in the panel. */}
-      <span className="absolute bg-paper-mid" style={place([274, 68, 16, 20])} />
-      <span className="absolute bg-paper-dark" style={place([294, 74, 14, 18])} />
-      <span className="absolute bg-paper-mid" style={place([272, 98, 18, 16])} />
-      <span className="absolute bg-paper-dark" style={place([296, 100, 14, 22])} />
-      <span className="absolute bg-paper-mid" style={place([278, 126, 20, 18])} />
-      <span className="absolute bg-paper-dark" style={place([274, 150, 16, 16])} />
+      <span className="absolute bg-paper-mid" style={place([286, 126, 14, 18])} />
+      <span className="absolute bg-paper-dark" style={place([303, 130, 12, 16])} />
+      <span className="absolute bg-paper-mid" style={place([288, 152, 16, 14])} />
+      <span className="absolute bg-paper-dark" style={place([304, 156, 12, 20])} />
+      <span className="absolute bg-paper-mid" style={place([286, 182, 18, 16])} />
+      <span className="absolute bg-paper-dark" style={place([302, 186, 14, 14])} />
 
       {/* ---- The desk ----------------------------------------------------- */}
       {/*
@@ -269,12 +273,18 @@ function DrawnBasement({ theme }: { theme: Theme }) {
         * shadow: in the storeroom `theme.timberDark` and `theme.wainscot` are the
         * same tone, so a leg drawn in it was invisible against the wall behind.
         */}
-      <span className={`absolute ${spec.timber}`} style={place([desk[0], 264, desk[2], 8])} />
-      <span className="absolute bg-ink-900/55" style={place([desk[0] + 4, 272, 9, 100])} />
-      <span className="absolute bg-ink-900/55" style={place([desk[0] + desk[2] - 13, 272, 9, 100])} />
-      {/* A drawer front, so it reads as a desk rather than as a table. */}
-      <span className={`absolute ${spec.timberDark}`} style={place([desk[0] + 12, 274, 44, 14])} />
-      <span className="absolute bg-ink-100/50" style={place([desk[0] + 30, 280, 10, 3])} />
+      {/*
+        * Top, apron, then legs — **mass, not a ledge.** The desktop sits at
+        * `y 338`, two units above the horizon, so a top drawn on its own read as
+        * a shelf stuck to the back wall rather than a desk standing in front of
+        * it. In the painted shell this is a foreground object with real depth;
+        * the stand-in gets that with a body under the top.
+        */}
+      <span className={`absolute ${spec.timber}`} style={place([desk[0] - 6, 338, desk[2] + 12, 8])} />
+      <span className={`absolute ${spec.timberDark}`} style={place([desk[0] - 2, 346, desk[2] + 4, 18])} />
+      <span className="absolute bg-ink-100/40" style={place([desk[0] + 22, 353, 14, 3])} />
+      <span className="absolute bg-ink-900/55" style={place([desk[0] + 2, 364, 10, 66])} />
+      <span className="absolute bg-ink-900/55" style={place([desk[0] + desk[2] - 12, 364, 10, 66])} />
 
       {/* ---- The staircase ------------------------------------------------ */}
       {/*
@@ -289,21 +299,21 @@ function DrawnBasement({ theme }: { theme: Theme }) {
         style={place([stairs[0] + 6, stairs[1] + 6, stairs[2] - 12, stairs[3] - 6])}
       />
       {/* Light from the hall, at the head of the flight. */}
-      <span className="absolute bg-amber-glow/35" style={place([16, 98, 54, 44])} />
+      <span className="absolute bg-amber-glow/35" style={place([STEP_X, 98, 44, 34])} />
 
       {STEPS.map(({ y, width }, index) => (
         <span key={y}>
           {/* The nosing: the lit front edge of the tread. */}
           <span
             className={`absolute ${spec.timber}`}
-            style={{ ...place([16, y, width, 8]), opacity: 1 - index * 0.07 }}
+            style={{ ...place([STEP_X, y, width, 8]), opacity: 1 - index * 0.07 }}
           />
           {/* The riser under it, in shadow. Three times the nosing's height. */}
-          <span className="absolute bg-ink-900/70" style={place([16, y + 8, width, 24])} />
+          <span className="absolute bg-ink-900/70" style={place([STEP_X, y + 8, width, 24])} />
           {/* The banister post at the open edge of that step. */}
           <span
             className={`absolute ${spec.rail}`}
-            style={{ ...place([16 + width - 6, y - 22, 5, 24]), opacity: 1 - index * 0.07 }}
+            style={{ ...place([STEP_X + width - 6, y - 22, 5, 24]), opacity: 1 - index * 0.07 }}
           />
         </span>
       ))}
@@ -312,7 +322,7 @@ function DrawnBasement({ theme }: { theme: Theme }) {
         <span
           key={`rail-${String(y)}`}
           className={`absolute ${spec.rail}`}
-          style={place([16 + width - 14, y - 24, 14, 5])}
+          style={place([STEP_X + width - 14, y - 24, 14, 5])}
         />
       ))}
 
@@ -322,8 +332,8 @@ function DrawnBasement({ theme }: { theme: Theme }) {
         * reads as a void rather than as ground somebody is standing on — the
         * same trick the hall uses, and the reason the first version had them.
         */}
-      <span className="absolute bg-ink-900/25" style={place([0, 444, 320, 3])} />
-      <span className="absolute bg-ink-900/18" style={place([0, 516, 320, 3])} />
+      <span className="absolute bg-ink-900/25" style={place([0, 424, 320, 3])} />
+      <span className="absolute bg-ink-900/18" style={place([0, 500, 320, 3])} />
 
       {/*
         * The rug, because the reference has one and because it is what tells a
@@ -337,32 +347,32 @@ function DrawnBasement({ theme }: { theme: Theme }) {
         * gradient in percentages so it scales with the room rather than
         * drifting against it on a wider phone.
         */}
-      <span className={`absolute ${spec.rug}`} style={place([76, 396, 190, 150])} />
+      <span className={`absolute ${spec.rug}`} style={place([96, 356, 180, 176])} />
       <span
         className="absolute"
         style={{
-          ...place([76, 396, 190, 150]),
+          ...place([96, 356, 180, 176]),
           background:
             `repeating-linear-gradient(to bottom, transparent 0 ${rows(5).toFixed(3)}%, rgba(0,0,0,0.16) ${rows(5).toFixed(3)}% ${rows(6).toFixed(3)}%),` +
             `repeating-linear-gradient(to right, transparent 0 ${cols(5).toFixed(3)}%, rgba(255,255,255,0.05) ${cols(5).toFixed(3)}% ${cols(6).toFixed(3)}%)`,
         }}
       />
-      <RugRing spec={spec} rect={[82, 402, 178, 138]} />
-      <RugRing spec={spec} rect={[98, 418, 146, 106]} faint />
+      <RugRing spec={spec} rect={[102, 362, 168, 164]} />
+      <RugRing spec={spec} rect={[118, 378, 136, 132]} faint />
       {/* The fringe, at both ends, so it reads as laid down rather than painted on. */}
-      <span className="absolute bg-paper-dark/45" style={place([76, 392, 190, 4])} />
-      <span className="absolute bg-paper-dark/45" style={place([76, 546, 190, 4])} />
+      <span className="absolute bg-paper-dark/45" style={place([96, 352, 180, 4])} />
+      <span className="absolute bg-paper-dark/45" style={place([96, 532, 180, 4])} />
 
       {/* Flattened boxes and a crate, left of the rug. */}
-      <span className={`absolute ${spec.timberDark}`} style={place([6, 388, 62, 22])} />
-      <span className={`absolute ${spec.timber} opacity-70`} style={place([10, 396, 54, 8])} />
-      <span className="absolute bg-ink-700" style={place([8, 424, 60, 54])} />
-      <span className="absolute bg-ink-500/60" style={place([12, 428, 52, 4])} />
-      <span className="absolute bg-ink-500/40" style={place([12, 448, 52, 4])} />
+      <span className={`absolute ${spec.timberDark}`} style={place([4, 356, 68, 22])} />
+      <span className={`absolute ${spec.timber} opacity-70`} style={place([8, 364, 60, 8])} />
+      <span className="absolute bg-ink-700" style={place([6, 396, 66, 58])} />
+      <span className="absolute bg-ink-500/60" style={place([10, 400, 58, 4])} />
+      <span className="absolute bg-ink-500/40" style={place([10, 422, 58, 4])} />
 
       {/* A stack of boxes in the near right corner. */}
-      <span className={`absolute ${spec.timberDark}`} style={place([274, 476, 44, 20])} />
-      <span className={`absolute ${spec.timber} opacity-70`} style={place([280, 496, 40, 18])} />
+      <span className={`absolute ${spec.timberDark}`} style={place([282, 452, 38, 20])} />
+      <span className={`absolute ${spec.timber} opacity-70`} style={place([286, 472, 34, 18])} />
     </div>
   );
 }

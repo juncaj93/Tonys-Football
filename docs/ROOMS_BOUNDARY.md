@@ -264,15 +264,21 @@ reachable, and `back-hall-shut` photographs it at all three widths.
 
 ---
 
-## 10. Art — the room is a painted shell, and the shell is the blocker
+## 10. Art — the storeroom is painted; two shells outstanding
 
-**Superseded 2026-08-09.** This section used to read *"none is required, and none
-is requested"*, and that was true of the room as first built: there was no room
-art, none had ever been briefed, and flat rectangles were the approved
-placeholder architecture. The commissioner's direction of 2026-08-09 supplies an
-approved reference and corrects the direction — *"flat walls, simplistic stairs,
-crude rectangles, under-detailed props, weak atmosphere"* — so the position is
-now the opposite.
+**Superseded twice.** It first read *"none is required, and none is requested"*,
+which was true of the room as first built. The commissioner's direction of
+2026-08-09 supplied an approved reference and corrected it. On **2026-08-10 the
+storeroom shell was delivered, processed and shipped**, so the position now is:
+
+| Theme | Shell | State |
+|---|---|---|
+| `storeroom` (default) | `zone_room_shell_storeroom` | **painted, live** |
+| `rec_room` | `zone_room_shell_rec_room` | outstanding — draws the stand-in |
+| `cold_store` | `zone_room_shell_cold_store` | outstanding — draws the stand-in |
+
+Because resolution is per theme, that mixed state is a normal state and not a
+half-finished one.
 
 ### 10.1 The architecture
 
@@ -297,21 +303,62 @@ looking at a folder of screenshots has no way to tell *"this is the room"* from
 *"this is what stands in for the room"*, and the moment one theme has art and
 another does not, two pictures mean different things under one naming.
 
-### 10.2 The geometry is fixed, and the art is drawn to it
+### 10.2 The brief went first; the geometry moved to meet the art
 
-The reverse of how the parlor was done, deliberately. The parlor's art came
-first and its coordinates were measured off it; here the room already works —
-tested, gated, photographed at three widths — so the cheaper thing to move is the
-paint.
+The plan was *"the art is drawn to the geometry"*, and that is still the right
+default — the room already works, so the cheaper thing to move is the paint. What
+actually happened is worth recording, because it will happen again on the next
+two shells.
 
-`docs/art/BATCH_E_BASEMENT_HANDOFF.md` briefs the three shells **to the numbers
-`lib/rooms/objects.ts` holds**, including six **prepared places** that must be
-drawn empty: the frame, the shelf plank, the desktop, the pennant rod, the
-noticeboard and the rug. Anything painted there is covered by a sprite at runtime
-and reads as a rendering bug. `lib/assets/batches.test.ts` fails the build if the
-document and the registry ever disagree about which slugs exist.
+**The delivered shell came back close, and not exact.** A generated image does
+not hit a coordinate table, and it should not be sent back for a fifteen-unit
+error when the alternative is editing eight numbers. So the geometry was
+**aligned to the delivered art**, measured off it rather than guessed:
 
-### 10.3 What still uses real approved art, and needs nothing
+| Object | Was | Is | Moved because |
+|---|---|---|---|
+| `stairs` | `[10, 92, 98, 274]` | `[48, 92, 82, 240]` | the flight sits further right and stops higher; the old region covered the side table and missed the stair's right edge |
+| `rings` | `[124, 52, 134, 46]` | `[136, 96, 118, 40]` | the rod is 44 units lower than briefed |
+| `wall` | `[124, 112, 116, 78]` | `[150, 140, 100, 72]` | the frame is smaller and lower |
+| `shelf_left` / `shelf_right` | `x 126 / 178` | `x 140 / 196` | the shelf spans `x 136–250`, not `120–230` |
+| `bench` | `[246, 214, 68, 58]` | `[256, 286, 60, 60]` | the desk is a **foreground** object, not a ledge on the back wall |
+| `corridor` | `[266, 56, 48, 124]` | `[280, 118, 40, 112]` | the cork board is further right and lower, and runs off the frame edge |
+| `manager` | `[110, 320, …]` | `[126, 334, …]` | centred on the rug the art actually drew |
+| `HORIZON` / `CEILING` | `366` / `46` | `340` / `62` | the floor line and the joists, read off the shell |
+
+Two consequences, both recorded rather than absorbed:
+
+- **The storeroom is now the master.** The handoff carries these numbers, so the
+  rec room and the cold store are briefed to the room that exists. They are *the
+  same room refitted*: a fixture that moved between themes would move a
+  manager's things when they changed the walls.
+- **`PENNANT.shown` went 6 → 5.** The delivered rod is 114 units wide and the
+  parlor's 22-unit pitch fits five. Narrowing the pitch to force a sixth would
+  make this rail visibly a different fitting from the one in the shop, which is
+  the whole reason a pennant reads as a championship here without being
+  explained. The panel lists every title either way.
+
+Six **prepared places** must still be drawn empty on the outstanding two: the
+frame, the shelf, the desktop, the pennant rod, the noticeboard and the rug.
+Anything painted there is covered by a sprite at runtime and reads as a rendering
+bug. `lib/assets/batches.test.ts` fails the build if the handoff and the registry
+disagree about which slugs exist.
+
+### 10.2.1 The canvas was wrong, and it would have shipped a 3×-oversized room
+
+`zone_room_shell_*` was registered at **960 × 1707**, copied from
+`zone_back_hall_shell`. Both were wrong. The one shell this product has actually
+shipped — `zone_parlor_shell` — is **320 × 569 on disk**, and
+`ART_PRODUCTION_BACKLOG`'s first rule says why: art is *"authored at its logical
+size in CSS pixels, no larger… an oversized source gets resampled and loses"* its
+edges. The device scales it up with `image-rendering: pixelated`.
+
+It mattered because `process-art.ts` resizes to whatever the registry says. The
+error was invisible while every shell was a placeholder and would have shipped a
+three-times-oversized room the moment one arrived. `zone_back_hall_shell` was
+corrected in the same change.
+
+### 10.3 What else uses real approved art, and needs nothing
 
 - **Collectibles** in the four places — the twelve Batch B sprites, at their
   authored 46 × 46 into a 46 × 46 **art rect**, which is the pipeline's *one art

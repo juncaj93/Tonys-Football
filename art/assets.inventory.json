@@ -308,7 +308,7 @@
       "$comment": "Reached through the one rear doorway in the parlor. A small pixel-art scene, not a menu card: one compact screen, two environmental choices, and an in-world return door. Rooms and Underground exist ONLY here.",
       "zone_back_hall_shell": {
         "family": "zone",
-        "canvas": "960x1707",
+        "canvas": "320x569",
         "batch": "B1",
         "art_status": "placeholder",
         "role": "scenery",
@@ -353,18 +353,19 @@
       }
     },
     "_basement_B1": {
-      "$comment": "The manager's basement, reached down the stairs from the Back Hall. One portrait shell per theme plus transparent hit regions -- the same grammar as the parlor and the hall, and NOT a grid of hotspots. Each shell is drawn EMPTY where runtime content goes: the frame, the shelf plank, the desktop and the pennant rail carry a manager's own things, and the rug carries the manager. Geometry is fixed by lib/rooms/objects.ts; the art is drawn to those numbers rather than measured off afterwards. See docs/art/BATCH_C_BASEMENT_HANDOFF.md.",
+      "$comment": "The manager's basement, reached down the stairs from the Back Hall. One portrait shell per theme plus transparent hit regions -- the same grammar as the parlor and the hall, and NOT a grid of hotspots. Authored at 320x569, the LOGICAL size, exactly as the shipped zone_parlor_shell is: the pipeline resizes to this canvas and the device scales up with image-rendering: pixelated. Each shell is drawn EMPTY where runtime content goes -- the frame, the shelf plank, the desktop and the pennant rail carry a manager's own things, and the rug carries the manager. Geometry is fixed by lib/rooms/objects.ts. See docs/art/BATCH_E_BASEMENT_HANDOFF.md.",
       "zone_room_shell_storeroom": {
         "family": "zone",
-        "canvas": "960x1707",
+        "canvas": "320x569",
         "batch": "B1",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "role": "scenery",
-        "alt": "A manager's basement, fitted out as a storeroom"
+        "alt": "A manager's basement, fitted out as a storeroom",
+        "path": "/assets/zone/zone_room_shell_storeroom.png"
       },
       "zone_room_shell_rec_room": {
         "family": "zone",
-        "canvas": "960x1707",
+        "canvas": "320x569",
         "batch": "B1",
         "art_status": "placeholder",
         "role": "scenery",
@@ -372,7 +373,7 @@
       },
       "zone_room_shell_cold_store": {
         "family": "zone",
-        "canvas": "960x1707",
+        "canvas": "320x569",
         "batch": "B1",
         "art_status": "placeholder",
         "role": "scenery",

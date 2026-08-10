@@ -129,23 +129,23 @@ So this batch cannot be briefed until one of two routes is chosen, and both are 
 
 ---
 
-## Batch E — the manager's basement — **ready to generate**
+## Batch E — the manager's basement — **one of three delivered**
 
 Three room shells, briefed in full at [`BATCH_E_BASEMENT_HANDOFF.md`](BATCH_E_BASEMENT_HANDOFF.md).
 
-| Slug | What it is | Canvas |
-|---|---|---|
-| `zone_room_shell_storeroom` | The basement as it is — block, concrete, one pendant lamp. **The default; generate first** | 960 × 1707 |
-| `zone_room_shell_rec_room` | The same room, panelled and carpeted | 960 × 1707 |
-| `zone_room_shell_cold_store` | The same room as a cleared-out walk-in | 960 × 1707 |
+| Slug | What it is | Canvas | State |
+|---|---|---|---|
+| `zone_room_shell_storeroom` | The basement as it is — block, concrete, one pendant lamp. The default | 320 × 569 | **delivered and live**, 2026-08-10 |
+| `zone_room_shell_rec_room` | The same room, panelled and carpeted | 320 × 569 | outstanding |
+| `zone_room_shell_cold_store` | The same room as a cleared-out walk-in | 320 × 569 | outstanding |
 
 Two things make this batch unlike the ones above it.
 
-**The geometry is fixed and the art is drawn to it.** `/rooms` already works — tested, gated, photographed at three widths — so the handoff briefs the shell *to the coordinates the code holds* rather than having them measured off the art afterwards. A shell whose shelf is fifteen units left of the shelf slot produces taps that land beside the thing tapped, and no gate can see it because both halves are individually correct.
+**The geometry moved to meet the art, once.** The brief went out to the coordinates the code held; the approved storeroom came back with the same composition at slightly different measurements, and — because a room that *works* is cheaper to re-aim than a painting is to redraw — `lib/rooms/objects.ts` was realigned to the delivered file rather than the file being redrawn to the code. That happened **once**, and the two remaining shells are now briefed to the storeroom: it is the master, and a shell drawn to it needs no further code change.
 
 **Six places must be drawn empty**: the frame, the shelf plank, the desktop, the pennant rod, the noticeboard and the rug. A manager's own things are composited into them, and anything painted there is covered at runtime and reads as a bug.
 
-Each shell is independently useful — the code resolves per theme, so they can arrive in any order.
+Each shell is independently useful — the code resolves per theme, so they can arrive in any order, and `rec_room` and `cold_store` draw the stand-in until they do.
 
 ---
 

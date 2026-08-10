@@ -19,19 +19,25 @@ import { ROOM, type RoomObjectSpec } from '@/lib/parlor/objects';
  * the top, one hanging enamel lamp, a framed board on the back wall, a pennant,
  * a shelf, a desk, a cork noticeboard, and a rug with room to stand on.
  *
- * Every rectangle below is placed against that composition, so the hit regions
- * land on furniture that is actually there rather than on a rectangle that was
- * there first. `docs/art/BATCH_E_BASEMENT_HANDOFF.md` briefs the shell to these
- * same numbers, which is the half that keeps them true: **the art is drawn to
- * the geometry, not measured off it afterwards.**
+ * **Every rectangle below is measured off the delivered storeroom shell**
+ * (`zone_room_shell_storeroom`, 2026-08-10), so a tap lands on the furniture a
+ * manager can actually see. The brief was written first and the art came back
+ * close but not exact — a generated image never hits a coordinate table — so
+ * the geometry was aligned to the art rather than the art being sent back.
+ *
+ * **The storeroom is now the master.** `docs/art/BATCH_E_BASEMENT_HANDOFF.md`
+ * carries these same numbers so the two outstanding shells are drawn to the room
+ * that exists: the rec room and the cold store are *the same room refitted*, and
+ * a fixture that moved between themes would move a manager's things when they
+ * changed the walls.
  *
  * ## The room is the size of every other room
  *
  * `BACK_HALL = ROOM` for the reason `lib/backhall/objects.ts` gives — one
  * coordinate system and one `place()`, so walking between rooms does not change
- * the size of the world. This is the third room and it keeps that. The reference
- * is 890 × 1600, an aspect of 0.556 against this room's 0.562, so the
- * composition transfers without cropping.
+ * the size of the world. This is the third room and it keeps that. The delivered
+ * shell is 940 × 1672, an aspect of 0.5622 against this room's 0.5624, so it
+ * transfers with no crop and no stretch worth measuring.
  *
  * ## Eight objects, and what is deliberately not one of them
  *
@@ -56,16 +62,16 @@ import { ROOM, type RoomObjectSpec } from '@/lib/parlor/objects';
 export const MANAGER_ROOM = ROOM;
 
 /**
- * Where the floor meets the back wall.
+ * Where the floor meets the back wall, **measured off the delivered shell**.
  *
- * Higher than the first version's 392, from the reference: the basement's floor
- * takes the bottom third of the frame, which is what gives a figure somewhere to
- * stand that is not against the wall.
+ * Used only by the drawn stand-in now — the storeroom draws its painted shell —
+ * so its job is to keep the two themes still on geometry looking like the same
+ * room as the one that has art.
  */
-export const HORIZON = 366;
+export const HORIZON = 340;
 
-/** Where the ceiling's joists stop and the block wall starts. */
-export const CEILING = 46;
+/** Where the ceiling's joists stop and the block wall starts. Same source. */
+export const CEILING = 62;
 
 /**
  * The four places a collectible can go.
@@ -112,9 +118,9 @@ export const SLOT_EMPTY: Readonly<Record<Slot, string>> = {
 /**
  * The eight, laid out against the reference.
  *
- * Every region is at least 44 × 44 room units, which at the narrowest supported
- * phone (360 CSS px across a 320-unit room) is 49.5 CSS px. `objects.test.ts`
- * fails the build if any two of them touch or if any falls outside the room.
+ * Every region clears **44 CSS px on the narrowest supported phone** — 360 px
+ * across a 320-unit room, so 39.1 room units. `objects.test.ts` fails the build
+ * if any two of them touch or if any falls outside the room.
  */
 export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
   /**
@@ -132,7 +138,7 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     label: 'Back up the stairs',
     destination: 'the hall',
     href: '/back-hall',
-    rect: [10, 92, 98, 274],
+    rect: [48, 92, 82, 240],
   },
 
   /**
@@ -156,7 +162,7 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     id: 'rings',
     kind: 'display',
     label: 'The pennant rail',
-    rect: [124, 52, 134, 46],
+    rect: [136, 96, 118, 40],
   },
 
   /* --- The four slots ---------------------------------------------------- */
@@ -177,7 +183,7 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     id: 'wall',
     kind: 'display',
     label: 'The frame on the wall',
-    rect: [124, 112, 116, 78],
+    rect: [150, 140, 100, 72],
   },
 
   /** The left of the shelf under the frame. */
@@ -185,14 +191,14 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     id: 'shelf_left',
     kind: 'display',
     label: 'The left of the shelf',
-    rect: [126, 216, 46, 46],
+    rect: [140, 216, 46, 46],
   },
   /** The right of the same plank. */
   {
     id: 'shelf_right',
     kind: 'display',
     label: 'The right of the shelf',
-    rect: [178, 216, 46, 46],
+    rect: [196, 216, 46, 46],
   },
 
   /**
@@ -206,7 +212,7 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     id: 'bench',
     kind: 'display',
     label: 'The desk',
-    rect: [250, 210, 60, 60],
+    rect: [256, 286, 60, 60],
   },
 
   /* --- The two the product knows ---------------------------------------- */
@@ -234,7 +240,7 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     id: 'manager',
     kind: 'display',
     label: 'The manager',
-    rect: [110, 320, 112, 168],
+    rect: [126, 334, 112, 168],
   },
 
   /**
@@ -255,7 +261,7 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
     id: 'corridor',
     kind: 'display',
     label: 'The noticeboard',
-    rect: [266, 56, 48, 124],
+    rect: [280, 118, 40, 112],
   },
 ] as const;
 
@@ -284,13 +290,13 @@ export function roomObject(id: string): RoomObjectSpec {
  * its own hit region.
  */
 export const SLOT_ART: Readonly<Record<Slot, RoomObjectSpec['rect']>> = {
-  // On the plank, where the hit region already is.
-  shelf_left: [126, 216, 46, 46],
-  shelf_right: [178, 216, 46, 46],
+  // Standing on the shelf, where the hit region already is.
+  shelf_left: [140, 216, 46, 46],
+  shelf_right: [196, 216, 46, 46],
   // Centred in the frame's opening.
-  wall: [159, 128, 46, 46],
+  wall: [177, 153, 46, 46],
   // Standing on the desktop, not floating in the middle of the desk.
-  bench: [257, 218, 46, 46],
+  bench: [263, 292, 46, 46],
 };
 
 /** The hit region a slot is tapped in. */
@@ -314,9 +320,18 @@ export const PENNANT = Object.freeze({
   width: 18,
   height: 15,
   pitch: 22,
-  /** Inset from the rail's own rectangle. */
-  offsetX: 3,
-  offsetY: 10,
-  /** How many hang on the wall. The panel lists every one. */
-  shown: 6,
+  /** Inset from the rail's own rectangle, so they hang from the rod. */
+  offsetX: 4,
+  offsetY: 26,
+  /**
+   * How many hang on the wall. The panel lists every one.
+   *
+   * **Five, not six.** The rod in the delivered shell is 114 units wide, and at
+   * the parlor's own 22-unit pitch that fits five. Narrowing the pitch to force a
+   * sixth would make this rail visibly a different fitting from the one in the
+   * shop, which is the whole reason a pennant reads as a championship here
+   * without being explained. Five titles is already past this league's horizon,
+   * and the panel is the record either way.
+   */
+  shown: 5,
 });
