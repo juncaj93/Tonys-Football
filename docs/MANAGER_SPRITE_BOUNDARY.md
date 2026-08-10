@@ -176,10 +176,11 @@ alone:
 follow the character onto `/profile` and into the customiser, where there is no
 floor for it to fall on, and it would be recoloured by whatever ramp sat under it.
 
-It is soft, and that is allowed here: `docs/M3_CHARACTER_BOUNDARY.md §3` bans
-partial alpha inside the **sprite**, so that the affordance silhouette derived
-from its own alpha stays hard. This is not the sprite and nothing derives a
-silhouette from it.
+**Two hard ellipses, no blur.** A penumbra out of two flat steps is the same
+trick `.pixel-edge` uses for a bevel and the same trick the sprite uses for a
+curve — it survives `image-rendering: pixelated`, costs no filter, and is the
+house style rather than an exception to it. The first version was one blurred
+rounded rectangle and drew nothing at all; see defect 15.
 
 It is the single cue no work on the sprite itself could supply.
 
@@ -187,10 +188,13 @@ It is the single cue no work on the sprite itself could supply.
 
 ## 3. Defects found by rendering and looking
 
-**Fifteen**, recorded because each was invisible to the seventy-six tests that
+**Eighteen**, recorded because each was invisible to the seventy-six tests that
 already existed, and because the list is the argument for the screenshot loop.
-Four of them were introduced by this slice and caught inside it; the rest were
-already shipped.
+
+Most were introduced by this rewrite and caught inside it, which is the loop
+working rather than a tally of mistakes — a figure re-authored on a canvas 1.75×
+larger is a new drawing, and the ones below are what a new drawing costs. Two had
+been shipped for months and are marked.
 
 1. **The entire figure rendered as its own outline colour.** One transposed index
    in `runDepths` — the recurrence read the neighbour on the far side of the pixel
@@ -217,8 +221,8 @@ already shipped.
    different arithmetic — `112 - cx` against `111 - x`. The left ear stood proud of
    the skull and the right was buried in it, on every manager. `mirrorCentre` exists
    for this and the symmetry test checks the drawing as well as the constants.
-6. **The hoodie's drawstrings had been rendering in `ink-900` since the hoodie
-   shipped.** They are one pixel wide, so every pixel of them touches empty and the
+6. **Shipped for months: the hoodie's drawstrings had been rendering in
+   `ink-900` since the hoodie was written.** They are one pixel wide, so every pixel of them touches empty and the
    unconditional outline claimed the whole cord. Found by asking why a *thin fixed
    mark* should be outlined at all — a fixed colour is an explicit decision about a
    pixel, and the beanie's pom is outlined because it has an interior, not because
@@ -226,7 +230,7 @@ already shipped.
 7. **Both pupils sat hard left.** Two ink columns of a five-column eye is
    off-centre by construction; every manager was looking away from whoever was
    looking at them.
-8. **Eyebrows were the manager's own skin, one step down.** Invisible on the pale
+8. **Shipped for months: eyebrows were the manager's own skin, one step down.** Invisible on the pale
    tones and wrong on all four. They belong to the hair layer now and take the hair
    colour, in the same way facial hair already did.
 9. **A shelf at each shoulder.** The deltoid ellipse sat level with `TORSO.top`, so
@@ -262,6 +266,24 @@ already shipped.
     could see — a gate asking whether the node existed would have been green on
     it, so the gate measures its rendered width and its computed alpha. It is two
     hard ellipses now, which is the same trick `.pixel-edge` uses for a bevel.
+16. **And then it was too narrow to notice.** Sized at 0.68 of the figure — barely
+    more than the boots are — it darkened the rug by a measurable amount and almost
+    all of that was *behind the feet*, leaving two tapering tips. Measured off the
+    capture by sampling rows through the shadow band rather than by squinting at
+    it. What makes a contact shadow read is the part that spreads past the stance
+    sideways, so it is wider than the boots and only a few rows deep.
+17. **All three hats sat across the face.** They were authored in offsets from
+    `HEAD.top`, so when the features moved they came down with the skull rather
+    than with the eyes: the beanie's band landed **on both eyes**, the visor's brim
+    on the lash line, the paper hat's band through the eyebrows. Nothing awards a
+    wearable, so all three would have shipped and surfaced on the day one was.
+    `HAT_BRIM` is one number now, two rows above the brow, and a test holds it.
+18. **Raising them made the visor float.** Five clear rows above a balding
+    manager's remaining hair — caught by the matrix test that exists for exactly
+    that pair, which is the one defect in this list a *test* found rather than an
+    eye. The balding crown is a horseshoe now; the cut that fixes this and the cut
+    that fixed defect 14 are the same cut at two different radii, and both wrong
+    versions are recorded beside it so the next person does not rediscover them.
 
 ---
 
