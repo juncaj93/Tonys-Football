@@ -1,12 +1,7 @@
-import { eq } from 'drizzle-orm';
-
 import { now } from '@/lib/clock';
-import { openSeason } from '@/lib/counter/tokens';
 import { cronAuthorized, cronJson, cronNotFound } from '@/lib/cron/secret';
 import { getDb } from '@/lib/db';
-import { seasons } from '@/lib/db/schema';
-import { runSunday } from '@/lib/slice/sunday';
-import { decodeMatchups, decodeState } from '@/lib/sleeper/codec';
+import { runSundayJob } from '@/lib/slice/sunday';
 import { createLiveSource } from '@/lib/sleeper/transport';
 
 /**
@@ -21,14 +16,10 @@ import { createLiveSource } from '@/lib/sleeper/transport';
  *
  * ## Which week it photographs
  *
- * Sleeper's own `state`, not a stored week. Tuesday asks *"which week has just
- * been played"* and reads that from the database; Sunday asks *"which week is
- * being played right now"*, and the only authority on that is the upstream. A
- * stored answer would be last week's for the entire duration of this one.
- *
- * `?week=` overrides, with the same secret, for a commissioner re-running a
- * missed Sunday against a week Sleeper has already moved past. It cannot
- * overwrite anything — see `lib/stats/snapshot.ts`.
+ * `runSundayJob` decides, from Sleeper's own `state`. `?week=` overrides, with
+ * the same secret, for a commissioner re-running a missed Sunday against a week
+ * Sleeper has already moved past. It cannot overwrite anything — see
+ * `lib/stats/snapshot.ts`.
  *
  * ## It reads once and writes once
  *
@@ -37,6 +28,14 @@ import { createLiveSource } from '@/lib/sleeper/transport';
  * section carves out, and it is deliberately shaped so it cannot grow into the
  * thing that was banned: one endpoint, one insert, no loop, no schedule of its
  * own, and a table that refuses to be written twice.
+ *
+ * ## The source is constructed here and nowhere else
+ *
+ * That is the seam: everything below `runSundayJob` takes its Sleeper as a
+ * parameter, so the whole job is drivable offline by the lifecycle rehearsal
+ * (`lib/rehearsal/`) against a written season. It used to live in this file,
+ * where the live source made it unreachable by any test — three real decisions
+ * with no cover on them.
  */
 
 export const runtime = 'nodejs';
@@ -52,74 +51,34 @@ export const maxDuration = 60;
 export async function GET(request: Request): Promise<Response> {
   if (!cronAuthorized(request, process.env)) return cronNotFound();
 
-  const db = getDb();
-  const season = await openSeason(db);
-
-  if (season === null) {
-    /*
-     * No open season. Not an error and not a retry: in July there is nothing
-     * being played, and a non-2xx here would have the platform retry an empty
-     * job every few minutes until September.
-     */
-    return cronJson(
-      { ran: false, why: 'There is no open season, so there is no week being played.' },
-      200,
-    );
-  }
-
-  const [row] = await db
-    .select({ leagueId: seasons.sleeperLeagueId })
-    .from(seasons)
-    .where(eq(seasons.id, season.id))
-    .limit(1);
-
-  const leagueId = row?.leagueId ?? null;
-  if (leagueId === null || leagueId === '') {
-    /*
-     * An open season with no Sleeper league attached. A real state — a season
-     * row can be created before the league exists — and not a failure to retry.
-     */
-    return cronJson(
-      {
-        ran: false,
-        why: `Season ${String(season.year)} has no Sleeper league id, so there is nothing to read.`,
-      },
-      200,
-    );
-  }
-
-  const source = createLiveSource();
+  const requested = new URL(request.url).searchParams.get('week');
+  const parsed = requested === null ? null : Number.parseInt(requested, 10);
 
   try {
-    const week = await weekToPhotograph(request, source);
-    if (week === null) {
+    const outcome = await runSundayJob(getDb(), {
+      source: createLiveSource(),
+      at: now(),
+      requestedWeek: Number.isNaN(parsed ?? Number.NaN) ? null : parsed,
+    });
+
+    if (outcome.kind === 'ran') {
       return cronJson(
-        { ran: false, why: 'Sleeper did not report a current week, so nothing was photographed.' },
+        { ran: true, report: outcome.report, warnings: outcome.warnings },
         200,
       );
     }
 
-    const fetched = await source.fetch({ kind: 'matchups', leagueId, week });
-    if (fetched.kind !== 'ok') {
-      /*
-       * 500 so the platform retries. Safe: the storage refuses a second capture
-       * of a week, so a retry either photographs a week that has none or does
-       * nothing at all.
-       */
-      console.error('The Sunday job could not read matchups:', fetched);
-      return cronJson({ ran: false, why: 'Sleeper did not answer. See the runtime log.' }, 500);
+    /*
+     * `nothing-to-do` is a 200 and `upstream-failed` is a 500 so the platform
+     * retries — safe, because the storage refuses a second capture of a week, so
+     * a retry either photographs a week that has none or does nothing at all.
+     */
+    if (outcome.kind === 'upstream-failed') {
+      console.error('The Sunday job could not read Sleeper:', outcome.why);
+      return cronJson({ ran: false, why: outcome.why }, 500);
     }
 
-    const decoded = decodeMatchups(fetched.payload, `matchups(${String(week)})`);
-    const report = await runSunday(db, {
-      season: season.year,
-      week,
-      entries: decoded.value,
-      at: now(),
-      source: source.label,
-    });
-
-    return cronJson({ ran: true, report, warnings: decoded.warnings }, 200);
+    return cronJson({ ran: false, why: outcome.why }, 200);
   } catch (error: unknown) {
     /*
      * The detail goes to the runtime log rather than into the body: this
@@ -129,21 +88,4 @@ export async function GET(request: Request): Promise<Response> {
     console.error('The Sunday job failed:', error);
     return cronJson({ ran: false, why: 'The job failed. See the runtime log.' }, 500);
   }
-}
-
-/** The overridden week, or the one Sleeper says is being played. */
-async function weekToPhotograph(
-  request: Request,
-  source: ReturnType<typeof createLiveSource>,
-): Promise<number | null> {
-  const requested = new URL(request.url).searchParams.get('week');
-  const parsed = requested === null ? null : Number.parseInt(requested, 10);
-  if (parsed !== null && Number.isInteger(parsed) && parsed >= 1 && parsed <= 18) return parsed;
-
-  const state = await source.fetch({ kind: 'state' });
-  if (state.kind !== 'ok') return null;
-
-  const decoded = decodeState(state.payload);
-  const week = decoded.value.week;
-  return Number.isInteger(week) && week >= 1 && week <= 18 ? week : null;
 }

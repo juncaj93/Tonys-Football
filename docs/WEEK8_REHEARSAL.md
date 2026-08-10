@@ -297,12 +297,33 @@ This is only visible with a season in motion. It is **not** a missing feature �
 every fact the paper needs is stored and final — it is one gate reading the wrong
 column.
 
-**Why it is not fixed here.** Changing which weeks the Slice may print changes
+**Why it was not fixed here.** Changing which weeks the Slice may print changes
 what the league reads as true, and it turns the approval desk live in September.
 That is `16 §9`'s territory and `docs/SLICE_REVIEW_BOUNDARY.md`'s, and this
 rehearsal's scope explicitly excludes the Slice's editorial architecture.
-`lib/slice/midseason-week8.test.ts` pins the current behaviour with the
-contradiction written into the test, so it cannot be mistaken for working.
+`lib/slice/midseason-week8.test.ts` pinned the current behaviour with the
+contradiction written into the test, so it could not be mistaken for working.
+
+> #### FIXED — 2026-08-10, by the Week 1 lifecycle rehearsal
+>
+> **The finding above stands exactly as written; only its status changed.** The
+> Week 1 rehearsal reached the same defect from the other end, on the same day,
+> with the Tuesday Slice handoff **inside** its scope — so it made the repair
+> this rehearsal deliberately declined to make. `docs/WEEK_1_REHEARSAL.md §6` is
+> the account of it, including the disagreement.
+>
+> The repair is that `factPacket` now calls `weekFinality` rather than reading
+> `seasons.finalized_at` directly, which is the predicate `lib/stats/finality.ts`
+> already owned and already named the Slice as a consumer of. **Nothing is
+> loosened** — a week with no `week_finalizations` row is still refused, so an
+> in-progress week still cannot be printed — and **nothing about approval moved**:
+> `16 §9`'s named-person gate is untouched, so the change puts a draft on the
+> desk and never past it.
+>
+> The tripwire this section describes did exactly what it was for: it made the
+> change impossible to miss. The test above is now **inverted rather than
+> deleted**, so that *which record decides finality* stays pinned whichever way
+> the answer goes.
 
 ### 5.2 The receipt's stated reason expires at kickoff
 
