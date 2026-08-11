@@ -137,10 +137,28 @@ export async function tonightBoard(db: Database): Promise<readonly TonightLine[]
   const lines: TonightLine[] = [];
 
   const [latestSeason] = await db
-    .select({ id: seasons.id, year: seasons.year })
+    .select({ id: seasons.id, year: seasons.year, finalizedAt: seasons.finalizedAt })
     .from(seasons)
     .orderBy(desc(seasons.year))
     .limit(1);
+
+  /*
+   * Whether the newest season on the books has been closed.
+   *
+   * `seasons.finalized_at` is the product's one deterministic season-completion
+   * boundary — a person's decision, written in January (`scripts/seed.ts`'s
+   * `FINALIZED_SEASONS`), never Sleeper's `complete` status, which flips the
+   * moment the last game ends while stat corrections are still landing.
+   *
+   * **The newest season, not any season.** Keying on *"some season is
+   * finalized"* would have been true of 2025 in August 2026, and the board
+   * would have announced a season that ended nineteen months earlier as though
+   * it had just happened. `finalized_at` records when the close was *recorded*
+   * rather than when the season ended — 2024's and 2025's are both stamped the
+   * day the fixtures were first imported — so it is not a recency signal and is
+   * not used as one.
+   */
+  const seasonJustClosed = latestSeason !== undefined && latestSeason.finalizedAt !== null;
 
   // --- The season, counted down -------------------------------------------
   if (clock.daysUntilKickoff !== null) {
@@ -165,11 +183,62 @@ export async function tonightBoard(db: Database): Promise<readonly TonightLine[]
     .limit(1);
 
   if (champion !== undefined) {
+    /*
+     * Two readings of one slot, and the deterministic state picks which.
+     *
+     * **Champion confirmed** (commissioner copy, 2026-08-10) is this same query
+     * — `final_rank = 1` on a season the product has closed — in the window
+     * where the champion's season is *the newest on the books*. Then Tony
+     * announces it. Once a later season exists the slot goes back to the
+     * standing-champion line, because *"still has the ring"* is a claim about
+     * holding it through time and only makes sense once time has passed.
+     *
+     * No new query, no new source, no new storage: the slot already reached
+     * this state and was saying the wrong thing in it — *"still has the 2026
+     * ring. Nobody has taken it off him"* on the day he won it.
+     *
+     * The name is **substituted from the verified result**, never authored.
+     */
+    const justCrowned = latestSeason !== undefined && champion.year === latestSeason.year;
+
     lines.push({
       key: 'champion',
-      text: `${champion.name} still has the ${String(champion.year)} ring. Nobody has taken it off him.`,
+      /*
+       * Verbatim, and without a terminal stop the ruling did not give it. Every
+       * other line here is a sentence; these two are a front page, and adding
+       * punctuation to authored copy is the smallest possible way to start
+       * rewriting it.
+       */
+      text: justCrowned
+        ? `${champion.name} WINS IT`
+        : `${champion.name} still has the ${String(champion.year)} ring. Nobody has taken it off him.`,
       priority: 20,
     });
+  }
+
+  /*
+   * --- The season is over ---------------------------------------------------
+   *
+   * **Season complete** (commissioner copy, 2026-08-10). Flavour for a verified
+   * state rather than a declaration of its own: it says nothing the closed
+   * season does not already say, and it cannot appear before the books are
+   * shut.
+   *
+   * Independent of the champion above rather than folded into it, because the
+   * two facts genuinely come apart: a season can be closed with no `final_rank`
+   * on record — `lib/counter/rings.ts` handles exactly that case and refuses to
+   * name a champion for it — and *"the season is over"* is still true and still
+   * worth the board saying.
+   *
+   * Priority 25 puts it directly under the champion. In the week a season
+   * closes that pair leads the board and the history line falls off the bottom,
+   * which is the right trade: *"2024 through 2026 are on the books"* is the
+   * least urgent line there is, and this one implies the newest of them.
+   */
+  if (seasonJustClosed) {
+    // A straight apostrophe, which is what `content/counter-greetings.md` uses
+    // in all twenty-seven of its own and what the ruling was written with.
+    lines.push({ key: 'wrap', text: "THAT'S A WRAP", priority: 25 });
   }
 
   /*
