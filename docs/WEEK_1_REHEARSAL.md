@@ -291,8 +291,8 @@ than paying nothing.
 > carries the finding and the correction notice.
 >
 > The disagreement was about *authority*, not substance: both sessions read it as
-> a wiring gap. §6.1 below records why shipping is the defensible call and how to
-> reverse it if the commissioner disagrees.
+> a wiring gap. **The commissioner ruled on 2026-08-10 to keep the fix**; §6.1 is
+> that ruling and §6.2 is what it does not license.
 
 `lib/slice/packet.ts` built its week with `finalized: season.finalized` — the
 **season's** own finality, which is `seasons.finalized_at`, which is shut in
@@ -338,28 +338,54 @@ holds the negative half and now says why; `lib/rehearsal/week-1.test.ts` holds
 the positive half. **Both were run against the pre-fix code and the positive one
 fails there** — `expected [] to have a length of 1`.
 
-### 6.1 Why the repair ships, and how to reverse it
+### 6.1 The commissioner ruling — **KEEP THE FIX**
 
-Three things make this a repair rather than a product decision:
+> **RULING, 2026-08-10: keep the shipped `weekFinality` fix. Do not revert it.**
+>
+> The Slice is *intended* to draft during the active season once the relevant week
+> has legitimately closed. It must **not** wait for `seasons.finalized_at`, which
+> is season-level finality and does not happen until the books close in January.
+>
+> The canonical lifecycle is: **week closes deterministically → that week's facts
+> become eligible → the Tuesday job may create a draft → the draft appears on the
+> review desk → a human reviews → a human approves and publishes.** The cron may
+> *prepare* editorial content and may never publish it.
 
-1. **The rule is already written down, and already names this caller.**
+**This section previously argued the case and offered a reversal path. It is now
+a decision rather than an argument**, and the reversal path is deliberately gone:
+reverting would reintroduce a defect the commissioner has ruled against.
+
+The reasoning that supported it is retained, because it is why the boundary sits
+where it does:
+
+1. **The rule was already written down, and already named this caller.**
    `lib/stats/finality.ts` says a week is final when its own finalization exists,
    and its header states *"the Slice will print a live week from the same
    record."* Rewards and stake settlement have called it since they were built.
    The Slice was the last caller asking the wider question.
 2. **Nothing reaches the league without a person.** `16 §9`'s approval gate is
    untouched: the draft lands as `needs_review` and stops, exactly as it did
-   before. What changes is whether there is anything on the desk to approve.
-3. **The costs are asymmetric.** If this ships and the commissioner would rather
-   it had not, the desk carries a draft nobody asked for and nobody published. If
-   it does not ship and the commissioner wanted it, `16 §4.3`'s last step
-   produces nothing from September to January and the league gets no paper for
-   the season the paper is about.
+   before. What changed is whether there is anything on the desk to approve.
 
-**To reverse it**, restore `finalized: season.finalized` in `factPacket`'s
-`forWeek` and re-invert the two tests that pin it
-(`lib/slice/midseason-week8.test.ts`, `lib/rehearsal/week-1.test.ts`). One small
-commit; no migration, no data change, nothing to unwind.
+### 6.2 What the ruling explicitly does **not** license
+
+Recorded because *"the Slice may print a live week"* is one sentence away from
+several things that remain forbidden:
+
+- **Provisional scores are still not publication facts.** An unclosed week is
+  still refused — `weekFinality` returns `not-final` and the packet prints
+  nothing.
+- **The Sunday snapshot is not a finalized read.** It is the pre-Monday
+  photograph and nothing else.
+- **A scheduled-but-unplayed week is still not five ties.** The 0–0 guard at the
+  write boundary is load-bearing and unweakened.
+- **Season-level records may not pretend the season is complete.** Week finality
+  is eligibility for *that week's* newspaper, not for a season summary.
+- **The cron may not approve and may not publish.** Both remain human-only.
+- **AI is still not a source of fantasy facts.**
+
+The ruling moved exactly one boundary: which finalization record makes an
+ordinary weekly fact packet eligible. Nothing else.
 
 ### One structural change came with it
 

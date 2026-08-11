@@ -106,12 +106,15 @@ Learned from three-way merges that were genuinely hard, and worth stating once:
 
 | Kind | Location |
 |---|---|
+| **What is open, right now** | **`docs/OPEN_ITEMS.md` — the canonical ledger. Read this first.** |
+| **Who is already working on what** | **`docs/ACTIVE_WORK.md` — claim your area before you start** |
 | Product specification | `PROJECT_SPEC/`, hierarchy in `README.md` |
 | Parlor navigation and object map | `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` |
 | Art pipeline and its rulings | `art/ASSET_PIPELINE.md` |
-| Measured shell geometry | `art/SHELL_AUDIT_zone_parlor_shell.md` |
+| Palette and per-family colour authority | `docs/PALETTE_FIDELITY_BOUNDARY.md` — **supersedes** `art/SHELL_AUDIT_zone_parlor_shell.md`, which is kept as the historical measurement only |
 | Data policy and audit | `docs/DATA_AUDIT.md` |
-| Current assignment | `docs/IMPLEMENTATION_HANDOFF.md` |
+| Narrative history of how the product got here | `docs/CHECKPOINT.md` |
+| ~~Current assignment~~ | ~~`docs/IMPLEMENTATION_HANDOFF.md`~~ — **historical record, not an assignment.** That file carries its own banner saying so. There is no standing "current assignment" document; work comes from `docs/OPEN_ITEMS.md` plus an explicit instruction |
 | **Ruling index** | §8 below |
 
 A ruling that changes canonical direction is **folded into the specialized document** as well as indexed here. The index is a pointer, not the source of truth.
@@ -245,7 +248,11 @@ Chronological. `PR #n · comment` is the authoritative text.
 
 ---
 
-## 9. Current milestone — M2 the loot-box slice
+## 9. Historical milestone — M2, the loot-box slice
+
+> ⚠️ **This is not the current milestone and has not been since 2026-07-31.** It is kept as the record of how M2 was scoped. **M2 shipped in full**, and so did everything after it — Stats Intelligence, M3, the Slice and its review chain, both crons, weekly rewards, the economy ruling, rooms, historical analysis, publication approval, the preseason special and three lifecycle rehearsals.
+>
+> **For what is actually open, read `docs/OPEN_ITEMS.md`.** For what someone else is already working on, read `docs/ACTIVE_WORK.md`. There is no standing "current milestone" section in this file; a section that has to be remembered is a section that goes stale, which is exactly what happened here.
 
 **Slice 1 — the tray holds a real box, and opening it is the moment** (issue #17). Built on `claude/tonys-pizza-tech-lead-iq2n38`.
 
@@ -258,7 +265,14 @@ Chronological. `PR #n · comment` is the authoritative text.
 | 5 | `object-map` rewritten to markers · new `glow` gate · `tray-owned-box` state | ✅ |
 | 6 | `/counter` made truthful about what is owned | ✅ |
 
-Next slices, as separate issues: **token acquisition** through `apply_token_delta` (which also makes `tray-reveal` a required visual state), then **`/counter/collection`**, then **showcase and equip**.
+Next slices, as separate issues: **token acquisition** through `apply_token_delta` (which also makes `tray-reveal` a required visual state), then **`/counter/collection`**, then **showcase and equip**. *(All shipped.)*
+
+### §8 ruling index, continued
+
+**These rows belong to the ruling index in §8** and were appended here by successive slices. They are left in place rather than relocated — moving thirty commissioner rulings to tidy a heading is exactly the churn `§6` warns about — but the header below is restored so they render as a table instead of as broken text. **Read them as part of §8.**
+
+| Date | Ruling | Where |
+|---|---|---|
 | 2026-08-01 | **Week-level finality exists, and stakes required it.** Two standing rules contradicted each other the moment a stake tried to pay: *a stake settles only from finalized results*, and *`apply_token_delta` refuses a finalized season* (`03 §6`). A stake was settleable exactly when it was unpayable. Neither rule is relaxed — a **week** is final on Tuesday, a **season** closes in January. `week_finalizations` is the record, `weekFinality()` is the one predicate, and a resolution stores **which source** it trusted | `lib/stats/finality.ts` · `drizzle/0010` |
 | 2026-08-01 | **Authoring reads what is known now and freezes it; settlement waits for the books.** A basis that refused open seasons made the market unbuildable in the only season it will run in. The provisional-numbers worry is answered by `weekly_stakes_terms_immutable` — a published line cannot move — not by refusing to author one | `lib/stakes/facts.ts` |
 | 2026-08-01 | **Tony's Line is flag-gated, shut in v1.** `18 §3.4` says so verbatim; `16 §9` puts it in v1 scope. Both hold: a deploy-time flag opens for everyone at once, as `18 §6` requires. Shut is also the only honest state — a season median needs a season | `lib/flags.ts` |

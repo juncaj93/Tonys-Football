@@ -51,6 +51,14 @@ One label per issue, and exactly one. The label **is** the state.
 
 "Actor" means whoever holds that role contract when the work is picked up — a session, a workflow, whatever is available. The label says what happens next and which `agents/*.md` file governs it; it deliberately does not say what kind of thing performs it. That is why removing the orchestrator (`§4`) changed nothing here.
 
+**`implementation-active` says a worker claimed it, and until 2026-08-11 there was
+nowhere to claim.** The labels are per-issue, and recent work has run from direct
+instructions rather than issues — so two sessions could both be
+"implementation-active" on the same area and neither could tell. `docs/ACTIVE_WORK.md`
+is the missing half: **read it and claim your area before starting a substantial
+workstream, and remove your row when the PR merges.** It is a Markdown table by
+convention, with no server, no automation and no CI check behind it.
+
 ---
 
 ## 3. The lifecycle

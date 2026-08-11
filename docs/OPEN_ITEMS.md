@@ -4,18 +4,26 @@
 narrative record of how the product got here and stays that; this file is the
 answer to *"what is actually left."* When they disagree, this file is newer.
 
-**Reconciled against `main` on 2026-08-09**, by reading the code and the database
-rather than the status paragraphs. Where a document said something was open and
-it had shipped, the document is corrected rather than the work redone; those
-corrections are in **H**.
+**Reconciled against `main` on 2026-08-11** (`c4a50c6`), by reading the code and
+the database rather than the status paragraphs. Where a document said something
+was open and it had shipped, the document is corrected rather than the work
+redone; those corrections are in **H**.
+
+**What the 2026-08-11 pass changed**, so nothing below reads as newly discovered
+work: the week-finality ruling is recorded as **settled** (**A0**); the manager
+sprite's product-acceptance question is filed as **open** and separated from its
+closed engineering item (**C3**); the catalog 24 → 32 growth is recorded as
+**approved with execution deferred** (**G2**); and two cross-references that
+pointed at entries which had never been written are resolved (**E7**, **G5**).
+**No product behaviour, schema, economy value or test changed.**
 
 > ## V1 engineering: FUNCTIONALLY READY
 >
 > Every v1 system is built, tested against a real Postgres, and photographed.
 > What remains is five human actions, and `docs/ACTIVATION.md` is the packet for
 > them — written for a phone, ordered, reversible, and the only document Alex
-> needs. **None of them moved on 2026-08-09** and none of them may be closed by
-> a session.
+> needs. **None of them moved on 2026-08-09, and none moved on 2026-08-11** —
+> and none of them may be closed by a session.
 >
 > **Deferred world-building scope was reopened by the commissioner on
 > 2026-08-09.** Manager rooms are built and the door is open; every other
@@ -72,14 +80,20 @@ untouched, so the change puts a draft on the desk and never past it.
 `lib/rehearsal/week-1.test.ts` holds the positive half and **fails on the pre-fix
 build**; `lib/slice/slice.test.ts` holds the negative half.
 
+**Ruled on by the commissioner, 2026-08-10: keep the fix.** Weekly Slice drafting
+uses **week** finality; it does not wait for `seasons.finalized_at`. The cron may
+prepare a draft and may never publish it — human approval is unchanged and
+mandatory. `docs/WEEK_1_REHEARSAL.md §6.1` carries the ruling and §6.2 records
+what it explicitly does *not* license. **This is settled. Do not revert it, and do
+not reopen it as a design question.**
+
 **The two rehearsals disagreed about whether to fix it, and that is recorded
 rather than smoothed over.** #86 pinned the defect with a test written to go red
 on repair, because its scope excluded the Slice's editorial architecture. #85's
 scope names the Tuesday Slice handoff, so it made the repair and **inverted** that
 test rather than deleting it — the tripwire worked exactly as intended and this
-is the conversation it demanded. If the commissioner would rather the desk stayed
-dark until January, reverting is one small commit against `lib/slice/packet.ts`
-and the two tests that pin it.
+is the conversation it demanded. The commissioner has since ruled to keep it, so
+the reversal path recorded at the time no longer applies and has been removed.
 
 **The playoff rehearsal found it a third time**, independently and on the same
 day, and its implementation was discarded in favour of this one. What it
@@ -203,6 +217,11 @@ eighteen defects the render loop found and the ones no test in the suite could
 have. **A tinted-mask pipeline is not refused — it is not needed**, and if
 painted layers are ever commissioned this geometry is what they are painted to.
 
+⚠️ **Closed as an *engineering* item, and that is the whole of what it closes.**
+The commissioner subsequently reported that the sprites still look visually bad.
+That is a product-acceptance question this entry does not answer and must not be
+read as having answered — it is **C3**, and it is open.
+
 ### A5 · Twelve of the twenty-four collectibles have no art, and they are 59.5% of every box opened — **art dependency**
 
 **Measured, 2026-08-10, and it is not the twelve you would guess.** Every epic
@@ -321,6 +340,50 @@ distinct names, requires the control to appear exactly when it is real, and
 measures its contrast against its own red ground.
 
 The first deliberate capture exposed **no defect**. 100 states × 3 widths.
+
+### C3 · The manager sprite is engineering-closed and **product-unaccepted** — **OPEN**
+
+**These are two different questions and only one of them is answered.**
+
+| | |
+|---|---|
+| **Engineering** | **CLOSED and technically correct.** `112 × 168`, one sprite unit to one room unit, form shading, contact shadows, a floor shadow. **A4** and `docs/MANAGER_SPRITE_BOUNDARY.md` |
+| **Product visual acceptance** | **NOT ACCEPTED.** After that work landed, the commissioner looked at the result and reported that the manager sprites still look visually bad |
+
+**Why this entry exists at all.** The reaction arrived in conversation and was
+never written into the repository, so `docs/VISUAL_DEBT.md` carried item 17 under
+**Closed** with nothing beside it — and `AUTONOMY.md §0` is explicit that a
+decision living only in a chat did not happen. A session reading only the closure
+would reasonably conclude the art direction had been accepted. **It has not
+been.**
+
+**What is emphatically still true**, and what this entry does not touch:
+
+- the canvas **must not** regress to a coarser internal size magnified into the
+  room;
+- colour stays a **runtime parameter**, and the parametric shape system is what
+  makes 11,520 combinations from twenty-nine layers possible;
+- a PNG or tinted-mask pipeline is **not required** and is not a prerequisite for
+  quality;
+- `docs/CHARACTER_CUSTOMISATION_BOUNDARY.md` stays **CLOSED** — six traits, the
+  same indices, slugs, catalog and defaults.
+
+**What is required before another implementation pass** — three things, none of
+them code:
+
+1. a **live production screenshot at actual iPhone scale**. No production capture
+   of a manager standing in a room exists in this repository, and the sweep
+   photographs a local build;
+2. a **concrete description of what reads wrong** — proportions, palette, face,
+   silhouette, shading, or the figure against the painted shell. *"Looks dumb"* is
+   a true reaction that four different implementations could each claim to
+   address, which is how a pass gets spent on the wrong axis;
+3. a **visual quality target** to judge a result against, the way the approved
+   room and manager references were used on 2026-08-09.
+
+**This is not authorization to redesign anything, to commission painted layers,
+or to propose an implementation.** It is the record that the question is open.
+`docs/VISUAL_DEBT.md` item **18** is the same finding at the surface it shows on.
 
 ---
 
@@ -561,6 +624,33 @@ boxes, 200 and 225 pass. `docs/ECONOMY_SIMULATION.md §7`. Closed.
 **Economy release-gate corrections — CLOSED.** E5 and E6 together are the whole
 of that workstream; nothing in it remains open.
 
+### E7 · A stale standings payload moves the table backwards, and the run still reports SUCCEEDED
+
+**Filed 2026-08-11 to resolve a dangling reference, not because anything changed.**
+`docs/PLAYOFF_REHEARSAL.md §5`, item 4, recorded this finding and pointed at an
+`OPEN_ITEMS` entry that had never been written. The finding is real, the code is
+unchanged, and the behaviour below is deliberate — this entry exists so the
+cross-reference resolves and so the reasoning is not rediscovered.
+
+Injected and observed during the playoff rehearsal: when Sleeper serves a
+standings payload older than the one already stored, `reconcileSeason` catches
+the disagreement and names both records for all ten rosters — but it pushes them
+onto `warnings`, so `sync_runs.status` stays **`SUCCEEDED`** rather than
+`NEEDS_REVIEW`. Verified in `lib/sleeper/reconcile.ts`: record and points
+conflicts both append to `warnings` and nothing escalates the run's status.
+
+**The policy was deliberately not changed**, and the reason is durable: 2024's
+finalized records and its weekly points disagree **permanently** (`16 §12`), so a
+run that read `NEEDS_REVIEW` every single week would teach whoever reads it to
+stop reading — which costs more than the signal is worth. A stronger visibility
+mechanism would have to distinguish *a permanent historical disagreement* from
+*a payload that regressed this week*, and that is a design question rather than a
+one-line change.
+
+**Not a launch blocker.** The disagreement is recorded either way, the finalized
+record stands, and nothing downstream reads the run status to decide what is
+true. If it is ever picked up, it is a hardening task with its own scope.
+
 ---
 
 ## F — Monitored, not worked
@@ -652,36 +742,6 @@ a blanket re-opening.
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
 
-### G4 · Tonight's playoff copy — two lines shipped, one cannot be supported
-
-**Commissioner ruling, 2026-08-10** supplied three lines of restrained Tony-world
-copy for the board, under one rule: deterministic state decides whether a message
-is eligible, and authored copy only decides how Tony expresses a state that is
-already proven.
-
-| Line | Shipped | Keyed on |
-|---|---|---|
-| `[MANAGER] WINS IT` | ✅ | `final_rank = 1` on the **newest** season, and that season closed |
-| `THAT'S A WRAP` | ✅ | the **newest** season has `finalized_at` |
-| `FOR THE TITLE` | ❌ | — |
-
-**`FOR THE TITLE` is not supportable and is the item that stays open.** The board
-would have to know the week being played is the bracket's last round, which needs
-`playoff_week_start` and a round count. **Neither is persisted**:
-`playoff_week_start` is read at import, classifies each week, and is discarded;
-`seasons` has no column for it and the bracket is not stored at all. The three
-routes to it — schedule inference, bracket persistence, or reading Sleeper on a
-page load — are each forbidden by this ruling or by **E7**'s. Stored `week_type`
-cannot stand in: it is only ever `regular`, `playoff` or `unscored`, so it can say
-the playoffs are on and never that this is the last one.
-
-Closing it would take a scoped feature decision about persisting playoff
-structure, which **E7** declines for v1. Nothing is pending on the copy itself.
-
-`docs/PLAYOFF_REHEARSAL.md §10` is the account;
-`lib/parlor/tonight-playoff-copy.test.ts` pins each line to its state and scans
-every reachable state for the banned vocabulary, `FOR THE TITLE` included.
-
 ### G1 · The Underground — the decision that is actually wanted
 
 **Nothing was built and nothing should be until this is answered.** The
@@ -730,30 +790,46 @@ that is the number `art/ASSET_PIPELINE.md §5` commits to at launch, not a gap.
 
 Group B greeting lines await commissioner approval; seed Group A only.
 
-### G2 · Growing the catalog past twenty-four — a ruling, not a session
+### G2 · Growing the catalog to thirty-two — **APPROVED, execution deferred to ~week 12**
 
-**The simulation recommends 32 for season one. Nothing was built.** `16` approves
-*"one loot box and a 24-item catalog"* and `lib/counter/catalog.ts` asserts
-`CATALOG_SIZE = 24` precisely so the seed fails loudly rather than shipping a
-different economy quietly — so this is the commissioner's to say, and
-[`docs/CATALOG_SIZING.md`](CATALOG_SIZING.md) is the evidence to say it against.
+> **Decision: approved.** **Execution: intentionally deferred until approximately
+> week 12 of season one.** The two halves are separate on purpose — this entry
+> stays in **G** because *approved* is not *do it now*, and a session that reads
+> the approval as authorization would ship a different economy months early.
+
+**Commissioner ruling, recorded 2026-08-11.** The P1 growth **24 → 32**
+(15 commons / 10 rares / 4 epics / 3 legendaries) is approved on the evidence in
+[`docs/CATALOG_SIZING.md`](CATALOG_SIZING.md). **This entry previously read
+*"this is the commissioner's to say"* and that is no longer true** — the question
+is settled and must not be re-raised as an open decision.
+
+**What is still not authorized.** Adding a single item, moving `CATALOG_SIZE`,
+writing a new reward-table version, or briefing new art for the eight. `16`
+approves *"one loot box and a 24-item catalog"*, `lib/counter/catalog.ts` asserts
+`CATALOG_SIZE = 24`, and **that assertion stays at 24 until the execution slice is
+separately instructed.** The seed failing loudly is the guard working, not a
+defect to route around.
+
+**P2 → 38 is unchanged: a recommendation, not a ruling**, and offseason at the
+earliest.
 
 **It is not urgent, and the date is measured rather than felt.** The shipped
 catalog first hands somebody tokens instead of an object in **week 12 of season
 one** for the median manager who gets there at all, and only 5.0% of openings at
 season end. Season *two* is where 24 gives way — 25.9% of openings paying tokens
 and 82% of managers hitting the wall. So the deadline for the eight new items is
-**week 12**, not kickoff, and the whole question can wait behind **A5**, which
-needs no ruling at all.
+**week 12**, not kickoff, and the whole thing sits behind **A5**, which is the
+twelve items that already exist and have no art.
 
 **Adding an item is cheap and additive**: a registry row, that constant, and a
 new content-hashed reward-table version. Every opening already recorded keeps
 pointing at the table it actually rolled against, and the rarity mass is per
 tier — so a legendary stays exactly 2% however many items exist.
 
-**Do not execute it autonomously**, and do not reach for a price change instead:
-a catalog problem is not fixed by moving token economics, which is the standing
-instruction and also what the numbers say.
+**Do not execute it autonomously** — the approval is a decision about *what*, not
+a schedule a session may bring forward. And do not reach for a price change
+instead: a catalog problem is not fixed by moving token economics, which is the
+standing instruction and also what the numbers say.
 
 ### G3 · Commissioner announcements — specified, unbuilt, and the shape is recommended
 
@@ -779,6 +855,64 @@ entry had already reached and the ruling confirms.
 **This is product direction, not authorization to build.** Nothing here may be
 implemented without a separate instruction.
 `docs/PUBLICATION_APPROVAL_BOUNDARY.md §5` carries the longer form.
+
+### G4 · Tonight's playoff copy — two lines shipped, one cannot be supported
+
+**Commissioner ruling, 2026-08-10** supplied three lines of restrained Tony-world
+copy for the board, under one rule: deterministic state decides whether a message
+is eligible, and authored copy only decides how Tony expresses a state that is
+already proven.
+
+| Line | Shipped | Keyed on |
+|---|---|---|
+| `[MANAGER] WINS IT` | ✅ | `final_rank = 1` on the **newest** season, and that season closed |
+| `THAT'S A WRAP` | ✅ | the **newest** season has `finalized_at` |
+| `FOR THE TITLE` | ❌ | — |
+
+**`FOR THE TITLE` is not supportable and is the item that stays open.** The board
+would have to know the week being played is the bracket's last round, which needs
+`playoff_week_start` and a round count. **Neither is persisted**:
+`playoff_week_start` is read at import, classifies each week, and is discarded;
+`seasons` has no column for it and the bracket is not stored at all. The three
+routes to it — schedule inference, bracket persistence, or reading Sleeper on a
+page load — are each forbidden by this ruling or by **G5**'s. Stored `week_type`
+cannot stand in: it is only ever `regular`, `playoff` or `unscored`, so it can say
+the playoffs are on and never that this is the last one.
+
+Closing it would take a scoped feature decision about persisting playoff
+structure, which **G5** declines for v1. Nothing is pending on the copy itself.
+
+`docs/PLAYOFF_REHEARSAL.md §10` is the account;
+`lib/parlor/tonight-playoff-copy.test.ts` pins each line to its state and scans
+every reachable state for the banned vocabulary, `FOR THE TITLE` included.
+
+### G5 · Persisting playoff structure — declined for v1
+
+**Commissioner ruling, 2026-08-10.** Filed 2026-08-11 to resolve a dangling
+reference: **G4** and `docs/PLAYOFF_REHEARSAL.md §5`, item 1, both cited this
+decision as an `OPEN_ITEMS` entry that had never been written. Nothing changed; the ruling
+is recorded here so the cross-references resolve and so the constraint is visible
+where a session looks for constraints.
+
+The product stores `made_playoffs` and `final_rank` and **nothing else about the
+postseason's structure**. Both are *consequences* of the bracket rather than the
+bracket, so *"who advanced this week"* is not answerable on the Tuesday it
+happened.
+
+**No `playoff_bracket` table. No second event spine. No new playoff-state
+persistence. No additional sync authority.** Retrospective playoff facts are
+acceptable and are what shipped — the `elimination` story reads the recorded
+placement rather than inferring one, and a test pins that it is retrospective.
+
+**What this closes.** `FOR THE TITLE` on the Tonight board (**G4**), and any
+future request to know mid-season which round the bracket is on. The three routes
+to that knowledge are schedule inference, bracket persistence, and reading
+Sleeper at render time; this ruling forbids the middle one and the other two are
+forbidden by the standing rules against inferring a schedule and against a new
+source of fantasy truth on a page load.
+
+**Reconsidering it later needs a scoped feature decision of its own**, and it is
+not a launch item: nothing in v1 asks the question.
 
 ---
 
@@ -862,9 +996,14 @@ does not settle.
 
 ### What is left, after the 2026-08-09 reopening
 
-Remaining items are **D** (human), **F** (monitored, restart conditions unmet)
-and **G** (deferred, now with G0's classification attached). Category C is empty
-of anything with clear value.
+Remaining items are **D** (human), **E** (debt, unforced), **F** (monitored,
+restart conditions unmet) and **G** (deferred, now with G0's classification
+attached) — plus exactly one live entry in **C**.
+
+**That one C entry is `C3`, and it is deliberately not actionable yet.** The
+manager sprite's product acceptance is open, and the next step on it is
+*evidence and a target*, not an implementation pass. Category C is otherwise
+still empty of anything with clear value, and C3 does not reopen it.
 
 The reopened scope produced exactly one buildable slice — **Rooms** — and it is
 built. Everything else in G0 is LATER or DO NOT BUILD **for a stated reason**,

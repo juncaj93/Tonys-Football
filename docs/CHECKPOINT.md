@@ -3332,10 +3332,14 @@ Gotchas that have cost time:
 
 ## Unresolved / carried forward
 
-- **Reward weights provisional** until the P3 simulation. `PROVISIONAL_RARITY_MASS` in `lib/counter/rewards.ts`.
-- **Collectible art is placeholder for all 24.** The box draws a flat carton and the collectible a tagged parcel — different silhouettes since #36, but one silhouette for every item. Specified behaviour; the plate carries identity and the item now stands centred on it. Real art is a registry row. **This is the last thing between M2 and the commissioner's "complete".**
-- **Group B content still needs commissioner approval**; seed Group A only.
-- **No token sink other than boxes, and no weekly income.** Matchup wins and weekly high scores need a played season and the two cron jobs (`16 §4.3`) that would award them. The reason codes exist; nothing is wired to them. Do not invent a reward that fires on nothing.
-- **Salvage for duplicates** is unbuilt and P3-gated.
-- **12 of 24 collectibles get finished art at launch**; the rest stay placeholder. Each is a registry row, never a code change.
-- **One greeting pair still shared** (SuggMyNick / cheeseking). Two lines of markdown, no code. Asserted in `lib/content/greeting.test.ts`.
+> ⚠️ **`docs/OPEN_ITEMS.md` is the canonical list of what is open. This list is
+> a historical M2-era snapshot**, refreshed 2026-08-11 only where it stated
+> something now provably false. Where the two disagree, `OPEN_ITEMS.md` wins.
+
+- **Reward weights provisional** until the P3 simulation. `PROVISIONAL_RARITY_MASS` in `lib/counter/rewards.ts`. **Still true, and correct:** the simulation has run for the box *price* (200, 2026-08-04) and not for the rarity table, so the flag stays.
+- ~~**Collectible art is placeholder for all 24.**~~ **Stale — corrected 2026-08-11.** **12 of the 24 are painted** and shipped (Batch B, #55). The remaining twelve are seven commons and five rares, and they carry **59.5% of every box opened** — measured, and briefed in `docs/art/BATCH_F_COLLECTIBLE_HANDOFF.md`. `OPEN_ITEMS` **A5**.
+- **Group B content still needs commissioner approval**; seed Group A only. **Still true.**
+- ~~**No token sink other than boxes, and no weekly income.**~~ **Stale — corrected 2026-08-11.** Both cron jobs exist, so the precondition this bullet named was met rather than waived: `lib/rewards/` pays **150** for a matchup win and **400** for the weekly high score from a finalized week (2026-08-04, `docs/WEEKLY_REWARDS_BOUNDARY.md`). *"Do not invent a reward that fires on nothing"* still governs anything new.
+- ~~**Salvage for duplicates** is unbuilt and P3-gated.~~ **Stale — corrected 2026-08-11.** The P3 simulation ran and salvage shipped in #66 — 20 / 40 / 70 / 120 by rarity, paid through the ledger, with a CHECK making an unpaid conversion physically unwritable. `docs/ECONOMY_RULING_BOUNDARY.md`.
+- **12 of 24 collectibles get finished art at launch**; the rest stay placeholder. Each is a registry row, never a code change. **Still the standing commitment**, and now the *delivered* state rather than the plan.
+- **One greeting pair still shared** (SuggMyNick / cheeseking). Two lines of markdown, no code. Asserted in `lib/content/greeting.test.ts`. **Still true** — it is `OPEN_ITEMS` **D3** and `docs/ACTIVATION.md §4`, and the line is the commissioner's to write.

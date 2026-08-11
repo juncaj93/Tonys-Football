@@ -337,6 +337,13 @@ contradiction written into the test, so it could not be mistaken for working.
 > change impossible to miss. The test above is now **inverted rather than
 > deleted**, so that *which record decides finality* stays pinned whichever way
 > the answer goes.
+>
+> **RULED, 2026-08-10 — keep it.** This section asked for a decision and got one:
+> the commissioner ruled that weekly Slice drafting uses **week** finality and
+> does not wait for `seasons.finalized_at`. The question this rehearsal raised is
+> **closed**, and the reversal path recorded at the time no longer applies.
+> `docs/WEEK_1_REHEARSAL.md §6.1` is the ruling; §6.2 is what it does not
+> license.
 
 ### 5.2 The receipt's stated reason expires at kickoff
 

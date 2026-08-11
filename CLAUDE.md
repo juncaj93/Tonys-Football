@@ -2,16 +2,31 @@
 
 This repository contains the complete product specification for **Tony’s Pizza Fantasy**.
 
+> ## Before you start a substantial workstream
+>
+> **Read `docs/ACTIVE_WORK.md` and claim your area if it is not already owned.**
+> Add your row before implementation begins, and remove it when the PR merges.
+>
+> **If an area is already claimed, you must not independently implement
+> overlapping work.** Parallel sessions have duplicated whole workstreams in this
+> repository — the same defect found and fixed three times, two harnesses
+> reconciled at merge, two open items filed under one number. A claim is not a
+> reservation; it is the only way one session can tell another is there.
+>
+> This does not apply to human-only actions (`docs/ACTIVATION.md`) or to tiny
+> one-off edits.
+
 Before planning or implementing any feature, read:
 
 0. `docs/PRODUCT_DELIVERY_MANDATE.md` — **the standing commissioner mandate. Read this first.** It defines what "complete" means, the permanent visual standard, the mandatory screenshot loop, demoability, specialist ownership, and the deterministic stats-fact layer.
 1. `PROJECT_SPEC/16_FINAL_RECONCILED_PLAN.md` — **the approved plan.**
 2. `PROJECT_SPEC/17_ACCELERATED_ROADMAP.md` — **the approved implementation ordering**
 3. `PROJECT_SPEC/18_PARLOR_NAVIGATION_MAP.md` — **how the room works. Read before touching any parlor object.**
-4. `docs/IMPLEMENTATION_HANDOFF.md` — **the current assignment**
-5. `README.md`
-6. Every numbered file inside `PROJECT_SPEC/`, in order
-7. `CLAUDE_FIRST_PROMPT.md`
+4. `docs/OPEN_ITEMS.md` — **the canonical ledger of what is actually open**, and `docs/ACTIVE_WORK.md` — **who is already on it**
+5. `docs/IMPLEMENTATION_HANDOFF.md` — **a historical record, not the current assignment.** Its own banner says so; it is listed here because it is still worth reading for how V1 and M2 were scoped
+6. `README.md`
+7. Every numbered file inside `PROJECT_SPEC/`, in order
+8. `CLAUDE_FIRST_PROMPT.md`
 
 The files inside `PROJECT_SPEC/` are the canonical product specification.
 
@@ -303,7 +318,7 @@ Two defects fell out, both found by gates rather than by reading: the driver's o
 - The tooling is reusable and answers *"what if we add five commons"* without a rewrite: `lib/economy/catalog-audit.ts`, `lib/economy/catalog-sizing.ts`, `scripts/catalog-sizing.ts`, 28 properties including **the season shape asserted against the fixture files** and the archetype ladder asserted to pay out exactly what a ten-manager week pays out.
 **The Week 1 lifecycle rehearsal — the whole week as one system, and the paper that would never have printed.** Every step of the Sunday-to-Tuesday chain was separately tested; the *seams* were not, and every expensive defect this pipeline has had lived in one. `lib/rehearsal/` is the reusable harness — a season written down as data (`script.ts`), four verbs over the real cron functions (`harness.ts`), and Week 1 as a scenario (`week-1.ts`). It drives production code: `runTuesday` is what the Tuesday route calls, and `runSundayJob` is what the Sunday route calls **as of this slice**.
 
-- **The Slice could never have drafted during the season it is about — and this slice fixes it.** `lib/slice/packet.ts` gated on `seasons.finalized_at`, which shuts in January, so **every week of 2026** would have refused `not-final` and the press desk would have been empty every Tuesday until the season was over. **The Week 8 rehearsal (#86) found the same defect independently and deliberately pinned it**, on the grounds that its own scope excluded the Slice's editorial architecture. This session's scope names the Tuesday Slice handoff explicitly, so the fix ships here and #86's pinning test is **inverted rather than deleted**, keeping its reasoning and its attribution. `docs/WEEK8_REHEARSAL.md §5.1` records the finding; `docs/WEEK_1_REHEARSAL.md §6` records the repair and the disagreement.
+- **The Slice could never have drafted during the season it is about — and this slice fixes it.** `lib/slice/packet.ts` gated on `seasons.finalized_at`, which shuts in January, so **every week of 2026** would have refused `not-final` and the press desk would have been empty every Tuesday until the season was over. **The Week 8 rehearsal (#86) found the same defect independently and deliberately pinned it**, on the grounds that its own scope excluded the Slice's editorial architecture. This session's scope names the Tuesday Slice handoff explicitly, so the fix ships here and #86's pinning test is **inverted rather than deleted**, keeping its reasoning and its attribution. **The commissioner ruled on 2026-08-10 to keep the fix**: weekly Slice drafting uses week finality and does not wait for `seasons.finalized_at`. The cron may prepare a draft and may never publish it. **Do not revert this and do not reopen it** — and do not read it as licensing anything wider; `docs/WEEK_1_REHEARSAL.md §6.2` lists what it explicitly does not license. `docs/WEEK8_REHEARSAL.md §5.1` records the finding; `docs/WEEK_1_REHEARSAL.md §6` records the repair, the disagreement and the ruling.
 - **The rule was already written down.** `lib/stats/finality.ts` says a week is final when **its own** finalization exists and names the Slice as one of its two consumers; rewards and settlement have called it since they were built. The fix calls the predicate rather than restating it. **Nothing is loosened** — an unclosed week is still refused, and publication still needs a named person, so the change moves a draft onto the desk and never past it.
 - **Nine failure injections**, each at the boundary that owns it rather than by stubbing what is under test: an unreachable Sleeper · a malformed payload · a doubled invocation · a crash after the sync · a crash after the rewards · a stale July re-import over a live season · a roster owned by an account this league has never seen · a week scheduled but never played · **a reward transaction denied its commit**. The last is the only one that is a property of the machine, and it is what a single-transaction claim exists to survive.
 - **Wagers are a recorded no-op in week 1**, for three separate reasons — the Line is flag-gated shut, a bounty needs twelve prior team-weeks, and a chalkboard prediction needs a prior week. Nothing was switched on to have something to settle.
@@ -368,7 +383,7 @@ Before writing implementation code:
 3. ~~Present an architecture review~~ — **complete.** Delivered across five review rounds and approved 2026-07-28. The result is `16_FINAL_RECONCILED_PLAN.md`.
 4. Build in the **vertical-slice order of `17 §4`**, honouring the release gates in `16`. The phase table in `16 §13` is superseded for ordering only.
 
-Work the assignment in `docs/IMPLEMENTATION_HANDOFF.md`. Do not begin a slice that has not been assigned, and do not absorb scope from a later slice — propose it instead.
+Work only an assignment you have actually been given. **`docs/OPEN_ITEMS.md` is the canonical list of what is open** and `docs/ACTIVE_WORK.md` says who is already on it — claim your area there before you start. (`docs/IMPLEMENTATION_HANDOFF.md` is a historical record and has not carried the current assignment since M2.) Do not begin a slice that has not been assigned, and do not absorb scope from a later slice — propose it instead.
 
 ## Source of Truth
 

@@ -120,7 +120,9 @@ TONYS_PIZZA_PROJECT_SPEC/
 ### Working documents
 
 ```text
-docs/IMPLEMENTATION_HANDOFF.md   the current engineering assignment
+docs/OPEN_ITEMS.md               the canonical ledger of what is open
+docs/ACTIVE_WORK.md              who is already working on what — claim before you start
+docs/IMPLEMENTATION_HANDOFF.md   historical record of how V1 and M2 were scoped
 content/counter-greetings.md     drafted Counter Greeting lines
 ```
 
