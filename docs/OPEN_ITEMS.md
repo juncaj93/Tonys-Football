@@ -627,7 +627,7 @@ of that workstream; nothing in it remains open.
 ### E7 · A stale standings payload moves the table backwards, and the run still reports SUCCEEDED
 
 **Filed 2026-08-11 to resolve a dangling reference, not because anything changed.**
-`docs/PLAYOFF_REHEARSAL.md §5.4` recorded this finding and pointed at an
+`docs/PLAYOFF_REHEARSAL.md §5`, item 4, recorded this finding and pointed at an
 `OPEN_ITEMS` entry that had never been written. The finding is real, the code is
 unchanged, and the behaviour below is deliberate — this entry exists so the
 cross-reference resolves and so the reasoning is not rediscovered.
@@ -889,8 +889,8 @@ every reachable state for the banned vocabulary, `FOR THE TITLE` included.
 ### G5 · Persisting playoff structure — declined for v1
 
 **Commissioner ruling, 2026-08-10.** Filed 2026-08-11 to resolve a dangling
-reference: **G4** and `docs/PLAYOFF_REHEARSAL.md §5.1` both cited this decision
-as an `OPEN_ITEMS` entry that had never been written. Nothing changed; the ruling
+reference: **G4** and `docs/PLAYOFF_REHEARSAL.md §5`, item 1, both cited this
+decision as an `OPEN_ITEMS` entry that had never been written. Nothing changed; the ruling
 is recorded here so the cross-references resolve and so the constraint is visible
 where a session looks for constraints.
 
