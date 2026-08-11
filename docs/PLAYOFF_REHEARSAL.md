@@ -192,16 +192,15 @@ sixteen drafts.
    new playoff-state persistence and no additional sync authority were
    introduced.** Retrospective playoff facts are acceptable and are what shipped.
    Reconsidering it later needs a scoped feature decision of its own.
-2. **Tonight has no playoff voice**, and playoff board messaging stays deferred
-   in this workstream (commissioner, 2026-08-10). The board's five possible
-   lines are the kickoff countdown, the standing champion, the heaviest
-   finalized game, who has picked up their keys, and which seasons are on the
-   books. **Nothing was prepared behind a typed interface either**, because the
-   deterministic half such a line would need — *who advanced* — is exactly the
-   bracket state ruling 1 declines to persist, so the only honest states
-   available (*championship week*, *champion confirmed*, *season complete*) are
-   all copy slots rather than data gaps. Those three are the slots to fill when
-   the commissioner writes them. `docs/OPEN_ITEMS.md` **G4**.
+2. **Tonight's playoff copy — two of three lines shipped, one is not supportable.**
+   Commissioner ruling, 2026-08-10 supplied three lines. `§10` is the account.
+   **`[MANAGER] WINS IT`** and **`THAT'S A WRAP`** are live, each keyed on state
+   the product already stores. **`FOR THE TITLE` was not built**, and the reason
+   is structural rather than editorial: knowing that the current week is the
+   championship week needs the league's `playoff_week_start` and its bracket
+   round count, and **neither is persisted** — `playoff_week_start` is read at
+   import, used to classify weeks, and discarded. The only two routes to it are
+   schedule inference and new bracket storage, and the same ruling forbids both.
 3. **Placements follow the bracket alone, so a bracket ahead of its own games
    would write a finish for a game never stored.** Found while building the
    scheduled-but-unplayed injection, which failed first time for exactly this
@@ -310,3 +309,74 @@ any postseason UI redesign · any new postseason persistence · any speculative
 postseason feature. No legacy concept from the older documents — end-of-week
 token expiry, the prop-bet system, peer side bets — was resurrected; §4 asserts
 their absence rather than assuming it.
+
+---
+
+## 10 · The commissioner's playoff copy, 2026-08-10
+
+Three lines were supplied. The rule governing all of them is that **deterministic
+state decides whether a message is eligible, and authored copy only decides how
+Tony expresses a state that is already proven.**
+
+| Line | State it needs | Shipped |
+|---|---|---|
+| `[MANAGER] WINS IT` | `final_rank = 1` on the **newest** season, and that season closed | ✅ |
+| `THAT'S A WRAP` | the **newest** season has `finalized_at` | ✅ |
+| `FOR THE TITLE` | the current week is the championship week | ❌ **not supportable** |
+
+### `FOR THE TITLE` — why it was not built
+
+The board would have to know that the week being played is the last round of the
+bracket. That needs `playoff_week_start` plus the number of rounds. **Neither is
+in the database.** `playoff_week_start` reaches `lib/sleeper/weeks.ts` at import,
+classifies each week as `regular` or `playoff`, and is then discarded; the
+`seasons` table has no column for it and `persist.ts` never writes one. The
+bracket is not persisted at all — that is `§5`'s standing ruling.
+
+So the three available routes are all closed:
+
+- **Infer the schedule** — *"the final is the last scored week of a season shaped
+  like the previous one"*. Banned by the ruling, and wrong on the season a league
+  changes its format.
+- **Persist the bracket** — banned by the ruling, and by `§5`.
+- **Read Sleeper at render time** — a new source of fantasy truth on a page load,
+  which no surface in this product does.
+
+Stored `week_type` cannot stand in either. It has only ever been written as
+`regular`, `playoff` or `unscored` — the `consolation` value the schema comment
+mentions is never produced — so it can say *"the playoffs are on"* and can never
+say *"this is the last one"*.
+
+### What the two shipped lines are keyed on, and what they are not
+
+**Not recency.** `seasons.finalized_at` records when the close was *recorded*,
+not when the season ended: 2024's and 2025's are both stamped the day the
+fixtures were first imported. A time window on it would have announced a
+nineteen-month-old season as news on the homepage today. The key is that the
+season is **the newest on the books** — a fact about the record rather than about
+the clock.
+
+**`[MANAGER] WINS IT` is the existing champion slot, not a new one.** That slot
+already ran exactly this query — `final_rank = 1` on an `ARCHIVED` season, newest
+first — and in the window where the champion's season is the newest it was saying
+the wrong thing: *"still has the 2026 ring. Nobody has taken it off him"*, on the
+day he won it. One branch on state, no new query, no new source. Once a later
+season exists the slot returns to the standing-champion line, because *"still
+has"* is a claim about holding it through time.
+
+**`THAT'S A WRAP` is a separate line because the two facts come apart.** A season
+can close with no `final_rank` on record — `lib/counter/rings.ts` handles that
+case and refuses to name a champion for it — and *"the season is over"* is still
+true. Priority 25 puts it directly under the champion; in the week a season
+closes, that pair leads the board and the history line falls off the four-line
+cap, which is the right trade.
+
+Both strings are used **verbatim**, including the absence of a terminal stop that
+every other line on the board has. Adding punctuation to authored copy is the
+smallest possible way to start rewriting it.
+
+`lib/parlor/tonight-playoff-copy.test.ts` proves each line appears only from its
+legitimate state — nine cases, including a season that *looks* finished but is
+open, a closed season that is no longer the newest, and a scan of every reachable
+state for the ruling's banned vocabulary plus `FOR THE TITLE` itself. Five of the
+nine fail on the pre-ruling build.

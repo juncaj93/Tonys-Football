@@ -416,35 +416,46 @@ describe.skipIf(!hasDatabase)('the week 16 playoff rehearsal', () => {
     expect(boardFace({ daysUntilKickoff: null, week }).hero).not.toBe('WEEK ONE');
   });
 
-  it('says nothing about the playoffs on the Tonight board, and that is reported', async () => {
+  it('says nothing about the playoffs mid-bracket, and the season is not wrapped', async () => {
     /*
-     * The mission expected championship and elimination to outrank an ordinary
-     * line here. **There is no playoff line at all** — the five the board can
-     * emit are the kickoff countdown, the standing champion, the heaviest
-     * finalized game, who has picked up their keys, and which seasons are on the
-     * books.
+     * The board gained two lines of commissioner copy on 2026-08-10 — *"[MANAGER]
+     * WINS IT"* and *"THAT'S A WRAP"* — and **neither may appear here.** The
+     * semifinal is played, the bracket is half-resolved and the books are open,
+     * which is precisely the state the ruling's *"do not display this from a
+     * provisional championship score or merely because the bracket appears
+     * complete"* is about.
      *
-     * Pinned as it stands rather than invented: a playoff line is new curated
-     * copy in Tony's voice, which `CLAUDE.md` reserves for the commissioner, and
-     * the deterministic half it would need — *who advanced* — is a bracket fact
-     * this product deliberately does not persist. `docs/OPEN_ITEMS.md` **G4**.
+     * The third slot, *"FOR THE TITLE"*, is **not implemented at all**: knowing
+     * that the current week is the championship week needs the league's
+     * `playoff_week_start` and its bracket round count, and neither is
+     * persisted. `docs/OPEN_ITEMS.md` **G4**.
      */
     const keys = (await tonightBoard(db!)).map((line) => line.key);
 
+    expect(keys).not.toContain('wrap');
     expect(keys).not.toContain('playoff');
     expect(keys).not.toContain('elimination');
     expect(
-      keys.every((key) => ['kickoff', 'champion', 'heaviest', 'keys', 'history'].includes(key)),
+      keys.every((key) =>
+        ['kickoff', 'champion', 'heaviest', 'keys', 'history'].includes(key),
+      ),
     ).toBe(true);
+
+    // And the standing-champion line is still 2025's, said the standing way —
+    // 2026 has not produced one, so nothing announces anybody.
+    const board = await tonightBoard(db!);
+    for (const line of board) {
+      expect(line.text).not.toMatch(/WINS IT/);
+      expect(line.text).not.toMatch(/FOR THE TITLE/i);
+    }
   });
 
   it('leaves every manager their room after elimination', async () => {
     /*
-     * `16 §7.4` again, on the surface a manager actually visits. A basement is
-     * a *permanent* thing (`11 §2` keeps the person and the seat apart), so
-     * missing the playoffs must not close one — and `roomFor` returning null
-     * for four of ten managers in December is exactly what that would look
-     * like.
+     * `16 §7.4` again, on the surface a manager actually visits. A basement is a
+     * *permanent* thing (`11 §2` keeps the person and the seat apart), so missing
+     * the playoffs must not close one — and `roomFor` returning null for four of
+     * ten managers in December is exactly what that would look like.
      */
     for (const rosterId of [...MISSED_OUT, ...STILL_IN]) {
       const manager = state.seats.find((seat) => seat.rosterId === rosterId);
@@ -454,8 +465,7 @@ describe.skipIf(!hasDatabase)('the week 16 playoff rehearsal', () => {
       expect(userId).not.toBeNull();
 
       await ensureRoom(db!, userId!);
-      const room = await roomFor(db!, userId!);
-      expect(room, `${manager!.manager} has no room`).not.toBeNull();
+      expect(await roomFor(db!, userId!), `${manager!.manager} has no room`).not.toBeNull();
     }
   });
 
@@ -466,15 +476,10 @@ describe.skipIf(!hasDatabase)('the week 16 playoff rehearsal', () => {
   describe('the Sunday snapshot', () => {
     it('photographs the games and leaves the byes out', async () => {
       /*
-       * Run against week 15 rather than 16 because 15 is the week with byes, so
-       * it can tell a working filter from an absent one. Ten rosters are read
-       * and four games are photographed: a snapshot that captured an unpaired
-       * roster would run `07 §8`'s comeback arithmetic against a score with no
-       * opponent.
-       *
-       * The week is already closed by the time this runs, which does not matter
-       * — the photograph and the close are independent records, and the Sunday
-       * job's only guard is that a week is photographed once.
+       * Week 15 rather than 16, because 15 is the week with byes and can tell a
+       * working filter from an absent one. Ten rosters read, four games
+       * photographed: a snapshot that captured an unpaired roster would run
+       * `07 §8`'s comeback arithmetic against a score with no opponent.
        */
       const leg = await rehearsal.sunday({
         week: PLAYOFF_WEEK_START,
@@ -493,9 +498,8 @@ describe.skipIf(!hasDatabase)('the week 16 playoff rehearsal', () => {
     it('is taken once and never retaken', async () => {
       /*
        * Idempotency is stronger here than anywhere else in the schema, and
-       * deliberately so: a second capture is a *worse* photograph, not a
-       * fresher one. The score before Monday is unrecoverable once Monday has
-       * happened.
+       * deliberately so: a second capture is a *worse* photograph, not a fresher
+       * one. The score before Monday is unrecoverable once Monday has happened.
        */
       const again = await rehearsal.sunday({
         week: PLAYOFF_WEEK_START,

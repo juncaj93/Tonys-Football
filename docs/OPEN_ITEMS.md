@@ -652,33 +652,35 @@ a blanket re-opening.
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
 
-### G4 · Tonight has no playoff voice — deferred, and what is actually missing is copy
+### G4 · Tonight's playoff copy — two lines shipped, one cannot be supported
 
-The board's five possible lines are the kickoff countdown, the standing
-champion, the heaviest finalized game, who has picked up their keys, and which
-seasons are on the books. **There is no playoff or elimination line at all**, so
-there is no precedence rule about the postseason to get right or wrong.
+**Commissioner ruling, 2026-08-10** supplied three lines of restrained Tony-world
+copy for the board, under one rule: deterministic state decides whether a message
+is eligible, and authored copy only decides how Tony expresses a state that is
+already proven.
 
-**Commissioner ruling, 2026-08-10.** Playoff-specific board messaging is
-desirable — verified championship, advancement and elimination context may
-outrank an ordinary matchup detail during the postseason — but deterministic
-state and Tony's authored wording are separate layers, and an engineering
-session may not invent the second. Nothing unsupported may be claimed, and the
-board must not assert live bracket facts the persisted data cannot prove.
+| Line | Shipped | Keyed on |
+|---|---|---|
+| `[MANAGER] WINS IT` | ✅ | `final_rank = 1` on the **newest** season, and that season closed |
+| `THAT'S A WRAP` | ✅ | the **newest** season has `finalized_at` |
+| `FOR THE TITLE` | ❌ | — |
 
-**Nothing was prepared behind a typed interface either, and that is deliberate.**
-The deterministic half such a line would need — *who advanced this week* — is
-exactly the bracket state **E7**'s ruling declines to persist. What remains
-available without new persistence is three states, and all three are copy slots
-rather than data gaps:
+**`FOR THE TITLE` is not supportable and is the item that stays open.** The board
+would have to know the week being played is the bracket's last round, which needs
+`playoff_week_start` and a round count. **Neither is persisted**:
+`playoff_week_start` is read at import, classifies each week, and is discarded;
+`seasons` has no column for it and the bracket is not stored at all. The three
+routes to it — schedule inference, bracket persistence, or reading Sleeper on a
+page load — are each forbidden by this ruling or by **E7**'s. Stored `week_type`
+cannot stand in: it is only ever `regular`, `playoff` or `unscored`, so it can say
+the playoffs are on and never that this is the last one.
 
-- **championship week** — derivable from `playoff_week_start` and the bracket's round count;
-- **champion confirmed** — `final_rank = 1` on a finalized season, which the banner rail already reads;
-- **season complete** — `seasons.finalized_at`.
+Closing it would take a scoped feature decision about persisting playoff
+structure, which **E7** declines for v1. Nothing is pending on the copy itself.
 
-Those are the exact slots to fill. Final wording must be commissioner-approved
-before publication. `lib/rehearsal/week-16.test.ts` pins the current set of five
-so the day one is added it reads as a change rather than as a surprise.
+`docs/PLAYOFF_REHEARSAL.md §10` is the account;
+`lib/parlor/tonight-playoff-copy.test.ts` pins each line to its state and scans
+every reachable state for the banned vocabulary, `FOR THE TITLE` included.
 
 ### G1 · The Underground — the decision that is actually wanted
 
