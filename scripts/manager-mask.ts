@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import sharp from 'sharp';
 
-import { CANVAS } from '../lib/character/art/geometry';
+import { AXIS, CANVAS } from '../lib/character/art/geometry';
 import {
   BODY_HEAD_SLUG,
   STYLE_TRAITS,
@@ -14,6 +14,7 @@ import {
   type CharacterConfiguration,
 } from '../lib/character/composite';
 import {
+  BUILD_REGISTRATION,
   MASK_CANVAS,
   TRANSPARENT_KEY,
   encodeMask,
@@ -81,6 +82,8 @@ export interface Snapped {
   readonly drift: { readonly mean: number; readonly p99: number; readonly max: number };
   readonly softAlpha: number;
   readonly factor: number;
+  /** Set when `--fit` normalised the placement. Always printed. */
+  readonly fitted: { readonly scale: number; readonly movedRows: number } | null;
 }
 
 /** Nearest key by plain Euclidean sRGB — the metric `ASSET_PIPELINE §4` ruled on. */
@@ -140,7 +143,87 @@ const ASPECT_TOLERANCE = 0.01;
  * **It cannot hide a malformed asset.** It changes only how the file is read, and
  * every registration check runs afterwards on the result.
  */
-export async function snap(file: string): Promise<Snapped> {
+/**
+ * Where in the source the canvas is read from.
+ *
+ * `origin` is the source pixel the output's top-left corner samples, and `step`
+ * is how many source pixels one output pixel spans. Without fitting this is
+ * simply the whole file; with it, the figure's own bounding box is mapped onto
+ * the band a build must occupy.
+ */
+interface Window {
+  readonly x: number;
+  readonly y: number;
+  readonly step: number;
+}
+
+/**
+ * Fit a delivered figure to the build band — **opt in, always reported.**
+ *
+ * ## Why this is not "making wrong art pass", and where the line is
+ *
+ * `docs/MANAGER_BUILD_PROTOTYPE.md §9.5` refused auto-fitting on the grounds that
+ * it resamples the art. That reasoning assumed the delivery *is* pixel art. It is
+ * not: a generator returns a **smooth 1024 × 1536 illustration**, and the pixel
+ * grid is manufactured by our own downscale. There is no authored block structure
+ * to damage — choosing a different rasterisation window is choosing where to
+ * sample, not resampling something already sampled.
+ *
+ * So the honest rule is about the **source**, not the operation:
+ *
+ * - a smooth illustration → the window is ours to choose, and fitting is free;
+ * - a source authored at exact blocks → the blocks are intentional and fitting
+ *   would smear them. `--fit` must not be used on one.
+ *
+ * ## What it still cannot hide
+ *
+ * Every content check runs **afterwards**, on the fitted result: palette drift is
+ * still reported, a background still fails coverage, an unenclosed silhouette
+ * still fails, holes still fail. And the fit itself is bounded — a delivery
+ * needing more than {@link FIT_LIMIT} was not drawn to this plate at all (a whole
+ * figure *including a head* needs about 0.65) and is refused rather than squeezed.
+ *
+ * The scale and offset are printed every time. A silent normalisation would be
+ * the renderer adjusting to compensate; a reported one is a measurement.
+ */
+const FIT_LIMIT = Object.freeze({ min: 0.8, max: 1.25 });
+
+function fitWindow(
+  alphaAt: (x: number, y: number) => number,
+  width: number,
+  height: number,
+): { window: Window; scale: number; from: { top: number; bottom: number; cx: number } } {
+  let top = height;
+  let bottom = -1;
+  let left = width;
+  let right = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (alphaAt(x, y) < 128) continue;
+      if (y < top) top = y;
+      if (y > bottom) bottom = y;
+      if (x < left) left = x;
+      if (x > right) right = x;
+    }
+  }
+  if (bottom < 0) throw new Error('nothing is painted in this file');
+
+  const targetTop = BUILD_REGISTRATION.shoulderBand.from;
+  const targetRows = BUILD_REGISTRATION.contactRow - targetTop + 1;
+  const sourceRows = bottom - top + 1;
+
+  // Source pixels per output pixel, chosen so the figure fills the band exactly.
+  const step = sourceRows / targetRows;
+  const cx = (left + right + 1) / 2;
+
+  return {
+    window: { x: cx - AXIS * step, y: top - targetTop * step, step },
+    scale: (width / MASK_CANVAS.width) / step,
+    from: { top, bottom, cx },
+  };
+}
+
+export async function snap(file: string, fit = false): Promise<Snapped> {
   const image = sharp(file).ensureAlpha();
   const { width, height } = await image.metadata();
   if (width === undefined || height === undefined) throw new Error(`${file}: unreadable`);
@@ -214,13 +297,26 @@ export async function snap(file: string): Promise<Snapped> {
   const drift = { mean: measured === 0 ? 0 : total / measured, p99, max };
 
   // Pass 2 — the majority role of the source cell under each output pixel.
+  const fitted = fit
+    ? fitWindow((x, y) => data[(y * width + x) * 4 + 3]!, width, height)
+    : null;
+  if (fitted !== null && (fitted.scale < FIT_LIMIT.min || fitted.scale > FIT_LIMIT.max)) {
+    throw new Error(
+      `fitting this file would rescale it by ${fitted.scale.toFixed(2)}x, outside the ` +
+        `${String(FIT_LIMIT.min)}–${String(FIT_LIMIT.max)} a near-miss can be. A delivery this far ` +
+        'out was not drawn to the plate — a whole figure including a head needs about 0.65x. ' +
+        'Regenerate it against art/jigs/manager_paintover_672x1008.png.',
+    );
+  }
+  const window: Window = fitted?.window ?? { x: 0, y: 0, step: width / MASK_CANVAS.width };
+
   const keys: number[] = [];
   for (let y = 0; y < MASK_CANVAS.height; y++) {
-    const y0 = Math.floor((y * height) / MASK_CANVAS.height);
-    const y1 = Math.max(y0 + 1, Math.floor(((y + 1) * height) / MASK_CANVAS.height));
+    const y0 = Math.floor(window.y + y * window.step);
+    const y1 = Math.max(y0 + 1, Math.floor(window.y + (y + 1) * window.step));
     for (let x = 0; x < MASK_CANVAS.width; x++) {
-      const x0 = Math.floor((x * width) / MASK_CANVAS.width);
-      const x1 = Math.max(x0 + 1, Math.floor(((x + 1) * width) / MASK_CANVAS.width));
+      const x0 = Math.floor(window.x + x * window.step);
+      const x1 = Math.max(x0 + 1, Math.floor(window.x + (x + 1) * window.step));
 
       const votes = new Map<number, number>();
       let cells = 0;
@@ -228,6 +324,10 @@ export async function snap(file: string): Promise<Snapped> {
       for (let sy = y0; sy < y1; sy++) {
         for (let sx = x0; sx < x1; sx++) {
           cells++;
+          if (sy < 0 || sx < 0 || sy >= height || sx >= width) {
+            clear++;
+            continue;
+          }
           const key = sourceKey[sy * width + sx]!;
           if (key === TRANSPARENT_KEY) {
             clear++;
@@ -256,7 +356,7 @@ export async function snap(file: string): Promise<Snapped> {
     }
   }
 
-  return { keys, drift, softAlpha, factor: width / MASK_CANVAS.width };
+  return { keys, drift, softAlpha, factor: width / MASK_CANVAS.width, fitted: fitted === null ? null : { scale: fitted.scale, movedRows: BUILD_REGISTRATION.shoulderBand.from - Math.round(fitted.from.top / (width / MASK_CANVAS.width)) } };
 }
 
 /** A picture of the mask as four real managers, so a person can judge it. */
@@ -335,9 +435,11 @@ export const ${constant}: EncodedMask = {
 }
 
 async function main(): Promise<void> {
-  const [file, slug] = process.argv.slice(2);
+  const argv = process.argv.slice(2);
+  const fit = argv.includes('--fit');
+  const [file, slug] = argv.filter((arg) => !arg.startsWith('--'));
   if (file === undefined || slug === undefined) {
-    throw new Error('usage: npm run art:mask -- <file.png> <slug>');
+    throw new Error('usage: npm run art:mask -- <file.png> <slug> [--fit]');
   }
   if (slug === BODY_HEAD_SLUG) {
     throw new Error(
@@ -352,7 +454,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const { keys, drift, softAlpha, factor } = await snap(file);
+  const { keys, drift, softAlpha, factor, fitted } = await snap(file, fit);
 
   const painted = keys.filter((key) => key !== TRANSPARENT_KEY).length;
 
@@ -364,6 +466,15 @@ async function main(): Promise<void> {
       `· max ${String(drift.max)}`,
   );
   if (softAlpha > 0) console.log(`  soft alpha          ${String(softAlpha)} source pixels`);
+  if (fitted !== null) {
+    console.log(
+      `  FITTED              rescaled ${fitted.scale.toFixed(3)}x and moved ` +
+        `${String(fitted.movedRows)} rows down to sit in the build band.` +
+        '\n                      This is a normalisation of PLACEMENT ONLY, applied because the ' +
+        '\n                      source is a smooth illustration whose pixel grid is ours to ' +
+        '\n                      choose. Every content check below still ran on the result.',
+    );
+  }
 
   if (drift.mean > 12) {
     console.log(

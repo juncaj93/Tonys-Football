@@ -6,7 +6,13 @@ import sharp from 'sharp';
 import { afterAll, describe, expect, it } from 'vitest';
 
 import { fixtureBuildMask } from '../lib/character/mask.fixture';
-import { MASK_CANVAS, MASK_KEYS, TRANSPARENT_KEY, paintedKeys } from '../lib/character/mask';
+import {
+  MASK_CANVAS,
+  MASK_KEYS,
+  TRANSPARENT_KEY,
+  paintedKeys,
+  validateBuildMask,
+} from '../lib/character/mask';
 
 import { nearestKey, snap } from './manager-mask';
 
@@ -191,6 +197,58 @@ describe('snapping a delivered file', () => {
       .toFile(drifted);
 
     expect((await snap(drifted)).drift.mean).toBeGreaterThan(5);
+  });
+});
+
+describe('fitting, which is opt in and always reported', () => {
+  it('lands a mis-framed but well-drawn figure in the build band', async () => {
+    /*
+     * Round 2 arrived 18 rows high and 12% too tall — good art, wrong placement.
+     * Fitting is legitimate here and only here: the source is a **smooth
+     * illustration**, so the pixel grid is ours to choose and moving the sampling
+     * window is not a resample of anything already sampled.
+     */
+    const source = fixtureBuildMask();
+    const shifted = Array.from({ length: MASK_CANVAS.width * MASK_CANVAS.height }, () => TRANSPARENT_KEY);
+    for (let y = 20; y < MASK_CANVAS.height; y++) {
+      for (let x = 0; x < MASK_CANVAS.width; x++) {
+        shifted[(y - 20) * MASK_CANVAS.width + x] = source[y * MASK_CANVAS.width + x]!;
+      }
+    }
+    const file = await paintAt(shifted, 1024, 1536, 'misframed.png');
+
+    expect(validateBuildMask((await snap(file)).keys).some((p) => /shoulder band|fill the frame|contact row/.test(p.message))).toBe(true);
+
+    const fitted = await snap(file, true);
+    expect(fitted.fitted).not.toBeNull();
+    const framing = validateBuildMask(fitted.keys).filter((p) =>
+      /shoulder band|fill the frame|lowest painted row/.test(p.message),
+    );
+    expect(framing).toEqual([]);
+  });
+
+  it('refuses a delivery too far out to be a near miss', async () => {
+    /*
+     * The bound is what stops fitting becoming "make any art pass". A whole
+     * figure *including a head* needs about 0.65x, and squeezing one into the
+     * body band would put a jaw where the head plate draws one.
+     */
+    const source = fixtureBuildMask();
+    const tiny = Array.from({ length: MASK_CANVAS.width * MASK_CANVAS.height }, () => TRANSPARENT_KEY);
+    for (let y = 0; y < MASK_CANVAS.height; y++) {
+      for (let x = 0; x < MASK_CANVAS.width; x++) {
+        if (source[y * MASK_CANVAS.width + x] === TRANSPARENT_KEY) continue;
+        const ty = Math.round(y / 2) + 60;
+        if (ty < MASK_CANVAS.height) tiny[ty * MASK_CANVAS.width + x] = source[y * MASK_CANVAS.width + x]!;
+      }
+    }
+    const file = await paintAt(tiny, 1024, 1536, 'halfsize.png');
+    await expect(snap(file, true)).rejects.toThrow(/outside the/);
+  });
+
+  it('does not fit unless asked', async () => {
+    const file = await paint(fixtureBuildMask(), 6, 'unfitted.png');
+    expect((await snap(file)).fitted).toBeNull();
   });
 });
 
