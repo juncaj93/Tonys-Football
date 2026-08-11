@@ -93,7 +93,7 @@ legendary checks (§7). The numbers moved; the ruling did not.
 | Non-weekly reward rate | ~0% | 0 ✓ |
 | Legendary mass, configured | exactly 2% | 2.000% ✓ |
 | Legendary rate per opening (sampled) | 2.00% ± 0.67 (4σ, n=6,976) | 1.98% ✓ |
-| Legendaries league-wide/season | 2–3 | 2.8 ✓ |
+| Legendaries league-wide/season *(derived, reported)* | 2.79 ± 0.94 | 2.76 |
 | Direct grants per manager/season | exactly 2 | 2.00 ✓ |
 
 **The correction made the ruling stronger rather than weaker.** Re-run at 17
@@ -101,11 +101,11 @@ weeks, the sweep is no longer three passes: **175 now fails** on boxes (13.0
 against 6–12) and on legendary volume (3.2 against 2–3), while 200 and 225 pass.
 The band the commissioner chose from has narrowed onto the value they chose.
 
-| price | boxes / manager / season | legendaries league-wide | |
+| price | boxes / manager / season | legendaries league-wide (derived expectation) | |
 |---|---|---|---|
-| 175 | 13.0 | 3.2 | ✗ |
-| **200** | **11.0** | **2.8** | ✓ |
-| 225 | 10.0 | 2.7 | ✓ |
+| 175 | 13.0 | 3.22 (expected 3.11 ± 0.99) | ✗ — fails on boxes |
+| **200** | **11.0** | **2.76** (expected 2.79 ± 0.94) | ✓ |
+| 225 | 10.0 | 2.72 (expected 2.59 ± 0.90) | ✓ |
 
 **The price alone is safe.** With the grants not yet built, 200 still measures
 9.0 boxes and 2.1 legendaries — both in range. The grants are additive rather
@@ -191,6 +191,41 @@ The ruling's own preference decided the shape — *assert the configuration exac
 
 **No approved economy value changed.** The price, the grants, the rewards, the rarity mass and the salvage values are exactly as ruled on 2026-08-04.
 
-#### What the correction exposed, and did not touch
+#### 3. The league-wide legendary count is a derived expectation — **ruling E6, 2026-08-10**
 
-Re-run at 17 weeks, the **`Legendaries league-wide per season` 2–3 range** — an *emergent* range this ruling did not authorise changing — now measures a mean of **2.78** against a ceiling of 3, and across twenty-four seeds it lands outside on **3 of 24** (it was 24/24 inside at the short season, mean 2.40). The default seed passes and the gate is deterministic, so nothing is flaky in CI. It is reported rather than adjusted, and carried in `docs/OPEN_ITEMS.md` **E6**.
+The 17-week correction exposed a third defect of the same family and the commissioner ruled on it separately: **replace the fixed `2–3` band with a derived expectation-based check; do not preserve or simply widen the literal range.**
+
+Under the corrected model the mean is ~2.8, so a ceiling of 3 sat within a standard deviation of the expectation and the check failed on **3 of 24 seeds while the configured probability and the draw were both provably correct**.
+
+**The formula.** Nothing is declared; everything is computed from the run:
+
+```
+  n = openings the run actually simulated       S = seasons
+  p = configured legendary rate, from the table's integer weights
+  expectation  E  = (n / S) · p
+  tolerance       = k · sqrt(n · p · (1 − p)) / S       with k = 4
+```
+
+`n·p·(1−p)` is the binomial variance of the legendary count over the whole run; its root divided by `S` puts it in per-season units. **2.8 appears nowhere in source** — it is what the formula returns for the approved economy, and it moves on its own when the price, the grants or the season length move. Halving the box price raises both the openings and the expectation, and a test asserts exactly that.
+
+At the approved economy the gate prints:
+
+```
+Legendaries league-wide per season (derived)
+  2.79 ± 0.94 = (6976 openings / 50 seasons) × 2.0%     measured 2.76
+```
+
+**It is reported, not gated, and that is also the ruling's instruction** — *"if the existing sampled legendary-rate check already mathematically covers the same risk, avoid duplicating identical statistical assertions."* It does, exactly. Multiply the sampled inequality through by `n/S`:
+
+```
+  |legendaries/n − p|      ≤  k·sqrt(p(1−p)/n)
+  |legendaries/S − (n/S)p| ≤  k·sqrt(n·p·(1−p))/S
+```
+
+The right-hand side is the tolerance above: the two are **algebraically the same assertion**, not merely similar, and a test proves they return the same verdict on every input including a fabricated result whose draw is deliberately wrong. Gating on both would count one claim twice and report two failures for one cause.
+
+The line is kept rather than deleted because it is the form a reader thinks in — *how many legendaries does the league see a year* — and because the ruling requires the expectation, the sample size and the tolerance to be documented where the gate is read. The distinct emergent signal it might otherwise have carried is **throughput**, and that is already gated one row above: openings are purchases plus the two grants, and purchases are bounded by `Boxes per manager per season`.
+
+**`RangeCheck.gating` replaced `range === 'informational'`**, so whether a row decides a release is a property rather than a display string, and a test names the six rows that gate — a silent demotion would be the gate quietly agreeing with itself.
+
+**The whole gate now passes on 24 of 24 seeds** at the approved economy, where it passed 21 of 24 before. No seed was cherry-picked and no range was widened until the seeds happened to pass; the literal band was replaced by the expectation it was always a proxy for.

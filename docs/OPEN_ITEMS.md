@@ -523,63 +523,43 @@ so the band has narrowed onto the value the commissioner chose.
 `docs/ECONOMY_SIMULATION.md §7` carries the methodology and the tolerance
 derivation. Closed.
 
-### E6 · `Legendaries league-wide per season` now sits against its ceiling
+### E6 · `Legendaries league-wide per season` was a literal band — **fixed, 2026-08-10**
 
-**Exposed by E5's correction, and deliberately not touched by it.** The range is
-`16 §8`'s and describes an *emergent* economy outcome, which the 2026-08-10
-ruling did not authorise changing.
+Exposed by E5's 17-week correction: the longer, correct season lifted the mean
+from 2.40 to **2.78** against a ceiling of **3**, so the bound sat within a
+standard deviation of the expectation and the check failed on **3 of 24 seeds
+while the configured probability and the draw were both provably correct**.
 
-The corrected 17-week season buys about one more box per manager per season, so
-league-wide legendary volume rises from a mean of **2.40** to **2.78** against a
-ceiling of **3**. Across twenty-four fixed seeds at fifty seasons it lands
-outside the 2–3 band on **3 of 24** — it was 24 of 24 inside at the short season.
+**Commissioner ruling: replace the band with a derived expectation. Do not
+preserve or simply widen the literal range.** Done:
 
-**Nothing is flaky in CI.** The gate is deterministic and its default seed
-passes; the sensitivity only appears if the seed is changed. But it is the same
-shape of problem E5 just fixed one instance of — a bound close to the true value
-— on a range only the commissioner can move.
+```
+  expectation = (openings / seasons) × configured rate
+  tolerance   = 4 · sqrt(openings · p · (1 − p)) / seasons
+```
 
-Three ways out, none of them a session's to pick: widen the range, express it as
-a tolerance around a derived expectation the way the legendary-rate check now is,
-or accept that the real economy produces ~2.8 legendaries a season and restate
-`16 §8`. **Reporting it is the whole action taken.**
+Everything comes from the run — **2.8 is not a constant anywhere in source**, it
+is what the formula returns for the approved economy, and a test asserts it moves
+when the price moves. The gate prints the expectation, the opening count, the
+season count and the tolerance on the row itself.
 
-### E7 · The elimination story is retrospective, and live bracket state is ruled out
+**Reported rather than gated, which is the same ruling's anti-duplication
+clause.** Multiplying the sampled legendary-rate inequality by `openings/seasons`
+gives this one exactly — they are algebraically the same assertion, proven by a
+test that checks both verdicts agree on every input including a deliberately
+wrong draw. The rate check gates; this line documents. The throughput signal it
+might otherwise have carried is already bounded by `Boxes per manager per season`.
 
-**The candidate was fixed; the limitation is a ruling, not a defect.**
+`RangeCheck.gating` replaced the old `range === 'informational'` string test, so
+whether a row decides a release is a property rather than a label, and a test
+names the six rows that gate.
 
-`elimination` had been derived from *"the loser meets no other playoff team
-again this season"*, which this league's bracket makes permanently false — the
-first-round losers meet each other in week 16 for fifth and the semifinal losers
-meet each other in week 17 for third. Measured rather than reasoned: it appears
-nowhere in the six playoff weeks of the two recorded seasons. It now reads the
-recorded placement, and two headline templates changed with it because
-*"{l} is done for the year"* would have been false the first time it fired.
+**The whole gate now passes 24 of 24 seeds**, against 21 of 24 before. **No
+approved economy value changed** and the sweep still selects 200: 175 fails on
+boxes, 200 and 225 pass. `docs/ECONOMY_SIMULATION.md §7`. Closed.
 
-It fires only once ranks one and two exist, so the paper printed on the Tuesday
-of the semifinal cannot carry it. **Commissioner ruling, 2026-08-10: do not add
-a `playoff_bracket` table for v1.** Retrospective playoff facts are acceptable
-where the persisted data proves them, and a live *"who advanced this week"*
-story is a deferred feature opportunity rather than a launch blocker. Building
-it needs a scoped decision of its own — source of truth, schema, sync semantics,
-idempotency, stale-data behaviour and its own rehearsal coverage. **Nothing of
-the sort was introduced here.**
-
-`docs/PLAYOFF_REHEARSAL.md §3.2` and `§5`.
-
-### E8 · A stale standings payload moves the table backwards for a week
-
-Injected and observed. `reconcileSeason` catches it and names both records for
-all ten rosters, but the disagreement is a *warning* rather than a *conflict*, so
-`sync_runs.status` stays `SUCCEEDED`. Deliberate — 2024's records and its weekly
-points disagree permanently, and a run reading `NEEDS_REVIEW` every week would
-teach whoever reads it to stop reading — but a commissioner reading only the
-status would not see it. Recorded as behaviour, not filed as a defect.
-
-**Commissioner ruling, 2026-08-10: the policy is not to be changed in a playoff
-PR.** A historical permanent disagreement is not a reason to make all standings
-drift fatal. If it deserves stronger visibility, that is a separate hardening
-task.
+**Economy release-gate corrections — CLOSED.** E5 and E6 together are the whole
+of that workstream; nothing in it remains open.
 
 ---
 

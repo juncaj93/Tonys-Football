@@ -17,6 +17,7 @@ import {
   SCORED_WEEKS,
   checkRanges,
   configuredLegendaryRate,
+  legendaryExpectation,
   salvageFor,
   generator,
   rarityMass,
@@ -253,7 +254,7 @@ describe('the range checks', () => {
      * release gate that depends on luck is not a gate.
      */
     const checks = checkRanges(simulate(input({ seasons: 50, policy: 'specified' })));
-    const failures = checks.filter((c) => c.range !== 'informational' && !c.withinRange);
+    const failures = checks.filter((c) => c.gating && !c.withinRange);
     expect(failures.map((f) => `${f.name}: ${f.measured}`)).toEqual([]);
   });
 
@@ -269,7 +270,7 @@ describe('the range checks', () => {
         }),
       ),
     );
-    expect(drifted.some((c) => c.range !== 'informational' && !c.withinRange)).toBe(true);
+    expect(drifted.some((c) => c.gating && !c.withinRange)).toBe(true);
   });
 
   it('holds the one range that is true by construction', () => {
@@ -447,5 +448,122 @@ describe('the legendary checks', () => {
     const range = checks.find((c) => c.name === 'Legendary rate per opening (sampled)')?.range;
     expect(range).toContain(`${String(LEGENDARY_SIGMA_TOLERANCE)}σ`);
     expect(range).toMatch(/n=\d+/);
+  });
+});
+
+describe('the league-wide legendary figure', () => {
+  const seeds = Array.from({ length: 24 }, (_, index) => 20260804 + index * 1013);
+  const gateRun = (seed: number) => simulate(input({ seasons: 50, policy: 'specified', seed }));
+
+  it('shows why the fixed 2–3 band was invalid', () => {
+    /*
+     * The evidence behind E6, asserted rather than described. Over twenty-four
+     * fixed seeds at the approved economy the old literal band rejects some
+     * runs — **while the configured probability is exactly 2% and the draw is
+     * provably correct on every one of them**. A band that red-lights a correct
+     * economy is measuring luck.
+     */
+    let oldBandRejects = 0;
+
+    for (const seed of seeds) {
+      const result = gateRun(seed);
+      const checks = checkRanges(result);
+
+      // The old predicate, restated here because it no longer exists in source.
+      const perSeason = result.legendariesPerSeasonLeagueWide;
+      if (perSeason < 2 || perSeason > 3) oldBandRejects += 1;
+
+      // ...and on the same run, both live legendary checks hold.
+      expect(checks.find((c) => c.name === 'Legendary mass, configured')?.withinRange).toBe(true);
+      expect(
+        checks.find((c) => c.name === 'Legendary rate per opening (sampled)')?.withinRange,
+        `seed ${String(seed)}`,
+      ).toBe(true);
+    }
+
+    expect(oldBandRejects).toBeGreaterThan(0);
+  });
+
+  it('derives its expectation from the openings the run actually simulated', () => {
+    // Not a constant. `2.8` appears nowhere in source: it is what the formula
+    // returns for the approved economy, and it moves when the economy moves.
+    const result = gateRun(seeds[0]!);
+    const e = legendaryExpectation(result);
+
+    expect(e.expectedPerSeason).toBeCloseTo((e.openings / e.seasons) * e.rate, 12);
+    expect(e.rate).toBeCloseTo(CONFIGURED_LEGENDARY_RATE, 12);
+
+    // Halve the price, buy far more boxes, and the expectation rises with them.
+    const cheaper = legendaryExpectation(
+      simulate(input({ seasons: 50, seed: seeds[0]!, economy: { ...PROVISIONAL_ECONOMY, standardBoxPriceTokens: 100 } })),
+    );
+    expect(cheaper.openings).toBeGreaterThan(e.openings);
+    expect(cheaper.expectedPerSeason).toBeGreaterThan(e.expectedPerSeason);
+  });
+
+  it('is the sampled rate check rescaled, which is why only one of them gates', () => {
+    /*
+     * E6: *"avoid duplicating identical statistical assertions."* They are not
+     * merely similar — multiply the rate inequality through by `n/S` and it is
+     * this one. Asserted on real runs and on a fabricated result whose draw is
+     * deliberately wrong, so agreement is tested on both verdicts.
+     */
+    const agree = (result: SimulationResult): void => {
+      const checks = checkRanges(result);
+      const sampled = checks.find((c) => c.name === 'Legendary rate per opening (sampled)');
+      const derived = checks.find((c) => c.name === 'Legendaries league-wide per season (derived)');
+      expect(derived?.withinRange).toBe(sampled?.withinRange);
+    };
+
+    for (const seed of seeds.slice(0, 6)) agree(gateRun(seed));
+
+    const real = simulate(input({ seasons: 5 }));
+    const openings = real.managers.reduce((n, m) => n + m.openings, 0);
+    const wrong: SimulationResult = {
+      ...real,
+      managers: real.managers.map((manager, index) => ({
+        ...manager,
+        legendaries: index === 0 ? Math.round(openings * 0.05) : 0,
+      })),
+      legendariesPerSeasonLeagueWide: Math.round(openings * 0.05) / real.input.seasons,
+    };
+    agree(wrong);
+    expect(
+      checkRanges(wrong).find((c) => c.name === 'Legendaries league-wide per season (derived)')
+        ?.withinRange,
+    ).toBe(false);
+  });
+
+  it('is reported rather than gated, and nothing else lost its gate', () => {
+    const checks = checkRanges(gateRun(seeds[0]!));
+    const derived = checks.find((c) => c.name === 'Legendaries league-wide per season (derived)');
+    expect(derived?.gating).toBe(false);
+
+    // The rows that decide a release, named. A silent demotion of any of these
+    // would be the gate quietly agreeing with itself.
+    expect(checks.filter((c) => c.gating).map((c) => c.name)).toEqual([
+      'Boxes per manager per season (median)',
+      'Reward-bearing weeks, median manager',
+      'Non-weekly reward rate',
+      'Legendary mass, configured',
+      'Legendary rate per opening (sampled)',
+      'Direct item grants per manager per season',
+    ]);
+  });
+
+  it('documents its expectation, its sample size and its tolerance', () => {
+    const derived = checkRanges(gateRun(seeds[0]!)).find(
+      (c) => c.name === 'Legendaries league-wide per season (derived)',
+    );
+    expect(derived?.range).toMatch(/±/);
+    expect(derived?.range).toMatch(/\d+ openings/);
+    expect(derived?.range).toMatch(/\d+ seasons/);
+  });
+
+  it('tightens as the run grows', () => {
+    const short = legendaryExpectation(simulate(input({ seasons: 5 })));
+    const long = legendaryExpectation(simulate(input({ seasons: 50 })));
+    // Per-season tolerance falls as 1/sqrt(S) at fixed per-season throughput.
+    expect(long.tolerancePerSeason).toBeLessThan(short.tolerancePerSeason);
   });
 });
