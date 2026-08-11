@@ -1,5 +1,18 @@
 # Tony's Pizza Fantasy — Underground Casino V1 Architecture Investigation
 
+> **APPROVED by the commissioner, 2026-08-11**, together with rulings **R1–R13**
+> that settle the product questions this document raised in `§K`.
+> **[`docs/CASINO_BOUNDARY.md`](CASINO_BOUNDARY.md) is now the canonical
+> record** — it carries the rulings, the blackjack and slots mathematics, the
+> economy measurement and the recommended launch parameters. This document
+> remains the **architecture**: the token path, the persistence model, the
+> idempotency story, the room integration and the workstream map are unchanged
+> and were approved as written. Where `§K`'s open decisions have since been
+> ruled on, `CASINO_BOUNDARY §2` is the answer.
+>
+> **Still true, and still the operating state: the Underground is CLOSED and
+> implementation is not authorized.**
+
 **Status:** investigation and planning only. **Nothing here is approved and nothing was
 implemented.** No migration, no route, no flag change, no economy value, no art.
 

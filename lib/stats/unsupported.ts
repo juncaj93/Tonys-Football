@@ -244,7 +244,8 @@ export const UNSUPPORTED_FACTS: readonly UnsupportedFact[] = Object.freeze([
       'football, and a collectible story reads a different table with different rules.',
     absentTables: [],
     wouldNeed: [
-      'the casino, which is deferred by commissioner ruling and has an open decision in `docs/OPEN_ITEMS.md` **G1**',
+      'the casino, whose games were ruled on 2026-08-11 (blackjack and slots, `docs/CASINO_BOUNDARY.md`) ' +
+        'but which is deliberately unbuilt and unauthorized — the Underground is closed',
       'a decision that collectible history belongs in the historical-analysis layer at all',
     ],
     insteadSay: 'nothing — the absence is the deferral working as intended',

@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| *(nothing claimed)* | | | | |
+| Underground casino — rulings, economy simulation and readiness (no product code) | claude/underground-casino-investigation-mu3ayr | `lib/casino/**` (math models only) · `lib/economy/simulate.ts` (additive casino scenario) · `lib/economy/casino-scenario.ts` · `scripts/casino-analysis.ts` · `docs/CASINO_BOUNDARY.md` · `docs/UNDERGROUND_CASINO_INVESTIGATION.md` · `docs/OPEN_ITEMS.md` **G1** · the ruling index | any migration · any route · any server action · any component · `lib/flags.ts` · `lib/counter/**` · `lib/stakes/**` · `lib/rewards/**` · any approved economy value · `art/**` · `ALL_STATES` | 2026-08-11 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of

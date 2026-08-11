@@ -2,6 +2,8 @@ import { type Rarity, RARITIES } from '@/lib/counter/catalog';
 import { type RewardTableConfig, resolveRoll } from '@/lib/counter/rewards';
 import { type EconomyValues } from '@/lib/counter/tokens';
 
+import { type CasinoArchetype, type CasinoPolicy, playWeek } from './casino-scenario';
+
 /**
  * The multi-season economy simulation — `16 §8`'s release gate.
  *
@@ -221,6 +223,19 @@ export interface SimulationInput {
   readonly seed: number;
   /** The catalog's size, which is what "complete" means. */
   readonly catalogSize: number;
+  /**
+   * Casino participation, or nothing at all.
+   *
+   * **Absent is the default and absent must change nothing.** `NEXT PHASE §B`
+   * requires the approved economy evidence to survive this addition untouched,
+   * so every casino draw comes from a *separate* generator seeded by
+   * `casino.seed` and the existing `next()` stream is never consulted for one.
+   * With this field undefined the loop below takes the identical branch it took
+   * before the field existed, in the identical order, and
+   * `simulate.test.ts` pins that against a recorded fingerprint rather than
+   * trusting the reading.
+   */
+  readonly casino?: CasinoPolicy;
 }
 
 export interface ManagerResult {
@@ -242,6 +257,25 @@ export interface ManagerResult {
   readonly salvageTokens: number;
   /** 1-based season in which the catalog completed, or null if it never did. */
   readonly completedInSeason: number | null;
+
+  /* --- casino, all zero and `'none'` when no policy was supplied ----------- */
+
+  readonly casinoArchetype: CasinoArchetype;
+  readonly casinoPlays: number;
+  readonly casinoWagered: number;
+  readonly casinoReturned: number;
+  /**
+   * The tab at the end of the run.
+   *
+   * Reported because it is the measurement the box counts cannot carry: two
+   * managers who bought the same number of boxes can end a run in very different
+   * positions, and *"who is holding what"* is the concentration question.
+   *
+   * Note that the simulation **carries a balance across seasons** and always
+   * has. That is the approved baseline's behaviour, not a casino decision, and
+   * this slice deliberately does not change it.
+   */
+  readonly endingBalance: number;
 }
 
 export interface SimulationResult {
@@ -294,6 +328,16 @@ export function simulate(input: SimulationInput): SimulationResult {
   const results: ManagerResult[] = [];
   let legendariesTotal = 0;
 
+  /*
+   * The casino's own stream.
+   *
+   * Constructed unconditionally because constructing a generator draws nothing —
+   * and *not* constructing it would put a branch above the loop that a future
+   * edit could accidentally make consult `next()`. It is only ever read from
+   * inside `if (input.casino !== undefined)`.
+   */
+  const casinoNext = generator(input.casino?.seed ?? 0);
+
   const profileFor = (index: number): ProfileName => {
     // A tenth best, a tenth worst, the rest median — a league is mostly middle.
     if (index === 0) return 'best';
@@ -318,6 +362,11 @@ export function simulate(input: SimulationInput): SimulationResult {
     let salvageTokens = 0;
     let grants = 0;
     let completedInSeason: number | null = null;
+
+    const archetype: CasinoArchetype = input.casino?.archetypes[m] ?? 'none';
+    let casinoPlays = 0;
+    let casinoWagered = 0;
+    let casinoReturned = 0;
 
     /** Open one box under the configured policy. */
     const open = (): void => {
@@ -392,6 +441,28 @@ export function simulate(input: SimulationInput): SimulationResult {
           tokensEarned += week_tokens;
         }
 
+        /*
+         * Down the stairs, before the counter.
+         *
+         * Play comes **first** on purpose. A manager who bought their boxes and
+         * then gambled the change would be measured as spending a residue that
+         * can never exceed the price of a box, which would make the casino look
+         * harmless by construction. Gambling first is the arrangement in which
+         * the casino can actually take the money a box would have cost, and
+         * that is the question being asked.
+         *
+         * Casino returns are deliberately **not** added to `tokensEarned`. R12
+         * excludes casino payouts from the earned-token award, and this counter
+         * is what that award reads — see `docs/CASINO_BOUNDARY.md §7`.
+         */
+        if (input.casino !== undefined && archetype !== 'none') {
+          const week = playWeek(input.casino, archetype, balance, casinoNext);
+          balance += week.returned - week.wagered;
+          casinoPlays += week.plays;
+          casinoWagered += week.wagered;
+          casinoReturned += week.returned;
+        }
+
         // Spending happens at the counter, whenever the tab allows it.
         while (balance >= input.economy.standardBoxPriceTokens) {
           balance -= input.economy.standardBoxPriceTokens;
@@ -423,6 +494,11 @@ export function simulate(input: SimulationInput): SimulationResult {
       grants,
       salvageTokens,
       completedInSeason,
+      casinoArchetype: archetype,
+      casinoPlays,
+      casinoWagered,
+      casinoReturned,
+      endingBalance: balance,
     });
   }
 
