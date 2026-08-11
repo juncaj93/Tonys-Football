@@ -449,6 +449,69 @@ export interface RangeCheck {
   readonly range: string;
   readonly measured: string;
   readonly withinRange: boolean;
+  /**
+   * Whether a failure here fails the gate.
+   *
+   * Was inferred from `range === 'informational'`, which made a display string
+   * load-bearing: a row that wanted to *report* a derived figure had to be
+   * labelled with a word instead of a number to avoid gating on it. This is the
+   * property itself, so `range` is free to say what the row actually measured.
+   */
+  readonly gating: boolean;
+}
+
+/**
+ * How many legendaries a season should produce, derived rather than declared.
+ *
+ * **Commissioner ruling, 2026-08-10 (E6).** The old check was a literal `2–3`
+ * band. Under the corrected 17-week season the modelled mean is ~2.8, so the
+ * upper bound sat within one standard deviation of the expectation and the
+ * check failed on 3 of 24 seeds **while the configured probability and the draw
+ * were both provably correct**. A gate that red-lights a correct economy is not
+ * a gate.
+ *
+ * So the expectation is computed from the two things that actually determine it:
+ *
+ * ```
+ *   openings per season  n/S
+ *   configured rate      p          (from the reward table's integer weights)
+ *   expectation          E = (n/S)·p
+ *   tolerance            k·sd,  sd = sqrt(n·p·(1−p)) / S
+ * ```
+ *
+ * `n·p·(1−p)` is the binomial variance of the legendary count over the whole
+ * run; dividing its root by `S` puts it in per-season units. **2.8 is nowhere in
+ * this file** — it is what the formula returns for the approved economy, and it
+ * moves on its own if the price, the grants or the season length move.
+ */
+export interface LegendaryExpectation {
+  /** Openings the run actually simulated. */
+  readonly openings: number;
+  readonly seasons: number;
+  /** The configured probability, from the table. */
+  readonly rate: number;
+  readonly expectedPerSeason: number;
+  readonly tolerancePerSeason: number;
+  readonly measuredPerSeason: number;
+}
+
+export function legendaryExpectation(result: SimulationResult): LegendaryExpectation {
+  const openings = result.managers.reduce((n, m) => n + m.openings, 0);
+  const seasons = result.input.seasons;
+  const rate = configuredLegendaryRate(result.input.table);
+  const perSeason = seasons === 0 ? 0 : openings / seasons;
+
+  return {
+    openings,
+    seasons,
+    rate,
+    expectedPerSeason: perSeason * rate,
+    tolerancePerSeason:
+      seasons === 0
+        ? 0
+        : (LEGENDARY_SIGMA_TOLERANCE * Math.sqrt(openings * rate * (1 - rate))) / seasons,
+    measuredPerSeason: result.legendariesPerSeasonLeagueWide,
+  };
 }
 
 function median(values: readonly number[]): number {
@@ -531,6 +594,7 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
    * error: `n` openings, each a legendary with probability `p`.
    */
   const configured = configuredLegendaryRate(result.input.table);
+  const expectation = legendaryExpectation(result);
   const tolerance =
     openings === 0
       ? 0
@@ -550,6 +614,7 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
       range: '6–12',
       measured: boxes.toFixed(1),
       withinRange: boxes >= 6 && boxes <= 12,
+      gating: true,
     },
     {
       name: 'Reward-bearing weeks, median manager',
@@ -562,12 +627,14 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
       range: '35–60%',
       measured: `${(rewardShare * 100).toFixed(1)}%`,
       withinRange: rewardShare >= 0.35 && rewardShare <= 0.6,
+      gating: true,
     },
     {
       name: 'Non-weekly reward rate',
       range: '~0%',
       measured: `${String(result.nonTuesdayRewards)} rewards`,
       withinRange: result.nonTuesdayRewards === 0,
+      gating: true,
     },
     {
       /*
@@ -578,6 +645,7 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
       range: 'exactly 2%',
       measured: `${(configured * 100).toFixed(3)}%`,
       withinRange: Math.abs(configured - CONFIGURED_LEGENDARY_RATE) < 1e-12,
+      gating: true,
     },
     {
       /*
@@ -590,14 +658,46 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
       range: `${(configured * 100).toFixed(2)}% ± ${(tolerance * 100).toFixed(2)} (${String(LEGENDARY_SIGMA_TOLERANCE)}σ, n=${String(openings)})`,
       measured: `${(legendaryRate * 100).toFixed(2)}%`,
       withinRange: openings === 0 || Math.abs(legendaryRate - configured) <= tolerance,
+      gating: true,
     },
     {
-      name: 'Legendaries league-wide per season',
-      range: '2–3',
-      measured: result.legendariesPerSeasonLeagueWide.toFixed(1),
+      /*
+       * **Reported, not gated — and that is the ruling's own instruction.**
+       *
+       * E6 asked for a derived expectation with a statistically justified
+       * tolerance, *and* said: "if the existing sampled legendary-rate check
+       * already mathematically covers the same risk, avoid duplicating
+       * identical statistical assertions."
+       *
+       * It does, exactly. Take the sampled check and multiply both sides by
+       * `n/S`:
+       *
+       *   |legendaries/n − p|  ≤  k·sqrt(p(1−p)/n)
+       *   |legendaries/S − (n/S)p| ≤ (n/S)·k·sqrt(p(1−p)/n) = k·sqrt(n p(1−p))/S
+       *
+       * The right-hand side is `tolerancePerSeason`. The two inequalities are
+       * **algebraically the same assertion**, not merely similar — a test proves
+       * they agree on every input, including fabricated ones. Gating on both
+       * would be one claim counted twice, and it would make a red gate report
+       * two failures for one cause.
+       *
+       * So the rate check gates and this line reports. It is kept rather than
+       * deleted because it is the form a reader thinks in — *"how many
+       * legendaries does the league see a year"* — and because the ruling
+       * requires the expectation, the sample size and the tolerance to be
+       * documented where the gate is read.
+       *
+       * The distinct emergent signal it might have carried is **throughput**,
+       * and that is already gated one row above: openings are purchases plus the
+       * two grants, and purchases are bounded by `Boxes per manager per season`.
+       */
+      name: 'Legendaries league-wide per season (derived)',
+      range: `${expectation.expectedPerSeason.toFixed(2)} ± ${expectation.tolerancePerSeason.toFixed(2)} = (${String(expectation.openings)} openings / ${String(expectation.seasons)} seasons) × ${(expectation.rate * 100).toFixed(1)}%`,
+      measured: expectation.measuredPerSeason.toFixed(2),
       withinRange:
-        result.legendariesPerSeasonLeagueWide >= 2 &&
-        result.legendariesPerSeasonLeagueWide <= 3,
+        Math.abs(expectation.measuredPerSeason - expectation.expectedPerSeason) <=
+        expectation.tolerancePerSeason,
+      gating: false,
     },
     {
       /*
@@ -611,6 +711,7 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
       range: 'exactly 2',
       measured: grantsPerSeason.toFixed(2),
       withinRange: Math.abs(grantsPerSeason - 2) < 0.001,
+      gating: true,
     },
     {
       name: 'Managers completing the catalog',
@@ -620,6 +721,7 @@ export function checkRanges(result: SimulationResult): readonly RangeCheck[] {
           ? `none of ${String(result.managers.length)} in ${String(result.input.seasons)} seasons`
           : `${String(completed.length)}/${String(result.managers.length)}, earliest season ${String(Math.min(...completed))}`,
       withinRange: true,
+      gating: false,
     },
   ];
 }

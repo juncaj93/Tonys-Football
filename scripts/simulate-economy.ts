@@ -48,12 +48,12 @@ function run(price: number, policy: DuplicatePolicy, salvage: SalvageValues): bo
   });
 
   const checks = checkRanges(result);
-  const gating = checks.filter((c) => c.range !== 'informational');
+  const gating = checks.filter((c) => c.gating);
   const passed = gating.every((c) => c.withinRange);
 
   console.log(`\n  ── box ${String(price)} · ${policy} ${'─'.repeat(Math.max(0, 40 - policy.length))}`);
   for (const check of checks) {
-    const mark = check.range === 'informational' ? ' ' : check.withinRange ? '✓' : '✗';
+    const mark = !check.gating ? ' ' : check.withinRange ? '✓' : '✗';
     console.log(`  ${mark} ${check.name.padEnd(44)} ${check.range.padEnd(14)} ${check.measured}`);
   }
 
