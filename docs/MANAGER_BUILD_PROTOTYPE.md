@@ -353,3 +353,54 @@ would make correct framing the generator's default — a full standing figure is
 what these models are best at — but their neck and jaw would land on rows the
 head plate owns, and no mechanical check can tell a chin from a collar. Refused,
 and recorded here so it is not rediscovered as a fresh idea.
+
+---
+
+## 10. Round 3 — registered, and the one conflict it exposed
+
+**`avatar_body_starter_04` is painted.** Round 3 cleared the outline and the
+contact row and missed the shoulder band by six rows; `--fit` normalised that
+(`0.952×`, 6 rows) and it passed. The mask is registered and the other five tops
+still draw themselves.
+
+### 10.1 Two instructions the generator could not follow, and only one mattered
+
+Round 3 was asked for `672 × 1008` with hard alpha and delivered `1024 × 1536`
+with **zero fully-opaque pixels** — the same signature as round 2. Two rounds
+asking and two rounds ignoring is evidence about the tool rather than the artist:
+this generator emits at its own size and its transparency is always feathered.
+
+**Neither turned out to matter**, which is worth recording before somebody asks
+for them again. The outline defect they were supposed to fix was fixed by
+*thickening the stroke* instead: 48 unoutlined pixels became **zero**, at the same
+1024 width and the same feathered alpha. Snapping at source resolution and voting
+by majority absorbs both. **Stop asking for the canvas size and the hard alpha**;
+ask for a thick outline.
+
+### 10.2 The no-hole rule and R2 are in direct conflict
+
+`lib/character/shading.test.ts`'s *"has no hole in it, on any top"* fails on the
+painted build with **55 pixels** of enclosed empty space, in two places: under the
+bent arm, and beside the hanging hand. Both are **outlined negative space and both
+are correct** — they are what makes the pose read as a pose rather than a slab.
+
+The rule is not wrong; its premise moved. It was written for a *drawn* figure
+whose gaps were always bugs, and it caught two of them — the two-column
+armpit-to-hem hole and twelve pixels through a collarbone. **A posed figure with
+an arm away from its body cannot have zero enclosed negative space**, so the rule
+and commissioner ruling R2 cannot both hold for a painted build.
+
+**The test is left red on purpose.** Editing a guard that has caught two shipped
+defects, in the same commit that makes it inconvenient, is the move this
+repository has the most reason to distrust. The recommended narrowing — keep the
+rule for drawn layers, and for painted builds require only that every enclosed gap
+is fully outlined — is written down here rather than applied.
+
+**The branch does not merge until this is ruled on**, which is the correct place
+for it to stop.
+
+### 10.3 What the pictures say
+
+The body is Tony-grade and holds at 390. The **head** is now the weakest thing in
+the frame — still the drawn plate, because painting it is not authorised — and it
+is where a viewer's eye goes. `docs/evidence/manager-build-prototype/`.

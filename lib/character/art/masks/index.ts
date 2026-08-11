@@ -1,5 +1,7 @@
 import { type EncodedMask } from '../../mask';
 
+import { AVATAR_BODY_STARTER_04 } from './avatar_body_starter_04';
+
 /**
  * Painted build masks, by the slug they take over.
  *
@@ -29,7 +31,20 @@ import { type EncodedMask } from '../../mask';
  * one side of that and not the other, and the preview would quietly stop being
  * the truth.
  */
-export const BUILD_MASKS: Readonly<Record<string, EncodedMask>> = Object.freeze({});
+export const BUILD_MASKS: Readonly<Record<string, EncodedMask>> = Object.freeze({
+  /**
+   * The T-shirt, round 3, 2026-08-11. **The prototype, and the only painted build.**
+   *
+   * Passed with `--fit` — rescaled `0.952×` and moved 6 rows down, a normalisation
+   * of placement only, reported in full at ingest. Unfitted it misses the shoulder
+   * band by six rows and fails nothing else.
+   *
+   * The five other tops are still drawn, and a manager wearing one cannot tell any
+   * of this happened. Deleting this line reverts the T-shirt to the drawn sprite
+   * with nothing else to undo.
+   */
+  [AVATAR_BODY_STARTER_04.slug]: AVATAR_BODY_STARTER_04,
+});
 
 export function buildMask(slug: string): EncodedMask | null {
   return BUILD_MASKS[slug] ?? null;
