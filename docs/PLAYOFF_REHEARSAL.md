@@ -192,6 +192,7 @@ sixteen drafts.
    new playoff-state persistence and no additional sync authority were
    introduced.** Retrospective playoff facts are acceptable and are what shipped.
    Reconsidering it later needs a scoped feature decision of its own.
+   `docs/OPEN_ITEMS.md` **G5**.
 2. **Tonight's playoff copy — two of three lines shipped, one is not supportable.**
    Commissioner ruling, 2026-08-10 supplied three lines. `§10` is the account.
    **`[MANAGER] WINS IT`** and **`THAT'S A WRAP`** are live, each keyed on state
@@ -216,7 +217,7 @@ sixteen drafts.
    policy was deliberately not changed here** — 2024's records and its weekly
    points disagree permanently, and a run reading `NEEDS_REVIEW` every week
    would teach whoever reads it to stop reading. If it deserves stronger
-   visibility that is a separate hardening task. `docs/OPEN_ITEMS.md` **E8**.
+   visibility that is a separate hardening task. `docs/OPEN_ITEMS.md` **E7**.
 
 ---
 

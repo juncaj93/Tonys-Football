@@ -19,7 +19,7 @@ Twelve of the twenty-four catalog items have no art. They are **not** a random t
 
 Three in five boxes opened this season produce the same picture of a closed pizza box. **P0 is those twelve, and the commons come first** — one common sprite is seen 1.7× as often as a rare one and 6× as often as a legendary one.
 
-**No new item is needed before kickoff.** The shipped catalog first hands somebody tokens instead of an object in **week 13** of season one, which is the deadline for P1, not the deadline for the season.
+**No new item is needed before kickoff.** The shipped catalog first hands somebody tokens instead of an object in **week 12** of season one, which is the deadline for P1, not the deadline for the season.
 
 ---
 
@@ -62,7 +62,13 @@ Paraphrasing the preamble is how style drift starts, and it is invisible until t
 | **P1** | `item_championship_ring` | no | before the first title is awarded |
 | **P2** | 3 commons + 2 rares + 1 epic | **yes, 6** | offseason |
 
-> **P1 and P2 need a commissioner decision before the registry changes.** `16` approves *"one loot box and a 24-item catalog"* and `lib/counter/catalog.ts` asserts `CATALOG_SIZE = 24` so the seed fails loudly rather than shipping a different economy quietly. **Generating the art costs nothing and commits nothing** — a PNG in `art/incoming/` changes no behaviour. Wiring a new slug into the registry is the step that needs the ruling.
+> **P1 is approved; P2 is not, and neither may touch the registry yet.**
+>
+> **P1 (24 → 32) is commissioner-approved**, with execution intentionally deferred to **approximately week 12 of season one** (`docs/OPEN_ITEMS.md` **G2**). Approved is not *do it now*: `16` approves *"one loot box and a 24-item catalog"*, `lib/counter/catalog.ts` asserts `CATALOG_SIZE = 24`, and **that assertion stays at 24 until an execution slice is separately instructed.** The seed failing loudly is the guard working.
+>
+> **P2 (→ 38) remains a simulation recommendation**, not a ruling, and offseason at the earliest.
+>
+> **Generating the art costs nothing and commits nothing** — a PNG in `art/incoming/` changes no behaviour. Wiring a new slug into the registry is the step that is still gated.
 
 ---
 
@@ -108,7 +114,7 @@ One asset serves every championship forever. It is **not** one of the catalog's 
 
 ## 4. P1 — the eight the simulation asks for
 
-Five of the eight are **wall items**, which is the point of the batch: it takes "owns something for the frame by week 8" from 84% to 95%, and it moves the week the box stops giving objects from week 13 of season one to season two.
+Five of the eight are **wall items**, which is the point of the batch: it takes "owns something for the frame by week 8" from 84% to 95%, and it moves the week the box stops giving objects from week 12 of season one to season two.
 
 ### 4.1 Commons — five, three of them wall
 
