@@ -167,10 +167,21 @@ export async function featuredMatchup(db: Queryable): Promise<MatchupFact | null
  * answer is `null` and the board prints nothing, which is the ruling's own
  * instruction and the board's own documented behaviour.
  *
- * **The honest cost, stated:** between the Tuesday that closes a week and the
- * Sunday that photographs the next one, no pairing for the named week is on
- * record and the detail slot is empty. Removing that gap means persisting the
- * schedule, which is new storage and is not in this ruling's scope.
+ * **The gap this leaves is the approved behaviour, not a shortfall.** Between
+ * the Tuesday that closes a week and the Sunday that photographs the next one,
+ * no pairing for the named week is on record and the detail slot is empty.
+ * Commissioner ruling, 2026-08-10: **keep it blank for v1.** The board goes on
+ * naming the current week from `currentWeekOf`, and an absent line is preferred
+ * to a stale one.
+ *
+ * So `null` here means *the current week is known and Tony does not yet have an
+ * authoritative matchup to feature*. It is not an error and needs no placeholder
+ * copy. Four things are ruled out explicitly and all four are absent by
+ * construction above: printing the previous week's game under this week's
+ * number, relabelling the board to whichever week holds more data, inferring the
+ * pairings, and persisting a schedule to fill this one line. Schedule storage is
+ * its own architecture decision if some other feature ever needs it — the board
+ * would consume it as a secondary benefit, never as its justification.
  *
  * ## The standings it ranks against are strictly earlier
  *

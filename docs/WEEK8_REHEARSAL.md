@@ -1,9 +1,11 @@
 # The midseason rehearsal — week 8 of 2026
 
-**Status:** run, and **closed out**. Two defects found and fixed here; three
-contradictions reported here and all three now ruled on by the commissioner
-(2026-08-10) — one fixed by the Week 1 rehearsal, two implemented in #89.
-Everything else measured and green.
+**Status: COMPLETE AND CLOSED.** Two defects found and fixed here; three
+contradictions reported here and all three ruled on by the commissioner
+(2026-08-10) — one repaired by the Week 1 rehearsal (#85), two implemented in
+#94. The one design question those rulings left open — the board's detail line
+between Tuesday and Sunday — is ruled on in **§5.4** and settled. Nothing in this
+document is waiting on a decision.
 
 This is the canonical account of what the lifecycle does after seven finalized
 weeks already exist. Where it disagrees with an older document about midseason
@@ -258,9 +260,10 @@ degradation — `boardFace` renders an empty detail rather than prose, which is 
 own documented rule (*"shows nothing rather than inventing a detail"*), and the
 panel behind the board still carries the whole fact.
 
-**Consequence, stated plainly:** the board's detail slot is now **empty for the
-whole live season**, because nothing produces a current-season matchup fact. That
-is honest and it is a visible gap — see §5.3.
+**Consequence, stated plainly:** the board's detail slot was **empty for the
+whole live season** after this fix, because nothing produced a current-season
+matchup fact. §5.3's selector is what fills it; §5.4 is the ruling on the days it
+still cannot.
 
 ---
 
@@ -274,7 +277,8 @@ not a slip.
 > **All three are now ruled on** (commissioner, 2026-08-10). The findings below
 > stand exactly as written and are the evidence the rulings were made on; each
 > carries its outcome underneath. §5.1 was repaired by the Week 1 rehearsal
-> (#85); §5.2 and §5.3 were ruled on and implemented in **#89**.
+> (#85); §5.2 and §5.3 were ruled on and implemented in **#94**; §5.4 is the
+> ruling that closed the last question those two left open.
 
 ### 5.1 The Slice cannot draft any week of a live season
 
@@ -358,7 +362,7 @@ seasonal (`16 §5.1`) and that seat belonged to two other people in 2024 and 202
 > > during preseason because the current season contains no meaningful results.
 > > That justification expires once real finalized weeks exist.
 >
-> Implemented in #89. The switch is on **the thing the old reason was about** —
+> Implemented in #94. The switch is on **the thing the old reason was about** —
 > does this season contain a result yet — rather than on a date:
 >
 > | State | What prints |
@@ -397,7 +401,7 @@ this is the obvious thing that would fill it.
 
 > #### RULED — 2026-08-10. Build a deterministic in-season selector
 >
-> Implemented in #89 as `lib/stats/importance.ts` (the rule, pure) and
+> Implemented in #94 as `lib/stats/importance.ts` (the rule, pure) and
 > `featuredCurrentMatchup` in `lib/stats/board.ts` (the reads).
 >
 > **The ranking rule, in order:** combined wins, descending → standings
@@ -415,18 +419,68 @@ this is the obvious thing that would fill it.
 > carried as evidence but not scored, because a complete round robin makes it
 > zero for most of a season.
 >
-> **The honest limitation:** the league's schedule is not stored — `persistWeeks`
-> drops an all-zero pairing as an unplayed fixture, on purpose — so the pairings
-> for a not-yet-final week come from **Sunday's photograph** (`week_snapshots`),
-> or from the week's stored games in the degraded case where a week synced but
-> its Tuesday declined to close it. Between the Tuesday that closes a week and
-> the Sunday that photographs the next, no pairing is on record and the slot is
-> empty. Closing that gap means persisting the schedule, which is new storage and
-> was not in the ruling's scope.
+> **Where the pairings come from:** the league's schedule is not stored —
+> `persistWeeks` drops an all-zero pairing as an unplayed fixture, on purpose —
+> so the pairings for a not-yet-final week come from **Sunday's photograph**
+> (`week_snapshots`), or from the week's stored games in the degraded case where
+> a week synced but its Tuesday declined to close it. Between the Tuesday that
+> closes a week and the Sunday that photographs the next, no pairing is on record
+> and the slot is empty. **That blank is ruled on and settled — see §5.4.**
 >
 > **No claim travels with it.** The face prints two names. Nothing is called
 > *must-win*, *win-and-in* or an *elimination game*, because none of those is
 > provable from a table without the remaining schedule.
+
+---
+
+### 5.4 The board's detail line between Tuesday and Sunday — **RULED, closed**
+
+The one question §5.3's selector left open, and it is now answered.
+
+`currentWeekOf` names the week the league is **playing**, and the only records
+that hold a not-yet-final week's pairings are Sunday's photograph and — in the
+degraded case — the week's own stored games. So from the Tuesday that closes a
+week until the Sunday that photographs the next one, the board can name the week
+and cannot name a game in it.
+
+> #### RULED — 2026-08-10. Keep the blank for v1.
+>
+> The board goes on identifying the current football week through the existing
+> `currentWeekOf` rule, and where no authoritative pairing is stored **the
+> matchup line is simply absent**. An absent line is preferred to a stale one,
+> and preferred to new storage introduced for presentation completeness.
+>
+> **The product may say `WEEK 9` with nothing underneath it.** It may not:
+>
+> | Ruled out | Why it cannot happen here |
+> |---|---|
+> | A week-8 matchup beneath `WEEK 9` | Candidates are read for the named week only — `weekSnapshot(week)`, else rows filtered to `row.week === week`. There is no path by which an earlier week's game reaches the line |
+> | Relabelling the board to week 8 because week 8 holds more data | The hero is `currentWeekOf` and nothing else writes it |
+> | Inferring week 9's pairings | Nothing derives a pairing; both sources are stored records |
+> | Reconstructing the schedule from assumptions | There is no schedule in the product to reconstruct from |
+> | Persisting schedule data to avoid an empty line | Not approved. See below |
+>
+> **The blank state is not an error.** It means *the current week is known, and
+> Tony does not yet have an authoritative matchup to feature*. No placeholder
+> copy is required. If a future visual review finds the empty composition itself
+> poor, that is a presentation problem and is solved as one — never by inventing
+> fantasy information.
+>
+> **Sunday's snapshot remains the sanctioned way the pairings arrive.** Once that
+> evidence exists the selector populates the line, which is what
+> `lib/slice/midseason-week8.test.ts` photographs: nothing before the capture,
+> `WEEK 9 / Nathan v Brandon` after it.
+>
+> **Future schedule persistence is not approved by this ruling.** If another
+> feature ever has a genuine need for it, it is evaluated as its own architecture
+> decision, and the board may consume the result as a secondary benefit. Storage
+> whose primary justification is filling this one line is not to be created.
+>
+> **Head-to-head stays evidence only.** The approved ranking is unchanged —
+> combined wins descending, standings proximity ascending, combined points-for
+> descending, roster id for deterministic ordering and never for selection — and
+> `no-clear-favourite` remains intentional. Adding head-to-head to the score
+> needs its own ruling.
 
 ---
 
@@ -565,14 +619,18 @@ them.
 Checked with the clock pinned to the week-8 Tuesday, because otherwise every
 surface renders its offseason branch and asserts nothing.
 
+**This table is what was measured on the day**, and three rows have since moved
+under the rulings in §5 — each says where. It is left as the record of what the
+rehearsal found rather than rewritten into a description of today's product.
+
 | Surface | State |
 |---|---|
-| Tonight board face | `WEEK 9`, detail empty — §4 |
+| Tonight board face | `WEEK 9`, detail empty — §4. **Now** `WEEK 9 / Nathan v Brandon` once Sunday has photographed the week, and empty before that by ruling (§5.3, §5.4) |
 | Tonight board panel | Four lines; the heaviest-game line names **2025** explicitly, which is why it is honest where the face was not |
-| Receipt | 2025 for nine managers, null for Zack — §5.2 |
+| Receipt | 2025 for nine managers, null for Zack — §5.2. **Now** 2026 through week 8 for all ten, by ruling |
 | Standings / history | Derived from stored games, matching the fixture to the cent |
 | Counter — tokens, collection | Reconciles to the ledger; a box opened twice returns the same item |
-| Slice / rack | Nothing published all season — §5.1 |
+| Slice / rack | Nothing published all season — §5.1. **Now** drafts each closed week onto the review desk, and still publishes nothing without a named approver |
 | Rooms, championship rail | Untouched by eight Tuesdays; every `championship:` grant identical |
 
 No new visual states were added. The homepage's photographed states are all
@@ -589,6 +647,13 @@ lifecycle harness and must not grow into one — every number in it is a
 consequence of the frozen scoreboard in `lib/sleeper/midseason-2026.ts`, stated
 so a reader can check it against the table in that file's header.
 
-If a reusable week-1 harness lands, this file rebases onto it and keeps its
-scoreboard and its assertions. The scoreboard is the deliverable; the plumbing
-around it is not.
+A reusable week-1 harness has since landed, and the reconciliation asked for
+happened at the one place a second harness really existed: `lib/rehearsal/`
+seeds through this scenario's own `importHistory`, so deploy-seeding is written
+once and both rehearsals drive it. The scoreboard is this file's deliverable; the
+plumbing around it is not.
+
+**This workstream is closed.** The rehearsal ran, its findings were ruled on, and
+the rulings are recorded above. Nothing here is an invitation to start schedule
+persistence, head-to-head scoring, historical-consumer integration, artwork,
+economy, Underground or activation work.
