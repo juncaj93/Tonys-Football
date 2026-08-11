@@ -86,6 +86,8 @@ export interface Snapped {
   readonly factor: number;
   /** Set when `--fit` normalised the placement. Always printed. */
   readonly fitted: { readonly scale: number; readonly movedRows: number } | null;
+  /** How many rows of neck a head delivery carried, once its skull was fitted. */
+  readonly neckRows: number;
 }
 
 /** Nearest key by plain Euclidean sRGB — the metric `ASSET_PIPELINE §4` ruled on. */
@@ -245,14 +247,16 @@ function headWindow(
   alphaAt: (x: number, y: number) => number,
   width: number,
   height: number,
-): { window: Window; scale: number } {
+): { window: Window; scale: number; jaw: number; neckRows: number } {
   let top = height;
   let bottom = -1;
   let left = width;
   let right = -1;
+  const rowWidth = new Int32Array(height);
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (alphaAt(x, y) < 128) continue;
+      rowWidth[y]!++;
       if (y < top) top = y;
       if (y > bottom) bottom = y;
       if (x < left) left = x;
@@ -261,15 +265,52 @@ function headWindow(
   }
   if (bottom < 0) throw new Error('nothing is painted in this file');
 
-  const targetRows = HEAD_REGISTRATION.bottom - HEAD_REGISTRATION.top + 1;
-  const step = (bottom - top + 1) / targetRows;
+  /*
+   * **The skull is fitted, not the whole drawing, and that correction is worth
+   * the paragraph.**
+   *
+   * The first version scaled the delivered bounding box — head *and* neck — onto
+   * our head-and-neck band. It reads as the obvious thing and it is wrong in a way
+   * that hides the actual defect: a delivery with a short neck has its *skull*
+   * stretched to fill the band, so every feature inside the skull moves down with
+   * it. Two head deliveries in a row landed their eyes on row 40 against a line at
+   * 37, and both times the face's own proportions were correct — eyes a little
+   * under halfway down the skull, exactly where a human's are. What was wrong was
+   * only how much of the drawing was neck.
+   *
+   * Fitting the **skull** separates those. The part hair is drawn to lands where
+   * hair expects it, the eyes land inside it, and the neck's length becomes its
+   * own question — which `validateHeadPlate` then asks, in rows, out loud.
+   *
+   * The jaw is found by width: a bald, clean-shaven head is widest across the ears
+   * and narrows into the neck, so the first row below the widest that has lost
+   * more than {@link JAW_DROP} of that width is the join.
+   */
+  let widest = top;
+  for (let y = top; y <= bottom; y++) if (rowWidth[y]! > rowWidth[widest]!) widest = y;
+
+  let jaw = bottom;
+  for (let y = widest; y <= bottom; y++) {
+    if (rowWidth[y]! < rowWidth[widest]! * JAW_DROP) {
+      jaw = y;
+      break;
+    }
+  }
+
+  const skullRows = HEAD_REGISTRATION.jaw - HEAD_REGISTRATION.top + 1;
+  const step = (jaw - top) / skullRows;
   const cx = (left + right + 1) / 2;
 
   return {
     window: { x: cx - AXIS * step, y: top - HEAD_REGISTRATION.top * step, step },
     scale: (width / MASK_CANVAS.width) / step,
+    jaw: HEAD_REGISTRATION.top + Math.round((jaw - top) / step),
+    neckRows: Math.round((bottom - jaw) / step),
   };
 }
+
+/** How much narrower than the widest row a head has to get to be a neck. */
+const JAW_DROP = 0.6;
 
 export async function snap(file: string, fit = false, head = false): Promise<Snapped> {
   const image = sharp(file).ensureAlpha();
@@ -353,8 +394,13 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
 
   // Pass 2 — the majority role of the source cell under each output pixel.
   const alphaAt = (x: number, y: number): number => data[(y * width + x) * 4 + 3]!;
+  let neckRows = 0;
   const fitted: { window: Window; scale: number; movedRows: number } | null = head
-    ? { ...headWindow(alphaAt, width, height), movedRows: 0 }
+    ? (() => {
+          const plate = headWindow(alphaAt, width, height);
+          neckRows = plate.neckRows;
+          return { window: plate.window, scale: plate.scale, movedRows: 0 };
+        })()
     : fit
       ? (() => {
           const box = fitWindow(alphaAt, width, height);
@@ -429,6 +475,7 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
     softAlpha,
     factor: width / MASK_CANVAS.width,
     fitted: fitted === null ? null : { scale: fitted.scale, movedRows: fitted.movedRows },
+    neckRows,
   };
 }
 

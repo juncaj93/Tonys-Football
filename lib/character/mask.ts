@@ -501,13 +501,35 @@ export function validateHeadPlate(keys: readonly number[]): readonly MaskProblem
     );
   }
 
+  /*
+   * **A neck may run past the collar row, and this rule used to say it could not.**
+   *
+   * The head plate is `base-body` and the build is `base-top`, so the shirt is
+   * drawn *over* the neck: rows below the collar are covered, and a neck that
+   * continues into them is hidden rather than wrong. What matters is that it
+   * **reaches** the collar, and that anything past it stays inside the neck's own
+   * columns — outside them it would emerge from behind the shirt.
+   */
   if (bottom > HEAD_REGISTRATION.bottom) {
-    fail(
-      `the plate paints down to row ${String(bottom)}; the head plate ends at ` +
-        `${String(HEAD_REGISTRATION.bottom)}, where the collar closes over it. Everything below ` +
-        'belongs to the body.',
-    );
-  } else if (bottom < HEAD_REGISTRATION.bottom) {
+    const strayed: number[] = [];
+    for (let y = HEAD_REGISTRATION.bottom + 1; y <= bottom; y++) {
+      for (let x = 0; x < width; x++) {
+        if (!opaque(x, y)) continue;
+        if (x < HEAD_REGISTRATION.neckColumns.from - 1 || x > HEAD_REGISTRATION.neckColumns.to + 1) {
+          strayed.push(x);
+        }
+      }
+    }
+    if (strayed.length > 0) {
+      fail(
+        `${String(strayed.length)} pixels are painted below the collar row ` +
+          `${String(HEAD_REGISTRATION.bottom)} and outside the neck's columns. The shirt covers ` +
+          'the neck down there; it does not cover a shoulder.',
+      );
+    }
+  }
+
+  if (bottom < HEAD_REGISTRATION.bottom) {
     fail(
       `the neck stops at row ${String(bottom)} and has to reach ` +
         `${String(HEAD_REGISTRATION.bottom)}, where the collar meets it. ` +
