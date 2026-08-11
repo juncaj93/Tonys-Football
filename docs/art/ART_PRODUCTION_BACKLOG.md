@@ -160,6 +160,22 @@ Each shell is independently useful — the code resolves per theme, so they can 
 
 ---
 
+## Batch G — the Back Hall — **briefed, one asset**
+
+Briefed in full at [`BATCH_G_BACK_HALL_HANDOFF.md`](BATCH_G_BACK_HALL_HANDOFF.md).
+
+| Slug | What it is | Canvas | State |
+|---|---|---|---|
+| `zone_back_hall_shell` | The service passage between the dining room and the cellar stairs | 320 × 569 | outstanding |
+
+**It is one asset, and the other four Back Hall slugs stay unused.** `18 §9.2` lists five; the shell draws all three openings complete, closed curtain included, because **nothing is ever composited into this room's openings in v1**. The parlor bakes its rear doorway empty for the opposite reason — a rack, a banner or a box goes into every prepared place it has. The one asset that decision defers is `object_door_underground_open`, which is Phase 10 and is an overlay on the same rectangle when it comes.
+
+**The staircase is not free.** `zone_room_shell_storeroom` already paints its own top of these stairs, so the two shells have to agree about one flight: a dark timber framed opening, rising away from the viewer, warm light at the top. Put the files side by side before delivering.
+
+**The chain across the stairs stays runtime CSS** and is explicitly excluded from the painting. It is a state of the door, not part of the room — `BACK_HALL_BOUNDARY §8.3` is the round where the open state photographed a chained stairwell.
+
+---
+
 ## How to hand a batch over
 
 Group them. One brief, one palette reference, one pixel-density reference, one sheet — never one image at a time. Include for each slot: slug, logical size, anchor, what the empty space is for, and a screenshot of the slot with the stand-in in it, so whoever draws it can see the hole it fills.

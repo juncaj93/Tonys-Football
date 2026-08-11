@@ -26,9 +26,9 @@ describe('the back hall map', () => {
   });
 
   it('shares the parlor’s coordinate system', () => {
-    // `zone_back_hall_shell` is registered at 960x1707 — 320 x 569 at the
-    // pipeline's 3x authoring scale, identical to the parlor's shell. Walking
-    // through the rear doorway must not change the size of the world.
+    // `zone_back_hall_shell` is registered at 320 x 569, identical to the
+    // parlor's shell and to every room shell on disk. Walking through the rear
+    // doorway must not change the size of the world.
     expect(BACK_HALL).toEqual({ width: 320, height: 569 });
   });
 

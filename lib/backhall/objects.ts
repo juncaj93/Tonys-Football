@@ -27,10 +27,15 @@ import type { RoomObjectSpec } from '@/lib/parlor/objects';
  *
  * ## The room is the same size as the parlor, on purpose
  *
- * `zone_back_hall_shell` is registered at `960x1707`, which is `320 × 569` at
- * the pipeline's 3× authoring scale — identical to `zone_parlor_shell`. So the
- * two rooms share one coordinate system and one `place()`, and walking through
- * the rear doorway does not change the size of the world.
+ * `zone_back_hall_shell` is registered at `320x569` — identical to
+ * `zone_parlor_shell` and to every room shell on disk. So the two rooms share
+ * one coordinate system and one `place()`, and walking through the rear doorway
+ * does not change the size of the world.
+ *
+ * It read `960x1707` here until 2026-08-11, which was the registry's own value
+ * until all four room shells were found registered three times oversized and
+ * corrected (`docs/OPEN_ITEMS.md` **A3**). The number matters to whoever draws
+ * the shell, so it is the live one rather than the historical one.
  *
  * ## Locked is a state of a Door, not a different kind of object
  *
