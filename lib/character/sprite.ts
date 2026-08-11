@@ -91,8 +91,24 @@ export type Material =
   /** A fixed colour from the locked palette, by key (`lib/character/palette.ts`). */
   | `fixed:${string}`;
 
-/** A rasterised pixel's final role, after shading. */
-export type Tone = 'outline' | 'shade' | 'base' | 'light' | 'ink' | `fixed:${string}`;
+/**
+ * A rasterised pixel's final role, after shading.
+ *
+ * **`skin:` exists for painted masks and for nothing else.** A drawn layer has
+ * exactly one paint, so a tone never had to say which material it belonged to. A
+ * painted *build* mask carries two — bare forearms and a shirt, in one layer —
+ * so its tones name the channel, and `compositeRuns` resolves the prefix away
+ * into the paint map the moment the layer is written. Nothing downstream of that
+ * write ever sees one; `mask.test.ts` and `composite`'s own suite hold it.
+ */
+export type Tone =
+  | 'outline'
+  | 'shade'
+  | 'base'
+  | 'light'
+  | 'ink'
+  | `fixed:${string}`
+  | `skin:${string}`;
 
 /**
  * The three tones the light moves a pixel between, darkest first.
@@ -122,6 +138,18 @@ export function darker(tone: Tone, steps = 1): Tone {
     TONE_RAMP[Math.max(0, TONE_RAMP.indexOf(role as RampTone) - steps)]!;
 
   if (isRampTone(tone)) return step(tone) as Tone;
+
+  /*
+   * A channelled tone steps within its own channel. In practice this is never
+   * reached — `compositeRuns` strips the prefix as it writes a mask layer, so a
+   * shadow always falls on a plain tone — but a stepping function that silently
+   * declined to step is exactly the shape of the defect that left every fixed
+   * colour flat for a month, and it costs two lines not to have one.
+   */
+  if (tone.startsWith('skin:')) {
+    const role = tone.slice('skin:'.length);
+    return isRampTone(role) ? (`skin:${step(role)}` as Tone) : tone;
+  }
 
   const at = tone.indexOf('@');
   if (at === -1 || !tone.startsWith('fixed:')) return tone;

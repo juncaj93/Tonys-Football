@@ -1,10 +1,14 @@
+import { maskToneGrid } from '../mask';
 import { bounds, rasterise, shade, type Bounds, type Op, type ToneGrid } from '../sprite';
 
-import { BODY } from './body';
+import { BODY, BODY_HEAD } from './body';
 import { CANVAS } from './geometry';
 import { FACIAL_HAIR, HAIR_STYLES } from './hair';
+import { buildMask } from './masks';
 import { TOPS } from './tops';
 import { WEARABLE_ART } from './wearables';
+
+export { buildMask, hasBuildMask } from './masks';
 
 /**
  * Every drawable layer, by slug.
@@ -25,6 +29,7 @@ import { WEARABLE_ART } from './wearables';
 
 export const LAYER_SHAPES: Readonly<Record<string, readonly Op[]>> = Object.freeze({
   avatar_body_base: BODY,
+  avatar_body_head: BODY_HEAD,
   ...HAIR_STYLES,
   ...FACIAL_HAIR,
   ...TOPS,
@@ -47,6 +52,25 @@ const BOXES = new Map<string, Bounds | null>();
 export function toneGrid(slug: string): ToneGrid | null {
   const cached = CACHE.get(slug);
   if (cached !== undefined) return cached;
+
+  /*
+   * **Paint wins over shapes, and the shading pass does not run on it.**
+   *
+   * A drawn layer's light is derived from its own outline, which is why it can
+   * only ever produce a lit rim and a shaded flank — no fold, no cast shadow, no
+   * turning cylinder. A painted layer's light was decided by whoever painted it,
+   * and re-deriving it would throw away the thing the paint was commissioned for.
+   *
+   * Cached in the same map and keyed the same way, so nothing downstream — the
+   * compositor, the bounds, the contact shadows, the run-length pass — can tell a
+   * painted layer from a drawn one.
+   */
+  const mask = buildMask(slug);
+  if (mask !== null) {
+    const grid = maskToneGrid(mask);
+    CACHE.set(slug, grid);
+    return grid;
+  }
 
   const shapes = LAYER_SHAPES[slug];
   if (shapes === undefined) return null;

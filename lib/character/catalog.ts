@@ -94,6 +94,20 @@ export const TOP_OPTIONS: readonly TraitOption[] = Object.freeze([
 /** The one layer nobody chooses the shape of. Skin chooses its colour. */
 export const BODY_SLUG = 'avatar_body_base';
 
+/**
+ * The same figure from the neck up, and nothing below it.
+ *
+ * Drawn instead of {@link BODY_SLUG} when the chosen top is a **painted build**,
+ * which carries the torso, arms, hands, trousers and boots in one painting. Not a
+ * trait and not choosable: which of the two is drawn is decided by whether the
+ * top has artwork, never by a manager and never by anything stored.
+ *
+ * `lib/character/art/body.ts` splits the one shape list into the two halves and a
+ * test asserts the concatenation is unchanged, so the unpainted path draws
+ * exactly what it drew before this existed.
+ */
+export const BODY_HEAD_SLUG = 'avatar_body_head';
+
 /** A colour trait's options, as swatches rather than as drawings. */
 export const COLOUR_TRAITS: Readonly<Record<'skin' | 'hairColour' | 'topColour', readonly Ramp[]>> =
   Object.freeze({
@@ -170,6 +184,7 @@ export function wearable(slug: string): Wearable | null {
 export function characterSlugs(): readonly string[] {
   return [
     BODY_SLUG,
+    BODY_HEAD_SLUG,
     ...HAIR_STYLE_OPTIONS.map((option) => option.slug),
     ...FACIAL_HAIR_OPTIONS.map((option) => option.slug),
     ...TOP_OPTIONS.map((option) => option.slug),

@@ -36,7 +36,9 @@
     "art:validate": "tsx scripts/validate-collectible.ts",
     "visual:qa": "tsx scripts/visual-qa.mts",
     "visual:tony-glow": "tsx scripts/tony-glow-probe.mts && tsx scripts/tony-glow-frames.mts",
-    "art:batch": "tsx scripts/art-batch.ts"
+    "art:batch": "tsx scripts/art-batch.ts",
+    "art:jig": "tsx scripts/manager-jig.ts",
+    "art:mask": "tsx scripts/manager-mask.ts"
   },
   "overrides": {
     "brace-expansion": "^5.0.8",

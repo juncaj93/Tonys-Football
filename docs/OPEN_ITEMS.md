@@ -381,9 +381,34 @@ them code:
 3. a **visual quality target** to judge a result against, the way the approved
    room and manager references were used on 2026-08-09.
 
-**This is not authorization to redesign anything, to commission painted layers,
-or to propose an implementation.** It is the record that the question is open.
-`docs/VISUAL_DEBT.md` item **18** is the same finding at the surface it shows on.
+~~**This is not authorization to redesign anything, to commission painted layers,
+or to propose an implementation.**~~ **Superseded 2026-08-11 — all three
+preconditions were met and the commissioner ruled.** A production screenshot at
+iPhone scale, a concrete description (*boxy · stiff · flat · overly geometric ·
+simplistic · avatar-builder rather than illustrated*) and three reference images
+with stated authority were supplied; `docs/MANAGER_SPRITE_QUALITY_INVESTIGATION.md`
+is the investigation they unblocked.
+
+**Where it now stands.** The cause is architectural rather than artistic: because
+one body serves six garments, the arms must hang straight down and nothing can
+overlap anything, so Tony's pose is not expressible at any resolution. The ruling
+approved **painted builds below the neck with a fixed head plate**, and authorised
+a **one-build prototype** — infrastructure plus a single T-shirt — before the
+remaining sixteen assets are commissioned.
+
+The infrastructure is built and **nothing a manager sees has changed**: with no
+mask registered every top still renders the drawn sprite, pixel for pixel.
+`docs/MANAGER_BUILD_PROTOTYPE.md` is the canonical account and
+`docs/art/MANAGER_BUILD_TSHIRT_BRIEF.md` is the art brief. **Still open, and the
+next step is not code:** the real T-shirt has to come back, be validated,
+photographed at 390 / 375 / 360, seen on a phone and compared against Tony. Only
+the commissioner can close it.
+
+The four things this entry has always said stay true remain true: the canvas must
+not regress, colour stays a runtime parameter, the six traits and their stored
+integers do not move, and `docs/CHARACTER_CUSTOMISATION_BOUNDARY.md` stays
+**CLOSED**. `docs/VISUAL_DEBT.md` item **18** is the same finding at the surface it
+shows on.
 
 ---
 

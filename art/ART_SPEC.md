@@ -47,7 +47,7 @@ If that screen reads as a single coherent place, the whole library is unblocked 
 | Family | Logical canvas | Notes |
 |---|---|---|
 | Character (Tony) | 88 × 240 | Feet on the bottom edge. Renders 1:1 in CSS pixels at phone width. |
-| Avatar layers | ⚠️ **REOPENED** — see §2.2 | Must be identical to each other and fixed before B2. |
+| Avatar layers | **112 × 168** | Settled 2026-08-10 — `roomObject('manager').rect` exactly, so one art pixel is one room unit. Identical across every layer. See §2.2. |
 | Zone tile | 320 wide, height by content | The parlor is 320 × 569, cut at the counter into 320 × 291 and 320 × 278. See §2.1. |
 | Collectible | **46 × 46** | One source serves all three surfaces. Bottom-centre anchor. Measured, not chosen — see below. |
 | Surface (text-driven) | 96 × 64 | Blank; text is rendered at runtime into the safe area (§7) |
@@ -97,7 +97,17 @@ So the master unit moved with the room. Both numbers are now read off the same d
 
 **Consequence — this is a live decision, not a settled one.** §5 requires every avatar layer to share one canvas so that a hat drawn once sits on a body drawn once. That invariant is untouched. What is no longer obvious is *which* canvas, because §2's old answer was "identical to Tony" and Tony is now sized for one specific fixture in one specific room. Avatars appear in the Showcase and, later, in basements — not behind that counter, and not necessarily at that scale.
 
-**Nothing in a character or avatar family may be generated until this is decided.** It affects `character_tony_pleased`, `character_tony_unimpressed` (B1 — these must match Tony exactly, and are already updated), and every `avatar_*` and `wear_*` slug (B2, still 32 × 48 in the inventory and **not** to be generated at that size without a decision).
+~~**Nothing in a character or avatar family may be generated until this is decided.**~~ It affects `character_tony_pleased`, `character_tony_unimpressed` (B1 — these must match Tony exactly, and are already updated), and every `avatar_*` and `wear_*` slug.
+
+> **Decided, and recorded 2026-08-11.** The avatar canvas is **`112 × 168`**, and
+> it was settled by measurement on 2026-08-10 rather than by argument: it is
+> `roomObject('manager').rect` exactly, so one avatar pixel is one room unit — the
+> same relationship the shell and every collectible already keep, and the one the
+> old `64 × 96` broke at 1.75. `lib/rooms/objects.test.ts` pins the two together,
+> `checkManagerBelongsInTheRoom` measures the rendered ratio in a browser, and
+> `art/assets.inventory.json` carries it on every `avatar_*` and `wear_*` row.
+> The generation hold above is lifted for that canvas and that canvas only.
+> `docs/MANAGER_SPRITE_BOUNDARY.md` is the account.
 
 ---
 
@@ -159,8 +169,16 @@ Props and furniture may sit deeper in the room. Characters may not.
 
 **Detail budget** — the count of distinct interior shapes inside a silhouette, excluding the outline:
 
-- Character face: ≤ 6 (eyes, brow, nose, mouth, mustache, one accent)
-- Character body: ≤ 8
+> **Amended 2026-08-11 by commissioner ruling R3. The character and avatar rows below the line are withdrawn; Tony is the authority.**
+>
+> The two numbers were written before any character art existed and the approved `character_tony_neutral` exceeds both by a wide margin — he carries roughly **forty colours** and an interior-detail density of **71%**, against a manager sprite that obeyed the budget exactly and measured **27%**. Held to the letter, these rows say the approved benchmark asset is out of spec and that managers must stay simpler than the character they stand beside.
+>
+> **For the `character` and `avatar` families the budget is Tony**: match the level of construction, anatomy and interior detail in the approved asset. Where this table and Tony disagree, Tony wins. Nothing about Tony changes.
+>
+> The rows for collectibles, props and background elements are **unaffected and still binding** — they are about legibility at 46 × 46 and at a distance, which is a different problem with a different answer. `docs/MANAGER_SPRITE_QUALITY_INVESTIGATION.md §C` carries the measurements.
+
+- ~~Character face: ≤ 6 (eyes, brow, nose, mouth, mustache, one accent)~~ — withdrawn, see above
+- ~~Character body: ≤ 8~~ — withdrawn, see above
 - Collectible: ≤ 10
 - Zone-tile prop: ≤ 6
 - Zone-tile background element: ≤ 3
@@ -170,6 +188,15 @@ Props and furniture may sit deeper in the room. Characters may not.
 ---
 
 ## 5. Avatar attachment points
+
+> **Stale, and recorded as stale 2026-08-11.** The canvas below is **not** the
+> product's. Avatar layers share `112 × 168` — `roomObject('manager').rect`
+> exactly, so one art pixel is one room unit — pinned by
+> `lib/rooms/objects.test.ts` and `art/assets.inventory.json`, and §2.2's
+> "REOPENED" note is settled by those two. The anchor coordinates below are
+> likewise superseded: `lib/character/art/geometry.ts` is the single coordinate
+> authority, and `npm run art:jig` emits the landmarks from it rather than from
+> any table. The **render order** below is still correct and still governs.
 
 All avatar layers share the 32 × 48 canvas. Anchors are absolute pixel coordinates on that canvas, origin top-left.
 

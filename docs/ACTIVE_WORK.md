@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| *(nothing claimed)* | | | | |
+| Manager-character painted-build prototype (`OPEN_ITEMS` C3 · `VISUAL_DEBT` 18) | `claude/manager-visual-redesign-investigation-eshqcb` | `lib/character/mask.ts` · `lib/character/art/masks/` · `lib/character/art/{index,body}.ts` · `lib/character/{sprite,composite,catalog}.ts` (mask paths only) · `scripts/manager-{jig,mask}.ts` · `art/jigs/` · the one new `avatar_body_head` registry row · `docs/MANAGER_BUILD_PROTOTYPE.md` · `docs/art/MANAGER_BUILD_TSHIRT_BRIEF.md` | the six traits and their stored integers · `characterConfigurations` and any migration · the customiser screen · room art, geometry or `lib/rooms/*` · Back Hall · Underground/casino · Slice, rehearsals, economy, collectibles · Tony · `art/palette.json` · wearable architecture or artwork · any visual-QA assertion (none is weakened here) | 2026-08-11 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of

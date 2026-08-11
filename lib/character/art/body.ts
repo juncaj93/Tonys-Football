@@ -145,7 +145,19 @@ const hand = (cx: number, thumb: 1 | -1): readonly Op[] => [
   rect(cx + thumb * 3, HAND.cy - 4, 2, 5, SKIN),
 ];
 
-export const BODY: readonly Op[] = Object.freeze([
+/**
+ * Everything below the neck: legs, boots, torso, arms, hands.
+ *
+ * **Split out rather than moved.** A painted *build* mask
+ * (`lib/character/mask.ts`) carries all of this in one painting, together with
+ * the garment over it, because the stiffness the redesign exists to fix comes
+ * from the arms having to serve six different tops. When a build is painted this
+ * half is not drawn at all, and {@link BODY_HEAD} is drawn on its own.
+ *
+ * `BODY` is still exactly `[...BODY_BELOW, ...BODY_HEAD]` in that order, so the
+ * unpainted path is byte-identical to what it was — asserted, not assumed.
+ */
+export const BODY_BELOW: readonly Op[] = Object.freeze([
   // --- legs and boots, drawn first so the torso overlaps the waist -----------
   leg(LEG.leftX, 1),
   leg(LEG.rightX, -1),
@@ -182,7 +194,18 @@ export const BODY: readonly Op[] = Object.freeze([
   ...arm(ARM.rightX + ARM.width, ARM.rightX - ARM.overlap),
   ...hand(HAND.leftCx, 1),
   ...hand(HAND.rightCx, -1),
+]);
 
+/**
+ * The neck, the head and the face — the half every build shares.
+ *
+ * **A build may pose its arms; it may not move the skull.** Six hairstyles and
+ * four facial hairs register against these coordinates once, and would otherwise
+ * have to be painted per build — 6 × 6 and 4 × 6 instead of 6 and 4. The head
+ * being fixed is what keeps the painted route to seventeen assets rather than
+ * sixty.
+ */
+export const BODY_HEAD: readonly Op[] = Object.freeze([
   // --- neck ------------------------------------------------------------------
   rect(NECK.left, NECK.top, NECK.width, NECK.bottom - NECK.top, SKIN),
   // The shadow the jaw casts on it. Without this the neck reads as a post.
@@ -297,3 +320,6 @@ export const BODY: readonly Op[] = Object.freeze([
     'ink',
   ),
 ]);
+
+/** The whole figure, drawn. Unchanged, and the fallback whenever no build is painted. */
+export const BODY: readonly Op[] = Object.freeze([...BODY_BELOW, ...BODY_HEAD]);

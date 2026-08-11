@@ -1,5 +1,6 @@
-import { layerBounds, toneGrid } from './art';
+import { hasBuildMask, layerBounds, toneGrid } from './art';
 import {
+  BODY_HEAD_SLUG,
   BODY_SLUG,
   isKnownOption,
   optionName,
@@ -160,7 +161,14 @@ export type Paint =
   | { readonly kind: 'skin'; readonly index: number }
   | { readonly kind: 'hair'; readonly index: number }
   | { readonly kind: 'top'; readonly index: number }
-  | { readonly kind: 'item'; readonly slug: string };
+  | { readonly kind: 'item'; readonly slug: string }
+  /**
+   * A **painted build** — the whole figure below the neck in one layer, so it
+   * carries two of the manager's choices at once: the garment it is dyed in and
+   * the skin its bare forearms and hands are. Every other layer has exactly one
+   * paint, which is why no tone ever had to name a channel before this.
+   */
+  | { readonly kind: 'build'; readonly index: number; readonly skin: number };
 
 export interface CompositeLayer {
   readonly layer: LayerName;
@@ -192,16 +200,39 @@ export function composeCharacter(
   const safe = repairConfiguration(configuration);
   const worn = repairEquipment(equipment);
 
+  const top = styleSlug('top', safe.top);
+
+  /*
+   * **A painted top brings its own body, so the drawn one stands down.**
+   *
+   * The two halves of the figure are the same two layers they always were —
+   * `base-body` under `base-top`, in the same order — and all that changes is
+   * what each one holds. Painted: the head plate, then the whole below-neck
+   * figure in one painting. Drawn: the whole body, then a garment shell traced
+   * over it. `LAYER_ORDER`, the catalog, the traits and the stored integers are
+   * untouched by the switch, which is why a build can land one at a time.
+   *
+   * It resolves per *top*, not globally. Five drawn tops and one painted one is a
+   * legitimate state — it is precisely the prototype's state — and a manager on a
+   * drawn top renders exactly as they did before any of this existed.
+   */
+  const painted = top !== null && hasBuildMask(top);
+
   const layers: CompositeLayer[] = [
-    { layer: 'base-body', slug: BODY_SLUG, paint: { kind: 'skin', index: safe.skin } },
+    {
+      layer: 'base-body',
+      slug: painted ? BODY_HEAD_SLUG : BODY_SLUG,
+      paint: { kind: 'skin', index: safe.skin },
+    },
   ];
 
-  const top = styleSlug('top', safe.top);
   if (top !== null) {
     layers.push({
       layer: TRAIT_LAYER.top,
       slug: top,
-      paint: { kind: 'top', index: safe.topColour },
+      paint: painted
+        ? { kind: 'build', index: safe.topColour, skin: safe.skin }
+        : { kind: 'top', index: safe.topColour },
     });
   }
 
@@ -250,6 +281,7 @@ function coloursFor(paint: Paint): LayerColours {
     case 'hair':
       return hairColours(paint.index);
     case 'top':
+    case 'build':
       return topColours(paint.index);
     case 'item': {
       const item = wearable(paint.slug);
@@ -381,8 +413,20 @@ export function compositeRuns(composite: Composite): readonly ColourRun[] {
       }
     }
 
-    // Pass 2 — the layer itself.
+    /*
+     * Pass 2 — the layer itself.
+     *
+     * **A build's `skin:` prefix is resolved away here and nowhere else.** A
+     * painted build is the one layer that carries two of the manager's colours,
+     * so its tones name which; the prefix is stripped as the pixel is written and
+     * the pixel's *paint* records the difference instead. Every pass after this
+     * one — the next layer's contact shadow, the silhouette test, the colour
+     * lookup — is then reading the same plain tones it always read, which is why
+     * none of them needed a branch adding.
+     */
     const colours = coloursFor(layer.paint);
+    const bare = layer.paint.kind === 'build' ? skinColours(layer.paint.skin) : null;
+
     for (let y = box.top; y < box.bottom; y++) {
       const row = above[y];
       if (row === undefined) continue;
@@ -391,6 +435,11 @@ export function compositeRuns(composite: Composite): readonly ColourRun[] {
       for (let x = box.left; x < box.right; x++) {
         const tone = row[x];
         if (tone === null || tone === undefined) continue;
+        if (bare !== null && tone.startsWith('skin:')) {
+          toneRow[x] = tone.slice('skin:'.length) as Tone;
+          paintRow[x] = bare;
+          continue;
+        }
         toneRow[x] = tone;
         paintRow[x] = colours;
       }
@@ -450,7 +499,18 @@ export function compositeKey(composite: Composite): string {
   return composite.layers
     .map((layer) => {
       const paint = layer.paint;
-      const suffix = paint.kind === 'item' ? '' : `@${paint.kind}${String(paint.index)}`;
+      /*
+       * A build carries two indices, and both belong in the key. With only the
+       * garment's, four skin tones would share one key — so a cache would serve
+       * the wrong manager and two screenshots that differ would be filed under
+       * one name.
+       */
+      const suffix =
+        paint.kind === 'item'
+          ? ''
+          : paint.kind === 'build'
+            ? `@build${String(paint.index)}+skin${String(paint.skin)}`
+            : `@${paint.kind}${String(paint.index)}`;
       return `${layer.layer}:${layer.slug}${suffix}`;
     })
     .join('|');

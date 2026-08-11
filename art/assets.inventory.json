@@ -2,7 +2,7 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 115,
+  "totalSlugs": 116,
   "statusValues": [
     "placeholder",
     "generated",
@@ -406,6 +406,15 @@
         "batch": "B2",
         "art_status": "placeholder",
         "alt": "The figure every manager starts as"
+      },
+      "avatar_body_head": {
+        "family": "avatar",
+        "canvas": "112x168",
+        "anchor": "bottom-center",
+        "slot": "body",
+        "batch": "B2",
+        "art_status": "placeholder",
+        "alt": "A manager's head, neck and face"
       },
       "avatar_hair_01": {
         "family": "avatar",
