@@ -1,4 +1,4 @@
-import { HEAD, NECK, TORSO } from './art/geometry';
+import { AXIS, FACE, HEAD, NECK, TORSO } from './art/geometry';
 import { HOUSE, type HouseColour } from './palette';
 import { type Tone, type ToneGrid } from './sprite';
 
@@ -424,5 +424,167 @@ export function validateBuildMask(keys: readonly number[]): readonly MaskProblem
     }
   }
 
+  return problems;
+}
+
+/* --------------------------------------------------------- the head -- */
+
+/**
+ * Where a delivered head has to land.
+ *
+ * **Longer than a build's list, and that asymmetry is the point.** A build's
+ * registration exists so *its own* silhouette sits in the room; a head's exists
+ * so **ten other layers** land on it — six hairstyles drawn to the skull's curve,
+ * four facial-hair pieces drawn to the mouth and jaw, three hats to the brow. A
+ * head that misses is not a head slightly out of place, it is ten assets wrong.
+ *
+ * Which is also why a head is **not offered placement normalisation**. Fitting a
+ * bounding box aligns the envelope and says nothing about where the eyes are
+ * inside it, and the eyes are what everything else is measured from.
+ */
+export const HEAD_REGISTRATION = Object.freeze({
+  /** The topmost row of the skull. Hair is painted to the curve starting here. */
+  top: HEAD.top,
+  /** The last row the head plate owns. The collar closes over it. */
+  bottom: NECK.bottom - 1,
+  /** The jaw, where the skull ends and the neck begins. */
+  jaw: HEAD.bottom,
+  /** The eye line, and how far off it a delivery may be. */
+  eyeRow: FACE.eyeY,
+  eyeTolerance: 2,
+  /** The skull's columns, and how much wider or narrower a delivery may be. */
+  skull: Object.freeze({ left: HEAD.left, right: HEAD.right }),
+  widthTolerance: 3,
+  neckColumns: Object.freeze({ from: NECK.left, to: NECK.left + NECK.width - 1 }),
+});
+
+/** The key a painted eye white must land on, for the eye line to be measurable. */
+const EYE_WHITE_KEY = 19;
+
+/**
+ * Check a head plate.
+ *
+ * The eye line is measured from the **eye-white key** rather than guessed from
+ * dark pixels: a lash line, a pupil, a nostril and a mouth are all ink, and the
+ * only unambiguous eye in a role mask is its white.
+ */
+export function validateHeadPlate(keys: readonly number[]): readonly MaskProblem[] {
+  const { width, height } = MASK_CANVAS;
+  const problems: MaskProblem[] = [];
+  const fail = (message: string): number => problems.push({ severity: 'fail', message });
+
+  if (keys.length !== width * height) {
+    return [{ severity: 'fail', message: `mask is ${String(keys.length)} cells, not ${String(width * height)}` }];
+  }
+
+  const at = (x: number, y: number): number =>
+    x < 0 || y < 0 || x >= width || y >= height ? TRANSPARENT_KEY : keys[y * width + x]!;
+  const opaque = (x: number, y: number): boolean => at(x, y) !== TRANSPARENT_KEY;
+
+  let top: number = height;
+  let bottom = -1;
+  let painted = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!opaque(x, y)) continue;
+      painted++;
+      if (y < top) top = y;
+      if (y > bottom) bottom = y;
+    }
+  }
+  if (painted === 0) return [{ severity: 'fail', message: 'the head plate is empty' }];
+
+  if (top !== HEAD_REGISTRATION.top) {
+    fail(
+      `the skull starts on row ${String(top)}, not ${String(HEAD_REGISTRATION.top)}. Six ` +
+        'hairstyles are painted to the curve that starts there.',
+    );
+  }
+
+  if (bottom > HEAD_REGISTRATION.bottom) {
+    fail(
+      `the plate paints down to row ${String(bottom)}; the head plate ends at ` +
+        `${String(HEAD_REGISTRATION.bottom)}, where the collar closes over it. Everything below ` +
+        'belongs to the body.',
+    );
+  } else if (bottom < HEAD_REGISTRATION.bottom) {
+    fail(
+      `the neck stops at row ${String(bottom)} and has to reach ` +
+        `${String(HEAD_REGISTRATION.bottom)}, where the collar meets it. ` +
+        `${String(HEAD_REGISTRATION.bottom - bottom)} rows of room would show through the join.`,
+    );
+  }
+
+  // The eye line, from the eye whites.
+  let eyeTop = -1;
+  let eyeWhites = 0;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (at(x, y) !== EYE_WHITE_KEY) continue;
+      eyeWhites++;
+      if (eyeTop === -1) eyeTop = y;
+    }
+  }
+  if (eyeWhites === 0) {
+    fail(
+      'no pixel is painted in the eye-white key, so the eye line cannot be measured. The eyes ' +
+        'are what every other layer is positioned from.',
+    );
+  } else if (Math.abs(eyeTop - HEAD_REGISTRATION.eyeRow) > HEAD_REGISTRATION.eyeTolerance) {
+    fail(
+      `the eyes begin on row ${String(eyeTop)}, ${String(Math.abs(eyeTop - HEAD_REGISTRATION.eyeRow))} ` +
+        `rows off the eye line at ${String(HEAD_REGISTRATION.eyeRow)}. Hats clear the brow two rows ` +
+        'above it and every hairstyle is drawn around it.',
+    );
+  }
+
+  // The skull's width, measured at the eye line where it is widest.
+  let left: number = width;
+  let right = -1;
+  for (let x = 0; x < width; x++) {
+    if (opaque(x, HEAD_REGISTRATION.eyeRow)) {
+      if (x < left) left = x;
+      if (x > right) right = x;
+    }
+  }
+  const wanted = HEAD_REGISTRATION.skull.right - HEAD_REGISTRATION.skull.left;
+  if (right >= 0 && Math.abs(right - left + 1 - wanted) > HEAD_REGISTRATION.widthTolerance) {
+    fail(
+      `the skull is ${String(right - left + 1)} columns across at the eye line, against ` +
+        `${String(wanted)}. Long hair and the ponytail hang just outside ` +
+        `${String(HEAD_REGISTRATION.skull.left)}–${String(HEAD_REGISTRATION.skull.right)}.`,
+    );
+  }
+
+  // The neck has to be there for the collar to close over.
+  const open: number[] = [];
+  for (let x = HEAD_REGISTRATION.neckColumns.from; x <= HEAD_REGISTRATION.neckColumns.to; x++) {
+    if (!opaque(x, HEAD_REGISTRATION.bottom)) open.push(x);
+  }
+  if (open.length > 0) {
+    fail(`the neck is missing at row ${String(HEAD_REGISTRATION.bottom)}, columns ${open.join(', ')}.`);
+  }
+
+  let bare = 0;
+  let firstBare = '';
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!opaque(x, y) || at(x, y) === 1) continue;
+      const exposed =
+        (x > 0 && !opaque(x - 1, y)) ||
+        (x < width - 1 && !opaque(x + 1, y)) ||
+        (y > 0 && !opaque(x, y - 1)) ||
+        (y < height - 1 && !opaque(x, y + 1));
+      if (exposed) {
+        bare++;
+        if (firstBare === '') firstBare = `(${String(x)}, ${String(y)})`;
+      }
+    }
+  }
+  if (bare > 0) {
+    fail(`${String(bare)} pixels sit on the head's edge without an outline, first at ${firstBare}.`);
+  }
+
+  void AXIS;
   return problems;
 }

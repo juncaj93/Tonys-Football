@@ -15,12 +15,14 @@ import {
 } from '../lib/character/composite';
 import {
   BUILD_REGISTRATION,
+  HEAD_REGISTRATION,
   MASK_CANVAS,
   TRANSPARENT_KEY,
   encodeMask,
   maskToneGrid,
   paintedKeys,
   validateBuildMask,
+  validateHeadPlate,
   type EncodedMask,
 } from '../lib/character/mask';
 import { SKIN_TONES, TOP_COLOURS } from '../lib/character/palette';
@@ -223,7 +225,53 @@ function fitWindow(
   };
 }
 
-export async function snap(file: string, fit = false): Promise<Snapped> {
+/**
+ * Fit a delivered head so the plate's rows are its rows.
+ *
+ * **A head is fitted and a build is not, which is the opposite of what §9.5's
+ * reasoning suggests, and the asymmetry is deliberate.** A build's placement is
+ * its own business — nothing else depends on where its knees are — so a build
+ * that misses the band was drawn wrong and is regenerated. A head has ten layers
+ * measured off it, so what matters is not *whether* it was delivered in place but
+ * whether its **internal proportions** are ours. Scaling its bounding box onto
+ * our rows is what turns that into a checkable question: fit the envelope, then
+ * measure whether the eye line, the jaw and the skull's width landed where hair
+ * and beards expect them.
+ *
+ * Fitting therefore hides nothing here. It is the step that makes the real check
+ * possible, and every one of those checks runs afterwards.
+ */
+function headWindow(
+  alphaAt: (x: number, y: number) => number,
+  width: number,
+  height: number,
+): { window: Window; scale: number } {
+  let top = height;
+  let bottom = -1;
+  let left = width;
+  let right = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (alphaAt(x, y) < 128) continue;
+      if (y < top) top = y;
+      if (y > bottom) bottom = y;
+      if (x < left) left = x;
+      if (x > right) right = x;
+    }
+  }
+  if (bottom < 0) throw new Error('nothing is painted in this file');
+
+  const targetRows = HEAD_REGISTRATION.bottom - HEAD_REGISTRATION.top + 1;
+  const step = (bottom - top + 1) / targetRows;
+  const cx = (left + right + 1) / 2;
+
+  return {
+    window: { x: cx - AXIS * step, y: top - HEAD_REGISTRATION.top * step, step },
+    scale: (width / MASK_CANVAS.width) / step,
+  };
+}
+
+export async function snap(file: string, fit = false, head = false): Promise<Snapped> {
   const image = sharp(file).ensureAlpha();
   const { width, height } = await image.metadata();
   if (width === undefined || height === undefined) throw new Error(`${file}: unreadable`);
@@ -238,7 +286,14 @@ export async function snap(file: string, fit = false): Promise<Snapped> {
 
   const wanted = MASK_CANVAS.width / MASK_CANVAS.height;
   const got = width / height;
-  if (Math.abs(got - wanted) / wanted > ASPECT_TOLERANCE) {
+  /*
+   * A head is exempt from the aspect rule and a build is not. The rule exists to
+   * refuse a *stretched figure*, and a build fills its canvas so the file's aspect
+   * is the figure's. A head is a small object on whatever canvas the generator
+   * felt like — square, most often — and its own proportions are measured
+   * directly by `validateHeadPlate` rather than inferred from the file.
+   */
+  if (!head && Math.abs(got - wanted) / wanted > ASPECT_TOLERANCE) {
     throw new Error(
       `${file} is ${String(width)} x ${String(height)}, an aspect of ${got.toFixed(3)} against the ` +
         `canvas's ${wanted.toFixed(3)}. Squeezing it to fit would stretch the figure, and a ` +
@@ -297,10 +352,22 @@ export async function snap(file: string, fit = false): Promise<Snapped> {
   const drift = { mean: measured === 0 ? 0 : total / measured, p99, max };
 
   // Pass 2 — the majority role of the source cell under each output pixel.
-  const fitted = fit
-    ? fitWindow((x, y) => data[(y * width + x) * 4 + 3]!, width, height)
-    : null;
-  if (fitted !== null && (fitted.scale < FIT_LIMIT.min || fitted.scale > FIT_LIMIT.max)) {
+  const alphaAt = (x: number, y: number): number => data[(y * width + x) * 4 + 3]!;
+  const fitted: { window: Window; scale: number; movedRows: number } | null = head
+    ? { ...headWindow(alphaAt, width, height), movedRows: 0 }
+    : fit
+      ? (() => {
+          const box = fitWindow(alphaAt, width, height);
+          return {
+            window: box.window,
+            scale: box.scale,
+            movedRows:
+              BUILD_REGISTRATION.shoulderBand.from -
+              Math.round(box.from.top / (width / MASK_CANVAS.width)),
+          };
+        })()
+      : null;
+  if (!head && fitted !== null && (fitted.scale < FIT_LIMIT.min || fitted.scale > FIT_LIMIT.max)) {
     throw new Error(
       `fitting this file would rescale it by ${fitted.scale.toFixed(2)}x, outside the ` +
         `${String(FIT_LIMIT.min)}–${String(FIT_LIMIT.max)} a near-miss can be. A delivery this far ` +
@@ -356,7 +423,13 @@ export async function snap(file: string, fit = false): Promise<Snapped> {
     }
   }
 
-  return { keys, drift, softAlpha, factor: width / MASK_CANVAS.width, fitted: fitted === null ? null : { scale: fitted.scale, movedRows: BUILD_REGISTRATION.shoulderBand.from - Math.round(fitted.from.top / (width / MASK_CANVAS.width)) } };
+  return {
+    keys,
+    drift,
+    softAlpha,
+    factor: width / MASK_CANVAS.width,
+    fitted: fitted === null ? null : { scale: fitted.scale, movedRows: fitted.movedRows },
+  };
 }
 
 /** A picture of the mask as four real managers, so a person can judge it. */
@@ -437,24 +510,25 @@ export const ${constant}: EncodedMask = {
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const fit = argv.includes('--fit');
+  const head = argv.includes('--head');
   const [file, slug] = argv.filter((arg) => !arg.startsWith('--'));
   if (file === undefined || slug === undefined) {
-    throw new Error('usage: npm run art:mask -- <file.png> <slug> [--fit]');
+    throw new Error('usage: npm run art:mask -- <file.png> <slug> [--fit] [--head]');
   }
-  if (slug === BODY_HEAD_SLUG) {
+  if (head !== (slug === BODY_HEAD_SLUG)) {
     throw new Error(
-      `${BODY_HEAD_SLUG} is the head plate, not a build. It is drawn, and painting it is a ` +
-        'separate authorised step — the prototype covers one T-shirt build only.',
+      `--head is for ${BODY_HEAD_SLUG} and nothing else. A head and a build are validated ` +
+        'against different landmarks and neither check makes sense on the other.',
     );
   }
-  if (!STYLE_TRAITS.top.some((option) => option.slug === slug)) {
+  if (!head && !STYLE_TRAITS.top.some((option) => option.slug === slug)) {
     throw new Error(
       `${slug} is not one of the six tops. A build mask takes over a top's slug so that the ` +
         'stored integer keeps meaning what it meant.',
     );
   }
 
-  const { keys, drift, softAlpha, factor, fitted } = await snap(file, fit);
+  const { keys, drift, softAlpha, factor, fitted } = await snap(file, fit, head);
 
   const painted = keys.filter((key) => key !== TRANSPARENT_KEY).length;
 
@@ -484,7 +558,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const problems = validateBuildMask(keys);
+  const problems = head ? validateHeadPlate(keys) : validateBuildMask(keys);
   for (const problem of problems) {
     console.log(`  ${problem.severity === 'fail' ? '✗' : '⚠'} ${problem.message}`);
   }
