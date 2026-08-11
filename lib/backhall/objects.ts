@@ -53,14 +53,31 @@ export const BACK_HALL = ROOM;
 /**
  * The three.
  *
- * Coordinates are chosen against the placeholder scene in
- * `components/scene/back-hall.tsx`, which draws the hall from these same
- * numbers — so the hit region and the thing you can see are one definition
- * rather than two that drift. When `zone_back_hall_shell` lands as real art it
- * is measured the way `zone_parlor_shell` was, and these move once.
+ * **Measured off `zone_back_hall_shell` on 2026-08-11**, by luminance profile
+ * rather than by eye — the openings are the dark columns in a lit wall, so the
+ * jambs are where the column means step. Before that they were chosen against
+ * the drawn stand-in, and this file said they would *"move once"* when real art
+ * landed. This is that once.
  *
- * Every region is at least 44 × 44 room units where the drawn object is smaller,
- * and `backhall.test.ts` fails the build if any two of them touch.
+ * The art was drawn to a briefed set of coordinates and came back close but not
+ * exact, and the code moved rather than the painting — the same call the
+ * storeroom's delivery made on 2026-08-10, for the same reason: a room that
+ * already works is cheaper to re-aim than a painting is to redraw.
+ *
+ * Every region clears 44 CSS px on the narrowest supported phone, and
+ * `backhall.test.ts` fails the build if any two of them touch.
+ *
+ * ## A fourth rule arrived with the measurement
+ *
+ * A shut door renders its in-world answer **below its own rectangle**, and that
+ * answer is up to 68 CSS px tall. Under the old geometry the stairs ended at
+ * `y 542` and their line landed at 670px inside a 664px viewport — off the
+ * bottom of the screen at 390, clipped at 375 and 360 (visual debt 19). Nobody
+ * met it because `rooms` is open and the shut state is photographed without
+ * tapping anything.
+ *
+ * So a **lockable** door must end above `y 465`. Both of them now end at 292,
+ * and `backhall.test.ts` holds it.
  */
 export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
   /**
@@ -68,8 +85,17 @@ export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
    *
    * Stairs going down are the only metaphor in the product that needs no
    * explanation at all, which is the test `18 §5` sets for an object earning a
-   * destination. It is drawn as an opening in the floor with a rail and a lit
-   * landing below, not as a labelled hatch.
+   * destination.
+   *
+   * **It is a framed stair head in the wall, not a hole cut in the floor**, and
+   * that changed with the art. The stand-in cut an opening in the near floor
+   * and railed it; `zone_room_shell_storeroom` — which was already painted and
+   * paints the *other end of this same flight* — frames it in dark timber and
+   * runs it away from the viewer. Two shells cannot disagree about one
+   * staircase, and the painted one shipped first.
+   *
+   * Measured: the frame spans `x 38–110` and the opening runs `y 120–282`, with
+   * the stairwell's own lit bulb at `y 222–246`.
    */
   {
     id: 'stairs',
@@ -77,7 +103,7 @@ export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
     label: 'Down the stairs',
     destination: 'the rooms',
     href: '/rooms',
-    rect: [16, 392, 112, 150],
+    rect: [38, 118, 72, 174],
   },
 
   /**
@@ -106,7 +132,7 @@ export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
     kind: 'door',
     label: 'The curtained doorway',
     destination: 'somewhere',
-    rect: [204, 104, 88, 276],
+    rect: [118, 118, 86, 174],
   },
 
   /**
@@ -114,6 +140,13 @@ export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
    *
    * A door in the world rather than a breadcrumb or a browser-back dependency
    * (`18 §5`). It is the only object here that is never shut.
+   *
+   * The shell draws the dining room **through** it — red-and-white check, a
+   * booth, a green pendant — which is why it needs no marking at all. It is
+   * also the narrowest of the three at 50 units, which is 56 CSS px on a 360px
+   * phone: comfortably over the 44 floor, and the region is padded left onto
+   * the jamb rather than the opening being widened, because hit regions are
+   * invisible and the painting is not.
    */
   {
     id: 'return',
@@ -121,7 +154,7 @@ export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
     label: 'Back out front',
     destination: 'the parlor',
     href: '/',
-    rect: [122, 122, 70, 258],
+    rect: [266, 116, 50, 176],
   },
 ] as const;
 
@@ -155,7 +188,14 @@ export type Lockable = (typeof LOCKABLE)[number];
  * than *when*, for the same reason.
  */
 export const LOCKED_LINES: Readonly<Record<Lockable, string>> = {
-  stairs: 'Chain across the rail. Tony has not finished down there.',
+  /*
+   * It said *"Chain across the rail"* until 2026-08-11, and the rail went with
+   * the stand-in — the painted stairwell is a framed opening in the wall, so
+   * the chain now hangs across the doorway and there is no rail in the room to
+   * refer to. Copy that describes something a manager cannot see is a smaller
+   * defect than a wrong number and exactly as avoidable.
+   */
+  stairs: 'Chain across the stairs. Tony has not finished down there.',
   curtain: 'Don’t worry about it.',
 };
 

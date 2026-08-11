@@ -15,14 +15,17 @@ doorway rather than by typing the URL.
 
 | File | State |
 |---|---|
-| `<w>-back-hall.png` | `/back-hall` as it ships — stairs open, curtain shut |
-| `<w>-back-hall-shut.png` | `/back-hall?open=none` — both shut. **The state a revert produces** |
-| `<w>-shut-stairs-answers.png` | the shut stairs tapped, its in-world line showing |
-| `<w>-shut-curtain-answers.png` | the shut curtain tapped, *"Don't worry about it."* |
+| `<w>-back-hall-art.png` | **`/back-hall` as it ships now** — the painted shell, stairs open, curtain shut |
+| `<w>-back-hall-art-shut.png` | the painted hall with both doors shut, chain across the stairs |
+| `<w>-art-shut-<door>-answers.png` | each shut door tapped, its in-world line on screen |
+| `before-after-390.png` | the drawn stand-in beside the painting, at 390 |
+| `<w>-back-hall.png` | *(before)* the drawn stand-in — stairs open, curtain shut |
+| `<w>-back-hall-shut.png` | *(before)* `/back-hall?open=none` — both shut |
+| `<w>-shut-<door>-answers.png` | *(before)* each shut door tapped. **The stairs' line is off-screen at 390** |
 | `<w>-parlor.png` | the approved parlor, same conditions — the primary benchmark |
 | `<w>-rooms.png` | the approved storeroom, same conditions — the secondary benchmark |
-| `world-comparison-360.png` | the three rooms side by side at 360. **The one picture the report is about** |
-| `back-hall-layout-plate.png` | the geometry the replacement shell has to satisfy, drawn at 3× |
+| `world-comparison-360.png` | the three rooms side by side at 360 |
+| `back-hall-layout-plate.png` | the geometry the brief asked for, drawn at 3×. **Superseded** by the measurements the delivered art produced — kept as the record of what was asked |
 
 `<w>` is `390`, `375`, `360` — except the two benchmarks, which are kept at `390`
 (the width the colour counts below are measured at) and `360` (the width the
@@ -66,12 +69,43 @@ of a palette each room actually spends:
 
 | | ≥ 0.5% of frame | ≥ 0.1% | distinct |
 |---|---|---|---|
-| `/back-hall` @390 | **9** | 16 | 409 |
+| `/back-hall` @390 — **the drawn stand-in** | **9** | 16 | 409 |
 | `/rooms` @390 (painted storeroom) | 25 | 38 | 428 |
 | `/` @390 (painted parlor) | **48** | 83 | 11,915 |
 
 The back hall's two darkest fills alone cover **56.9%** of the screen; its four
 largest cover **77.7%**. The parlor's largest single colour covers 12.4%.
+
+Measured again on the **delivered shells themselves**, which removes the
+rendering and the page furniture from the comparison:
+
+| 320 × 569 asset | ≥ 0.5% | ≥ 0.1% | distinct | top colour |
+|---|---|---|---|---|
+| `zone_back_hall_shell` | **19** | 25 | 82 | 15.9% |
+| `zone_room_shell_storeroom` | 25 | 31 | 73 | 19.8% |
+| `zone_parlor_shell` | 52 | 64 | 90 | 4.2% |
+
+`BATCH_G §5.10` asked for 25–48 and the hall landed at 19. Recorded rather than
+rounded up. It is a proxy, the room genuinely has a large plain floor, and
+`docs/PALETTE_FIDELITY_BOUNDARY.md` is the standing evidence that these proxies
+can prefer the worse picture — so the picture decided.
+
+---
+
+## After: the shut doors can be heard
+
+The defect this investigation found, and the same measurement after the shell
+landed and the geometry moved with it:
+
+| Width | The stairs' line, before | After |
+|---|---|---|
+| 390 | **670.3 – 737.9** in a 664px viewport | **365.6 – 433.2** |
+| 375 | 644.5 – 712.1 | 351.5 – 419.1 |
+| 360 | 618.8 – 686.3 | 337.5 – 405.1 |
+
+`checkBackHall` taps each shut door and fails if the answer is not wholly on
+screen. Restoring the old `stairs` rectangle turns it red at all three widths
+with exactly the "before" numbers — done, and then reverted.
 
 ---
 

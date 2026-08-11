@@ -250,7 +250,39 @@ catalog change.
 **Nothing is blocked.** Every unpainted slug resolves today, the loop works, and
 a swap stays a registry row.
 
-### A6 · The Back Hall is the only interior in the product that is not art — **art dependency, briefed 2026-08-11**
+### A6 · The Back Hall was the only interior in the product that is not art — **CLOSED, 2026-08-11**
+
+**Briefed and delivered the same day.** The commissioner supplied
+`zone_back_hall_shell` against the brief below; it was processed unmodified
+through `art:process` and `/back-hall` renders `data-room-shell="art"` at all
+three widths. The drawn stand-in is **deleted** — the hall has one shell, so a
+fallback branch would be one nothing can reach, and the honest signal for a lost
+registry path is a red gate rather than a diagram.
+
+Measured on the delivered file: **19** colours covering ≥0.5% of the frame each,
+against the stand-in's 9, the storeroom's 25 and the parlor's 52. That is six
+under the brief's own 25–48 target and it is recorded rather than rounded up —
+the room genuinely has a large plain floor, and the picture at phone size is the
+acceptance criterion.
+
+Three things came out of the delivery:
+
+- **The geometry moved to the art, once**, by luminance profile off the file:
+  `stairs [16,392,112,150] → [38,118,72,174]`, `curtain [204,104,88,276] →
+  [118,118,86,174]`, `return [122,122,70,258] → [266,116,50,176]`. Same call the
+  storeroom made on 2026-08-10, same reason, and these numbers are the master now.
+- **Visual debt 19 closed with it**, because the painted stairwell ends at
+  `y 292` instead of `y 542`. The rule survives the fix and `checkBackHall` now
+  **taps** each shut door, which is the only way that class of defect is visible
+  at all.
+- **A gate that was quietly rotting was fixed** — the chain check matched a
+  Tailwind class, and restyling the chain would have made it match nothing while
+  *"no chain found"* is the passing answer for the open state.
+
+`docs/BACK_HALL_BOUNDARY.md §10` is the canonical account. The original
+investigation follows, kept because it is the diagnosis.
+
+---
 
 **Reported by the commissioner and confirmed by measurement.** `/back-hall` draws
 `components/scene/back-hall.tsx` — flat rectangles in palette colours, the
@@ -290,9 +322,11 @@ Three things worth carrying out of the investigation:
 Doors work, and the swap is a registry row plus deleting one component.
 
 **Nothing else is in category A.** Every other v1 system is built, tested and
-reachable; what remains below is polish, activation, or deferred scope. The
-three that remain — **A3**, **A5** and **A6** — are all art dependencies and
-none of them blocks anything: every unpainted slug resolves today.
+reachable; what remains below is polish, activation, or deferred scope. The two
+that remain — **A3** and **A5** — are both art dependencies and neither blocks
+anything: every unpainted slug resolves today. **A6 closed on 2026-08-11**, and
+with it every *room* in the product is painted; what is left unpainted is two
+basement themes and twelve collectibles.
 
 ---
 

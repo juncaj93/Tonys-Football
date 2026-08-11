@@ -1,6 +1,21 @@
 # Batch G — the Back Hall
 
-**Status:** briefed, not commissioned. **One asset:** `zone_back_hall_shell`.
+> ## Delivered and live, 2026-08-11 — briefed and hung the same day.
+>
+> `zone_back_hall_shell` was supplied against the brief below, processed **unmodified**
+> through `art:process`, and `/back-hall` renders `data-room-shell="art"` at all three
+> widths. **No further action on this batch.**
+>
+> Two things worth carrying forward if another room is ever briefed this way:
+>
+> - **The delivered file satisfied nine of the ten acceptance rules and missed §5.10** —
+>   19 colours at ≥0.5% of frame against a 25–48 target — and was accepted anyway, because
+>   the target is a proxy and the picture at phone size is the criterion. Recorded rather
+>   than rounded up.
+> - **The geometry moved to the art**, not the other way round, exactly as `§3.1` said it
+>   would. The Was/Is table is in `docs/BACK_HALL_BOUNDARY.md §10.2`.
+
+**Status:** **delivered and live.** **One asset:** `zone_back_hall_shell`.
 **Purpose:** the room between the parlor and the basement is the only space in the product still drawn in flat rectangles. This replaces the stand-in with a painted shell on the parlor's own terms.
 
 This file is meant to be **pasted into an image-generation session as-is**. Every number in it was read off the running product on 2026-08-11 — see `docs/evidence/back-hall/`. Nothing here is a question for the commissioner.

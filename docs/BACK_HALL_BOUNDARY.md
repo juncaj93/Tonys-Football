@@ -222,10 +222,13 @@ and a driver that only navigated would file that under a name claiming otherwise
 
 ## 9. The art direction, 2026-08-11 — the room is a diagram, and two defects were under it
 
+> **Superseded within the same day by `§10`: the shell was commissioned, delivered and
+> hung.** This section is kept because it is the diagnosis and the reasoning, and because
+> `§9.2`–`§9.5` are what `§10` executed. Where the two disagree about what exists, `§10`
+> is the live account.
+
 Commissioner report: the hall's visual quality is not accepted, and it must belong in the
-same illustrated world as the parlor and the storeroom. **Investigation and brief only** —
-nothing about the room's behaviour, routing, flags, copy or object map changed, and
-`components/scene/back-hall.tsx` still draws every pixel it drew before.
+same illustrated world as the parlor and the storeroom.
 
 `docs/art/BATCH_G_BACK_HALL_HANDOFF.md` is the brief. `docs/evidence/back-hall/` is the
 photography and the measurements. What belongs here is the part that governs the room
@@ -313,3 +316,102 @@ foreclose the first.
   same applies here, once.
 - **Anything about the manager sprite.** No manager ever stands in this room. `C3` is open
   and untouched.
+
+---
+
+## 10. `zone_back_hall_shell` — delivered and hung, 2026-08-11
+
+The commissioner supplied the approved shell the same day the brief went out. It is
+processed **unmodified** through `art:process` and live: `/back-hall` stamps
+`data-room-shell="art"` at all three widths.
+
+### 10.1 The stand-in is deleted, and the chain is what survives it
+
+`§8.1` promised this and `§9.2` restated it. `components/scene/back-hall.tsx` went from
+about a hundred and eighty lines of flat rectangles to one `AssetView` plus the chain.
+
+It is **deleted rather than kept behind a resolver**, which is where the hall differs from
+the basement. `manager-room.tsx` keeps its drawing because two of three themes are still
+unpainted and the code resolves a shell per theme; the hall has one shell, so a second
+branch would be a branch nothing can reach. The honest failure signal for a lost registry
+path is the gate, not a silent fallback — `checkBackHall` asserts `data-room-shell` reads
+`art`, and `registry.test.ts` pins the slug as `generated`.
+
+The chain stays runtime, for the reason `§8.3` recorded. It also got better: one pale bar
+was the only thing left on screen that looked drawn by a programmer, so it is now eye
+plates and eleven alternating links, which is what makes a line read as *links* rather than
+as a rule. It is still flat and still in palette — it is a state marker, and `MANDATE`
+forbids temporary art polished enough to be mistaken for a decision.
+
+### 10.2 The geometry moved to the art, once
+
+Measured by **luminance profile** off the delivered file rather than by eye: the openings
+are dark columns in a lit wall, so the jambs are where the column means step.
+
+| | Was (drawn stand-in) | Is (measured off the shell) |
+|---|---|---|
+| `stairs` | `[16, 392, 112, 150]` | **`[38, 118, 72, 174]`** |
+| `curtain` | `[204, 104, 88, 276]` | **`[118, 118, 86, 174]`** |
+| `return` | `[122, 122, 70, 258]` | **`[266, 116, 50, 176]`** |
+
+The brief asked for the art to be drawn to the geometry; it came back close and not exact,
+and the code moved — the same call the storeroom's delivery made on 2026-08-10, for the
+same reason. **That happens once.** These numbers are now the master.
+
+The stairwell changed *kind* as well as position, and that was forced rather than chosen:
+the stand-in cut a hole in the near floor and railed it, while `zone_room_shell_storeroom`
+— painted first, and painting *the other end of the same flight* — frames it in dark timber
+and runs it away from the viewer. Two shells cannot disagree about one staircase.
+
+### 10.3 Visual debt 19 is closed by the geometry, and gated by a tap
+
+`§9.5` filed it and made it a constraint: a **lockable** door must end above `y 465`, because
+`ShutDoor` renders its answer 8 units beneath the rectangle and that answer is up to 68 CSS
+px tall. Both lockable doors now end at `292`.
+
+Measured on a production build, tapping the shut doors:
+
+| | Was, at 390 | Is |
+|---|---|---|
+| the stairs' line | `670.3 – 737.9` in a 664px viewport | **`365.6 – 433.2`** |
+| the curtain's line | 472.9, fine | 365.6 – 409.4 |
+
+`checkBackHall` now **taps** each shut door and fails if its answer is not wholly on screen.
+It had to tap: the line is at `opacity: 0` until something touches the door, and this state
+has always been photographed without touching anything, which is why a milestone of
+screenshots never saw it. Restoring the old rectangle turns it red at all three widths with
+exactly those numbers.
+
+The copy moved with the picture. `LOCKED_LINES.stairs` said *"Chain across the rail"* and
+there is no rail in the painting; it now says *"Chain across the stairs."*
+
+### 10.4 Two gates got stronger, and one of them was quietly rotting
+
+- **The chain check read a Tailwind class** (`.bg-ink-100\/70`). Restyling the chain — which
+  is exactly what happened here — would have made it match nothing, and *"no chain found"*
+  is the **passing** answer for the open state. A gate that silently becomes vacuous is
+  worse than no gate. It reads `data-stairs-chained` now.
+- **The shell check is new**, and it exists because deleting the fallback removed the only
+  other thing that would have noticed.
+
+### 10.5 What the delivered shell measures
+
+| | ≥0.5% of frame | ≥0.1% | distinct |
+|---|---|---|---|
+| the hall, drawn stand-in | 9 | 16 | — |
+| **the hall, painted** | **19** | **25** | 82 |
+| the storeroom | 25 | 31 | 73 |
+| the parlor | 52 | 64 | 90 |
+
+`BATCH_G §5.10` set the target at 25–48 and it landed at **19**, six under the storeroom.
+Recorded rather than rounded up: the room genuinely has a large plain floor, its top colour
+covers 15.9% against the storeroom's 19.8%, and at phone size it reads as the same world.
+The number is a proxy and the picture is the acceptance criterion (`docs/PALETTE_FIDELITY_BOUNDARY.md`
+established that the proxies can prefer the worse picture).
+
+### 10.6 Still not decided, still not touched
+
+The status-bar treatment from `§9.5` — this route has no scrim. The delivered shell keeps
+its top band dark and unread, which is the mitigation the brief asked for; the parlor's
+scrim remains available and remains a decision for whoever wants it. Nothing about the
+Underground, the manager sprite, the parlor or the basement moved.
