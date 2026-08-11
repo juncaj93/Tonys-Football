@@ -11,6 +11,7 @@ import {
   encodeMask,
   maskToneGrid,
   paintedKeys,
+  pendingKeys,
   validateBuildMask,
 } from './mask';
 import { fixtureBuildMask } from './mask.fixture';
@@ -33,11 +34,32 @@ import { coverage, rasterise, shade } from './sprite';
 /* ----------------------------------------------------------- the keys -- */
 
 describe('the mask vocabulary', () => {
-  it('paints only in the locked palette', () => {
-    // The whole reason a mask can be recoloured at runtime is that its keys are
-    // *roles*. A key painted in a colour the palette does not have would be a
-    // colour nothing can resolve.
-    for (const key of MASK_KEYS) expect(HOUSE[key.colour], key.name).toBeDefined();
+  it('renders only into the locked palette, whatever it is encoded in', () => {
+    /*
+     * The encoding colour is a property of the *source file*; the rendered colour
+     * is what ships. Three keys are deliberately encoded in colours the palette
+     * does not have — see the module note — and every one of them must still
+     * decode to a tone the renderer can already paint.
+     */
+    const legal = new Set<string>(Object.values(HOUSE));
+    for (const key of pendingKeys()) {
+      expect(legal.has(key.hex), `${key.name} is a pending step`).toBe(false);
+      expect(key.tone, `${key.name} must still render`).not.toBeNull();
+    }
+    for (const key of MASK_KEYS) {
+      if (key.pending === true || key.index === TRANSPARENT_KEY) continue;
+      expect(legal.has(key.hex), `${key.name} (${key.hex})`).toBe(true);
+    }
+  });
+
+  it('collapses every pending step onto a tone the palette can paint today', () => {
+    // The property that lets art be authored deeper than the palette. A pending
+    // key that decoded to a tone nothing resolves would render as a hole.
+    const renderable = new Set<string>(['outline', 'light', 'base', 'shade']);
+    for (const key of pendingKeys()) {
+      const tone = String(key.tone).replace(/^skin:/, '').replace(/^fixed:[a-z]+@/i, '');
+      expect(renderable.has(tone), `${key.name} decodes to ${String(key.tone)}`).toBe(true);
+    }
   });
 
   it('keeps every pair of keys apart', () => {
@@ -176,7 +198,53 @@ describe('validation refuses artwork the renderer would have to be bent around',
   });
 
   it('refuses a plate with a background painted behind the figure', () => {
-    expect(failures(Array.from({ length: canvas }, () => 3)).join(' ')).toMatch(/is there a background/);
+    /*
+     * Painted below the head-clearance row, so the coverage check is what
+     * answers rather than head clearance. Round 1 arrived with a black field and
+     * a warm glow behind the figure — an entirely reasonable thing for an image
+     * model to add, and it makes every pixel of the canvas opaque.
+     */
+    const keys = Array.from({ length: canvas }, (_, at) =>
+      Math.floor(at / MASK_CANVAS.width) > BUILD_REGISTRATION.headClearBelow ? 4 : TRANSPARENT_KEY,
+    );
+    expect(failures(keys).join(' ')).toMatch(/is a background, a vignette/);
+  });
+
+  /**
+   * Shift the fixture down the canvas, keeping its shape.
+   *
+   * A figure that starts too **high** is caught by head clearance; one that
+   * starts too **low** — drawn small, or floating — is what the shoulder band is
+   * for. Those are the two ways framing goes wrong and they have two messages.
+   */
+  const shifted = (by: number): readonly number[] => {
+    const source = fixtureBuildMask();
+    const out = Array.from({ length: canvas }, () => TRANSPARENT_KEY);
+    for (let y = 0; y + by < MASK_CANVAS.height; y++) {
+      for (let x = 0; x < MASK_CANVAS.width; x++) {
+        out[(y + by) * MASK_CANVAS.width + x] = source[y * MASK_CANVAS.width + x]!;
+      }
+    }
+    return out;
+  };
+
+  it('refuses a figure that starts below the shoulders, and says so by name', () => {
+    /*
+     * **This is the round-1 diagnosis, generalised.** That build was excellent art
+     * framed as a standalone portrait — it filled the canvas instead of sitting in
+     * the two thirds below the head. Contact row and coverage would each have
+     * caught it, but neither *names* the problem, and a refusal that does not name
+     * the problem costs a whole generation round to work out.
+     */
+    expect(failures(shifted(30)).join(' ')).toMatch(/outside the shoulder band/);
+  });
+
+  it('tells a frame-filling figure what it actually did wrong', () => {
+    // The other direction: too high is head clearance, and the message has to
+    // carry the diagnosis rather than just the row number.
+    const keys = [...fixtureBuildMask()];
+    for (let x = 40; x < 70; x++) keys[12 * MASK_CANVAS.width + x] = 4;
+    expect(failures(keys).join(' ')).toMatch(/drawn to fill the frame/);
   });
 
   it('reads its registration off the production geometry, never its own copy', () => {

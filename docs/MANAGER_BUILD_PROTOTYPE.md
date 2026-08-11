@@ -1,7 +1,13 @@
 # The painted manager build — prototype phase
 
-**Status: infrastructure built, 2026-08-11. No artwork exists, and nothing a
-manager sees has changed by a single pixel.**
+**Status: infrastructure built and revised once against a real delivery,
+2026-08-11. No artwork exists, and nothing a manager sees has changed by a single
+pixel.**
+
+> **Revision 2.** Round 1 came back as excellent art in a file the pipeline
+> refused. Three of the five refusals were **ours**, and §9 is the account of what
+> changed on our side. The visual direction is approved and is not being
+> re-litigated.
 
 Commissioner ruling, 2026-08-11, approved the investigation in
 `docs/MANAGER_SPRITE_QUALITY_INVESTIGATION.md` and authorised a deliberately
@@ -22,7 +28,7 @@ instructions for what happens when the art comes back.
 | **R1** | Option 4 approved — painted builds below the neck, fixed head plate, separate hair and facial hair, runtime colour, six stored integers unchanged | `lib/character/composite.ts`, `lib/character/art/body.ts` |
 | **R2** | The pose belongs to the top; head registration stays compatible | `BUILD_REGISTRATION` in `lib/character/mask.ts` — the binding list is short **on purpose** |
 | **R3** | Tony is the quality authority; obsolete detail limits do not bind | `art/ART_SPEC.md §4`, amended |
-| **R4** | Palette extension approved in principle, **not to be chosen yet** | the mask vocabulary is exactly what the locked 32 can express — no `shade2` |
+| **R4** | Palette extension approved in principle, **not to be chosen yet** | measured against Tony in §3; three steps recorded as `pending`, `art/palette.json` untouched |
 | **R5** | Art comes from the ChatGPT workflow; provide the mechanical contract | `docs/art/MANAGER_BUILD_TSHIRT_BRIEF.md`, `art/jigs/`, `npm run art:mask` |
 | **R6** | Wearables deferred | nothing about them was touched or designed |
 
@@ -81,7 +87,7 @@ they would have to be painted per build — 36 and 24 instead of 6 and 4.
 
 ## 3. The role-mask contract
 
-`lib/character/mask.ts`. **Fifteen entries, meant to be read in one sitting.**
+`lib/character/mask.ts`. **Eighteen entries, meant to be read in one sitting.**
 
 A mask is a `112 × 168` PNG in which every pixel names *the job it does*, not the
 colour it ends up. `#C42B2B` does not mean "red"; it means "the base tone of the
@@ -91,28 +97,56 @@ colour system — `ROOMS_BOUNDARY §14.1` prices a naive full-colour PNG swap at
 **132 files**, because a finished hairstyle is one hair colour and the other seven
 stop existing.
 
-Three channels — `garment`, `skin`, `fixed` — and four tones. Three deliberate
-absences:
+Three channels — `garment`, `skin`, `fixed` — and up to five steps per material.
+Two deliberate absences:
 
-- **No `shade2`.** The investigation recommended a fifth tone and R4 says measure
-  before extending the palette. The vocabulary is therefore exactly what the
-  locked 32 can express, and the returned T-shirt is the evidence that settles
-  whether more is needed.
-- **`denim` and `sole` stop at two steps.** Their third is `ink-900`, which is the
-  outline colour — a pixel painted there could not be told from the silhouette
-  and would render identically either way.
+- **`sole` stops at two steps.** Its third is `ink-900`, which is the outline
+  colour — a pixel painted there could not be told from the silhouette and would
+  render identically either way.
 - **No channel on the outline.** One ink colour, and `compositeRuns`' existing
   rule decides per pixel whether it is the figure's edge or an internal seam.
 
-The key colours are **real production colours**, chosen as the ones one specific
-manager actually renders in — skin Tone 2, a Sauce-red top, denim, leather. So a
-mask is simultaneously a machine-readable role map *and* a correct picture of a
-real manager, which means the art session is asked to paint **a character** rather
-than an encoding, and the delivered file can be reviewed by looking at it.
+**The encoding colour is not the render colour**, which is revision 2's correction
+and is what makes room for the three pending steps below. A mask PNG is a *source
+file* — it lives in `art/incoming/`, becomes a module, and never reaches
+`public/` — so `art/palette.json`, which governs shipped assets, does not govern
+it. Keys are chosen for **separability** first, because the conversion snaps to
+the nearest one, and **plausibility** second, so that a painter is painting a
+recognisable red-shirted manager rather than an abstract index map and can judge
+their own work by looking at it. Fourteen of the seventeen are real production
+colours; three are not, and are marked.
 
 `mask.test.ts` asserts every pair of keys is more than 20 apart in sRGB, because
 the conversion snaps to the nearest key and two close keys would make that snap a
 coin toss on exactly the pixels an artist was least careful about.
+
+### Seventeen keys, and three of them the palette cannot paint yet
+
+Measured against the approved `character_tony_neutral`, by material region:
+
+| material | Tony | rendered today | with the proposed extension |
+|---|---|---|---|
+| garment | 5 (apron) – 8 (jersey) | **3** | **5** |
+| trousers | 4 | 2 + ink | 3 + ink |
+| bare skin | 3 | **3** | 3 |
+| boots | 4 | 3 + ink | 3 + ink |
+
+**Skin and boots are already right**, which is the useful half of the
+measurement: the shortfall is the garment and the trousers, so the extension is
+small. `#F58A80`, `#5A1216` and `#4A7FB8` are marked `pending` — **the art is
+painted with them, the mask records them, and the renderer collapses them** onto
+the nearest step it can paint until a ruling.
+
+Nothing about that collapse loses art. The information is in the encoded module;
+the day an extension is approved, three `tone` fields change and every delivered
+mask renders at full depth **with no regeneration**. That is the whole reason to
+record more than we can currently paint, and it is what stops a palette decision
+costing a generation round.
+
+**The proposal, when it is wanted:** an `avatar` family extension of **17
+colours** — 8 top ramps × 2 steps, plus one denim step. `zone` declares 64 and
+`character` 16, so it is in line. **Not implemented, and `art/palette.json` is
+untouched.**
 
 ### A mask ships as a module, not as a file read at runtime
 
@@ -247,3 +281,75 @@ cannot read a deleted assertion as an accident.
 **Then stop.** The next decision is the commissioner's and it is a single
 question: does the real T-shirt prototype look good enough to commission the
 other sixteen?
+
+---
+
+## 9. Revision 2 — what round 1 changed, on our side
+
+The delivered concept was approved as visual direction and refused as a file.
+Two of the five refusals were the artist's; **three were ours**, and a contract
+that fails good art for its own reasons is a contract that burns generation
+rounds.
+
+### 9.1 The whole-multiple rule is gone, and it was never buying the guarantee
+
+The first ingest demanded a source that was a whole multiple of `112 × 168`, and
+round 1 died on that gate **before one thing about the drawing was measured**.
+The fear behind it was real — resampling blends two key colours into a third and
+the snap then invents a role — but the rule was standing in for arithmetic.
+
+Reordering the operations removes it: **snap every source pixel to a role first,
+then take the majority** of the source cell under each output pixel. Nothing is
+averaged, so no between-colour is ever created; mode is the correct operator for
+indexed data and average is simply wrong for it — averaging skin base with
+garment base gives a tan that snaps to *boot light*, which would put bootlaces in
+the middle of a sleeve.
+
+It is a **strict generalisation**: a correctly painted 6× file decodes to exactly
+what it was painted as, asserted at 1×, 6× and 9.14×. It **cannot hide a
+malformed asset**, because it changes only how the file is read and every
+registration check runs afterwards.
+
+### 9.2 The encoding colour is not the render colour
+
+The first vocabulary required every key to be a colour the product renders, so a
+mask would double as a correct picture. That instinct **cost tones we already
+had**: `denim` and `sole` both take `ink-900` as their darkest step, which is the
+outline colour, so neither could be encoded.
+
+A mask PNG is a **source file** — it never reaches `public/`, so `palette.json`,
+which governs shipped assets, does not govern it. Keys are now chosen for
+separability first and plausibility second, which is what makes room for the
+three pending steps in §3.
+
+### 9.3 The plate now occupies the space it wants left empty
+
+Round 1 was framed as a standalone portrait filling the canvas. That is not
+carelessness: **a headless body has no natural framing cue**, so "leave the top
+third empty" was competing with every instinct an image model has.
+
+An area that *looks* occupied is not competed with. The head band on
+`manager_paintover_672x1008.png` is now hatched, labelled twice, and carries the
+drawn head — and the contact row is a solid bar with its own label.
+
+### 9.4 A refusal that does not name the problem costs a round
+
+`shoulderBand` is new, and it exists because contact row and coverage would each
+have caught round 1 without either of them *saying* what was wrong. Two framing
+failures, two messages: too high is head clearance and says *drawn to fill the
+frame*; too low is the shoulder band. Both are tested.
+
+### 9.5 What was considered and refused
+
+**Auto-fitting the figure** — scaling and translating a delivered build so its
+feet land on the contact row — was evaluated and rejected. It is deterministic,
+but it is not lossless (it resamples the art, breaking the one-art-pixel-to-one-
+room-unit rule that the whole density finding rests on) and it **would hide a
+malformed asset**, which is the explicit boundary. A build framed wrong is
+regenerated.
+
+**Accepting a whole figure with a head and clipping it** was also evaluated. It
+would make correct framing the generator's default — a full standing figure is
+what these models are best at — but their neck and jaw would land on rows the
+head plate owns, and no mechanical check can tell a chin from a collar. Refused,
+and recorded here so it is not rediscovered as a fresh idea.

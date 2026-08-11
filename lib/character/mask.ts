@@ -1,4 +1,4 @@
-import { HEAD, NECK } from './art/geometry';
+import { HEAD, NECK, TORSO } from './art/geometry';
 import { HOUSE, type HouseColour } from './palette';
 import { type Tone, type ToneGrid } from './sprite';
 
@@ -7,7 +7,7 @@ import { type Tone, type ToneGrid } from './sprite';
  *
  * ## What a mask is, and what it deliberately is not
  *
- * A mask is a `112 × 168` PNG in which **every pixel names the job it does**, not
+ * A mask is a `112 × 168` grid in which **every pixel names the job it does**, not
  * the colour it ends up. `#C42B2B` in a delivered file does not mean *this pixel
  * is red*; it means *this pixel is the base tone of the garment channel*, and a
  * manager who chose Deep blue sees `#2C5A8C` there. That indirection is the whole
@@ -16,46 +16,55 @@ import { type Tone, type ToneGrid } from './sprite';
  * a finished full-colour hairstyle is one hair colour and the other seven stop
  * existing.
  *
- * It is **not** a generic art framework. There is one vocabulary, it is fifteen
- * entries long, it covers exactly what a below-neck build contains, and it is
- * meant to be read in one sitting. A second channel or a fifth tone is a decision
- * with evidence behind it, not a slot somebody fills in.
+ * It is **not** a generic art framework. One vocabulary, eighteen entries, covering
+ * exactly what a below-neck build contains.
  *
- * ## The key colours are real production colours, and that is the trick
+ * ## Revision 2, 2026-08-11 — the encoding colour is not the render colour
  *
- * Every entry below is one of the locked 32 in `art/palette.json`, chosen as the
- * colours **one specific manager** actually renders in: skin Tone 2, a Sauce-red
- * top, denim trousers, leather boots. So the mask is simultaneously
+ * The first version required every key to be a colour the product actually
+ * renders, so the mask would double as a correct picture of a manager. That was a
+ * good instinct and it **cost us tones we already had**: `denim` and `sole` both
+ * take `ink-900` as their darkest step, which is also the outline colour, so
+ * encoding them was impossible and two materials shipped a step shallower than
+ * the renderer could paint them.
  *
- * - a machine-readable role map, and
- * - a correct picture of a real manager,
+ * A mask PNG is a **source file**. It lives in `art/incoming/`, it is converted to
+ * a module, and it never reaches `public/` — so `art/palette.json`, which governs
+ * *shipped assets*, does not govern it. The keys are therefore chosen for two
+ * properties in this order:
  *
- * which means the image-generation session is asked to paint *a character*
- * rather than to paint an encoding, and the returned file can be looked at
- * directly. A generator asked to emit an abstract index map produces something
- * nobody can review; a generator asked to paint a red-shirted man in a fixed
- * fifteen-colour palette is being asked for ordinary pixel art.
+ * 1. **Separability** — the conversion snaps each incoming pixel to its nearest
+ *    key, and two keys close together make that snap a coin toss on exactly the
+ *    pixels an artist was least careful about. Asserted at ≥ 20 in `mask.test.ts`.
+ * 2. **Plausibility** — a painter working in these colours is painting a
+ *    recognisable red-shirted manager rather than an abstract index map, so they
+ *    can judge their own work by looking at it.
  *
- * **Every pair of keys is distinguishable**, asserted in `mask.test.ts`, because
- * the conversion step snaps each incoming pixel to its nearest key and two keys
- * that sit close together would make that snap a coin toss.
+ * Where a real production colour satisfies both, it is used. Three do not exist
+ * yet and are marked {@link MaskKey.pending}.
  *
- * ## Two ramps deliberately stop at two steps
+ * ## Three keys are `pending`, and that is the palette question deferred rather than dodged
  *
- * `denim` and `sole` both take `ink-900` as their shade — the same colour as the
- * outline. A pixel painted there could not be told from the silhouette, and it
- * would render identically either way, so the vocabulary omits it rather than
- * carrying an entry that cannot be encoded. `leather` keeps all three because
- * `wood-dark` is its own colour.
+ * Measured against the approved `character_tony_neutral`, per material region:
  *
- * ## There is no `shade2` yet, and that is a ruling rather than an oversight
+ * | material | Tony | this vocabulary renders today | with the proposed extension |
+ * |---|---|---|---|
+ * | garment | 5 (apron) – 8 (jersey) | **3** | **5** |
+ * | trousers | 4 | 2 + ink | 3 + ink |
+ * | bare skin | 3 | **3** | 3 |
+ * | boots | 4 | 3 + ink | 3 + ink |
  *
- * The investigation recommended a fifth tone. **Commissioner ruling R4,
- * 2026-08-11: do not choose a palette extension speculatively — land the
- * prototype art first and measure what it actually needs**, the way `character`'s
- * sixteen colours were measured off Tony. So this vocabulary is exactly what the
- * locked 32 can express today, and the returned T-shirt is the evidence that
- * settles whether more is required.
+ * **Skin and boots are already right**, which is the useful half of that
+ * measurement — the shortfall is the garment and the trousers, and it is
+ * therefore small. `art_status` for the three pending keys is exactly that: the
+ * art is authored *with* them, the mask *records* them, and the renderer collapses
+ * them onto the nearest step it can paint until the commissioner rules on an
+ * `avatar` palette extension (17 colours: 8 top ramps × 2, plus one denim step).
+ *
+ * **Nothing about that collapse is a loss of art.** The information is in the
+ * encoded module; the day the extension lands, the `tone` on three rows below
+ * changes and every delivered mask renders at full depth **with no regeneration**.
+ * That is the whole reason to record more than we can currently paint.
  */
 
 /** Which material a pixel belongs to. */
@@ -67,58 +76,93 @@ export type MaskChannel =
   /** Not the manager's to choose: trousers, boot uppers, soles. */
   | 'fixed';
 
+/** The step of a material's ramp, lightest first. */
+export type MaskStep = 'light2' | 'light' | 'base' | 'shade' | 'shade2';
+
 export interface MaskKey {
   /** The index written into the encoded run list. Never reordered; append only. */
   readonly index: number;
   readonly channel: MaskChannel | 'none';
+  readonly step: MaskStep | 'outline' | 'none';
   /** What a painter is told this pixel is. */
   readonly name: string;
-  /** The exact colour the delivered PNG must carry, from the locked 32. */
-  readonly colour: HouseColour;
-  /** The tone this decodes to, or `null` for transparent. */
+  /** The exact colour the delivered file must carry. Source-file only. */
+  readonly hex: string;
+  /**
+   * The tone this decodes to **today**, or `null` for transparent.
+   *
+   * A `pending` key decodes to the nearest step the palette can currently paint.
+   * Changing that is a one-line edit per row on the day an extension is approved,
+   * and it re-renders every mask already delivered.
+   */
   readonly tone: Tone | null;
+  /**
+   * True where the palette has no colour for this step yet.
+   *
+   * The art is authored with it anyway — see the module note. A pending key is
+   * **encoded faithfully and rendered approximately**, never the other way round.
+   */
+  readonly pending?: true;
 }
 
+const house = (colour: HouseColour): string => HOUSE[colour];
+
 /**
- * The vocabulary. **Fifteen entries, and the order is the encoding.**
+ * The vocabulary. **Eighteen entries, and the order is the encoding.**
  *
- * A stored mask module names these by index, so a row that moved would silently
- * repaint every delivered asset — the same rule, for the same reason, as
- * `lib/character/catalog.ts`'s.
+ * A stored mask names these by index, so a row that moved would silently repaint
+ * every delivered asset — the same rule, for the same reason, as
+ * `lib/character/catalog.ts`'s. **Never reorder; only append.**
  */
 export const MASK_KEYS: readonly MaskKey[] = Object.freeze([
-  { index: 0, channel: 'none', name: 'Transparent', colour: 'ink-900', tone: null },
+  { index: 0, channel: 'none', step: 'none', name: 'Transparent', hex: house('ink-900'), tone: null },
+  { index: 1, channel: 'none', step: 'outline', name: 'Outline', hex: house('ink-900'), tone: 'outline' },
 
-  { index: 1, channel: 'none', name: 'Outline', colour: 'ink-900', tone: 'outline' },
+  /*
+   * The garment, five steps. `light2` and `shade2` are the two the palette cannot
+   * paint yet; both collapse inward, so a five-tone painting renders in three and
+   * loses no recorded information.
+   */
+  { index: 2, channel: 'garment', step: 'light2', name: 'Shirt highlight', hex: '#F58A80', tone: 'light', pending: true },
+  { index: 3, channel: 'garment', step: 'light', name: 'Shirt light', hex: house('red-light'), tone: 'light' },
+  { index: 4, channel: 'garment', step: 'base', name: 'Shirt base', hex: house('red-mid'), tone: 'base' },
+  { index: 5, channel: 'garment', step: 'shade', name: 'Shirt shade', hex: house('red-dark'), tone: 'shade' },
+  { index: 6, channel: 'garment', step: 'shade2', name: 'Shirt deep shadow', hex: '#5A1216', tone: 'shade', pending: true },
 
-  { index: 2, channel: 'garment', name: 'Garment light', colour: 'red-light', tone: 'light' },
-  { index: 3, channel: 'garment', name: 'Garment base', colour: 'red-mid', tone: 'base' },
-  { index: 4, channel: 'garment', name: 'Garment shade', colour: 'red-dark', tone: 'shade' },
+  // Skin, three steps — which is what Tony's own arms and hands use.
+  { index: 7, channel: 'skin', step: 'light', name: 'Skin light', hex: house('skin-1'), tone: 'skin:light' },
+  { index: 8, channel: 'skin', step: 'base', name: 'Skin base', hex: house('skin-2'), tone: 'skin:base' },
+  { index: 9, channel: 'skin', step: 'shade', name: 'Skin shade', hex: house('skin-3'), tone: 'skin:shade' },
 
-  { index: 5, channel: 'skin', name: 'Skin light', colour: 'skin-1', tone: 'skin:light' },
-  { index: 6, channel: 'skin', name: 'Skin base', colour: 'skin-2', tone: 'skin:base' },
-  { index: 7, channel: 'skin', name: 'Skin shade', colour: 'skin-3', tone: 'skin:shade' },
+  /*
+   * Trousers. `light2` is the one genuinely missing colour rather than a nicety:
+   * the denim ramp tops out at `blue-mid`, so the shipped trousers are much darker
+   * than any real pair of jeans — the single most visible mismatch between the
+   * approved concept and what this palette can paint.
+   */
+  { index: 10, channel: 'fixed', step: 'light2', name: 'Trouser highlight', hex: '#4A7FB8', tone: 'fixed:denim@light', pending: true },
+  { index: 11, channel: 'fixed', step: 'light', name: 'Trouser light', hex: house('blue-mid'), tone: 'fixed:denim@light' },
+  { index: 12, channel: 'fixed', step: 'base', name: 'Trouser base', hex: house('blue-deep'), tone: 'fixed:denim@base' },
 
-  { index: 8, channel: 'fixed', name: 'Trouser light', colour: 'blue-mid', tone: 'fixed:denim@light' },
-  { index: 9, channel: 'fixed', name: 'Trouser base', colour: 'blue-deep', tone: 'fixed:denim@base' },
+  { index: 13, channel: 'fixed', step: 'light', name: 'Boot light', hex: house('wood-pale'), tone: 'fixed:leather@light' },
+  { index: 14, channel: 'fixed', step: 'base', name: 'Boot base', hex: house('wood-mid'), tone: 'fixed:leather@base' },
+  { index: 15, channel: 'fixed', step: 'shade', name: 'Boot shade', hex: house('wood-dark'), tone: 'fixed:leather@shade' },
 
-  { index: 10, channel: 'fixed', name: 'Boot light', colour: 'wood-pale', tone: 'fixed:leather@light' },
-  { index: 11, channel: 'fixed', name: 'Boot base', colour: 'wood-mid', tone: 'fixed:leather@base' },
-  { index: 12, channel: 'fixed', name: 'Boot shade', colour: 'wood-dark', tone: 'fixed:leather@shade' },
-
-  { index: 13, channel: 'fixed', name: 'Sole light', colour: 'ink-500', tone: 'fixed:sole@light' },
-  { index: 14, channel: 'fixed', name: 'Sole base', colour: 'ink-700', tone: 'fixed:sole@base' },
+  { index: 16, channel: 'fixed', step: 'light', name: 'Sole light', hex: house('ink-500'), tone: 'fixed:sole@light' },
+  { index: 17, channel: 'fixed', step: 'base', name: 'Sole base', hex: house('ink-700'), tone: 'fixed:sole@base' },
 ]);
 
 /** The transparent key. Index 0, and the only one with no tone. */
 export const TRANSPARENT_KEY = 0;
 
-/** Every key that may appear as an opaque pixel, with its exact hex. */
-export function paintedKeys(): readonly (MaskKey & { readonly hex: string })[] {
-  return MASK_KEYS.filter((key) => key.index !== TRANSPARENT_KEY).map((key) => ({
-    ...key,
-    hex: HOUSE[key.colour],
-  }));
+/** Every key that may appear as an opaque pixel. */
+export function paintedKeys(): readonly MaskKey[] {
+  return MASK_KEYS.filter((key) => key.index !== TRANSPARENT_KEY);
+}
+
+/** The keys whose step the palette cannot paint yet. Evidence for the ruling. */
+export function pendingKeys(): readonly MaskKey[] {
+  return MASK_KEYS.filter((key) => key.pending === true);
 }
 
 export const MASK_CANVAS = Object.freeze({ width: 112, height: 168 });
@@ -127,10 +171,10 @@ export const MASK_CANVAS = Object.freeze({ width: 112, height: 168 });
  * A decoded mask, ready to be a layer.
  *
  * `rle` is the wire format the generated modules carry: `"<key>.<count>"`
- * entries, comma-separated, row-major across the whole canvas. Readable enough
- * to grep, small enough to ship to the browser — which it must be, because
- * `composeCharacter` runs unchanged in the customiser's local preview and a
- * mask that only existed on the server would make that preview a lie.
+ * entries, comma-separated, row-major across the whole canvas. Readable enough to
+ * grep, small enough to ship to the browser — which it must be, because
+ * `composeCharacter` runs unchanged in the customiser's local preview and a mask
+ * that only existed on the server would make that preview a lie.
  */
 export interface EncodedMask {
   readonly slug: string;
@@ -209,13 +253,12 @@ export type MaskProblem = { readonly severity: 'fail' | 'warn'; readonly message
 /**
  * Where a delivered build has to agree with the rest of the figure.
  *
- * **Binding, and short.** `ART_SPEC §9`'s standing rule is that a layer which
- * does not land on its anchor is regenerated and *the renderer is never adjusted
- * to compensate*, so the list of things a build must hit is exactly the list of
- * things another layer depends on — and nothing else. The pose, the arms, the
- * hands, the stance and the garment silhouette are **deliberately unconstrained**
- * (commissioner ruling R2, 2026-08-11); constraining them is what produced the
- * interchangeable mannequin this work exists to escape.
+ * **Binding, and short.** `ART_SPEC §9`'s standing rule is that a layer which does
+ * not land on its anchor is regenerated and *the renderer is never adjusted to
+ * compensate*, so this list is exactly what another layer depends on and nothing
+ * else. The pose, the arms, the hands, the stance and the garment silhouette are
+ * **deliberately unconstrained** (commissioner ruling R2, 2026-08-11);
+ * constraining them is what produced the interchangeable mannequin.
  */
 export const BUILD_REGISTRATION = Object.freeze({
   /** Nothing in a build may reach the head. The head plate owns everything above. */
@@ -223,17 +266,27 @@ export const BUILD_REGISTRATION = Object.freeze({
   /** The collar must close over the neck, or the join shows the room through it. */
   neckColumns: Object.freeze({ from: NECK.left, to: NECK.left + NECK.width - 1 }),
   neckClosedAtRow: NECK.bottom - 1,
-  /** Feet on the floor. The composite ends here and the room's shadow is drawn to it. */
+  /** Feet on the floor. The composite ends here and the room draws its shadow to it. */
   contactRow: MASK_CANVAS.height - 1,
+  /**
+   * Where the topmost painted row must fall.
+   *
+   * **Added in revision 2, and it is the check round 1 needed.** That figure was
+   * beautifully drawn and framed as a standalone portrait — it filled the canvas
+   * top to bottom instead of sitting in the third of it below the head. Every
+   * other check would have caught it eventually, but none of them *named* the
+   * problem, and a refusal that does not name the problem costs a whole
+   * generation round to diagnose.
+   */
+  shoulderBand: Object.freeze({ from: HEAD.bottom + 1, to: TORSO.top + 6 }),
 });
 
 /**
  * Check a grid of key indices against everything that can be checked mechanically.
  *
- * Colour legality, canvas and alpha are checked by the caller that read the file
- * (`scripts/manager-mask.ts`) because they are properties of the *file*; this
- * checks properties of the *drawing*, and is pure so the tests can build a bad
- * mask in memory rather than committing one.
+ * Canvas, alpha and colour legality are the caller's — they are properties of the
+ * *file*. This checks properties of the *drawing*, and is pure so the tests can
+ * build a bad mask in memory rather than committing one.
  */
 export function validateBuildMask(keys: readonly number[]): readonly MaskProblem[] {
   const { width, height } = MASK_CANVAS;
@@ -251,32 +304,39 @@ export function validateBuildMask(keys: readonly number[]): readonly MaskProblem
 
   let painted = 0;
   let lowest = -1;
+  let highest: number = height;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
       if (!opaque(x, y)) continue;
       painted++;
       lowest = y;
+      highest = Math.min(highest, y);
     }
   }
 
   if (painted === 0) return [{ severity: 'fail', message: 'the mask is empty' }];
 
-  // Head clearance — the head plate owns every row above this and a build that
+  // Head clearance — the head plate owns every row above this, and a build that
   // reaches into it draws a second skull over the first.
-  for (let y = 0; y <= BUILD_REGISTRATION.headClearBelow; y++) {
-    for (let x = 0; x < width; x++) {
-      if (opaque(x, y)) {
-        fail(
-          `a build must leave rows 0–${String(BUILD_REGISTRATION.headClearBelow)} clear for the ` +
-            `head plate; there is paint at (${String(x)}, ${String(y)})`,
-        );
-        y = BUILD_REGISTRATION.headClearBelow;
-        break;
-      }
-    }
+  if (highest <= BUILD_REGISTRATION.headClearBelow) {
+    fail(
+      `the topmost painted row is ${String(highest)}; a build must leave rows 0–` +
+        `${String(BUILD_REGISTRATION.headClearBelow)} clear for the head plate. This is what a ` +
+        'figure **drawn to fill the frame** looks like: a build is not a whole person, it is the ' +
+        'part below the neck, and the top third of the canvas belongs to the head.',
+    );
+  } else if (
+    highest < BUILD_REGISTRATION.shoulderBand.from ||
+    highest > BUILD_REGISTRATION.shoulderBand.to
+  ) {
+    fail(
+      `the figure begins at row ${String(highest)}, outside the shoulder band ` +
+        `${String(BUILD_REGISTRATION.shoulderBand.from)}–${String(BUILD_REGISTRATION.shoulderBand.to)}. ` +
+        'A build is not a whole figure: it is the part below the neck, and the top third of the ' +
+        'canvas belongs to the head. A figure drawn to fill the frame lands here.',
+    );
   }
 
-  // Feet on the floor.
   if (lowest !== BUILD_REGISTRATION.contactRow) {
     fail(
       `the lowest painted row is ${String(lowest)}, not the contact row ` +
@@ -285,7 +345,6 @@ export function validateBuildMask(keys: readonly number[]): readonly MaskProblem
     );
   }
 
-  // The collar closes over the neck.
   const { from, to } = BUILD_REGISTRATION.neckColumns;
   const open: number[] = [];
   for (let x = from; x <= to; x++) {
@@ -334,7 +393,12 @@ export function validateBuildMask(keys: readonly number[]): readonly MaskProblem
   // check on this list.
   const share = painted / (width * height);
   if (share < 0.12) fail(`only ${(share * 100).toFixed(1)}% of the canvas is painted`);
-  if (share > 0.55) fail(`${(share * 100).toFixed(1)}% of the canvas is painted — is there a background?`);
+  if (share > 0.55) {
+    fail(
+      `${(share * 100).toFixed(1)}% of the canvas is painted. A build occupies roughly a third — ` +
+        'this is a background, a vignette, or a figure drawn at the wrong scale.',
+    );
+  }
 
   for (let y = 0; y < height; y++) {
     if (opaque(0, y) || opaque(width - 1, y)) {

@@ -12,7 +12,11 @@
       "to": 61
     },
     "neckClosedAtRow": 63,
-    "contactRow": 167
+    "contactRow": 167,
+    "shoulderBand": {
+      "from": 53,
+      "to": 67
+    }
   },
   "landmarks": [
     {
@@ -80,6 +84,13 @@
       "note": "opaque across the neck columns here, or the join shows the room"
     },
     {
+      "key": "shoulder_band",
+      "label": "Shoulders start",
+      "kind": "binding",
+      "row": 53,
+      "note": "the topmost painted row must fall in 53-67"
+    },
+    {
       "key": "shoulders",
       "label": "Shoulder line",
       "kind": "advisory",
@@ -138,100 +149,138 @@
     {
       "index": 1,
       "channel": "none",
+      "step": "outline",
       "name": "Outline",
       "hex": "#1A1214",
-      "houseColour": "ink-900"
+      "pending": false
     },
     {
       "index": 2,
       "channel": "garment",
-      "name": "Garment light",
-      "hex": "#E4534A",
-      "houseColour": "red-light"
+      "step": "light2",
+      "name": "Shirt highlight",
+      "hex": "#F58A80",
+      "pending": true
     },
     {
       "index": 3,
       "channel": "garment",
-      "name": "Garment base",
-      "hex": "#C42B2B",
-      "houseColour": "red-mid"
+      "step": "light",
+      "name": "Shirt light",
+      "hex": "#E4534A",
+      "pending": false
     },
     {
       "index": 4,
       "channel": "garment",
-      "name": "Garment shade",
-      "hex": "#8C1F22",
-      "houseColour": "red-dark"
+      "step": "base",
+      "name": "Shirt base",
+      "hex": "#C42B2B",
+      "pending": false
     },
     {
       "index": 5,
-      "channel": "skin",
-      "name": "Skin light",
-      "hex": "#F2C9A0",
-      "houseColour": "skin-1"
+      "channel": "garment",
+      "step": "shade",
+      "name": "Shirt shade",
+      "hex": "#8C1F22",
+      "pending": false
     },
     {
       "index": 6,
-      "channel": "skin",
-      "name": "Skin base",
-      "hex": "#D9A173",
-      "houseColour": "skin-2"
+      "channel": "garment",
+      "step": "shade2",
+      "name": "Shirt deep shadow",
+      "hex": "#5A1216",
+      "pending": true
     },
     {
       "index": 7,
       "channel": "skin",
-      "name": "Skin shade",
-      "hex": "#9C6640",
-      "houseColour": "skin-3"
+      "step": "light",
+      "name": "Skin light",
+      "hex": "#F2C9A0",
+      "pending": false
     },
     {
       "index": 8,
-      "channel": "fixed",
-      "name": "Trouser light",
-      "hex": "#2C5A8C",
-      "houseColour": "blue-mid"
+      "channel": "skin",
+      "step": "base",
+      "name": "Skin base",
+      "hex": "#D9A173",
+      "pending": false
     },
     {
       "index": 9,
-      "channel": "fixed",
-      "name": "Trouser base",
-      "hex": "#14233D",
-      "houseColour": "blue-deep"
+      "channel": "skin",
+      "step": "shade",
+      "name": "Skin shade",
+      "hex": "#9C6640",
+      "pending": false
     },
     {
       "index": 10,
       "channel": "fixed",
-      "name": "Boot light",
-      "hex": "#C99A63",
-      "houseColour": "wood-pale"
+      "step": "light2",
+      "name": "Trouser highlight",
+      "hex": "#4A7FB8",
+      "pending": true
     },
     {
       "index": 11,
       "channel": "fixed",
-      "name": "Boot base",
-      "hex": "#7A4A2A",
-      "houseColour": "wood-mid"
+      "step": "light",
+      "name": "Trouser light",
+      "hex": "#2C5A8C",
+      "pending": false
     },
     {
       "index": 12,
       "channel": "fixed",
-      "name": "Boot shade",
-      "hex": "#4A2E1C",
-      "houseColour": "wood-dark"
+      "step": "base",
+      "name": "Trouser base",
+      "hex": "#14233D",
+      "pending": false
     },
     {
       "index": 13,
       "channel": "fixed",
-      "name": "Sole light",
-      "hex": "#4A3B3F",
-      "houseColour": "ink-500"
+      "step": "light",
+      "name": "Boot light",
+      "hex": "#C99A63",
+      "pending": false
     },
     {
       "index": 14,
       "channel": "fixed",
+      "step": "base",
+      "name": "Boot base",
+      "hex": "#7A4A2A",
+      "pending": false
+    },
+    {
+      "index": 15,
+      "channel": "fixed",
+      "step": "shade",
+      "name": "Boot shade",
+      "hex": "#4A2E1C",
+      "pending": false
+    },
+    {
+      "index": 16,
+      "channel": "fixed",
+      "step": "light",
+      "name": "Sole light",
+      "hex": "#4A3B3F",
+      "pending": false
+    },
+    {
+      "index": 17,
+      "channel": "fixed",
+      "step": "base",
       "name": "Sole base",
       "hex": "#2E2226",
-      "houseColour": "ink-700"
+      "pending": false
     }
   ],
   "outline": "#1A1214"

@@ -138,6 +138,13 @@ function landmarks(): readonly Landmark[] {
       note: 'opaque across the neck columns here, or the join shows the room',
     },
     {
+      key: 'shoulder_band',
+      label: 'Shoulders start',
+      kind: 'binding',
+      row: BUILD_REGISTRATION.shoulderBand.from,
+      note: `the topmost painted row must fall in ${String(BUILD_REGISTRATION.shoulderBand.from)}-${String(BUILD_REGISTRATION.shoulderBand.to)}`,
+    },
+    {
       key: 'shoulders',
       label: 'Shoulder line',
       kind: 'advisory',
@@ -295,8 +302,33 @@ async function paintOverPlate(marks: readonly Landmark[]): Promise<Buffer> {
     );
   };
 
+  const reserved = BUILD_REGISTRATION.headClearBelow * scale;
+
+  /*
+   * The reserved band is **filled**, not merely outlined, and that is the whole
+   * fix for round 1.
+   *
+   * That figure was excellent and was framed as a standalone portrait filling the
+   * canvas — because a headless body has no natural framing cue, so "leave the top
+   * third empty" was competing with every instinct an image model has. An area
+   * that *looks* occupied is not competed with. The hatch says the space is taken.
+   */
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${String(width)}" height="${String(height)}">
+    <defs>
+      <pattern id="reserved" width="16" height="16" patternUnits="userSpaceOnUse"
+        patternTransform="rotate(45)">
+        <rect width="16" height="16" fill="#241B20" />
+        <rect width="8" height="16" fill="#31252B" />
+      </pattern>
+    </defs>
     <rect width="${String(width)}" height="${String(height)}" fill="#2E2226" />
+    <rect x="0" y="0" width="${String(width)}" height="${String(reserved)}" fill="url(#reserved)" />
+    <text x="${String(width / 2)}" y="34" text-anchor="middle"
+      font-family="monospace" font-size="22" fill="#E060B0">RESERVED — THE HEAD GOES HERE</text>
+    <text x="${String(width / 2)}" y="60" text-anchor="middle"
+      font-family="monospace" font-size="17" fill="#E060B0">PAINT NOTHING IN THIS HATCHED BAND</text>
+    <text x="${String(width / 2)}" y="${String(reserved + 34)}" text-anchor="middle"
+      font-family="monospace" font-size="17" fill="#E060B0">↓ SHOULDERS START JUST BELOW HERE ↓</text>
     <g shape-rendering="crispEdges">
       ${head
         .map(
@@ -312,9 +344,75 @@ async function paintOverPlate(marks: readonly Landmark[]): Promise<Buffer> {
       width="${String(neck[2] * scale)}" height="${String(neck[3] * scale)}"
       fill="none" stroke="${GUIDE.binding}" stroke-width="2" stroke-dasharray="4 4" opacity="0.9" />
     ${marks.map(line).join('\n')}
+    <rect x="0" y="${String(height - scale)}" width="${String(width)}" height="${String(scale)}"
+      fill="#E060B0" opacity="0.9" />
+    <text x="${String(width / 2)}" y="${String(height - scale - 10)}" text-anchor="middle"
+      font-family="monospace" font-size="18" fill="#E060B0">SOLES SIT ON THIS ROW</text>
   </svg>`;
 
   return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
+
+/**
+ * One sheet a generation session can work from without the architecture explained.
+ *
+ * **Tony, the palette and the rules in a single image.** The alternative is four
+ * uploads and a paragraph, and the failure mode of four uploads is that three of
+ * them are skimmed. The old manager sprite is deliberately **not** on it: a
+ * negative reference is a picture, and a picture in the context window is
+ * something a model draws from whether or not it is labelled "not this".
+ */
+async function referenceSheet(): Promise<Buffer> {
+  const scale = 3;
+  const tonyW = 88 * scale;
+  const tonyH = 240 * scale;
+  const width = 1180;
+  const height = tonyH + 120;
+
+  const tony = await sharp(path.join(process.cwd(), 'public', 'assets', 'character', 'character_tony_neutral.png'))
+    .resize(tonyW, tonyH, { kernel: 'nearest' })
+    .png()
+    .toBuffer();
+
+  const keys = paintedKeys();
+  const swatch = (index: number): string => {
+    const key = keys[index]!;
+    const column = Math.floor(index / 9);
+    const x = tonyW + 60 + column * 300;
+    const y = 150 + (index % 9) * 26;
+    return (
+      `<rect x="${String(x)}" y="${String(y)}" width="18" height="18" fill="${key.hex}" stroke="#7A6A6E" />` +
+      `<text x="${String(x + 26)}" y="${String(y + 14)}" font-family="monospace" font-size="13" ` +
+      `fill="${key.pending === true ? '#FFD98A' : '#F5EDDC'}">${key.hex}  ${key.name}` +
+      `${key.pending === true ? ' *' : ''}</text>`
+    );
+  };
+
+  const rule = (at: number, text: string): string =>
+    `<text x="${String(tonyW + 60)}" y="${String(height - 190 + at * 22)}" font-family="monospace" ` +
+    `font-size="14" fill="#B5A8A9">${text}</text>`;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${String(width)}" height="${String(height)}">
+    <rect width="${String(width)}" height="${String(height)}" fill="#1A1214" />
+    <text x="24" y="34" font-family="monospace" font-size="20" fill="#FFD98A">TONY — THE QUALITY BENCHMARK</text>
+    <text x="24" y="58" font-family="monospace" font-size="13" fill="#B5A8A9">Match his construction. Do not copy his identity, apron, moustache or jersey.</text>
+    <text x="${String(tonyW + 60)}" y="120" font-family="monospace" font-size="18" fill="#FFD98A">PAINT WITH THESE ${String(keys.length)} COLOURS ONLY</text>
+    ${keys.map((_, index) => swatch(index)).join('\n')}
+    <text x="${String(tonyW + 60)}" y="${String(150 + 9 * 26 + 18)}" font-family="monospace" font-size="12" fill="#FFD98A">* a tone the game cannot paint yet — paint it anyway, it is recorded</text>
+    ${rule(0, 'CANVAS 672 x 1008, transparent. No background, no glow, no vignette.')}
+    ${rule(1, 'PAINT ON THE SUPPLIED PLATE. Do not reframe or re-centre it.')}
+    ${rule(2, 'NOTHING in the hatched band — that is the head.')}
+    ${rule(3, 'SOLES ON THE BOTTOM ROW. Shoulders just below the hatching.')}
+    ${rule(4, 'Hard 6x6 blocks. No anti-aliasing, no gradients, no soft edges.')}
+    ${rule(5, '1px dark outline fully around the figure.')}
+    ${rule(6, 'One light source, upper left. Asymmetric pose. Below the neck only.')}
+  </svg>`;
+
+  return sharp(Buffer.from(svg))
+    .composite([{ input: tony, left: 24, top: 76 }])
+    .png()
+    .toBuffer();
 }
 
 /** The labelled plate a person takes into an image-generation session. */
@@ -417,6 +515,7 @@ async function main(): Promise<void> {
     path.join(OUT, 'manager_paintover_672x1008.png'),
     await paintOverPlate(marks),
   );
+  writeFileSync(path.join(OUT, 'manager_reference_sheet.png'), await referenceSheet());
   writeFileSync(
     path.join(OUT, 'manager_registration_jig.json'),
     `${JSON.stringify(
@@ -430,9 +529,10 @@ async function main(): Promise<void> {
         palette: paintedKeys().map((key) => ({
           index: key.index,
           channel: key.channel,
+          step: key.step,
           name: key.name,
           hex: key.hex,
-          houseColour: key.colour,
+          pending: key.pending === true,
         })),
         outline: HOUSE['ink-900'],
       },
@@ -441,7 +541,7 @@ async function main(): Promise<void> {
     )}\n`,
   );
 
-  console.log(`Wrote four files to art/jigs/ — ${String(marks.length)} landmarks.`);
+  console.log(`Wrote five files to art/jigs/ — ${String(marks.length)} landmarks.`);
 }
 
 main().catch((error: unknown) => {

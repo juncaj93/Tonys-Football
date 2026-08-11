@@ -61,6 +61,7 @@ describe('the committed jig agrees with the production coordinate system', () =>
 
   it.each([
     ['head_clear', HEAD.bottom],
+    ['shoulder_band', HEAD.bottom + 1],
     ['eye_line', FACE.eyeY],
     ['neck_closed', NECK.bottom - 1],
     ['shoulders', TORSO.top],
@@ -89,7 +90,7 @@ describe('the committed jig agrees with the production coordinate system', () =>
   it('binds only what another layer actually depends on', () => {
     const binding = jig.landmarks.filter((mark) => mark.kind === 'binding').map((mark) => mark.key);
     expect([...binding].sort()).toEqual(
-      ['canvas', 'contact', 'eye_line', 'head_clear', 'neck', 'neck_closed', 'skull'].sort(),
+      ['canvas', 'contact', 'eye_line', 'head_clear', 'neck', 'neck_closed', 'shoulder_band', 'skull'].sort(),
     );
   });
 

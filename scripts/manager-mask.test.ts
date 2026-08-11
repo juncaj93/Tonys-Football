@@ -26,27 +26,45 @@ const written: string[] = [];
 
 /** Paint a key grid at `factor`x, the way a delivered file would arrive. */
 async function paint(keys: readonly number[], factor: number, name: string): Promise<string> {
-  const width = MASK_CANVAS.width * factor;
-  const height = MASK_CANVAS.height * factor;
-  const rgba = Buffer.alloc(width * height * 4, 0);
+  return paintAt(keys, MASK_CANVAS.width * factor, MASK_CANVAS.height * factor, name);
+}
 
-  for (let y = 0; y < MASK_CANVAS.height; y++) {
-    for (let x = 0; x < MASK_CANVAS.width; x++) {
+/**
+ * Paint a key grid at an arbitrary size, nearest-neighbour.
+ *
+ * Deliberately **not** a whole multiple in the caller that matters: a generator
+ * emits 1024 x 1536 and the cells it produces are 9.14 source pixels wide, so
+ * some are nine across and some are ten. That irregularity is the thing the
+ * conversion has to survive.
+ */
+async function paintAt(
+  keys: readonly number[],
+  width: number,
+  height: number,
+  name: string,
+): Promise<string> {
+  const rgba = Buffer.alloc(width * height * 4, 0);
+  const colour = new Map<number, readonly [number, number, number]>();
+  for (const key of paintedKeys()) {
+    colour.set(key.index, [
+      parseInt(key.hex.slice(1, 3), 16),
+      parseInt(key.hex.slice(3, 5), 16),
+      parseInt(key.hex.slice(5, 7), 16),
+    ]);
+  }
+
+  for (let sy = 0; sy < height; sy++) {
+    const y = Math.min(MASK_CANVAS.height - 1, Math.floor((sy * MASK_CANVAS.height) / height));
+    for (let sx = 0; sx < width; sx++) {
+      const x = Math.min(MASK_CANVAS.width - 1, Math.floor((sx * MASK_CANVAS.width) / width));
       const key = keys[y * MASK_CANVAS.width + x]!;
       if (key === TRANSPARENT_KEY) continue;
-      const hex = paintedKeys().find((entry) => entry.index === key)!.hex;
-      const r = parseInt(hex.slice(1, 3), 16);
-      const g = parseInt(hex.slice(3, 5), 16);
-      const b = parseInt(hex.slice(5, 7), 16);
-      for (let dy = 0; dy < factor; dy++) {
-        for (let dx = 0; dx < factor; dx++) {
-          const at = ((y * factor + dy) * width + (x * factor + dx)) * 4;
-          rgba[at] = r;
-          rgba[at + 1] = g;
-          rgba[at + 2] = b;
-          rgba[at + 3] = 255;
-        }
-      }
+      const [r, g, b] = colour.get(key)!;
+      const at = (sy * width + sx) * 4;
+      rgba[at] = r;
+      rgba[at + 1] = g;
+      rgba[at + 2] = b;
+      rgba[at + 3] = 255;
     }
   }
 
@@ -69,7 +87,7 @@ describe('snapping a delivered file', () => {
 
     expect(result.factor).toBe(6);
     expect([...result.keys]).toEqual([...keys]);
-    expect(Math.max(0, ...result.distances)).toBe(0);
+    expect(result.drift).toEqual({ mean: 0, p99: 0, max: 0 });
     expect(result.softAlpha).toBe(0);
   });
 
@@ -102,15 +120,39 @@ describe('snapping a delivered file', () => {
     expect([...(await snap(speckled)).keys]).toEqual([...keys]);
   });
 
-  it('refuses a source that is not a whole multiple of the canvas', async () => {
-    const file = path.join(scratch, 'wrong.png');
+  it('is lossless at a fractional scale a generator actually produces', async () => {
+    /*
+     * **The rule this replaces was the gate round 1 died on**, before anything
+     * about the drawing had been measured. `1024 x 1536` is 9.14x the canvas —
+     * not a whole multiple of anything — and the old contract refused it outright.
+     *
+     * It decodes exactly, because the operator is *mode over snapped indices*
+     * rather than an average over colours: no colour between two keys is ever
+     * created, so no pixel can snap to a role nobody painted.
+     */
+    const keys = fixtureBuildMask();
+    const file = await paintAt(keys, 1024, 1536, 'native.png');
+    const result = await snap(file);
+
+    expect(result.factor).toBeCloseTo(9.14, 1);
+    expect([...result.keys]).toEqual([...keys]);
+    expect(result.drift.max).toBe(0);
+  });
+
+  it('is lossless at 1:1', async () => {
+    const keys = fixtureBuildMask();
+    expect([...(await snap(await paint(keys, 1, 'exact.png'))).keys]).toEqual([...keys]);
+  });
+
+  it('refuses a source smaller than the canvas', async () => {
+    const file = path.join(scratch, 'tiny.png');
     await sharp({
-      create: { width: 500, height: 700, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } },
+      create: { width: 56, height: 84, channels: 4, background: { r: 0, g: 0, b: 0, alpha: 1 } },
     })
       .png()
       .toFile(file);
 
-    await expect(snap(file)).rejects.toThrow(/whole multiple/);
+    await expect(snap(file)).rejects.toThrow(/Upscaling invents/);
   });
 
   it('refuses a source stretched on one axis', async () => {
@@ -126,7 +168,7 @@ describe('snapping a delivered file', () => {
       .png()
       .toFile(file);
 
-    await expect(snap(file)).rejects.toThrow(/stretched|whole multiple/);
+    await expect(snap(file)).rejects.toThrow(/stretched/);
   });
 
   it('reports how far the art actually was from the palette', async () => {
@@ -148,10 +190,7 @@ describe('snapping a delivered file', () => {
       .png()
       .toFile(drifted);
 
-    const result = await snap(drifted);
-    const mean =
-      result.distances.reduce((total, at) => total + at, 0) / Math.max(1, result.distances.length);
-    expect(mean).toBeGreaterThan(5);
+    expect((await snap(drifted)).drift.mean).toBeGreaterThan(5);
   });
 });
 

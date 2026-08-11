@@ -71,7 +71,14 @@ const EVIDENCE = path.join(process.cwd(), 'docs', 'evidence', 'manager-build-pro
 
 export interface Snapped {
   readonly keys: readonly number[];
-  readonly distances: readonly number[];
+  /**
+   * How far the delivered pixels sat from the nearest key, over the **source**.
+   *
+   * A histogram rather than the raw list: a 1024 x 1536 delivery is 1.5M pixels,
+   * and the summary is the only part anybody reads. Buckets are integer sRGB
+   * distance, so `p99` and `max` are exact rather than estimated.
+   */
+  readonly drift: { readonly mean: number; readonly p99: number; readonly max: number };
   readonly softAlpha: number;
   readonly factor: number;
 }
@@ -93,71 +100,163 @@ export function nearestKey(r: number, g: number, b: number): { index: number; di
   return { index: best, distance: Math.sqrt(bestDistance) };
 }
 
+/**
+ * How far the source's aspect may sit from the canvas's before it is a stretch.
+ *
+ * 1% of `112 : 168`. Generous enough for a generator that rounds its own output
+ * to a round number, tight enough that a figure squashed to fit is refused —
+ * because unstretching one means resampling it, and a resampled build no longer
+ * has one art pixel to one room unit, which is the whole density rule.
+ */
+const ASPECT_TOLERANCE = 0.01;
+
+/**
+ * Read a delivered file into role indices.
+ *
+ * ## Revision 2 — any source size, because the operator is mode and not average
+ *
+ * The first version demanded a whole multiple of `112 × 168` and round 1 died on
+ * that gate before anything about the drawing was measured. The requirement came
+ * from a real fear — resampling blends two key colours into a third, and the snap
+ * then invents a role — but it was solving that fear with a rule rather than with
+ * the arithmetic.
+ *
+ * The order of operations is what actually removes it:
+ *
+ * 1. **Snap first, at source resolution.** Every source pixel becomes a role
+ *    index. Nothing is averaged, so no colour between two keys is ever created.
+ * 2. **Then take the majority** of the source cell that maps to each output pixel.
+ *
+ * Mode is the correct operator for indexed data and average is simply wrong for
+ * it: averaging skin base with garment base gives a tan that snaps to *boot
+ * light*, which would put bootlaces in the middle of a sleeve. With mode, an
+ * output pixel is always a role some source pixel actually carried.
+ *
+ * This is a **strict generalisation** — a correctly painted 6× file still decodes
+ * to exactly what it was painted as, byte for byte, because each cell is uniform
+ * and the mode of a uniform cell is that value. `manager-mask.test.ts` asserts it
+ * at 6×, at 9.14× and at 1×.
+ *
+ * **It cannot hide a malformed asset.** It changes only how the file is read, and
+ * every registration check runs afterwards on the result.
+ */
 export async function snap(file: string): Promise<Snapped> {
   const image = sharp(file).ensureAlpha();
   const { width, height } = await image.metadata();
   if (width === undefined || height === undefined) throw new Error(`${file}: unreadable`);
 
-  if (width % MASK_CANVAS.width !== 0 || height % MASK_CANVAS.height !== 0) {
+  if (width < MASK_CANVAS.width || height < MASK_CANVAS.height) {
     throw new Error(
-      `${file} is ${String(width)} x ${String(height)}. A mask source must be a whole multiple of ` +
-        `${String(MASK_CANVAS.width)} x ${String(MASK_CANVAS.height)} — deliver at ` +
-        `${String(MASK_CANVAS.width * 6)} x ${String(MASK_CANVAS.height * 6)}. Rescaling a ` +
-        'fractional source blends the key colours into each other and the snap becomes a guess.',
+      `${file} is ${String(width)} x ${String(height)}, smaller than the ` +
+        `${String(MASK_CANVAS.width)} x ${String(MASK_CANVAS.height)} canvas. Upscaling invents ` +
+        'pixels nobody painted.',
     );
   }
-  const factor = width / MASK_CANVAS.width;
-  if (height / MASK_CANVAS.height !== factor) {
+
+  const wanted = MASK_CANVAS.width / MASK_CANVAS.height;
+  const got = width / height;
+  if (Math.abs(got - wanted) / wanted > ASPECT_TOLERANCE) {
     throw new Error(
-      `${file} is ${String(width)} x ${String(height)} — ${String(factor)}x wide but ` +
-        `${String(height / MASK_CANVAS.height)}x tall. A stretched figure cannot be unstretched.`,
+      `${file} is ${String(width)} x ${String(height)}, an aspect of ${got.toFixed(3)} against the ` +
+        `canvas's ${wanted.toFixed(3)}. Squeezing it to fit would stretch the figure, and a ` +
+        'stretched figure cannot be unstretched. Re-render at that aspect — 672 x 1008 or ' +
+        '1024 x 1536 both work.',
     );
   }
 
   const { data } = await image.raw().toBuffer({ resolveWithObject: true });
 
-  const keys: number[] = [];
-  const distances: number[] = [];
+  /*
+   * Pass 1 — snap every source pixel, memoised. A 1024 × 1536 file is 1.5M
+   * pixels against at most a few thousand distinct colours, so the cache turns
+   * the expensive part into a rounding error.
+   */
+  const seen = new Map<number, { index: number; distance: number }>();
+  const sourceKey = new Int8Array(width * height);
+  const histogram = new Float64Array(442);
+  let measured = 0;
   let softAlpha = 0;
 
+  for (let at = 0; at < width * height; at++) {
+    const i = at * 4;
+    const alpha = data[i + 3]!;
+    if (alpha > 0 && alpha < 255) softAlpha++;
+    if (alpha < 128) {
+      sourceKey[at] = TRANSPARENT_KEY;
+      continue;
+    }
+    const rgb = (data[i]! << 16) | (data[i + 1]! << 8) | data[i + 2]!;
+    let hit = seen.get(rgb);
+    if (hit === undefined) {
+      hit = nearestKey(data[i]!, data[i + 1]!, data[i + 2]!);
+      seen.set(rgb, hit);
+    }
+    sourceKey[at] = hit.index;
+    histogram[Math.min(441, Math.round(hit.distance))]! += 1;
+    measured++;
+  }
+
+  let total = 0;
+  let max = 0;
+  for (let d = 0; d < histogram.length; d++) {
+    total += d * histogram[d]!;
+    if (histogram[d]! > 0) max = d;
+  }
+  let seenSoFar = 0;
+  let p99 = 0;
+  for (let d = 0; d < histogram.length; d++) {
+    seenSoFar += histogram[d]!;
+    if (seenSoFar >= measured * 0.99) {
+      p99 = d;
+      break;
+    }
+  }
+  const drift = { mean: measured === 0 ? 0 : total / measured, p99, max };
+
+  // Pass 2 — the majority role of the source cell under each output pixel.
+  const keys: number[] = [];
   for (let y = 0; y < MASK_CANVAS.height; y++) {
+    const y0 = Math.floor((y * height) / MASK_CANVAS.height);
+    const y1 = Math.max(y0 + 1, Math.floor(((y + 1) * height) / MASK_CANVAS.height));
     for (let x = 0; x < MASK_CANVAS.width; x++) {
-      // The most common opaque colour in the block, and how many pixels voted.
-      const votes = new Map<string, number>();
-      let opaque = 0;
-      for (let dy = 0; dy < factor; dy++) {
-        for (let dx = 0; dx < factor; dx++) {
-          const i = ((y * factor + dy) * width + (x * factor + dx)) * 4;
-          const alpha = data[i + 3]!;
-          if (alpha > 0 && alpha < 255) softAlpha++;
-          if (alpha < 128) continue;
-          opaque++;
-          const rgb = `${String(data[i])},${String(data[i + 1])},${String(data[i + 2])}`;
-          votes.set(rgb, (votes.get(rgb) ?? 0) + 1);
+      const x0 = Math.floor((x * width) / MASK_CANVAS.width);
+      const x1 = Math.max(x0 + 1, Math.floor(((x + 1) * width) / MASK_CANVAS.width));
+
+      const votes = new Map<number, number>();
+      let cells = 0;
+      let clear = 0;
+      for (let sy = y0; sy < y1; sy++) {
+        for (let sx = x0; sx < x1; sx++) {
+          cells++;
+          const key = sourceKey[sy * width + sx]!;
+          if (key === TRANSPARENT_KEY) {
+            clear++;
+            continue;
+          }
+          votes.set(key, (votes.get(key) ?? 0) + 1);
         }
       }
 
-      if (opaque * 2 <= factor * factor) {
+      // Transparency wins a tie: a figure eroded by one pixel is a smaller
+      // figure, and one grown by a pixel has a halo of the wall behind it.
+      if (clear * 2 >= cells) {
         keys.push(TRANSPARENT_KEY);
         continue;
       }
 
-      let winner = '';
+      let winner = TRANSPARENT_KEY;
       let most = 0;
-      for (const [rgb, count] of votes) {
+      for (const [key, count] of votes) {
         if (count > most) {
           most = count;
-          winner = rgb;
+          winner = key;
         }
       }
-      const [r, g, b] = winner.split(',').map(Number) as [number, number, number];
-      const { index, distance } = nearestKey(r, g, b);
-      keys.push(index);
-      distances.push(distance);
+      keys.push(winner);
     }
   }
 
-  return { keys, distances, softAlpha, factor };
+  return { keys, drift, softAlpha, factor: width / MASK_CANVAS.width };
 }
 
 /** A picture of the mask as four real managers, so a person can judge it. */
@@ -235,12 +334,6 @@ export const ${constant}: EncodedMask = {
 `;
 }
 
-function percentile(values: readonly number[], at: number): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((x, y) => x - y);
-  return sorted[Math.min(sorted.length - 1, Math.floor(sorted.length * at))]!;
-}
-
 async function main(): Promise<void> {
   const [file, slug] = process.argv.slice(2);
   if (file === undefined || slug === undefined) {
@@ -259,21 +352,20 @@ async function main(): Promise<void> {
     );
   }
 
-  const { keys, distances, softAlpha, factor } = await snap(file);
+  const { keys, drift, softAlpha, factor } = await snap(file);
 
   const painted = keys.filter((key) => key !== TRANSPARENT_KEY).length;
-  const mean = distances.reduce((total, at) => total + at, 0) / Math.max(1, distances.length);
 
   console.log(`\n${path.basename(file)} → ${slug}`);
-  console.log(`  source              ${String(factor)}x`);
+  console.log(`  source              ${factor.toFixed(2)}x the canvas`);
   console.log(`  painted             ${String(painted)} of ${String(keys.length)} cells`);
   console.log(
-    `  snap distance       mean ${mean.toFixed(1)} · p99 ${percentile(distances, 0.99).toFixed(1)} ` +
-      `· max ${Math.max(0, ...distances).toFixed(1)}`,
+    `  snap distance       mean ${drift.mean.toFixed(1)} · p99 ${String(drift.p99)} ` +
+      `· max ${String(drift.max)}`,
   );
   if (softAlpha > 0) console.log(`  soft alpha          ${String(softAlpha)} source pixels`);
 
-  if (mean > 12) {
+  if (drift.mean > 12) {
     console.log(
       '\n  ⚠ The art was not painted in the fourteen key colours. Every pixel below has been ' +
         '\n    snapped to the nearest one, which means this mask is a guess about what was meant.' +
