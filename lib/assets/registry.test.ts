@@ -283,8 +283,19 @@ describe('the committed inventory', () => {
    * reconciliation principles forbid outright.
    */
   it('has the shell, and keeps the superseded zone tiles on record', () => {
+    /*
+     * **Both rooms are painted now.** `zone_back_hall_shell` was pinned as a
+     * placeholder here until 2026-08-11, when the approved shell landed and the
+     * drawn stand-in in `components/scene/back-hall.tsx` was deleted with it.
+     *
+     * Pinning it as art rather than deleting the assertion is deliberate, and
+     * it is the stronger direction: `/back-hall` has no fallback branch any
+     * more, so a registry row losing its `path` would stretch a compact
+     * placeholder across a whole room. The sibling test *"has a real file
+     * behind every asset that claims to have art"* covers the other half.
+     */
     expect(assetRegistry.get('zone_parlor_shell')?.artStatus).toBe('generated');
-    expect(assetRegistry.get('zone_back_hall_shell')?.artStatus).toBe('placeholder');
+    expect(assetRegistry.get('zone_back_hall_shell')?.artStatus).toBe('generated');
 
     // Withdrawn, not deleted — the foreground counter is a render step, not an asset.
     expect(assetRegistry.get('zone_parlor_counter_front')?.artStatus).toBe('retired');

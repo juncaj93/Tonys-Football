@@ -4554,12 +4554,84 @@ async function checkBackHall(page: Page, width: number, state: string): Promise<
    * simply contradicted the page — the shape of defect only a screenshot finds,
    * on the one state nobody will look at until the day it ships.
    */
-  const chained = await page.evaluate(() => document.querySelectorAll('.bg-ink-100\\/70').length > 0);
+  /*
+   * Read from a **marker attribute**, not from a Tailwind class.
+   *
+   * It matched `.bg-ink-100\/70` until 2026-08-11, which is a gate coupled to a
+   * colour: restyling the chain — which happened the moment the room became a
+   * painting and one pale bar stopped being good enough — would have silently
+   * stopped this check finding anything, and "no chain found" is the *passing*
+   * answer for the open state. A gate that quietly becomes vacuous is worse
+   * than no gate.
+   */
+  const chained = await page.evaluate(() => document.querySelectorAll('[data-stairs-chained]').length > 0);
   if (chained !== !expected.rooms) {
     fail(
       'back-hall',
       `${at} the stairs are ${expected.rooms ? 'open' : 'shut'} but the chain is ${chained ? 'drawn' : 'gone'}`,
     );
+  }
+
+  /*
+   * The room is a painting, and the gate says so.
+   *
+   * `zone_back_hall_shell` landed on 2026-08-11 and the drawn stand-in was
+   * deleted with it (`components/scene/back-hall.tsx` carries the reasoning).
+   * There is no second branch to fall back to, so a registry row that loses its
+   * `path` would render a compact placeholder stretched over a whole room —
+   * which is a broken screen that no other check here can see, because all three
+   * Doors would still be present, correctly shaped and correctly open.
+   */
+  const shell = await page.evaluate(
+    () => document.querySelector('[data-room-shell]')?.getAttribute('data-room-shell') ?? 'absent',
+  );
+  if (shell !== 'art') {
+    fail('back-hall', `${at} the hall's shell is "${shell}", expected "art" — has the registry lost its path?`);
+  }
+
+  /*
+   * A shut door's answer has to be **on the screen**.
+   *
+   * `18 §6.3` requires a locked destination to answer *in world*, and an answer
+   * below the fold is the same as no answer — the "coming-soon badge" failure
+   * reached from the other direction.
+   *
+   * This is visual debt 19, and it shipped for a milestone. `ShutDoor` renders
+   * its line 8 units beneath its own rectangle; the stairs used to end at
+   * `y 542`, which put the line's top at 670px inside a 664px viewport at 390.
+   * **No screenshot could ever have caught it**, because the line is at
+   * `opacity: 0` until something taps the door, and the driver photographs this
+   * state without tapping anything. So the gate taps.
+   */
+  for (const id of ['stairs', 'curtain'] as const) {
+    const shut = !isOpen(id);
+    if (!shut) continue;
+
+    await page.locator(`[data-room-object="${id}"]`).click({ force: true });
+    await page.waitForTimeout(400);
+
+    const box = await page
+      .locator('[aria-live="polite"] span')
+      .filter({ hasText: /./ })
+      .first()
+      .boundingBox();
+
+    if (box === null) {
+      fail('back-hall', `${at} tapping the shut ${id} said nothing`);
+      continue;
+    }
+
+    const viewport = page.viewportSize()?.height ?? 0;
+    if (box.y < 0 || box.y + box.height > viewport) {
+      fail(
+        'back-hall',
+        `${at} the shut ${id} answers at y ${box.y.toFixed(1)}–${(box.y + box.height).toFixed(1)} ` +
+          `in a ${String(viewport)}px viewport — the manager cannot read it`,
+      );
+    }
+
+    // Let it time out before tapping the next one, so two lines never overlap.
+    await page.waitForTimeout(4400);
   }
 
   /*
