@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Underground casino — rulings, economy simulation and readiness (no product code) | claude/underground-casino-investigation-mu3ayr | `lib/casino/**` (math models only) · `lib/economy/simulate.ts` (additive casino scenario) · `lib/economy/casino-scenario.ts` · `scripts/casino-analysis.ts` · `docs/CASINO_BOUNDARY.md` · `docs/UNDERGROUND_CASINO_INVESTIGATION.md` · `docs/OPEN_ITEMS.md` **G1** · the ruling index | any migration · any route · any server action · any component · `lib/flags.ts` · `lib/counter/**` · `lib/stakes/**` · `lib/rewards/**` · any approved economy value · `art/**` · `ALL_STATES` | 2026-08-11 |
+| Underground casino **W1** — foundation + slots (authorized 2026-08-11) | claude/underground-casino-investigation-mu3ayr | `lib/casino/**` · `drizzle/0019_casino_slots.sql` · `app/underground/**` · `app/actions/casino.ts` · `components/casino/**` · `components/scene/underground.tsx` · `lib/db/errors.ts` · `lib/flags.ts` (two new keys) · `lib/counter/tokens.ts` (casino reasons + the R12 allowlist) · the three new visual states · `docs/CASINO_BOUNDARY.md` | **W2 blackjack** — no `blackjack_hands` table, no engine · any approved economy value (box price, rarity, salvage, weekly rewards, catalog size) · `art/**` · any third cron · `lib/stakes/**` · `lib/rewards/**` · **the Underground's production flag** | 2026-08-11 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of

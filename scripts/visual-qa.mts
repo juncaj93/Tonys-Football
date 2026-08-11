@@ -284,6 +284,35 @@ type StateName =
    * precisely the one where being wrong is least recoverable.
    */
   | 'back-hall-shut'
+  /*
+   * The hall with **both** doors open — the state `BACK_HALL_BOUNDARY §8.2`
+   * recorded as *"a demo this document asked for and the product cannot honestly
+   * produce."*
+   *
+   * It could not exist while `/underground` was not a route: `openTo()` throws
+   * rather than render a `<Link>` to a 404, which is the defect the console gate
+   * caught on this page once already. W1 brings the route, so the state becomes
+   * photographable in the same change that gives the casino its door — exactly
+   * as that entry predicted.
+   */
+  | 'back-hall-both-open'
+  /*
+   * The Underground with the machine live — what shipping W1 looks like.
+   *
+   * Reachable only behind the demo guards. In production `underground` is
+   * `false` and this route answers `notFound()`, so this is a state no manager
+   * can reach and every reviewer must.
+   */
+  | 'underground'
+  /*
+   * The Underground with both machines covered.
+   *
+   * The room on the day the door opens and before either game is switched on,
+   * and the room a **revert** produces. `18 §6.1`: a locked destination is a
+   * closed door, never a hidden one — so both machines are drawn, and this is
+   * the state that proves they read as covered rather than as missing.
+   */
+  | 'underground-covered'
   | 'keyboard-focus'
   | 'six-banners'
   | 'tray-owned-box'
@@ -1385,6 +1414,31 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForTimeout(1200);
       return;
 
+    /*
+     * Both doors open, at last.
+     *
+     * This state was declared and then withdrawn when it turned out the product
+     * could not produce it — `openTo()` throws on a flag that opens a door with
+     * no route behind it, and the driver hung on `networkidle` against the 404.
+     * W1 supplies the route, so the flag now opens onto something real.
+     */
+    case 'back-hall-both-open':
+      await page.goto(`${BASE}/back-hall?open=rooms,underground`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
+    case 'underground':
+      await page.goto(`${BASE}/underground?open=underground,slotMachine`, {
+        waitUntil: 'networkidle',
+      });
+      await page.waitForTimeout(1200);
+      return;
+
+    case 'underground-covered':
+      await page.goto(`${BASE}/underground?open=underground`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(1200);
+      return;
+
     case 'keyboard-focus':
       await home(page);
       await dismissTony(page);
@@ -2131,6 +2185,9 @@ const ALL_STATES: readonly StateName[] = [
   'counter',
   'back-hall',
   'back-hall-shut',
+  'back-hall-both-open',
+  'underground',
+  'underground-covered',
   'keyboard-focus',
   'six-banners',
   'tray-owned-box',
@@ -3590,6 +3647,8 @@ const BACK_HALL_STATES: Readonly<Record<string, { rooms: boolean; underground: b
   'back-hall': { rooms: true, underground: false },
   // What setting `rooms` back to `false` produces.
   'back-hall-shut': { rooms: false, underground: false },
+  // The day the commissioner announces the Underground. Photographable since W1.
+  'back-hall-both-open': { rooms: true, underground: true },
 };
 
 /**

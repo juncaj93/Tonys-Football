@@ -22,6 +22,11 @@ import { eq } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
+import {
+  SHIPPED_TABLE,
+  ensureCasinoTable,
+  shippedReturnRate,
+} from '@/lib/casino/table';
 import { ensureRewardTable, grantBox } from '@/lib/counter/boxes';
 import { grantChampionshipRings } from '@/lib/counter/rings';
 import { grantSeasonalBoxes } from '@/lib/counter/grants';
@@ -202,6 +207,21 @@ async function main(): Promise<void> {
     console.log(
       `Rewards  table ${version} · ${String(table.entries.length)} items · ` +
         `total weight ${String(table.totalWeight)} · PROVISIONAL until the P3 simulation`,
+    );
+
+    //
+    // The slot machine's paytable, stored for the same reason and refusing the
+    // same way: `spin` will not roll against a version this database has never
+    // recorded. `ensureCasinoTable` also refuses to store an *incoherent* table,
+    // so a paytable that put a common symbol above a rare one — or breached the
+    // per-spin ceiling — could never reach a database at all.
+    //
+    // Stored even though `underground: false`. A configuration that only appears
+    // when a door opens is a configuration nobody has ever seen work.
+    const casino = await ensureCasinoTable(db);
+    console.log(
+      `Casino   slots table ${casino.version} · RTP ${(shippedReturnRate() * 100).toFixed(2)}% · ` +
+        `buttons ${SHIPPED_TABLE.wagers.join('/')} · PROVISIONAL — the Underground is shut`,
     );
 
     if (table.entries.length !== CATALOG_SIZE) {

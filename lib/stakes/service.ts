@@ -2,6 +2,7 @@ import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { type Database, type Queryable } from '@/lib/db';
+import { hasConstraint, isBalanceViolation } from '@/lib/db/errors';
 import { applyTokenDelta, economyFor, wallet } from '@/lib/counter/tokens';
 import { stakeEntries, stakeResolutions, weeklyStakes } from '@/lib/db/schema';
 
@@ -403,33 +404,18 @@ export async function placeEntry(
   }
 }
 
-/**
- * The overdraft CHECK, recognised by **constraint name** rather than by message.
+/*
+ * `isBalanceViolation` now lives in `lib/db/errors.ts`.
  *
- * `boxes.ts` gives the reason and it applies unchanged: drizzle wraps driver
- * errors, so `error.message` is only *"Failed query: …"* and matching on it would
- * swallow an unrelated check violation and report it to a manager as *"you cannot
- * afford this"* — a lie that looks like a feature. The first version of this
- * function did exactly that and a test caught it: a refused pick threw instead of
- * returning `insufficient_tokens`.
+ * It was written here and in `lib/counter/boxes.ts`, identically, each with its
+ * own copy of the wrapped-cause walk. The casino would have been the third, so
+ * it is extracted — the predicate is unchanged and the reason it matches on the
+ * **constraint name** rather than the message is recorded there, along with the
+ * test that caught the message-matching version.
  */
-function isBalanceViolation(error: unknown): boolean {
-  return hasConstraint(error, '23514', 'season_memberships_token_balance_non_negative');
-}
 
 function isUniqueViolation(error: unknown): boolean {
   return hasConstraint(error, '23505', 'stake_resolutions_one_per_stake');
-}
-
-function hasConstraint(error: unknown, code: string, constraint: string): boolean {
-  let current: unknown = error;
-  for (let depth = 0; depth < 5; depth += 1) {
-    if (typeof current !== 'object' || current === null) return false;
-    const candidate = current as { code?: string; constraint?: string; cause?: unknown };
-    if (candidate.code === code && candidate.constraint === constraint) return true;
-    current = candidate.cause;
-  }
-  return false;
 }
 
 /* -------------------------------------------------------------------------

@@ -777,6 +777,20 @@ export const tokenReason = pgEnum('token_reason', [
    * squeeze bottle comes up.
    */
   'DUPLICATE_SALVAGE',
+  /*
+   * The two ways the Underground moves money (`0019`).
+   *
+   * **Two, not one net movement.** Commissioner ruling R13 requires the wager
+   * and the payout to be distinct audited movements, and the ledger forces the
+   * same shape independently: a returned stake is a net delta of zero, and
+   * `apply_token_delta` refuses zero outright. There is no net-only
+   * representation available even if one were wanted.
+   *
+   * `CASINO_PAYOUT` is deliberately absent from `EARNED_TOKEN_REASONS` — R12,
+   * so the token-leader award cannot be won by grinding the machine.
+   */
+  'CASINO_WAGER',
+  'CASINO_PAYOUT',
 ]);
 
 /**
@@ -2609,3 +2623,92 @@ export const sliceDraftReviews = pgTable(
 );
 
 export type SliceDraftReview = typeof sliceDraftReviews.$inferSelect;
+
+/* -------------------------------------------------------------------------
+ * The Underground — `drizzle/0019_casino_slots.sql`
+ * ---------------------------------------------------------------------- */
+
+/** Which game a stored configuration belongs to. Blackjack joins it in W2. */
+export const casinoGame = pgEnum('casino_game', ['slots']);
+
+/**
+ * A versioned casino configuration — today, the slots paytable.
+ *
+ * The `reward_tables` shape, for the `reward_tables` reason: a recorded spin is
+ * only interpretable against the numbers that were live when it happened, so a
+ * re-tune writes a new version and every spin keeps pointing at what it actually
+ * rolled against. Immutable and undeletable by trigger; `provisional` clears
+ * when the commissioner signs the numbers off.
+ */
+export const casinoTables = pgTable('casino_tables', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  version: text('version').notNull().unique(),
+  game: casinoGame('game').notNull(),
+  config: jsonb('config').notNull(),
+  provisional: boolean('provisional').notNull().default(true),
+  createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
+});
+
+/**
+ * One spin of the slot machine. Append-only.
+ *
+ * `spin_key` is the idempotency mechanism and it is caller-supplied, because a
+ * spin is an **event** with no natural key — the same distinction
+ * `apply_token_delta` draws and the opposite of `box_openings.box_id`.
+ *
+ * The two ledger ids are R13's distinct movements, joined rather than
+ * summarised. `wagerTxId` is not nullable, so a spin nobody paid for cannot be
+ * written; `slot_spins_payout_is_paid` makes the credit and the ledger row
+ * inseparable in the other direction.
+ */
+export const slotSpins = pgTable(
+  'slot_spins',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+
+    spinKey: text('spin_key').notNull(),
+    stakeTokens: integer('stake_tokens').notNull(),
+    tableVersion: text('table_version')
+      .notNull()
+      .references(() => casinoTables.version, { onDelete: 'restrict' }),
+
+    /** The three raw rolls. With the table version, the outcome recomputes. */
+    rolls: integer('rolls').array().notNull(),
+    /** What they resolved to, stored so reading history needs no resolver. */
+    symbols: text('symbols').array().notNull(),
+
+    payoutTokens: integer('payout_tokens').notNull(),
+
+    wagerTxId: uuid('wager_tx_id')
+      .notNull()
+      .references(() => tokenTransactions.id, { onDelete: 'restrict' }),
+    payoutTxId: uuid('payout_tx_id').references(() => tokenTransactions.id, {
+      onDelete: 'restrict',
+    }),
+
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+  },
+  (table) => [
+    unique('slot_spins_key_unique').on(table.spinKey),
+    index('slot_spins_user_recent_idx').on(table.userId, table.createdAt),
+    check('slot_spins_stake_positive', sql`${table.stakeTokens} > 0`),
+    check('slot_spins_payout_non_negative', sql`${table.payoutTokens} >= 0`),
+    check(
+      'slot_spins_payout_is_paid',
+      sql`(${table.payoutTokens} > 0) = (${table.payoutTxId} is not null)`,
+    ),
+    check(
+      'slot_spins_three_reels',
+      sql`array_length(${table.rolls}, 1) = 3 and array_length(${table.symbols}, 1) = 3`,
+    ),
+  ],
+);
+
+export type SlotSpin = typeof slotSpins.$inferSelect;

@@ -417,6 +417,91 @@ hands use the same measured outcome spread as Phase 2.
 
 ---
 
+## 12. W1 — built, and the door is still shut
+
+**Approved 2026-08-11 and implemented the same day.** The slot machine works end
+to end against a real Postgres. **`underground: false`**, `slotMachine: false`,
+`blackjackTable: false` — R11 requires both games before the curtain goes up, and
+blackjack is W2.
+
+### 12.1 What landed
+
+| | |
+|---|---|
+| `drizzle/0019_casino_slots.sql` | `slot_spins` · `casino_tables` · the two `token_reason` values |
+| `lib/casino/table.ts` | the shipped paytable (Candidate E), content-hashed and stored, plus the roll → symbol → payout resolver |
+| `lib/casino/slots.ts` | `spin()` — one transaction, four idempotency mechanisms |
+| `lib/casino/objects.ts` · `components/scene/underground.tsx` | the room, drawn from the same numbers the hit regions use |
+| `app/underground/page.tsx` · `app/actions/casino.ts` | the route and the one action |
+| `lib/db/errors.ts` | `isBalanceViolation`, extracted from its two existing copies |
+| `lib/counter/tokens.ts` | `EARNED_TOKEN_REASONS` — R12 |
+
+### 12.2 The guarantees are in the database, not in the service
+
+`09 §12`'s integrity list, each satisfied by a mechanism rather than by care:
+
+| Requirement | Mechanism |
+|---|---|
+| Server-generated outcome | `rollBelow` (`crypto.randomInt`); the client sends a stake and a token and nothing else |
+| Validated bet amount | Checked against the **stored** paytable's buttons, not a constant |
+| Sufficient-token check | `CHECK (token_balance >= 0)`. **Nothing reads a balance and decides** |
+| Atomic bet and payout | One transaction; a failure anywhere leaves the tab untouched |
+| Idempotency | advisory lock → replay read → `spin_key UNIQUE` → `apply_token_delta`'s key |
+| Replay rejection | A recorded spin is returned unchanged, never re-rolled |
+| No client-authoritative result | The component holds no paytable, no strip, no odds and no arithmetic |
+| Auditability | The three raw rolls and the table version are stored; the outcome recomputes |
+| Append-only | Trigger. A recorded spin cannot be edited or deleted |
+
+Two more the migration adds: **`wager_tx_id NOT NULL`** makes a spin nobody paid
+for unwritable, and **`slot_spins_payout_is_paid`** makes a claimed payout with no
+ledger row unwritable. Both are asserted by test.
+
+### 12.3 Three decisions worth recording
+
+**The anti-spam interval is a database read, not a limiter.** R9 forbids quotas
+and requires correctness against double taps. `MIN_SPIN_INTERVAL_MS` is evaluated
+*inside the transaction*, against the manager's own last row, under the advisory
+lock. An in-memory limiter would be **worse than nothing**: serverless functions
+share no memory between invocations, so it would look like a control and do
+nothing.
+
+**The action checks the flags for itself.** A server action is a public endpoint,
+reachable by anybody who can guess its id whether or not a page renders a button
+for it. A shut machine that only hid its UI would still take wagers.
+
+**`back-hall-both-open` is photographable at last.** It was declared, found
+impossible, and recorded as *"a demo this document asked for and the product
+cannot honestly produce"* — because `openTo()` throws on a flag opening a door
+with no route behind it. The prediction was that the casino would bring the route
+and the state would arrive with it. It did. The assertion that pinned the
+impossibility is **inverted rather than deleted**.
+
+### 12.4 What has and has not been verified
+
+| | |
+|---|---|
+| `npm run typecheck` · `npm run lint` | PASS |
+| `npm run build` | PASS — `/underground` compiles |
+| Full test suite | PASS — **2,053 passing**, including 16 slot-machine integration tests against a real Postgres 16 |
+| Migration applied to a live database | PASS |
+| Seed stores the paytable | PASS — `ad3386079ca387df · RTP 92.09% · buttons 5/10/20 · PROVISIONAL` |
+| **`npm run visual:qa`** | **NOT RUN** — see below |
+
+**The visual gate did not run, and that is a gap rather than a pass.** The
+container's Playwright browser build does not match the version this repository
+pins, and downloading the matching one is blocked by the network policy. The
+driver was **not** modified to work around it: weakening a gate to make it pass in
+an environment it was not written for is the failure mode the gate exists to
+prevent.
+
+So three visual states — `underground`, `underground-covered` and
+`back-hall-both-open` — are **declared, wired and unphotographed**. Their
+`driver-coverage` tests pass, which proves the states are *declared*, not that
+they *look right*. **`npm run visual:qa` must run and pass before W1 merges**, and
+the Underground must not open until it has.
+
+---
+
 ## 10. What this slice deliberately did not do
 
 No migration · no route · no server action · no component · no feature-flag

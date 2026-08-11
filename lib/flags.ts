@@ -34,13 +34,21 @@
  * Adding one is a deliberate act: `flags.test.ts` asserts the whole set, so a
  * new key has to be declared here *and* justified there.
  */
-export type FeatureKey = 'rooms' | 'underground' | 'roulette' | 'tonysLine';
+export type FeatureKey =
+  | 'rooms'
+  | 'underground'
+  | 'roulette'
+  | 'tonysLine'
+  | 'slotMachine'
+  | 'blackjackTable';
 
 export const FEATURE_KEYS: readonly FeatureKey[] = [
   'rooms',
   'underground',
   'roulette',
   'tonysLine',
+  'slotMachine',
+  'blackjackTable',
 ];
 
 /**
@@ -71,7 +79,20 @@ const V1: Readonly<Record<FeatureKey, boolean>> = {
    * commissioner's, not a deploy's, and it is recorded as such.
    */
   rooms: true,
-  // The casino is P10 and is not in v1 (`16`).
+  /*
+   * **Shut, and it is the door rather than the games.**
+   *
+   * The games were ruled on 2026-08-11 and the slot machine is built
+   * (`docs/CASINO_BOUNDARY.md`), but **R11 says both games must be ready before
+   * the Underground opens** and blackjack is W2. Opening now would spend
+   * `18 §6`'s announced reveal on half a room, and the reveal can only be spent
+   * once.
+   *
+   * When it opens it opens for everyone at once, which is what a deploy-time
+   * flag does. Until then this one line is the whole of what stands between the
+   * league and a working slot machine — and that is deliberate, because the
+   * alternative to a flag is unmerged code nobody can review.
+   */
   underground: false,
   // Never. `16`: "Roulette is never built. A reserved feature-flag key is the
   // entire required scaffolding."
@@ -94,6 +115,20 @@ const V1: Readonly<Record<FeatureKey, boolean>> = {
    * preview override can open it and the demo states photograph it open.
    */
   tonysLine: false,
+  /*
+   * The two machines in the Underground, flagged separately.
+   *
+   * **Engineering and demo only** (R11). They exist so W1 can be photographed,
+   * reviewed and gated while blackjack is still being built — not so the room
+   * can open half-finished. Both are shut, and `underground` above is shut over
+   * the top of them, so a mistake here reaches nobody.
+   *
+   * `blackjackTable` is a key with no feature behind it until W2, exactly as
+   * `underground` was a key with no route behind it until this slice. `openTo`'s
+   * rule applies: a flag says a feature shipped, it cannot make one exist.
+   */
+  slotMachine: false,
+  blackjackTable: false,
 };
 
 export type FeatureFlags = Readonly<Record<FeatureKey, boolean>>;
@@ -159,13 +194,28 @@ export function featureFlags(
    * indistinguishable from an absent one after trimming.
    */
   const flags: Record<FeatureKey, boolean> = requested.includes('none')
-    ? { rooms: false, underground: false, roulette: false, tonysLine: false }
+    ? {
+        rooms: false,
+        underground: false,
+        roulette: false,
+        tonysLine: false,
+        slotMachine: false,
+        blackjackTable: false,
+      }
     : { ...V1 };
 
   for (const key of requested) {
     // `roulette` is deliberately unreachable, even here. It is not a feature
     // waiting for a switch; it is a decision with a key attached.
-    if (key === 'rooms' || key === 'underground' || key === 'tonysLine') flags[key] = true;
+    if (
+      key === 'rooms' ||
+      key === 'underground' ||
+      key === 'tonysLine' ||
+      key === 'slotMachine' ||
+      key === 'blackjackTable'
+    ) {
+      flags[key] = true;
+    }
   }
 
   return flags;

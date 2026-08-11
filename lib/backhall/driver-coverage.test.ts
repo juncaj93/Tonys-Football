@@ -35,30 +35,38 @@ function driverBackHallStates(): readonly string[] {
 describe('the visual driver and the back hall agree', () => {
   it('photographs every flag combination the product can honestly produce', () => {
     /*
-     * Two, not the three `BACK_HALL_BOUNDARY §5` asks for.
+     * **Three, at last** — and this assertion is the record of why it used to be
+     * two.
      *
-     * `back-hall-both-open` is missing on purpose and this is where the reason
-     * lives. `/underground` is **deliberately not a route** — the whole reveal
-     * is that you find out what is behind the curtain by being let in — so
-     * "Underground open" is not a state the product can be in today. Rendering
-     * it would mean a `<Link>` to a page that does not exist, which is the
-     * defect the console gate already caught here once. `openTo` throws instead.
+     * `back-hall-both-open` was missing on purpose, and this comment is where
+     * the reason lived: `/underground` was **deliberately not a route**, so
+     * *"Underground open"* was not a state the product could be in. Rendering it
+     * meant a `<Link>` to a page that did not exist — the defect the console
+     * gate caught here once — and `openTo` threw rather than produce it. The
+     * prediction recorded at the time was that *"when the casino lands it brings
+     * its route, and the state becomes photographable in the same change."*
      *
-     * When the casino lands in P10 it brings its route, and the state becomes
-     * photographable in the same change. Until then a screenshot of it would be
-     * a screenshot of a 404.
+     * That is what happened. W1 built `/underground`, the flag now opens onto a
+     * real room, and the third combination is photographed. **The assertion is
+     * inverted rather than deleted** — it was a tripwire that worked exactly as
+     * intended, and the shape of the change it was watching for is the useful
+     * half of it.
      *
      * ## The pair inverted when the basement shipped, and the count did not
      *
      * `back-hall-rooms-open` is gone and `back-hall-shut` replaces it.
      * `rooms` opened on 2026-08-09, so the *default* hall is now the one with
      * the stairs open — which is what `back-hall` photographs — and the state
-     * needing a parameter is the one a **revert** produces. Same two flag
+     * needing a parameter is the one a **revert** produces. Same flag
      * combinations, opposite defaults, and the shut hall is still photographed
      * for the reason it always was: nobody will look at it until the day
      * somebody needs it.
      */
-    expect([...driverBackHallStates()].sort()).toEqual(['back-hall', 'back-hall-shut']);
+    expect([...driverBackHallStates()].sort()).toEqual([
+      'back-hall',
+      'back-hall-both-open',
+      'back-hall-shut',
+    ]);
   });
 
   it('declares a case for each of them', () => {

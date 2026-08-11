@@ -2,6 +2,7 @@ import { and, asc, count, eq, sql } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { type Database, type Queryable } from '@/lib/db';
+import { isBalanceViolation } from '@/lib/db/errors';
 import { boxOpenings, collectibles, lootBoxes, rewardTables } from '@/lib/db/schema';
 
 import { catalogItem, type Rarity } from './catalog';
@@ -196,29 +197,6 @@ export async function purchaseBox(
     }
     throw error;
   }
-}
-
-/**
- * Was this the balance constraint refusing an overdraft?
- *
- * Matched on the **constraint name**, not the message. A message match would also
- * swallow an unrelated check violation and report it to a manager as "you cannot
- * afford this", which is a lie that looks like a feature.
- */
-function isBalanceViolation(error: unknown): boolean {
-  let current: unknown = error;
-  for (let depth = 0; depth < 5; depth++) {
-    if (typeof current !== 'object' || current === null) return false;
-    const candidate = current as { code?: string; constraint?: string; cause?: unknown };
-    if (
-      candidate.code === '23514' &&
-      candidate.constraint === 'season_memberships_token_balance_non_negative'
-    ) {
-      return true;
-    }
-    current = candidate.cause;
-  }
-  return false;
 }
 
 /**

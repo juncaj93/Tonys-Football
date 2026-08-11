@@ -73,6 +73,14 @@ export async function resetDatabase(db: Database): Promise<void> {
       -- by trigger, and it protects a fact rather than an audit trail — the
       -- score before Monday is unrecoverable once Monday has happened.
       week_snapshots,
+      -- The Underground. Both refuse DELETE by trigger, so TRUNCATE is the only
+      -- way a harness that owns the database clears them. casino_tables is
+      -- listed rather than left standing because slot_spins holds a RESTRICT
+      -- reference to it, and a paytable that survived a reset would make the
+      -- first spin of the next test roll against a version the test did not
+      -- store.
+      slot_spins,
+      casino_tables,
       weekly_rewards,
       -- The Slice review chain, listed for the same reason: versions, reviews
       -- and holds all refuse DELETE by trigger. slice_issues and

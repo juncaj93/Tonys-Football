@@ -146,6 +146,8 @@ describe('feature flags', () => {
       underground: false,
       roulette: false,
       tonysLine: false,
+      slotMachine: false,
+      blackjackTable: false,
     });
   });
 
@@ -175,8 +177,10 @@ describe('feature flags', () => {
 
   it('declares exactly the keys this product has', () => {
     expect([...FEATURE_KEYS].sort()).toEqual([
+      'blackjackTable',
       'rooms',
       'roulette',
+      'slotMachine',
       'tonysLine',
       'underground',
     ]);
@@ -235,10 +239,14 @@ describe('feature flags', () => {
       underground: false,
       roulette: false,
       tonysLine: false,
+      slotMachine: false,
+      blackjackTable: false,
     });
     expect(featureFlags(demo, 'rooms,underground')).toEqual({
       rooms: true,
       underground: true,
+      slotMachine: false,
+      blackjackTable: false,
       roulette: false,
       tonysLine: false,
     });
@@ -248,6 +256,8 @@ describe('feature flags', () => {
       underground: false,
       roulette: false,
       tonysLine: false,
+      slotMachine: false,
+      blackjackTable: false,
     });
   });
 
@@ -269,6 +279,8 @@ describe('feature flags', () => {
       underground: false,
       roulette: false,
       tonysLine: false,
+      slotMachine: false,
+      blackjackTable: false,
     });
   });
 });
