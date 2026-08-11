@@ -61,6 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
+| Slice restraint — drop the board, open Tony's Line on the paper, collapse the draft review | claude/tonys-pizza-slice-sim-3mzxm5 | `components/slice/*` · `lib/slice/render.ts` (presentation only) · `lib/flags.ts` (`tonysLine`) · `components/scene/stakes-band.tsx` · `docs/SLICE_RESTRAINT_BOUNDARY.md` (new) | `lib/stats/*` · story selection · the validator's rules · `Edition`'s shape or hash · the approval chain · schema · crons · art | 2026-08-11 |
 | Tuesday Slice simulation lab — preseason · week 8 · week 16 | claude/tonys-pizza-slice-sim-3mzxm5 | `lib/simulation/*` (new) · `scripts/simulate.ts` (new) · `lib/demo/states.ts` + `lib/demo/apply.ts` (three new demo states only) · `scripts/visual-qa-capture.ts` (three new states only) · `docs/SLICE_SIMULATION_LAB.md` + `docs/evidence/slice-simulation/*` (new) | any Slice drafting/validation/render/publication rule · `lib/stats/*` · `lib/rehearsal/*` · `lib/sleeper/midseason-*` · `lib/slice/editions.ts` fixtures · rooms · sprites · art · economy · catalog · cron schedules · database schema | 2026-08-11 |
 
 **Empty is a real state**, and it means what it says: no session is holding any

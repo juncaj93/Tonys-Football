@@ -738,3 +738,63 @@ describe('the two number formats the packet allows', () => {
     expect(margin(50.51)).toBe('50.5');
   });
 });
+
+describe('a drawn game is a draw in the rendered scoreboard', () => {
+  /*
+   * **Moved here, not deleted.** This guarantee used to live in
+   * `components/slice/presentation.test.tsx`, asserted against the board the
+   * paper printed. The commissioner's 2026-08-11 ruling stopped the paper
+   * printing that board (`08 §1`, `08 §29`), and deleting the assertion with the
+   * section would have quietly retired the protection for a defect that really
+   * shipped: `leftWon` is false on a tie and the board's only separator was the
+   * literal word `over`, so a drawn game printed *"Cheese over Nathan"* — a
+   * claim about a result that did not happen — on the surface the league reads
+   * as true.
+   *
+   * `Edition.scoreboard` is still produced, still stored in the published
+   * snapshot and still part of `editionHash`. So the guarantee belongs where the
+   * data is **made**, which is here, and it protects whoever prints a board
+   * next — the standings and history surfaces are the obvious candidates.
+   */
+  const drawn = (): FactPacket => ({
+    season: 2026,
+    week: 4,
+    weekType: 'regular',
+    finalized: true,
+    lead: null,
+    rest: [],
+    scoreboard: [
+      {
+        key: '2026-w04-m1',
+        winnerName: null,
+        winnerPoints: null,
+        loserName: null,
+        loserPoints: null,
+        tie: true,
+        tieNames: ['Cheese', 'Nathan'],
+        tiePoints: 121.5,
+      },
+    ],
+    suppressed: [],
+    demoted: [],
+    quiet: true,
+    allowedNumbers: ['121.50'],
+    allowedNames: ['Cheese', 'Nathan'],
+    refusal: null,
+  });
+
+  it('marks it a tie and gives neither side the win', () => {
+    const [row] = renderEdition(drawn()).scoreboard;
+
+    expect(row?.tie).toBe(true);
+    expect(row?.leftWon).toBe(false);
+    expect(row?.leftPoints).toBe('121.50');
+    expect(row?.rightPoints).toBe('121.50');
+  });
+
+  it('names both sides, so a renderer cannot have to guess one', () => {
+    const [row] = renderEdition(drawn()).scoreboard;
+
+    expect([row?.leftName, row?.rightName].sort()).toEqual(['Cheese', 'Nathan']);
+  });
+});

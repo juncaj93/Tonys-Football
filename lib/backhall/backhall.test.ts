@@ -157,20 +157,36 @@ describe('feature flags', () => {
     );
   });
 
-  it('ships v1 with the market shut, because there is no season to run one on', () => {
+  it('ships v1 with the market OPEN — commissioner ruling, 2026-08-11', () => {
     /*
-     * `18 §3.4`: *"V1: Tony's weekly prediction only. Later, behind the approved
-     * feature flag — Tony's Line."* Shut is also the only honest state today —
-     * the line is a season median and the 2026 season has no games.
+     * **Inverted rather than deleted**, because *which state v1 ships* is the
+     * thing worth pinning and it should stay pinned whichever way the answer
+     * goes. It previously read *"ships v1 with the market shut, because there is
+     * no season to run one on"*, and both halves changed: `18 §3.4` puts the
+     * Line behind the flag and the commissioner opened it.
+     *
+     * The old reasoning was right about the danger and wrong about where the
+     * guard lives. Nothing fires on nothing here because **the basis refuses**,
+     * not because the flag is shut: `authorTonysLine` returns `thin-basis` until
+     * `MIN_BASIS_TEAM_WEEKS` team-weeks exist, which is roughly week 3. That
+     * property is asserted where it lives, in `lib/stakes/stakes.test.ts`.
      */
-    expect(featureFlags({}).tonysLine).toBe(false);
-    expect(featureFlags({ DEMO_FIXTURES: '1' }, 'tonysLine').tonysLine).toBe(true);
+    expect(featureFlags({}).tonysLine).toBe(true);
   });
 
   it('will not open the market in production either', () => {
-    expect(
-      featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'tonysLine').tonysLine,
-    ).toBe(false);
+    /*
+     * Restated so it no longer depends on what the default happens to be.
+     *
+     * It used to assert `tonysLine === false` here, which passed for **two**
+     * reasons at once — the override is refused *and* the default was shut — so
+     * it would have gone on passing if the refusal broke. Comparing against
+     * `featureFlags({})` isolates the refusal, which is the only thing this test
+     * was ever for. The shutting direction is the test above.
+     */
+    expect(featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'tonysLine')).toEqual(
+      featureFlags({}),
+    );
   });
 
   it('declares exactly the keys this product has', () => {
@@ -230,17 +246,23 @@ describe('feature flags', () => {
   it('opens from a preview query parameter, so both states can be photographed', () => {
     const demo = { DEMO_FIXTURES: '1' };
 
+    /*
+     * The override is **additive over the defaults**, not a complete statement
+     * of what is open — so `?open=rooms` leaves `tonysLine` where v1 put it,
+     * which is now open. `?open=none` below is the only way to get the floor,
+     * and that is exactly what it exists for.
+     */
     expect(featureFlags(demo, 'rooms')).toEqual({
       rooms: true,
       underground: false,
       roulette: false,
-      tonysLine: false,
+      tonysLine: true,
     });
     expect(featureFlags(demo, 'rooms,underground')).toEqual({
       rooms: true,
       underground: true,
       roulette: false,
-      tonysLine: false,
+      tonysLine: true,
     });
     // Repeated parameters arrive as an array, and a stale one must not throw.
     expect(featureFlags(demo, ['none', 'basement'])).toEqual({

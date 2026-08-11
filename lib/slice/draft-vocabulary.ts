@@ -132,6 +132,16 @@ export const DRAFT_PHRASES = {
   picksLabel: 'The first few',
   gradeLabel: 'Tony’s grade',
 
+  /**
+   * The line under the board that says a row opens.
+   *
+   * Curated like every other word on this page, and phrased as the shop rather
+   * than as an interface: *"tap to expand"* is a manual, and a manual on a
+   * newspaper is furniture nobody reads. It says what is behind the row, which
+   * is the only thing worth knowing.
+   */
+  expandHint: 'Tap a name to read Tony’s full review of that draft.',
+
   /** Week one. */
   weekOneLabel: 'Week one',
   versus: 'v',

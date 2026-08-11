@@ -162,10 +162,36 @@ describe.skipIf(!hasDatabase)('the Tuesday Slice simulation lab', () => {
     expect(look!.publishedHeadlineAfterwards).toBe(recordFor('week-16').desk?.edition.headline);
   });
 
-  it("Tony's Line is shut in all three, because nothing here opens a flag", () => {
-    for (const key of SIMULATION_KEYS) {
-      const kinds = recordFor(key).after.stakes.map((stake) => stake.kind);
-      expect(kinds, key).not.toContain('TONYS_LINE');
+  it("Tony's Line runs once the league has a basis, and not before", () => {
+    /*
+     * **Inverted rather than deleted.** It read *"Tony's Line is shut in all
+     * three, because nothing here opens a flag"* until the commissioner opened
+     * it on 2026-08-11, and the assertion is more useful the other way round:
+     * this is the only place the flag is exercised through the **real cron**,
+     * against a season the cron played, rather than through a unit test of
+     * `featureFlags`.
+     *
+     * The property is not *"the market exists"* — it is **where it starts**. A
+     * line is a season median and `MIN_BASIS_TEAM_WEEKS` keeps one from being
+     * authored until the league has played roughly a fortnight, so an open flag
+     * must still author nothing in the preseason and nothing in week 1.
+     */
+    const preseason = recordFor('preseason').after.stakes;
+    expect(preseason.filter((stake) => stake.kind === 'TONYS_LINE')).toEqual([]);
+
+    for (const key of ['week-8', 'week-16'] as const) {
+      const lines = recordFor(key).after.stakes.filter((stake) => stake.kind === 'TONYS_LINE');
+
+      expect(lines.length, `${key}: the market never opened`).toBeGreaterThan(0);
+
+      /*
+       * Ten managers reach twelve team-weeks during week 2, so the first line a
+       * season can carry is week 3's. Earlier than that is a line computed from
+       * a basis too thin to be called a median, which is the exact claim the
+       * market rests on.
+       */
+      const earliest = Math.min(...lines.map((stake) => stake.week));
+      expect(earliest, `${key}: a line was authored on a thin basis`).toBeGreaterThanOrEqual(3);
     }
   });
 

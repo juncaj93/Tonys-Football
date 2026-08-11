@@ -77,23 +77,41 @@ const V1: Readonly<Record<FeatureKey, boolean>> = {
   // entire required scaffolding."
   roulette: false,
   /*
-   * Tony's Line is a market, and there is no season to run one on.
+   * Tony's Line is open — commissioner ruling, 2026-08-11.
    *
    * `18 §3.4` puts it behind a flag in so many words: *"V1: Tony's weekly
    * prediction only. Later, behind the approved feature flag — Tony's Line."*
-   * `16 §9` puts it in v1 scope. Both are satisfied by a deploy-time flag: the
-   * feature is built, gated, and turned on for everyone at once when the season
-   * starts, which is exactly how `18 §6` says a shut destination opens.
+   * `16 §9` puts it in v1 scope. The flag is how a shut destination opens
+   * (`18 §6`): for everyone at once, at deploy time, in one line.
    *
-   * Shut is also the only honest state today. The line is a season median and
-   * the 2026 season has no games — authoring one now would be the *"weekly
-   * reward that fires on nothing"* the checkpoint warns against, with tokens
-   * attached.
+   * ## Why opening it does not author a line on nothing
    *
-   * Unlike `roulette`, this one **is** a feature waiting for a switch, so the
-   * preview override can open it and the demo states photograph it open.
+   * The old comment here said shut was *"the only honest state today"* because
+   * the 2026 season has no games. That reasoning was right about the danger and
+   * wrong about where the guard lives. **The guard is in the data, not in the
+   * flag**: `authorTonysLine` refuses `thin-basis` while
+   * `basis.medianTeamScoreCents` is null, and `MIN_BASIS_TEAM_WEEKS = 12` keeps
+   * it null until the league has played roughly a fortnight. Ten managers reach
+   * twelve team-weeks in week 3.
+   *
+   * So with this open: weeks 1 and 2 author **no line at all** and the band
+   * prints nothing, exactly as it does today; from week 3 the line is a real
+   * season median and the market runs. Nothing fires on nothing, and the
+   * offseason is unchanged.
+   *
+   * ## What it changes on the surfaces
+   *
+   * `16 §38` already puts the market on the paper. Opening the flag is what
+   * makes `chalkboardFor` return it, so the Slice's stakes band gains **Tony's
+   * Line with its OVER / UNDER control** and the parlor sign gains it too. The
+   * bet itself is unchanged and was always built: one pick per manager on their
+   * own team, a fixed stake, and a 2× payout enforced by
+   * `weekly_stakes_line_pays_double` in the database.
+   *
+   * **Shutting it again is this same one line**, and nothing is lost: an
+   * authored stake stays authored and settles on its own terms.
    */
-  tonysLine: false,
+  tonysLine: true,
 };
 
 export type FeatureFlags = Readonly<Record<FeatureKey, boolean>>;

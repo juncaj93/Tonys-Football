@@ -155,7 +155,7 @@ Only then did the preseason mode engage.
 | from the draft room | 16 rounds · first off the board *Ja'Marr Chase — Alex* · *round one: six running backs* · *first defense: 14th round* |
 | week one | **five fixtures**, printed as two names and a word |
 | validator | passed |
-| page | **8,024 px at 390** — about **9.5 screens**. See §6 |
+| page, as photographed | **8,024 px at 390** — about **9.5 screens**. Now **2,188 px** after the 2026-08-11 restraint ruling; see §7 item 1 |
 
 Week one's fixtures are on the page because the scenario serves week 1 the way
 Sleeper really serves a drafted-but-unplayed week: ten rows at zero. The sync
@@ -223,7 +223,12 @@ rather than editing one somebody approved.
 
 ### 6.2 Nothing on a playoff paper says which round it is
 
-Week 16's board prints five games in one list. Two are semifinals, one is the
+**Superseded in part, 2026-08-11: the board is no longer printed at all**
+(`docs/SLICE_RESTRAINT_BOUNDARY.md §1`), so the confusion below is no longer on
+the page. The underlying gap is unchanged and still real — the product cannot
+name a round — so the finding stands for whatever prints playoff results next.
+
+As photographed on the day, week 16's board printed five games in one list. Two are semifinals, one is the
 fifth-place game and two are consolation finals, and the paper cannot tell them
 apart — because the product does not store the bracket's structure.
 
@@ -232,6 +237,12 @@ board for the same missing fact. The dateline says `Playoffs` because
 `week_type` supports that much and no more.
 
 ### 6.3 Tony's Line is absent from every scenario
+
+**Superseded, 2026-08-11: the commissioner opened it.** The line now runs from
+week 3 and the market prints under the paper with its OVER / UNDER control;
+`docs/SLICE_RESTRAINT_BOUNDARY.md §2` records why opening the flag was safe, and
+the lab's own gate now asserts *where the market starts* rather than that it is
+shut. As photographed on the day:
 
 Correct, and nothing here opened it. `18 §3.4` puts it behind a shut flag, the
 job reads the same flag every surface reads, and `MIN_BASIS_TEAM_WEEKS = 12`
@@ -263,7 +274,7 @@ reported with its evidence; none is repaired here.
 
 | # | What | Kind |
 |---|---|---|
-| 1 | The preseason issue is **8,024 px at 390** — about **9.5 screens** — against 1,680 for a weekly paper. Ten team sections with five picks each. The board is first, so a manager who only wants their grade is done in two taps, which is the mitigation `PRESEASON_SLICE_BOUNDARY §7` designed. Whether the *rest* wants to be that long is a product question | editorial / visual |
+| 1 | ~~The preseason issue is **8,024 px at 390** — about **9.5 screens** — against 1,680 for a weekly paper.~~ **CLOSED by commissioner ruling, 2026-08-11.** The board and the ten team sections were the same ten managers twice; the board is now the only list and a row opens into the detail. **2,188 px, 2.6 screens.** `docs/SLICE_RESTRAINT_BOUNDARY.md §3` | editorial / visual — **resolved** |
 | 2 | Week 16's column reads *"An ordinary week, and Tony prints those the same as the other kind."* on a semifinal decided by 0.42. `EditionCharacter` is derived from story strength and knows nothing about the bracket | editorial |
 | 3 | Every weekly report carries the skipped line *"The draft has not finished, so nothing was stored."* — the draft sync, correctly refusing the real 2026 `pre_draft` board, every week from September to January. Correct, and it will read oddly on a commissioner's week-16 report | operational clarity |
 | 4 | The stakes band can print **`TONY'S CALL · WEEK 18`** beside **`THE BOUNTY · WEEK 17`**. That is a *rolling* bounty behaving exactly as `16 §38` specifies, and the two week labels side by side may read as staleness | editorial |

@@ -37,7 +37,7 @@ import path from 'node:path';
 
 import { chromium, type Browser, type Page } from 'playwright';
 
-import { databaseName } from './harness.js';
+import { assertServerIsOurBuild, databaseName } from './harness.js';
 
 const WIDTHS = [390, 375, 360] as const;
 const HEIGHT = 844;
@@ -78,17 +78,72 @@ function run(command: string, args: readonly string[], env: NodeJS.ProcessEnv): 
   execFileSync(command, [...args], { stdio: 'inherit', env });
 }
 
+/**
+ * Wait for a server, and then prove it is **ours**.
+ *
+ * ## Readiness is not identity, and this script learned that the hard way
+ *
+ * The first version returned as soon as `/door` answered at all. An orphaned
+ * `next-server` from the previous scenario was still holding the port, the
+ * replacement died on `EADDRINUSE`, the probe got its 200 from the **old
+ * build**, and three scenarios were photographed against stale code and filed
+ * under the new one. The screenshots looked completely plausible; only a string
+ * that had changed in the same session gave it away.
+ *
+ * `scripts/harness.ts` documents that exact incident from the visual sweep and
+ * exports the check for it, so this calls the check rather than repeating the
+ * mistake in a second place: it fetches an asset whose URL contains **this
+ * tree's** `BUILD_ID`, which a stale server answers 404 for while still
+ * answering 200 on every page.
+ */
 async function waitForServer(): Promise<void> {
   for (let attempt = 0; attempt < 120; attempt += 1) {
     try {
       const response = await fetch(`${BASE}/door`, { redirect: 'manual' });
-      if (response.status > 0) return;
+      if (response.status > 0) {
+        await assertServerIsOurBuild(BASE);
+        return;
+      }
     } catch {
       // Not up yet.
     }
     await new Promise((resolve) => setTimeout(resolve, 500));
   }
   throw new Error(`the server never answered on ${BASE}`);
+}
+
+/**
+ * Stop a server, and everything it started.
+ *
+ * `npx next start` is a wrapper: the process that actually holds the port is a
+ * grandchild called `next-server`. Signalling the wrapper leaves that
+ * grandchild running, which is how the port came to be occupied by a previous
+ * scenario's build. So the whole **process group** is signalled, which is what
+ * `detached: true` on the spawn exists to make possible, and the port is then
+ * waited on until it is genuinely free.
+ */
+async function stopServer(server: ChildProcess | null): Promise<void> {
+  if (server?.pid === undefined) return;
+
+  try {
+    process.kill(-server.pid, 'SIGTERM');
+  } catch {
+    // Already gone.
+  }
+
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    try {
+      await fetch(`${BASE}/door`, { redirect: 'manual', signal: AbortSignal.timeout(1000) });
+    } catch {
+      return; // Nothing answering: the port is free.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 250));
+  }
+
+  throw new Error(
+    `a server is still holding ${BASE} after SIGTERM. Photographing now would ` +
+      'capture the previous scenario\'s build.',
+  );
 }
 
 /** Sign in as Alex, through the real door. Found by name — uuids move on reseed. */
@@ -112,6 +167,8 @@ interface Shot {
   readonly fold: string;
   /** How tall the page is, in CSS pixels. Screens of scrolling, in one number. */
   readonly pageHeight: number;
+  /** The preseason board with one manager's review open. Absent on a weekly issue. */
+  readonly opened?: { readonly file: string; readonly pageHeight: number };
 }
 
 async function photograph(browser: Browser, scenario: Scenario): Promise<readonly Shot[]> {
@@ -158,7 +215,31 @@ async function photograph(browser: Browser, scenario: Scenario): Promise<readonl
     await page.screenshot({ path: fold, fullPage: false });
 
     const pageHeight = await page.evaluate(() => document.documentElement.scrollHeight);
-    written.push({ width, full, fold, pageHeight });
+
+    /*
+     * The preseason board opened, which is the feature rather than a variant.
+     *
+     * *"Streamline the issue, and let each owner read their detailed one"* is
+     * two states, and a photograph of only the collapsed one shows the half that
+     * is easy. The first row is opened through the element's own disclosure —
+     * no script of ours toggles anything — and the height is recorded again, so
+     * *"what does it cost to open one"* is a number.
+     */
+    let opened: Shot['opened'];
+    const rows = page.locator('details[data-preseason-team]');
+    if ((await rows.count()) > 0) {
+      await rows.first().locator('summary').click();
+      await page.waitForTimeout(150);
+
+      const file = path.join(OUT, `${scenario}-slice-${String(width)}-open.png`);
+      await page.screenshot({ path: file, fullPage: true });
+      opened = {
+        file,
+        pageHeight: await page.evaluate(() => document.documentElement.scrollHeight),
+      };
+    }
+
+    written.push({ width, full, fold, pageHeight, ...(opened === undefined ? {} : { opened }) });
 
     await context.close();
   }
@@ -225,7 +306,13 @@ async function main(): Promise<void> {
        * `resetDatabase` truncates underneath it and Next caches nothing that
        * survives a restart. Cheaper to be sure than to explain a stale render.
        */
-      server = spawn('npx', ['next', 'start', '--port', String(PORT)], { env, stdio: 'ignore' });
+      server = spawn('npx', ['next', 'start', '--port', String(PORT)], {
+        env,
+        stdio: 'ignore',
+        // Its own process group, so `stopServer` can signal the `next-server`
+        // grandchild that actually holds the port.
+        detached: true,
+      });
       await waitForServer();
 
       const shots = await photograph(browser, scenario);
@@ -233,16 +320,18 @@ async function main(): Promise<void> {
       for (const shot of shots) {
         console.log(
           `  ${String(shot.width)}px · page ${String(shot.pageHeight)}px · ` +
-            `${String(Math.round((shot.pageHeight / HEIGHT) * 10) / 10)} screens`,
+            `${String(Math.round((shot.pageHeight / HEIGHT) * 10) / 10)} screens` +
+            (shot.opened === undefined
+              ? ''
+              : ` · one open ${String(shot.opened.pageHeight)}px`),
         );
       }
 
-      server.kill('SIGTERM');
+      await stopServer(server);
       server = null;
-      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   } finally {
-    server?.kill('SIGTERM');
+    await stopServer(server).catch(() => undefined);
     await browser.close();
   }
 

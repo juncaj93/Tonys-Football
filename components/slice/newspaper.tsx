@@ -1,6 +1,4 @@
 import {
-  Ledger,
-  LedgerRow,
   MetadataStrip,
   MountedSheet,
   PressMasthead,
@@ -174,95 +172,37 @@ export function Newspaper({ issue, stamp = null }: { issue: Edition; stamp?: str
             </Section>
           )}
 
-          {issue.scoreboard.length > 0 && (
-            <Section
-              label="The board"
-              data-slice-board=""
-              /*
-               * Closes the lead only when nothing came between. An issue with no
-               * secondary story goes straight from the lede to the board, and the
-               * board is then the first thing after it.
-               */
-              weight={issue.secondary.length === 0 ? 'heavy' : 'rule'}
-            >
-              {/*
-                * Every game of the week, whether or not it was a story.
-                *
-                * This is the part that makes it a newspaper rather than a feed:
-                * the old Slice reported the two games the fact layer had an
-                * opinion about and silently dropped the other three, so three of
-                * ten managers never appeared in their own week.
-                *
-                * A `Ledger`, because that is what a results board is — a key on
-                * the left, a number on the right, one rule between rows. It used
-                * to be a bare list whose scores were set two pixels smaller than
-                * the names beside them, so the column a reader is actually
-                * scanning was the quietest thing in it.
-                */}
-              <div className="mt-2.5">
-                <Ledger>
-                  {issue.scoreboard.map((row) => (
-                    <LedgerRow
-                      key={row.key}
-                      kind="name"
-                      data-slice-score=""
-                      label={
-                        <>
-                          <span className={row.leftWon ? 'text-ink-900' : 'text-ink-700'}>
-                            {row.leftName}
-                          </span>
-                          {/*
-                            * `over` is a claim about who won, so a drawn game
-                            * cannot use it. It did: `leftWon` is false on a tie
-                            * and the board printed *"A over B"* for a game
-                            * neither side won. `RenderedScore` has carried
-                            * `tie` since it was written.
-                            */}
-                          <span className="text-ink-500">{row.tie ? ' ties ' : ' over '}</span>
-                          <span className="text-ink-700">{row.rightName}</span>
-                        </>
-                      }
-                      value={
-                        <>
-                          {/*
-                            * The winner's score is the display face's **real**
-                            * 700, not a synthetic one. VT323 ships at 400 only,
-                            * so bolding a name would have the browser smear the
-                            * glyphs — which on a pixel face is the blurry type
-                            * the whole art direction is written against. Which
-                            * side won is carried by the word between the names;
-                            * this is reinforcement.
-                            */}
-                          <span className={row.leftWon ? 'font-display font-bold' : ''}>{row.leftPoints}</span>
-                          {/*
-                            * The separator gets room on both sides.
-                            *
-                            * `131.84–123.38` set tight reads as one nine-figure
-                            * number at a glance, which is the opposite of what a
-                            * results board is for — the reader is comparing two
-                            * quantities and the first thing they need is to see
-                            * that there *are* two.
-                            *
-                            * Margin rather than spaces in the string: the value
-                            * is `whitespace-nowrap`, so two space characters
-                            * would widen the unbreakable column by two full
-                            * glyphs of a wide pixel face and push the names on a
-                            * 360 screen. 3px a side buys the separation for a
-                            * fifth of the cost.
-                            */}
-                          <span className="mx-[3px] text-ink-500">&ndash;</span>
-                          <span className={!row.leftWon && !row.tie ? 'font-display font-bold' : ''}>
-                            {row.rightPoints}
-                          </span>
-                        </>
-                      }
-                    />
-                  ))}
-                </Ledger>
-              </div>
-            </Section>
-          )}
+          {/*
+            * **The board is not printed.** Commissioner ruling, 2026-08-11.
+            *
+            * It used to print every publishable game of the week under a *"The
+            * board"* heading, and the note that stood here defended it: the
+            * pre-board Slice reported the two games the fact layer had an
+            * opinion about and dropped the rest, so most of the league never
+            * appeared in its own week.
+            *
+            * That defence is real and it is now **overridden on purpose**, by
+            * the document the board was always in tension with. `08 §1` says the
+            * Slice *"should not read like a generic fantasy recap, a box-score
+            * summary, or an AI-generated newsletter."* `08 §2` says *"do not
+            * force sections."* `08 §29` makes *"no fixed section is forced"* an
+            * acceptance criterion. A ledger of all five games, every week,
+            * whatever happened, is a fixed section and it is a box score.
+            *
+            * **The cost is stated rather than discovered later**: on a typical
+            * week the paper carries two or three stories, so six or seven
+            * managers are not named in it at all. Results live on the standings
+            * and history surfaces, which is where a reader goes to look
+            * something up rather than to read.
+            *
+            * `Edition.scoreboard` is **deliberately untouched**. It stays in the
+            * packet, in the snapshot and in `editionHash`, so nothing about a
+            * published version moved and the record of the week is complete —
+            * this is a decision about what the paper *prints*, not about what it
+            * *knows*. `docs/SLICE_RESTRAINT_BOUNDARY.md` is the account.
+            */}
         </>
+
       ) : (
         <p className={`mt-4 ${TYPE.bodyLead} text-ink-700`}>{issue.nothingToPrint}</p>
       )}

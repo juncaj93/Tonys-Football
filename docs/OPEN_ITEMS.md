@@ -396,20 +396,21 @@ notes or already-settled behaviour and live in that document's §7.
 
 | | |
 |---|---|
-| **The preseason issue is 8,024 px at 390 — about 9.5 screens** | Against 1,680 for a weekly paper. Ten team sections, five picks each. The board sits **first**, so a manager who only wants their own grade is done in two taps, which is the mitigation `PRESEASON_SLICE_BOUNDARY §7` designed on purpose. Whether the remaining nine screens want to be that long is a product call nobody has made, because until now nobody had seen the page at full length |
-| **Week 16's column called a 0.42 semifinal "an ordinary week"** | `EditionCharacter` is derived from story strength and knows nothing about the bracket, so a playoff week with one strong story reads as quiet. Correct by its own rule and probably wrong for the reader |
+| ~~**The preseason issue is 8,024 px at 390 — about 9.5 screens**~~ | **RULED AND CLOSED, 2026-08-11.** The board and the ten team sections were the same ten managers twice. The board is now the only list and a row opens into the detail: **2,188 px, 2.6 screens.** `docs/SLICE_RESTRAINT_BOUNDARY.md §3` |
+| **Week 16's column called a 0.42 semifinal "an ordinary week"** | **STILL OPEN.** `EditionCharacter` is derived from story strength and knows nothing about the bracket, so a playoff week with one strong story reads as quiet. Correct by its own rule and probably wrong for the reader |
 
-**Neither is a defect and neither is authorization to change copy, a threshold or
-a renderer.** Both need a decision first: the first about how long a draft review
-should be, the second about whether `EditionCharacter` should know a playoff week
-when it sees one. Evidence is
+**The one remaining entry is not a defect and is not authorization to change copy,
+a threshold or a renderer.** It needs a decision first: whether
+`EditionCharacter` should know a playoff week when it sees one. Evidence is
 [`docs/evidence/slice-simulation/`](evidence/slice-simulation/) — the reports and
 the photographs at 390 / 375 / 360.
 
 **Related and already settled, recorded so it is not refiled as new:** a playoff
 paper cannot name which round a game was, and `elimination` cannot be told on the
 Tuesday it happened. Both need the bracket's structure persisted, which **G5**
-declines for v1. The lab is the first thing to demonstrate the second one — the
+declines for v1. The first of the two is no longer *visible* — the 2026-08-11
+ruling stopped the paper printing a board at all — but the gap is unchanged and
+still governs whatever prints playoff results next. The lab is the first thing to demonstrate the second one — the
 same week re-assembled after the final does carry the story, and the published
 issue does not move.
 
