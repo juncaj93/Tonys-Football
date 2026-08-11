@@ -1473,7 +1473,7 @@ export const APPLIED_STATES: readonly string[] = Object.keys(APPLIERS);
  * optional fields are supplied on some and left off others so both shapes appear
  * in one issue.
  */
-const DEMO_REVIEWS: readonly {
+export const DEMO_REVIEWS: readonly {
   readonly grade: TonyGrade;
   readonly take: string;
   readonly concern?: string;

@@ -27,6 +27,8 @@
     "db:status": "bash scripts/dev-db.sh status",
     "demo": "tsx scripts/demo.ts",
     "rehearse": "tsx scripts/rehearse.ts",
+    "simulate": "tsx scripts/simulate.ts",
+    "simulate:shots": "tsx scripts/simulate-shots.mts",
     "sleeper:record": "tsx scripts/record-fixtures.ts",
     "sleeper:check": "tsx scripts/record-fixtures.ts -- --check",
     "sleeper:import": "tsx scripts/import-league.ts",

@@ -1,0 +1,79 @@
+{
+  "widths": [
+    390,
+    375,
+    360
+  ],
+  "route": "/slice",
+  "scenarios": [
+    {
+      "scenario": "preseason",
+      "shots": [
+        {
+          "width": 390,
+          "full": "docs/evidence/slice-simulation/preseason-slice-390.png",
+          "fold": "docs/evidence/slice-simulation/preseason-slice-390-fold.png",
+          "pageHeight": 8024
+        },
+        {
+          "width": 375,
+          "full": "docs/evidence/slice-simulation/preseason-slice-375.png",
+          "fold": "docs/evidence/slice-simulation/preseason-slice-375-fold.png",
+          "pageHeight": 8079
+        },
+        {
+          "width": 360,
+          "full": "docs/evidence/slice-simulation/preseason-slice-360.png",
+          "fold": "docs/evidence/slice-simulation/preseason-slice-360-fold.png",
+          "pageHeight": 8105
+        }
+      ]
+    },
+    {
+      "scenario": "week-8",
+      "shots": [
+        {
+          "width": 390,
+          "full": "docs/evidence/slice-simulation/week-8-slice-390.png",
+          "fold": "docs/evidence/slice-simulation/week-8-slice-390-fold.png",
+          "pageHeight": 1680
+        },
+        {
+          "width": 375,
+          "full": "docs/evidence/slice-simulation/week-8-slice-375.png",
+          "fold": "docs/evidence/slice-simulation/week-8-slice-375-fold.png",
+          "pageHeight": 1752
+        },
+        {
+          "width": 360,
+          "full": "docs/evidence/slice-simulation/week-8-slice-360.png",
+          "fold": "docs/evidence/slice-simulation/week-8-slice-360-fold.png",
+          "pageHeight": 1776
+        }
+      ]
+    },
+    {
+      "scenario": "week-16",
+      "shots": [
+        {
+          "width": 390,
+          "full": "docs/evidence/slice-simulation/week-16-slice-390.png",
+          "fold": "docs/evidence/slice-simulation/week-16-slice-390-fold.png",
+          "pageHeight": 1573
+        },
+        {
+          "width": 375,
+          "full": "docs/evidence/slice-simulation/week-16-slice-375.png",
+          "fold": "docs/evidence/slice-simulation/week-16-slice-375-fold.png",
+          "pageHeight": 1646
+        },
+        {
+          "width": 360,
+          "full": "docs/evidence/slice-simulation/week-16-slice-360.png",
+          "fold": "docs/evidence/slice-simulation/week-16-slice-360-fold.png",
+          "pageHeight": 1715
+        }
+      ]
+    }
+  ]
+}
