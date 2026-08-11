@@ -258,9 +258,12 @@ degradation — `boardFace` renders an empty detail rather than prose, which is 
 own documented rule (*"shows nothing rather than inventing a detail"*), and the
 panel behind the board still carries the whole fact.
 
-**Consequence, stated plainly:** the board's detail slot is now **empty for the
-whole live season**, because nothing produces a current-season matchup fact. That
-is honest and it is a visible gap — see §5.3.
+**Consequence, stated plainly:** the board's detail slot is empty whenever no
+current-season pairing is on record. When this was written that meant *the whole
+live season*, because nothing produced a current-season matchup fact; §5.3's
+selector now fills it from Sunday's photograph through Tuesday's close, and the
+remaining empty window is **Wednesday to Saturday**. That window is **ruled and
+accepted for v1** — see §5.3.
 
 ---
 
@@ -271,10 +274,15 @@ scope. None was fixed *here*. The first was pinned by a test that would go
 **red** the day it was addressed, which was the point: it should be a decision,
 not a slip.
 
-> **All three are now ruled on** (commissioner, 2026-08-10). The findings below
-> stand exactly as written and are the evidence the rulings were made on; each
-> carries its outcome underneath. §5.1 was repaired by the Week 1 rehearsal
-> (#85); §5.2 and §5.3 were ruled on and implemented in **#89**.
+> **All three are now ruled on, and the workstream is CLOSED** (commissioner,
+> 2026-08-10). The findings below stand exactly as written and are the evidence
+> the rulings were made on; each carries its outcome underneath. §5.1 was
+> repaired by the Week 1 rehearsal (#85); §5.2 and §5.3 were ruled on and
+> implemented in **#94** (`f5673ad`), which the commissioner has approved.
+>
+> The one design question §5.3 left open — the board's detail between Tuesday's
+> close and the following Sunday's snapshot — is **ruled** and recorded at the
+> end of §5.3. Nothing here is awaiting a decision.
 
 ### 5.1 The Slice cannot draft any week of a live season
 
@@ -358,8 +366,8 @@ seasonal (`16 §5.1`) and that seat belonged to two other people in 2024 and 202
 > > during preseason because the current season contains no meaningful results.
 > > That justification expires once real finalized weeks exist.
 >
-> Implemented in #89. The switch is on **the thing the old reason was about** —
-> does this season contain a result yet — rather than on a date:
+> Implemented in **#94** (`f5673ad`). The switch is on **the thing the old reason
+> was about** — does this season contain a result yet — rather than on a date:
 >
 > | State | What prints |
 > |---|---|
@@ -397,8 +405,8 @@ this is the obvious thing that would fill it.
 
 > #### RULED — 2026-08-10. Build a deterministic in-season selector
 >
-> Implemented in #89 as `lib/stats/importance.ts` (the rule, pure) and
-> `featuredCurrentMatchup` in `lib/stats/board.ts` (the reads).
+> Implemented in **#94** (`f5673ad`) as `lib/stats/importance.ts` (the rule,
+> pure) and `featuredCurrentMatchup` in `lib/stats/board.ts` (the reads).
 >
 > **The ranking rule, in order:** combined wins, descending → standings
 > proximity `|rankA − rankB|`, ascending → combined points for, descending.
@@ -421,12 +429,63 @@ this is the obvious thing that would fill it.
 > or from the week's stored games in the degraded case where a week synced but
 > its Tuesday declined to close it. Between the Tuesday that closes a week and
 > the Sunday that photographs the next, no pairing is on record and the slot is
-> empty. Closing that gap means persisting the schedule, which is new storage and
-> was not in the ruling's scope.
+> empty.
 >
 > **No claim travels with it.** The face prints two names. Nothing is called
 > *must-win*, *win-and-in* or an *elimination game*, because none of those is
 > provable from a table without the remaining schedule.
+
+#### RULED — 2026-08-10. Wednesday to Saturday, the detail line is simply absent
+
+**Keep the current behaviour for v1 and accept the blank matchup-detail slot.**
+This closes the one design question §5.3 left open. It required **no code
+change**: the merged implementation already does exactly this.
+
+The board continues to identify the current football week through the existing
+`currentWeekOf` rule. When the current week's pairings are not yet available
+from an authoritative stored source, the matchup-detail line is **absent**. That
+is preferable to stale information, and preferable to new storage introduced for
+presentation completeness.
+
+**The product may print:**
+
+```
+WEEK 9
+```
+
+with nothing underneath it, when no authoritative week 9 pairing is stored.
+
+**It must not:**
+
+| | |
+|---|---|
+| show a week 8 matchup beneath `WEEK 9` | `matchupLine` refuses a fact from any season but the one the board announces, and `featuredCurrentMatchup` is scoped to the named week — there is no fall-back to an earlier one |
+| relabel the board week 8 because week 8 holds more information | `currentWeekOf` is the only week source the face has |
+| infer week 9 pairings | the only reads are `week_snapshots` and `fantasy_matchups` |
+| reconstruct the schedule from assumptions | nothing derives a pairing that is not stored |
+| persist new schedule data to avoid an empty line | no table, column or migration was added |
+
+**The blank state is not an error.** It means *the current week is known, and
+Tony does not yet have an authoritative matchup to feature.* No placeholder copy
+is required. If a future visual review finds the empty composition itself poor,
+that is a **presentation** problem and must be solved as one — never by
+inventing fantasy information.
+
+**Sunday's snapshot remains the authoritative opportunity** to obtain the
+current week's pairings under the existing architecture. Once that evidence
+exists, the deterministic selector populates the detail.
+
+**Future schedule persistence is not approved by this ruling.** If another
+product feature later has a genuine need for it, that is its own architecture
+decision, and the Tonight Board may consume the stored schedule as a secondary
+benefit. **Do not create storage whose primary justification is filling this one
+board line.**
+
+**Head-to-head stays evidence only.** It is computed and carried, and it is not
+scored. Adding it to the importance rule needs a separate product ruling. The
+approved ranking remains: combined wins descending → standings proximity
+ascending → combined points for descending → roster id for deterministic
+ordering only, never for selection. `no-clear-favourite` remains intentional.
 
 ---
 
