@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| *(nothing claimed)* | | | | |
+| Back Hall environmental art direction (investigation + art brief) | `claude/back-hall-visual-investigation-qhml1h` | `components/scene/back-hall.tsx` · `lib/backhall/objects.ts` (coordinates only) · `app/back-hall/page.tsx` (presentation only) · `zone_back_hall_shell` and the four `_backHall_B1` registry rows · `docs/BACK_HALL_BOUNDARY.md` · a new `docs/art/BATCH_G_BACK_HALL_HANDOFF.md` · `docs/evidence/back-hall/` | manager sprite architecture or art (`lib/character/**`) · manager customisation · the approved parlor shell and `app/page.tsx` · the basement/storeroom (`lib/rooms/**`, `zone_room_shell_*`) · casino / Underground logic beyond the existing inert plate · token economy values · Tuesday Slice · collectibles · any route that is not `/back-hall` · schema | 2026-08-11 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
