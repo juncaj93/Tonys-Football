@@ -120,11 +120,19 @@ about, not a paytable that wants more effort.
 The return rate was never the problem: A reaches 85.57%.
 
 Candidate C is the recommendation. It is **B's paytable at half the stake**,
-which buys back the top prize while *halving* the largest possible single payout
-to **400 tokens — two pizza boxes**. Its lowest button is 5, which is what makes
-the 20× top prize reachable without committing much, and it puts slots **below**
+which buys back the top prize. Its lowest button is 5, which is what makes the
+20× top prize reachable without committing much, and it puts slots **below**
 blackjack's ladder, which is the right relationship: slots is the fast incidental
 game, blackjack is the one you sit down for.
+
+> **Correction, ruled 2026-08-11.** This paragraph originally said Candidate C
+> *"halves the largest possible single payout to 400 tokens."* That was true only
+> against Candidate B, which was never approved — and stating it without the
+> comparison invited the reading that C reduces the top payout. **Against the
+> approved baseline it raises it.** Relative to R5/R7 as written (40-token
+> maximum wager, 200-token ceiling): the **maximum wager halves** 40 → 20, the
+> **gross top payout doubles** 200 → 400, and the **maximum net win rises 160 →
+> 380**. The underlying analysis is unchanged; only the wording was wrong.
 
 ## 5. Baseline preservation
 
@@ -302,6 +310,112 @@ returns exactly the stake, so a net-only representation would be a zero delta an
 `CASINO_PAYOUT +40` is two legal non-zero movements and a truthful audit trail.
 R13 asked to be told if the transaction architecture required a different
 representation: **it does not.**
+
+## 11. Phase 3 — the slots redesign, and what it settled
+
+**Commissioner rulings, 2026-08-11 (second set).** Buttons fixed at **5 / 10 /
+20**; top prize fixed at **20×**, so 400 tokens at the largest button and no
+progressive jackpot; **85.13% refused** and the design re-derived toward
+**≈92%**, exploring 90 / 92 / 93 with *no assumption that 92 wins*; **blackjack
+untouched** at 20 / 40 / 80, 3:2, 2.03%.
+
+`docs/evidence/casino/slots-redesign.md` is the generated measurement
+(`npx tsx scripts/slots-redesign.ts`).
+
+### 11.1 The strip moved once, for the top prize
+
+`24 · 21 · 18 · 15 · 12 · 10`, flatter at the rare end than Phase 2's
+`25 · 22 · 19 · 16 · 11 · 7`. On the old strip the top prize landed **1 in 2,915
+spins** — a regular player meets it once every **5.7 seasons**, which is a top
+prize in the paytable and not in the product. It is now **1 in 1,000**, about
+once every two seasons per regular player. Criterion 2 asks for memorable wins,
+and a win nobody in a ten-person league ever sees is not one.
+
+### 11.2 The pair tier is forced, not chosen
+
+With the top prize fixed at 20×, the whole triple tier can return at most
+`3.50% × 20 = 70.0%` even if **every** three-of-a-kind paid the maximum. So **no
+paytable can reach 90% — let alone 92% — without a pair tier.** Ruling 2 and
+Ruling 3 together determine that this machine pays frequent small wins; that is
+arithmetic rather than a design preference, and a test asserts it.
+
+Given that, the tier pays *above* the stake on the three rarer symbols instead of
+paying the stake back on everything. Same return rate, but a **real win 15.74% of
+the time** rather than money-back 43.8% of the time.
+
+### 11.3 The three candidates
+
+| | triples (crust→tony) | RTP | Hit | True win | Top prize | Loss/spin at 10 | Volatility |
+|---|---|---|---|---|---|---|---|
+| **D** | 7/10/11/13/16/20 | 90.54% | 47.30% | 15.74% | 20× @ 1 in 1,000 | 0.946 | 1.925 |
+| **E** | 8/10/11/13/17/20 | **92.09%** | 47.30% | 15.74% | 20× @ 1 in 1,000 | 0.791 | 1.986 |
+| **F** | 8/10/12/14/17/20 | 93.01% | 47.30% | 15.74% | 20× @ 1 in 1,000 | 0.699 | 2.038 |
+
+Pairs are `1/1/1/2/2/2` in all three, so the comparison isolates the return rate.
+All three pass every coherence check.
+
+### 11.4 What the simulation actually showed
+
+**Leaving 85% did the work. The choice inside the band did almost none.**
+
+| | RTP | Regular: boxes | Regular: items after S1 | Heavy: boxes | League drain/season |
+|---|---|---|---|---|---|
+| Phase 2 (85.13%) | 85.13% | 8.0 | 8.0 / 24 | **4.0 — gate FAIL** | 4,333 |
+| **D** | 90.54% | 9.0 | 11.6 / 24 | 6.0 | 3,927 |
+| **E** | 92.09% | 9.5 | **11.7 / 24** | 7.0 | 3,515 |
+| **F** | 93.01% | 10.0 | 11.8 / 24 | 7.0 | 3,316 |
+| *no casino* | — | 11.0 | 13.3 / 24 | 11.0 | 0 |
+
+Three results, and the first is the one that matters:
+
+1. **Ruling 3 fixed the gate failure.** At 85% a league of heavy players fell to
+   4.0 boxes a season, below the approved 6–12 floor. Every Phase 3 candidate
+   **passes the release gate at every archetype.**
+2. **Regular play no longer guts the collection.** The cost fell from **5.3 items
+   of 13.3 (−40%)** at 85% to **1.6 items (−12%)** at 92%. Criterion 4 is met.
+3. **The band is flat.** Across 90 → 93 a regular player gains **0.2 items and
+   1.0 boxes**, while the league gives up 611 tokens of sink a season. The
+   marginal value of return above 90% is close to nothing, which is why the
+   choice inside the band is a judgement about the sink rather than about
+   progression.
+
+**Season-one item counts are the mean over 50 independent leagues, not one.** The
+first run of the script reported them from a single ten-manager season and they
+came out **non-monotonic in the return rate** — the 93% candidate looking worse
+than the 90% one. That is sampling noise being read as a finding, the same error
+the 2026-08-10 economy-gate ruling was issued about, and the fix is the same:
+make the sample big enough that the signal survives it. Each figure now rests on
+500 manager-seasons.
+
+### 11.5 The recommendation: **E, at 92.09%**
+
+- **Criterion 1, meaningfully net-negative** — 3,515 tokens a season leave the
+  league, about 17.6 boxes of purchasing power. D drains more; the difference
+  buys nothing measurable in progression.
+- **Criterion 2, memorable wins** — identical across the band by construction:
+  same strip, same hit rate, same 15.74% true-win rate, same top prize.
+- **Criterion 3, a real 20× top** — 1 in 1,000 spins, 400 tokens at the top
+  button, and the rarest symbol is the unique largest payout.
+- **Criterion 4, does not gut the loop** — a regular player keeps 11.7 of 13.3
+  items. D's marginal extra drain costs a regular player half a box a season for
+  no gain elsewhere; F's marginal extra return buys 0.1 items for 200 fewer
+  tokens of sink.
+- **Criterion 5, no positive-EV grinding** — RTP is below 100% at every button
+  and every combination, so there is no positive-EV line anywhere in the game.
+- **Lowest complexity** — one strip, six pair values, six ascending triple
+  values, no second mechanic and no special cases. Identical in shape to D and F,
+  so nothing is bought with complexity.
+
+E is also Ruling 3's stated target. The simulation was run without assuming that
+and does not select it by much — but it does select it.
+
+### 11.6 Blackjack is untouched
+
+Ruling 4. Wagers 20 / 40 / 80, 3:2 naturals, S17, the V1 rule set, measured
+2.03%. Nothing in the slots redesign touched it, and the 25% of plays that are
+hands use the same measured outcome spread as Phase 2.
+
+---
 
 ## 10. What this slice deliberately did not do
 

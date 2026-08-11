@@ -1,7 +1,18 @@
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
-import { CANDIDATES, RECOMMENDED } from '@/lib/casino/candidates';
+import { CANDIDATE_C, PHASE_2_CANDIDATES } from '@/lib/casino/candidates';
+
+/**
+ * **Pinned to the Phase 2 family on purpose.**
+ *
+ * This script is the record of the analysis that produced the 2026-08-11
+ * rulings, and it reads `CANDIDATE_C` rather than `RECOMMENDED` so that later
+ * changes to the recommendation cannot silently rewrite the evidence those
+ * rulings were made on. Phase 3 has its own script.
+ */
+const CANDIDATES = PHASE_2_CANDIDATES;
+const RECOMMENDED = CANDIDATE_C;
 import {
   INFINITE_DECK_NATURAL,
   SINGLE_DECK_NATURAL,

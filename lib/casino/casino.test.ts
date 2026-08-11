@@ -30,7 +30,17 @@ import {
   solveInfiniteDeck,
   strategyKey,
 } from './blackjack-model';
-import { CANDIDATE_A, CANDIDATE_B, CANDIDATE_C, CANDIDATES, RECOMMENDED } from './candidates';
+import {
+  CANDIDATE_A,
+  CANDIDATE_B,
+  CANDIDATE_C,
+  CANDIDATE_D,
+  CANDIDATE_E,
+  CANDIDATE_F,
+  CANDIDATES,
+  PHASE_2_CANDIDATES,
+  RECOMMENDED,
+} from './candidates';
 import { SYMBOLS, analyse, auditPaytable } from './slots-model';
 
 /**
@@ -142,15 +152,18 @@ describe('the approved economy gate is untouched by the casino work', () => {
 /* ------------------------------------------------------------------ slots -- */
 
 describe('slots paytables', () => {
-  it.each(CANDIDATES)('$id enumerates a complete probability space', (table) => {
+  it.each([...CANDIDATES, ...PHASE_2_CANDIDATES])(
+    '$id enumerates a complete probability space',
+    (table) => {
     const analysis = analyse(table);
     const total = analysis.lines.reduce((sum, line) => sum + line.probability, 0) + analysis.lossRate;
     // Exact to floating point, not "approximately one": the space is 6³ and
     // every branch is accounted for, so a gap is a missing combination.
     expect(total).toBeCloseTo(1, 12);
     expect(analysis.hitRate + analysis.lossRate).toBeCloseTo(1, 12);
-    expect(analysis.moneyBackRate + analysis.winRate).toBeCloseTo(analysis.hitRate, 12);
-  });
+      expect(analysis.moneyBackRate + analysis.winRate).toBeCloseTo(analysis.hitRate, 12);
+    },
+  );
 
   /**
    * The return rates, to two decimal places.
@@ -159,17 +172,61 @@ describe('slots paytables', () => {
    * than sampled — the 2026-08-10 gate ruling's own preference: *"assert the
    * configuration exactly and use simulation only for emergent outcomes."*
    */
-  it('returns the rates the report quotes', () => {
+  it('returns the rates the reports quote', () => {
+    // Phase 3, under Ruling 3.
+    expect(analyse(CANDIDATE_D).rtp * 100).toBeCloseTo(90.54, 2);
+    expect(analyse(CANDIDATE_E).rtp * 100).toBeCloseTo(92.09, 2);
+    expect(analyse(CANDIDATE_F).rtp * 100).toBeCloseTo(93.01, 2);
+
+    // Phase 2, superseded, kept as the record of what 85% actually was.
     expect(analyse(CANDIDATE_A).rtp * 100).toBeCloseTo(85.57, 2);
     expect(analyse(CANDIDATE_B).rtp * 100).toBeCloseTo(85.13, 2);
     expect(analyse(CANDIDATE_C).rtp * 100).toBeCloseTo(85.13, 2);
   });
 
-  it('lands every candidate near R6 target of roughly 85%', () => {
+  /**
+   * Ruling 3 refuses 85.13% and directs the design at roughly 92%, exploring
+   * 90 / 92 / 93. The band is asserted rather than the point, because the ruling
+   * asked for a band and the simulation showed it is nearly flat inside one.
+   */
+  it('lands every Phase 3 candidate inside the band Ruling 3 approved', () => {
     for (const table of CANDIDATES) {
-      expect(analyse(table).rtp).toBeGreaterThan(0.84);
-      expect(analyse(table).rtp).toBeLessThan(0.87);
+      expect(analyse(table).rtp).toBeGreaterThan(0.895);
+      expect(analyse(table).rtp).toBeLessThan(0.935);
     }
+  });
+
+  /**
+   * Ruling 2 fixes the top prize at 20× and the ceiling at 400, which is 20×
+   * the largest approved button. The two agree exactly, and a change to either
+   * that broke the other would otherwise only show up in a report.
+   */
+  it('pays exactly 20x at the top and exactly fills the 400 ceiling', () => {
+    for (const table of CANDIDATES) {
+      const a = analyse(table);
+      expect(a.topPrize.multiplier).toBe(20);
+      expect(a.topPrize.label).toBe('three tony');
+      expect(table.wagers).toEqual([5, 10, 20]);
+      expect(a.maxPayoutByWager.get(20)).toBe(400);
+      expect(a.capBreaches).toEqual([]);
+    }
+  });
+
+  /**
+   * The pair tier is not a stylistic choice — it is forced.
+   *
+   * With the top prize fixed at 20×, the entire triple tier can return at most
+   * `P(any triple) × 20`, and that is nowhere near 90%. So no paytable can meet
+   * Ruling 3 without paying frequent small wins, and this asserts the arithmetic
+   * rather than leaving it as a claim in a report.
+   */
+  it('cannot reach Ruling 3 band on triples alone, which is why a pair tier exists', () => {
+    const a = analyse(RECOMMENDED);
+    const tripleCeiling = a.lines
+      .filter((line) => line.label.startsWith('three'))
+      .reduce((sum, line) => sum + line.probability, 0) * 20;
+
+    expect(tripleCeiling).toBeLessThan(0.9);
   });
 
   /**
@@ -181,22 +238,16 @@ describe('slots paytables', () => {
    * coherence audit refuses it for the reason a player would: the rarest
    * combination on the machine is not the one that pays most.
    */
-  it('refuses candidate A because the cap leaves it with no top prize', () => {
+  it('refuses Phase 2 candidate A because its cap left it with no top prize', () => {
     const problems = auditPaytable(CANDIDATE_A);
     expect(problems.length).toBeGreaterThan(0);
     expect(problems.join(' ')).toContain('no top prize');
   });
 
-  it('accepts the two candidates that give the rarest symbol the largest prize', () => {
-    expect(auditPaytable(CANDIDATE_B)).toEqual([]);
-    expect(auditPaytable(CANDIDATE_C)).toEqual([]);
-    for (const table of [CANDIDATE_B, CANDIDATE_C]) {
+  it('accepts every candidate that gives the rarest symbol the largest prize', () => {
+    for (const table of [...CANDIDATES, CANDIDATE_B, CANDIDATE_C]) {
+      expect(auditPaytable(table)).toEqual([]);
       expect(analyse(table).topPrize.label).toBe('three tony');
-    }
-  });
-
-  it('keeps every payout inside the ceiling the candidate declares', () => {
-    for (const table of [CANDIDATE_B, CANDIDATE_C]) {
       expect(analyse(table).capBreaches).toEqual([]);
     }
   });
@@ -211,7 +262,7 @@ describe('slots paytables', () => {
    * rate come out.
    */
   it('never pays a winning combination less than the stake', () => {
-    for (const table of CANDIDATES) {
+    for (const table of [...CANDIDATES, ...PHASE_2_CANDIDATES]) {
       for (const symbol of SYMBOLS) {
         for (const pays of [table.pair[symbol], table.triple[symbol]]) {
           expect(Number.isInteger(pays)).toBe(true);
@@ -299,6 +350,7 @@ describe('the casino scenario', () => {
   });
 
   it('refuses a slots wager the paytable does not offer as a button', () => {
+    // 40 was a Phase 2 button and Ruling 1 removed it.
     expect(() => slotsGame(RECOMMENDED, 40)).toThrow(/does not offer/);
   });
 
