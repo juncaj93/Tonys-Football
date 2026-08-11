@@ -385,6 +385,34 @@ them code:
 or to propose an implementation.** It is the record that the question is open.
 `docs/VISUAL_DEBT.md` item **18** is the same finding at the surface it shows on.
 
+### C4 · Two editorial observations from the Slice simulation lab — **OPEN, and deliberately not repaired**
+
+The simulation lab (`docs/SLICE_SIMULATION_LAB.md`) played the preseason, week 8
+and the week 16 semifinal through the real crons and photographed what printed.
+**Nothing in the product was changed** — the workstream's own rule was that a
+finding is recorded and the thing it measures is left alone. Two of its six
+observations are worth a commissioner's eye; the other four are simulation-input
+notes or already-settled behaviour and live in that document's §7.
+
+| | |
+|---|---|
+| **The preseason issue is 8,024 px at 390 — about 9.5 screens** | Against 1,680 for a weekly paper. Ten team sections, five picks each. The board sits **first**, so a manager who only wants their own grade is done in two taps, which is the mitigation `PRESEASON_SLICE_BOUNDARY §7` designed on purpose. Whether the remaining nine screens want to be that long is a product call nobody has made, because until now nobody had seen the page at full length |
+| **Week 16's column called a 0.42 semifinal "an ordinary week"** | `EditionCharacter` is derived from story strength and knows nothing about the bracket, so a playoff week with one strong story reads as quiet. Correct by its own rule and probably wrong for the reader |
+
+**Neither is a defect and neither is authorization to change copy, a threshold or
+a renderer.** Both need a decision first: the first about how long a draft review
+should be, the second about whether `EditionCharacter` should know a playoff week
+when it sees one. Evidence is
+[`docs/evidence/slice-simulation/`](evidence/slice-simulation/) — the reports and
+the photographs at 390 / 375 / 360.
+
+**Related and already settled, recorded so it is not refiled as new:** a playoff
+paper cannot name which round a game was, and `elimination` cannot be told on the
+Tuesday it happened. Both need the bracket's structure persisted, which **G5**
+declines for v1. The lab is the first thing to demonstrate the second one — the
+same week re-assembled after the final does carry the story, and the published
+issue does not move.
+
 ---
 
 ---
@@ -998,12 +1026,14 @@ does not settle.
 
 Remaining items are **D** (human), **E** (debt, unforced), **F** (monitored,
 restart conditions unmet) and **G** (deferred, now with G0's classification
-attached) — plus exactly one live entry in **C**.
+attached) — plus exactly two live entries in **C**.
 
-**That one C entry is `C3`, and it is deliberately not actionable yet.** The
-manager sprite's product acceptance is open, and the next step on it is
-*evidence and a target*, not an implementation pass. Category C is otherwise
-still empty of anything with clear value, and C3 does not reopen it.
+**Both C entries are decisions rather than tasks, and neither is actionable
+yet.** `C3` is the manager sprite's product acceptance, whose next step is
+*evidence and a target* rather than an implementation pass. `C4` is two editorial
+observations the Slice simulation lab photographed, each of which needs a
+commissioner's call before a line of copy moves. Category C is otherwise still
+empty of anything with clear value, and neither entry reopens it.
 
 The reopened scope produced exactly one buildable slice — **Rooms** — and it is
 built. Everything else in G0 is LATER or DO NOT BUILD **for a stated reason**,
