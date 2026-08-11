@@ -253,14 +253,32 @@ describe('fitting, which is opt in and always reported', () => {
 });
 
 describe('the snap metric', () => {
-  it('sends every key colour to itself, exactly', () => {
-    for (const key of paintedKeys()) {
+  it.each(['build', 'head'] as const)('sends every %s key colour to itself, exactly', (plate) => {
+    for (const key of paintedKeys(plate)) {
       const r = parseInt(key.hex.slice(1, 3), 16);
       const g = parseInt(key.hex.slice(3, 5), 16);
       const b = parseInt(key.hex.slice(5, 7), 16);
-      const { index, distance } = nearestKey(r, g, b);
+      const { index, distance } = nearestKey(r, g, b, plate);
       expect(index, key.name).toBe(key.index);
       expect(distance).toBe(0);
+    }
+  });
+
+  it('never answers a head with a key a head cannot contain', () => {
+    /*
+     * **The snap may only offer keys the layer could hold**, and this is the case
+     * that proved it necessary. Our skin ramp and our leather ramp are neighbours
+     * — `skin-2` and `wood-pale` are 45 apart, closer than a delivery's own drift
+     * — so a face painted with ordinary mid-brown shadow put a quarter of a head
+     * onto **boot** keys. Nothing was wrong with the art.
+     */
+    const headKeys = new Set(paintedKeys('head').map((key) => key.index));
+    for (const key of paintedKeys('build')) {
+      if (headKeys.has(key.index)) continue;
+      const r = parseInt(key.hex.slice(1, 3), 16);
+      const g = parseInt(key.hex.slice(3, 5), 16);
+      const b = parseInt(key.hex.slice(5, 7), 16);
+      expect(headKeys.has(nearestKey(r, g, b, 'head').index), `${key.name} on a head`).toBe(true);
     }
   });
 

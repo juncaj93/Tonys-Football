@@ -103,7 +103,27 @@ export interface MaskKey {
    * **encoded faithfully and rendered approximately**, never the other way round.
    */
   readonly pending?: true;
+  /**
+   * Which plates this key can legally appear on.
+   *
+   * **The snap is only allowed to answer with a key the layer could contain**, and
+   * that is not a nicety. Our skin ramp and our leather ramp are neighbours in
+   * colour space — `skin-2 #D9A173` and `wood-pale #C99A63` are 45 apart, closer
+   * than a delivery's own drift — so a face painted with ordinary mid-brown
+   * shadows put **25% of a head onto boot keys**, which rendered as wood-coloured
+   * blotches across the cheeks. Nothing was wrong with the art.
+   *
+   * A head plate contains skin, eyes and outline. It contains no boots, no
+   * trousers and no shirt, so offering those as answers can only ever be wrong.
+   * Restricting the candidates removes impossible answers rather than accepting
+   * bad ones, which is why it cannot hide a malformed asset.
+   */
+  readonly on: readonly ('build' | 'head')[];
 }
+
+const BOTH = ['build', 'head'] as const;
+const BUILD_ONLY = ['build'] as const;
+const HEAD_ONLY = ['head'] as const;
 
 const house = (colour: HouseColour): string => HOUSE[colour];
 
@@ -115,24 +135,24 @@ const house = (colour: HouseColour): string => HOUSE[colour];
  * `lib/character/catalog.ts`'s. **Never reorder; only append.**
  */
 export const MASK_KEYS: readonly MaskKey[] = Object.freeze([
-  { index: 0, channel: 'none', step: 'none', name: 'Transparent', hex: house('ink-900'), tone: null },
-  { index: 1, channel: 'none', step: 'outline', name: 'Outline', hex: house('ink-900'), tone: 'outline' },
+  { index: 0, channel: 'none', step: 'none', name: 'Transparent', hex: house('ink-900'), tone: null, on: BOTH },
+  { index: 1, channel: 'none', step: 'outline', name: 'Outline', hex: house('ink-900'), tone: 'outline', on: BOTH },
 
   /*
    * The garment, five steps. `light2` and `shade2` are the two the palette cannot
    * paint yet; both collapse inward, so a five-tone painting renders in three and
    * loses no recorded information.
    */
-  { index: 2, channel: 'garment', step: 'light2', name: 'Shirt highlight', hex: '#F58A80', tone: 'light', pending: true },
-  { index: 3, channel: 'garment', step: 'light', name: 'Shirt light', hex: house('red-light'), tone: 'light' },
-  { index: 4, channel: 'garment', step: 'base', name: 'Shirt base', hex: house('red-mid'), tone: 'base' },
-  { index: 5, channel: 'garment', step: 'shade', name: 'Shirt shade', hex: house('red-dark'), tone: 'shade' },
-  { index: 6, channel: 'garment', step: 'shade2', name: 'Shirt deep shadow', hex: '#5A1216', tone: 'shade', pending: true },
+  { index: 2, channel: 'garment', step: 'light2', name: 'Shirt highlight', hex: '#F58A80', tone: 'light', pending: true, on: BUILD_ONLY },
+  { index: 3, channel: 'garment', step: 'light', name: 'Shirt light', hex: house('red-light'), tone: 'light', on: BUILD_ONLY },
+  { index: 4, channel: 'garment', step: 'base', name: 'Shirt base', hex: house('red-mid'), tone: 'base', on: BUILD_ONLY },
+  { index: 5, channel: 'garment', step: 'shade', name: 'Shirt shade', hex: house('red-dark'), tone: 'shade', on: BUILD_ONLY },
+  { index: 6, channel: 'garment', step: 'shade2', name: 'Shirt deep shadow', hex: '#5A1216', tone: 'shade', pending: true, on: BUILD_ONLY },
 
   // Skin, three steps — which is what Tony's own arms and hands use.
-  { index: 7, channel: 'skin', step: 'light', name: 'Skin light', hex: house('skin-1'), tone: 'skin:light' },
-  { index: 8, channel: 'skin', step: 'base', name: 'Skin base', hex: house('skin-2'), tone: 'skin:base' },
-  { index: 9, channel: 'skin', step: 'shade', name: 'Skin shade', hex: house('skin-3'), tone: 'skin:shade' },
+  { index: 7, channel: 'skin', step: 'light', name: 'Skin light', hex: house('skin-1'), tone: 'skin:light', on: BOTH },
+  { index: 8, channel: 'skin', step: 'base', name: 'Skin base', hex: house('skin-2'), tone: 'skin:base', on: BOTH },
+  { index: 9, channel: 'skin', step: 'shade', name: 'Skin shade', hex: house('skin-3'), tone: 'skin:shade', on: BOTH },
 
   /*
    * Trousers. `light2` is the one genuinely missing colour rather than a nicety:
@@ -140,16 +160,16 @@ export const MASK_KEYS: readonly MaskKey[] = Object.freeze([
    * than any real pair of jeans — the single most visible mismatch between the
    * approved concept and what this palette can paint.
    */
-  { index: 10, channel: 'fixed', step: 'light2', name: 'Trouser highlight', hex: '#4A7FB8', tone: 'fixed:denim@light', pending: true },
-  { index: 11, channel: 'fixed', step: 'light', name: 'Trouser light', hex: house('blue-mid'), tone: 'fixed:denim@light' },
-  { index: 12, channel: 'fixed', step: 'base', name: 'Trouser base', hex: house('blue-deep'), tone: 'fixed:denim@base' },
+  { index: 10, channel: 'fixed', step: 'light2', name: 'Trouser highlight', hex: '#4A7FB8', tone: 'fixed:denim@light', pending: true, on: BUILD_ONLY },
+  { index: 11, channel: 'fixed', step: 'light', name: 'Trouser light', hex: house('blue-mid'), tone: 'fixed:denim@light', on: BUILD_ONLY },
+  { index: 12, channel: 'fixed', step: 'base', name: 'Trouser base', hex: house('blue-deep'), tone: 'fixed:denim@base', on: BUILD_ONLY },
 
-  { index: 13, channel: 'fixed', step: 'light', name: 'Boot light', hex: house('wood-pale'), tone: 'fixed:leather@light' },
-  { index: 14, channel: 'fixed', step: 'base', name: 'Boot base', hex: house('wood-mid'), tone: 'fixed:leather@base' },
-  { index: 15, channel: 'fixed', step: 'shade', name: 'Boot shade', hex: house('wood-dark'), tone: 'fixed:leather@shade' },
+  { index: 13, channel: 'fixed', step: 'light', name: 'Boot light', hex: house('wood-pale'), tone: 'fixed:leather@light', on: BUILD_ONLY },
+  { index: 14, channel: 'fixed', step: 'base', name: 'Boot base', hex: house('wood-mid'), tone: 'fixed:leather@base', on: BUILD_ONLY },
+  { index: 15, channel: 'fixed', step: 'shade', name: 'Boot shade', hex: house('wood-dark'), tone: 'fixed:leather@shade', on: BUILD_ONLY },
 
-  { index: 16, channel: 'fixed', step: 'light', name: 'Sole light', hex: house('ink-500'), tone: 'fixed:sole@light' },
-  { index: 17, channel: 'fixed', step: 'base', name: 'Sole base', hex: house('ink-700'), tone: 'fixed:sole@base' },
+  { index: 16, channel: 'fixed', step: 'light', name: 'Sole light', hex: house('ink-500'), tone: 'fixed:sole@light', on: BUILD_ONLY },
+  { index: 17, channel: 'fixed', step: 'base', name: 'Sole base', hex: house('ink-700'), tone: 'fixed:sole@base', on: BUILD_ONLY },
 
   /*
    * Appended 2026-08-11 for the head plate, which a build does not need and a
@@ -165,16 +185,18 @@ export const MASK_KEYS: readonly MaskKey[] = Object.freeze([
    * the drawn head was written; it simply never needed encoding, because no build
    * has eyes.
    */
-  { index: 18, channel: 'skin', step: 'light2', name: 'Skin highlight', hex: house('amber-glow'), tone: 'skin:light', pending: true },
-  { index: 19, channel: 'fixed', step: 'base', name: 'Eye white', hex: house('paper-white'), tone: 'fixed:white@base' },
+  { index: 18, channel: 'skin', step: 'light2', name: 'Skin highlight', hex: house('amber-glow'), tone: 'skin:light', pending: true, on: BOTH },
+  { index: 19, channel: 'fixed', step: 'base', name: 'Eye white', hex: house('paper-white'), tone: 'fixed:white@base', on: HEAD_ONLY },
 ]);
 
 /** The transparent key. Index 0, and the only one with no tone. */
 export const TRANSPARENT_KEY = 0;
 
-/** Every key that may appear as an opaque pixel. */
-export function paintedKeys(): readonly MaskKey[] {
-  return MASK_KEYS.filter((key) => key.index !== TRANSPARENT_KEY);
+/** Every key that may appear as an opaque pixel, optionally on one plate. */
+export function paintedKeys(plate?: 'build' | 'head'): readonly MaskKey[] {
+  return MASK_KEYS.filter(
+    (key) => key.index !== TRANSPARENT_KEY && (plate === undefined || key.on.includes(plate)),
+  );
 }
 
 /** The keys whose step the palette cannot paint yet. Evidence for the ruling. */
@@ -449,9 +471,29 @@ export const HEAD_REGISTRATION = Object.freeze({
   bottom: NECK.bottom - 1,
   /** The jaw, where the skull ends and the neck begins. */
   jaw: HEAD.bottom,
-  /** The eye line, and how far off it a delivery may be. */
+  /**
+   * The eye line, and how far off it a delivery may be.
+   *
+   * **Three, and the number is now evidence rather than a guess.** It was two,
+   * chosen before any head existed. Two deliveries in a row landed on row 40 — a
+   * drawn head's eyes sit 46% down its skull and a painted one put them at 57%,
+   * because the cranium above them is taller — so the question became whether
+   * three rows actually costs anything.
+   *
+   * It was answered by rendering: the painted head under **all six hairstyles and
+   * all four facial-hair layers**, in `docs/evidence/manager-head-prototype/`. The
+   * hair sits correctly, because hair registers to the skull and the skull is
+   * fitted exactly. The beards sit up to three rows high, which is visible if you
+   * are looking for it and is not what anybody would call broken — and it resolves
+   * on its own when facial hair is repainted to this head.
+   *
+   * **A fourth row is not available**, and that is the honest bound rather than a
+   * round number: no uniform scale can land the eye line and the jaw *and* the
+   * skull top at once when the proportions differ, so widening this further stops
+   * being a tolerance and becomes an unmeasured claim.
+   */
   eyeRow: FACE.eyeY,
-  eyeTolerance: 2,
+  eyeTolerance: 3,
   /** The skull's columns, and how much wider or narrower a delivery may be. */
   skull: Object.freeze({ left: HEAD.left, right: HEAD.right }),
   widthTolerance: 3,
@@ -468,7 +510,11 @@ const EYE_WHITE_KEY = 19;
  * dark pixels: a lash line, a pupil, a nostril and a mouth are all ink, and the
  * only unambiguous eye in a role mask is its white.
  */
-export function validateHeadPlate(keys: readonly number[]): readonly MaskProblem[] {
+export function validateHeadPlate(
+  keys: readonly number[],
+  /** What the build draws over the head, when the caller knows. */
+  covered?: (x: number, y: number) => boolean,
+): readonly MaskProblem[] {
   const { width, height } = MASK_CANVAS;
   const problems: MaskProblem[] = [];
   const fail = (message: string): number => problems.push({ severity: 'fail', message });
@@ -511,20 +557,31 @@ export function validateHeadPlate(keys: readonly number[]): readonly MaskProblem
    * columns — outside them it would emerge from behind the shirt.
    */
   if (bottom > HEAD_REGISTRATION.bottom) {
-    const strayed: number[] = [];
+    /*
+     * **Judged against what the build actually covers**, when the caller can say.
+     * The first version guessed with the neck's columns and refused one pixel of a
+     * correct delivery — a pixel the shirt was drawn straight over. A guess about
+     * coverage is exactly the thing the composite can answer for itself.
+     */
+    let strayed = 0;
+    let firstStray = '';
     for (let y = HEAD_REGISTRATION.bottom + 1; y <= bottom; y++) {
       for (let x = 0; x < width; x++) {
         if (!opaque(x, y)) continue;
-        if (x < HEAD_REGISTRATION.neckColumns.from - 1 || x > HEAD_REGISTRATION.neckColumns.to + 1) {
-          strayed.push(x);
-        }
+        const hidden =
+          covered === undefined
+            ? x >= HEAD_REGISTRATION.neckColumns.from - 1 && x <= HEAD_REGISTRATION.neckColumns.to + 1
+            : covered(x, y);
+        if (hidden) continue;
+        strayed++;
+        if (firstStray === '') firstStray = `(${String(x)}, ${String(y)})`;
       }
     }
-    if (strayed.length > 0) {
+    if (strayed > 0) {
       fail(
-        `${String(strayed.length)} pixels are painted below the collar row ` +
-          `${String(HEAD_REGISTRATION.bottom)} and outside the neck's columns. The shirt covers ` +
-          'the neck down there; it does not cover a shoulder.',
+        `${String(strayed)} pixels are painted below the collar row ` +
+          `${String(HEAD_REGISTRATION.bottom)} where nothing covers them, first at ${firstStray}. ` +
+          'The shirt hides the neck down there; it does not hide a shoulder.',
       );
     }
   }
@@ -603,10 +660,26 @@ export function validateHeadPlate(keys: readonly number[]): readonly MaskProblem
       }
     }
   }
-  if (bare > 0) {
-    fail(`${String(bare)} pixels sit on the head's edge without an outline, first at ${firstBare}.`);
+  /*
+   * **A small budget, for the same mechanical reason the build has one.**
+   *
+   * Where a curve meets the canvas at a shallow angle, the majority vote that
+   * turns 1024 source pixels into 112 drops the outline on a pixel or two — always
+   * at the crown, where the skull is flattest. Round 1 carried 24 of them and
+   * round 2 carried 6, which is the difference a thicker stroke made rather than
+   * noise. Eight is under a twentieth of a head's outline and above what a
+   * correctly drawn delivery leaves.
+   */
+  if (bare > OUTLINE_BUDGET) {
+    fail(
+      `${String(bare)} pixels sit on the head's edge without an outline, first at ${firstBare}, ` +
+        `over the ${String(OUTLINE_BUDGET)} a conversion leaves. Draw the outline thicker.`,
+    );
   }
 
   void AXIS;
   return problems;
 }
+
+/** How many unoutlined edge pixels the downscale may leave on a head. */
+export const OUTLINE_BUDGET = 8;

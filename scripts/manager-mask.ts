@@ -91,10 +91,15 @@ export interface Snapped {
 }
 
 /** Nearest key by plain Euclidean sRGB — the metric `ASSET_PIPELINE §4` ruled on. */
-export function nearestKey(r: number, g: number, b: number): { index: number; distance: number } {
+export function nearestKey(
+  r: number,
+  g: number,
+  b: number,
+  plate: 'build' | 'head' = 'build',
+): { index: number; distance: number } {
   let best = TRANSPARENT_KEY;
   let bestDistance = Infinity;
-  for (const key of paintedKeys()) {
+  for (const key of paintedKeys(plate)) {
     const kr = parseInt(key.hex.slice(1, 3), 16);
     const kg = parseInt(key.hex.slice(3, 5), 16);
     const kb = parseInt(key.hex.slice(5, 7), 16);
@@ -367,7 +372,7 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
     const rgb = (data[i]! << 16) | (data[i + 1]! << 8) | data[i + 2]!;
     let hit = seen.get(rgb);
     if (hit === undefined) {
-      hit = nearestKey(data[i]!, data[i + 1]!, data[i + 2]!);
+      hit = nearestKey(data[i]!, data[i + 1]!, data[i + 2]!, head ? 'head' : 'build');
       seen.set(rgb, hit);
     }
     sourceKey[at] = hit.index;
@@ -533,6 +538,22 @@ async function preview(slug: string, mask: EncodedMask): Promise<Buffer> {
     .toBuffer();
 }
 
+/** Every cell the painted T-shirt build occupies, so a head can be judged against it. */
+function buildCoverage(): Set<number> | null {
+  const top = STYLE_TRAITS.top.findIndex((option) => option.name === 'T-shirt');
+  const composite = composeCharacter({ skin: 1, hair: 0, hairColour: 1, facialHair: 0, top, topColour: 1 });
+  const build = composite.layers.filter((layer) => layer.layer === 'base-top');
+  if (build.length === 0) return null;
+
+  const cells = new Set<number>();
+  for (const run of compositeRuns({ ...composite, layers: build })) {
+    for (let y = run.y; y < run.y + run.h; y++) {
+      for (let x = run.x; x < run.x + run.w; x++) cells.add(y * MASK_CANVAS.width + x);
+    }
+  }
+  return cells;
+}
+
 function moduleSource(slug: string, mask: EncodedMask): string {
   const constant = slug.toUpperCase();
   return `import { type EncodedMask } from '../../mask';
@@ -605,7 +626,14 @@ async function main(): Promise<void> {
     );
   }
 
-  const problems = head ? validateHeadPlate(keys) : validateBuildMask(keys);
+  /*
+   * A head is judged against what the shipped build actually draws over it, which
+   * is the difference between a rule and a guess about one.
+   */
+  const shirt = head ? buildCoverage() : null;
+  const problems = head
+    ? validateHeadPlate(keys, shirt === null ? undefined : (x, y) => shirt.has(y * MASK_CANVAS.width + x))
+    : validateBuildMask(keys);
   for (const problem of problems) {
     console.log(`  ${problem.severity === 'fail' ? '✗' : '⚠'} ${problem.message}`);
   }

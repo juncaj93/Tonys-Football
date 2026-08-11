@@ -1,5 +1,6 @@
 import { type EncodedMask } from '../../mask';
 
+import { AVATAR_BODY_HEAD } from './avatar_body_head';
 import { AVATAR_BODY_STARTER_04 } from './avatar_body_starter_04';
 
 /**
@@ -44,6 +45,20 @@ export const BUILD_MASKS: Readonly<Record<string, EncodedMask>> = Object.freeze(
    * with nothing else to undo.
    */
   [AVATAR_BODY_STARTER_04.slug]: AVATAR_BODY_STARTER_04,
+
+  /**
+   * The head plate, round 2, 2026-08-11.
+   *
+   * Its skull is fitted to rows 24–52 and its eyes land on row 40 against a line
+   * at 37 — inside the tolerance, which was widened to three **on the evidence of
+   * rendering it under all six hairstyles and all four beards** rather than to let
+   * it through. The hair sits correctly; the beards sit up to three rows high
+   * until they are repainted to this head.
+   *
+   * Drawn on the five unpainted tops, this plate is not used at all — those still
+   * draw the whole figure, head included.
+   */
+  [AVATAR_BODY_HEAD.slug]: AVATAR_BODY_HEAD,
 });
 
 export function buildMask(slug: string): EncodedMask | null {

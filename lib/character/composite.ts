@@ -416,16 +416,29 @@ export function compositeRuns(composite: Composite): readonly ColourRun[] {
     /*
      * Pass 2 — the layer itself.
      *
-     * **A build's `skin:` prefix is resolved away here and nowhere else.** A
-     * painted build is the one layer that carries two of the manager's colours,
-     * so its tones name which; the prefix is stripped as the pixel is written and
-     * the pixel's *paint* records the difference instead. Every pass after this
-     * one — the next layer's contact shadow, the silhouette test, the colour
-     * lookup — is then reading the same plain tones it always read, which is why
-     * none of them needed a branch adding.
+     * **A `skin:` prefix is resolved away here and nowhere else.** A painted build
+     * carries two of the manager's colours, so its tones name which; the prefix is
+     * stripped as the pixel is written and the pixel's *paint* records the
+     * difference instead. Every pass after this one — the next layer's contact
+     * shadow, the silhouette test, the colour lookup — is then reading the same
+     * plain tones it always read, which is why none of them needed a branch.
+     *
+     * **A painted head plate emits `skin:` tones too, and the first version of
+     * this line did not know that.** It asked only whether the paint was a
+     * `build`, so a head's tones fell through unstripped to the colour pass, which
+     * answers an unrecognised key with **ink** — and every manager rendered with a
+     * black face. `composite.test.ts`'s prefix test existed and passed throughout,
+     * because it only ever ran a build. A layer painted `skin` resolves them
+     * against its own colours, which is what it was already using for everything
+     * else it drew.
      */
     const colours = coloursFor(layer.paint);
-    const bare = layer.paint.kind === 'build' ? skinColours(layer.paint.skin) : null;
+    const bare =
+      layer.paint.kind === 'build'
+        ? skinColours(layer.paint.skin)
+        : layer.paint.kind === 'skin'
+          ? colours
+          : null;
 
     for (let y = box.top; y < box.bottom; y++) {
       const row = above[y];

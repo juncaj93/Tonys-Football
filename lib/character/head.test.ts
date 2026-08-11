@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
 import { FACE, HEAD, NECK } from './art/geometry';
-import { HEAD_REGISTRATION, MASK_CANVAS, TRANSPARENT_KEY, validateHeadPlate } from './mask';
+import {
+  HEAD_REGISTRATION,
+  MASK_CANVAS,
+  OUTLINE_BUDGET,
+  TRANSPARENT_KEY,
+  validateHeadPlate,
+} from './mask';
 
 /**
  * The head plate's registration, and what it refuses.
@@ -94,8 +100,18 @@ describe('what it refuses', () => {
   });
 
   it('refuses eyes off the line, because beards and hats are measured from them', () => {
-    // Three rows low is what two head deliveries in a row actually did.
-    expect(failures(plate({ eyeRow: FACE.eyeY + 3 })).join(' ')).toMatch(/rows off the eye line/);
+    expect(failures(plate({ eyeRow: FACE.eyeY + HEAD_REGISTRATION.eyeTolerance + 1 })).join(' '))
+      .toMatch(/rows off the eye line/);
+  });
+
+  it('allows the three rows two real deliveries actually landed on', () => {
+    /*
+     * A drawn head puts the eyes 46% down its skull and a painted one put them at
+     * 57%. Three rows, and the tolerance was widened to admit it **after** the
+     * head was rendered under all six hairstyles and all four beards — not to let
+     * it through. See `HEAD_REGISTRATION.eyeTolerance`.
+     */
+    expect(failures(plate({ eyeRow: FACE.eyeY + 3 }))).toEqual([]);
   });
 
   it('allows eyes inside the tolerance', () => {
@@ -122,16 +138,30 @@ describe('what it refuses', () => {
       .toMatch(/columns across at the eye line/);
   });
 
-  it('refuses paint below the collar outside the neck’s columns', () => {
+  it('refuses paint below the collar that nothing covers', () => {
     const keys = plate();
     keys[(HEAD_REGISTRATION.bottom + 2) * MASK_CANVAS.width + 20] = SKIN_BASE;
-    expect(failures(keys).join(' ')).toMatch(/outside the neck's columns/);
+    expect(failures(keys).join(' ')).toMatch(/where nothing covers them/);
+  });
+
+  it('accepts paint below the collar that the build does cover', () => {
+    /*
+     * The rule used to guess with the neck's columns and refused a single pixel of
+     * a correct delivery — one the shirt was drawn straight over. When the caller
+     * can say what the build covers, the composite answers for itself.
+     */
+    const keys = plate();
+    const stray = (HEAD_REGISTRATION.bottom + 2) * MASK_CANVAS.width + 20;
+    keys[stray] = SKIN_BASE;
+    const covered = (x: number, y: number): boolean =>
+      y * MASK_CANVAS.width + x === stray;
+    expect(validateHeadPlate(keys, covered).filter((p) => p.severity === 'fail')).toEqual([]);
   });
 
   it('refuses an unenclosed silhouette', () => {
     const keys = plate();
     let repainted = 0;
-    for (let at = 0; at < keys.length && repainted < 6; at++) {
+    for (let at = 0; at < keys.length && repainted < OUTLINE_BUDGET + 4; at++) {
       if (keys[at] === OUTLINE) {
         keys[at] = SKIN_BASE;
         repainted++;

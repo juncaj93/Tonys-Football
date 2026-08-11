@@ -83,3 +83,39 @@ export function fixtureBuildMask(): readonly number[] {
   }
   return enclosed;
 }
+
+/**
+ * A mechanically valid head plate, built in memory — **test-only, never artwork.**
+ *
+ * Small and deliberately crude: a skin-toned skull with an outline and two eye
+ * whites, on the head's own rows. It exists so the compositor's handling of a
+ * `skin:`-carrying head layer can be tested without a delivered PNG.
+ */
+export function fixtureHeadMask(): readonly number[] {
+  const { width, height } = CANVAS;
+  const keys = Array.from({ length: width * height }, () => TRANSPARENT_KEY);
+  const put = (x: number, y: number, key: number): void => {
+    if (x >= 0 && y >= 0 && x < width && y < height) keys[y * width + x] = key;
+  };
+
+  for (let y = 24; y <= 52; y++) for (let x = 43; x <= 68; x++) put(x, y, 8);
+  for (let y = 53; y <= 63; y++) for (let x = 50; x <= 61; x++) put(x, y, 8);
+  for (let y = 30; y < 36; y++) for (let x = 47; x < 65; x++) put(x, y, 7);
+  for (let dy = 0; dy < 3; dy++) for (let dx = 0; dx < 5; dx++) {
+    put(48 + dx, 37 + dy, 19);
+    put(59 + dx, 37 + dy, 19);
+  }
+
+  const opaque = (x: number, y: number): boolean =>
+    x >= 0 && y >= 0 && x < width && y < height && keys[y * width + x] !== TRANSPARENT_KEY;
+  const enclosed = [...keys];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!opaque(x, y)) continue;
+      if (!opaque(x - 1, y) || !opaque(x + 1, y) || !opaque(x, y - 1) || !opaque(x, y + 1)) {
+        enclosed[y * width + x] = 1;
+      }
+    }
+  }
+  return enclosed;
+}

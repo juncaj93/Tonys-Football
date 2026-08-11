@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { BODY_HEAD_SLUG, BODY_SLUG, STYLE_TRAITS } from './catalog';
-import { SKIN_TONES, TOP_COLOURS } from './palette';
+import { HOUSE, SKIN_TONES, TOP_COLOURS } from './palette';
 
 /**
  * The painted-build path, end to end, with a diagnostic mask standing in for art.
@@ -25,9 +25,11 @@ const HOODIE = STYLE_TRAITS.top.find((option) => option.name === 'Hoodie')!.slug
 
 vi.mock('./art/masks', async () => {
   const { encodeMask } = await import('./mask');
-  const { fixtureBuildMask } = await import('./mask.fixture');
-  const mask = encodeMask(TSHIRT, fixtureBuildMask());
-  const masks: Record<string, unknown> = { [TSHIRT]: mask };
+  const { fixtureBuildMask, fixtureHeadMask } = await import('./mask.fixture');
+  const masks: Record<string, unknown> = {
+    [TSHIRT]: encodeMask(TSHIRT, fixtureBuildMask()),
+    avatar_body_head: encodeMask('avatar_body_head', fixtureHeadMask()),
+  };
   return {
     BUILD_MASKS: masks,
     buildMask: (slug: string) => masks[slug] ?? null,
@@ -173,5 +175,44 @@ describe('the channel prefix never escapes the compositor', () => {
 
   it('draws the figure in more than a handful of colours', () => {
     expect(new Set(colours).size).toBeGreaterThanOrEqual(8);
+  });
+});
+
+describe('a painted head plate, the other layer that carries skin tones', () => {
+  /**
+   * **The bug this exists for rendered every manager with a black face.**
+   *
+   * `compositeRuns` strips a `skin:` prefix as it writes a layer, and the first
+   * version asked only whether the paint was a `build`. A painted head plate is
+   * painted `{ kind: 'skin' }` and emits `skin:` tones too, so its tones fell
+   * through unstripped to the colour pass — which answers an unrecognised key with
+   * **ink**.
+   *
+   * Every test above passed throughout, because every one of them ran a *build*.
+   * It was found by rendering the head under six hairstyles and looking at it.
+   */
+  it('draws the head in skin rather than in ink', () => {
+    const composite = composeCharacter(manager());
+    const base = composite.layers.find((layer) => layer.layer === 'base-body')!;
+    expect(base.slug).toBe(BODY_HEAD_SLUG);
+    expect(base.paint.kind).toBe('skin');
+
+    const runs = compositeRuns(composite);
+    const ink = new Set<string>([HOUSE['ink-900']]);
+    const head = runs.filter((run) => run.y >= 30 && run.y < 45 && !ink.has(run.value));
+    expect(head.length, 'the head plate drew nothing but outline').toBeGreaterThan(4);
+
+    // And every colour is a real one, which is what ink-through-the-fallback broke.
+    for (const run of runs) expect(run.value).toMatch(/^#[0-9A-F]{6}$/i);
+  });
+
+  it('recolours the head with the skin the manager chose', () => {
+    const at = (skin: number): Set<string> =>
+      new Set(
+        compositeRuns(composeCharacter(manager({ skin })))
+          .filter((run) => run.y >= 30 && run.y < 45)
+          .map((run) => run.value),
+      );
+    expect([...at(0)].sort()).not.toEqual([...at(3)].sort());
   });
 });
