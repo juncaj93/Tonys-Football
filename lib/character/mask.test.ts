@@ -36,20 +36,33 @@ import { coverage, rasterise, shade } from './sprite';
 describe('the mask vocabulary', () => {
   it('renders only into the locked palette, whatever it is encoded in', () => {
     /*
-     * The encoding colour is a property of the *source file*; the rendered colour
-     * is what ships. Three keys are deliberately encoded in colours the palette
-     * does not have — see the module note — and every one of them must still
-     * decode to a tone the renderer can already paint.
+     * **The encoding colour is unconstrained and the rendered colour is not.**
+     *
+     * An earlier version of this test asserted that a `pending` key must be
+     * encoded in a colour the palette does *not* have. That was never the
+     * invariant — it was a coincidence of the first three pending steps, and
+     * `Skin highlight` broke it immediately by being encoded in `amber-glow`,
+     * which is a locked colour that simply is not the step above `skin-1`.
+     *
+     * What has to hold is the other direction: whatever a key is *painted* in, it
+     * must decode to a tone the renderer can resolve today. `pending` describes a
+     * gap in the ramp, not a gap in the palette.
      */
     const legal = new Set<string>(Object.values(HOUSE));
-    for (const key of pendingKeys()) {
-      expect(legal.has(key.hex), `${key.name} is a pending step`).toBe(false);
-      expect(key.tone, `${key.name} must still render`).not.toBeNull();
+
+    for (const key of MASK_KEYS) {
+      if (key.index === TRANSPARENT_KEY) continue;
+      expect(key.tone, `${key.name} must render as something`).not.toBeNull();
     }
+
+    // Every step the palette *does* have is encoded in the colour it renders as,
+    // so a mask stays a readable picture of a real manager.
     for (const key of MASK_KEYS) {
       if (key.pending === true || key.index === TRANSPARENT_KEY) continue;
       expect(legal.has(key.hex), `${key.name} (${key.hex})`).toBe(true);
     }
+
+    expect(pendingKeys().length, 'pending steps are evidence for a palette ruling').toBeGreaterThan(0);
   });
 
   it('collapses every pending step onto a tone the palette can paint today', () => {

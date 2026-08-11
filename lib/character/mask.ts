@@ -150,6 +150,23 @@ export const MASK_KEYS: readonly MaskKey[] = Object.freeze([
 
   { index: 16, channel: 'fixed', step: 'light', name: 'Sole light', hex: house('ink-500'), tone: 'fixed:sole@light' },
   { index: 17, channel: 'fixed', step: 'base', name: 'Sole base', hex: house('ink-700'), tone: 'fixed:sole@base' },
+
+  /*
+   * Appended 2026-08-11 for the head plate, which a build does not need and a
+   * face cannot do without.
+   *
+   * **`Skin highlight` is pending, for the same reason and with the same
+   * measurement as the garment's.** Tony's own hands and forearms use three skin
+   * values, which is why the build's three were left alone — but his *face* uses
+   * five. A brow, a cheekbone and the bridge of a nose are the surfaces a fourth
+   * step exists for, and there are twenty-eight rows of skull to spend it on.
+   *
+   * **`Eye white` is not pending.** `FIXED.white` has been in the palette since
+   * the drawn head was written; it simply never needed encoding, because no build
+   * has eyes.
+   */
+  { index: 18, channel: 'skin', step: 'light2', name: 'Skin highlight', hex: house('amber-glow'), tone: 'skin:light', pending: true },
+  { index: 19, channel: 'fixed', step: 'base', name: 'Eye white', hex: house('paper-white'), tone: 'fixed:white@base' },
 ]);
 
 /** The transparent key. Index 0, and the only one with no tone. */

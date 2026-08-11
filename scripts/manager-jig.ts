@@ -7,6 +7,7 @@ import {
   ARM,
   AXIS,
   CANVAS,
+  EAR,
   FACE,
   HAND,
   HEAD,
@@ -15,7 +16,7 @@ import {
   SHOE,
   TORSO,
 } from '../lib/character/art/geometry';
-import { BODY_HEAD_SLUG } from '../lib/character/catalog';
+import { BODY_HEAD_SLUG, STYLE_TRAITS } from '../lib/character/catalog';
 import {
   DEFAULT_CONFIGURATION,
   composeCharacter,
@@ -33,6 +34,9 @@ import { HOUSE } from '../lib/character/palette';
  * are keyed against.
  */
 const REFERENCE_SKIN = 1;
+
+/** The one painted build, whose neck the head has to join. */
+const TSHIRT_INDEX = STYLE_TRAITS.top.findIndex((option) => option.name === 'T-shirt');
 
 /**
  * The manager registration jig — `npm run art:jig`.
@@ -400,19 +404,107 @@ async function referenceSheet(): Promise<Buffer> {
     <text x="${String(tonyW + 60)}" y="120" font-family="monospace" font-size="18" fill="#FFD98A">PAINT WITH THESE ${String(keys.length)} COLOURS ONLY</text>
     ${keys.map((_, index) => swatch(index)).join('\n')}
     <text x="${String(tonyW + 60)}" y="${String(150 + 9 * 26 + 18)}" font-family="monospace" font-size="12" fill="#FFD98A">* a tone the game cannot paint yet — paint it anyway, it is recorded</text>
-    ${rule(0, 'CANVAS 672 x 1008, transparent. No background, no glow, no vignette.')}
-    ${rule(1, 'PAINT ON THE SUPPLIED PLATE. Do not reframe or re-centre it.')}
-    ${rule(2, 'NOTHING in the hatched band — that is the head.')}
-    ${rule(3, 'SOLES ON THE BOTTOM ROW. Shoulders just below the hatching.')}
-    ${rule(4, 'Hard 6x6 blocks. No anti-aliasing, no gradients, no soft edges.')}
-    ${rule(5, '1px dark outline fully around the figure.')}
-    ${rule(6, 'One light source, upper left. Asymmetric pose. Below the neck only.')}
+    ${rule(0, 'PAINT ON THE SUPPLIED PLATE. Do not reframe, re-centre or crop it.')}
+    ${rule(1, 'Paint ONLY where the plate is empty. Hatching is not yours to touch.')}
+    ${rule(2, 'Transparent background. No black field, no glow, no vignette.')}
+    ${rule(3, 'A THICK dark outline, fully closed, around everything you paint.')}
+    ${rule(4, 'Flat blocks of the colours above. No gradients, no in-between tones.')}
+    ${rule(5, 'One light source, upper left, across the whole figure.')}
+    ${rule(6, 'Deliver at any size at the plate’s 2:3 aspect — 672x1008 or 1024x1536.')}
   </svg>`;
 
   return sharp(Buffer.from(svg))
     .composite([{ input: tony, left: 24, top: 76 }])
     .png()
     .toBuffer();
+}
+
+
+/**
+ * The plate the head prototype is painted on.
+ *
+ * **It shows the accepted painted body at full strength**, and that is the whole
+ * design. Commissioner ruling, 2026-08-11: the new head must have *"a neck that
+ * visually belongs to the accepted painted body"*. Asking for that in prose and
+ * then handing over an empty rectangle is asking somebody to match a thing they
+ * cannot see. Painting the head directly onto the body makes the match the
+ * default rather than an instruction.
+ *
+ * Everything below the neck is therefore **already painted and must be left
+ * alone** — the delivered file is cropped to the head plate's own rows at ingest,
+ * so nothing repainted down there would survive anyway.
+ */
+async function headPlateCanvas(marks: readonly Landmark[]): Promise<Buffer> {
+  const scale = 6;
+  const width = CANVAS.width * scale;
+  const height = CANVAS.height * scale;
+
+  // The accepted build, without the head — which is the thing being replaced.
+  const body = composeCharacter({ ...DEFAULT_CONFIGURATION, top: TSHIRT_INDEX, skin: REFERENCE_SKIN });
+  const runs = compositeRuns({
+    ...body,
+    layers: body.layers.filter((layer) => layer.layer === 'base-top'),
+  });
+
+  const box = (
+    x: number, y: number, w: number, h: number, colour: string, dash = '4 4',
+  ): string =>
+    `<rect x="${String(x * scale)}" y="${String(y * scale)}" width="${String(w * scale)}" ` +
+    `height="${String(h * scale)}" fill="none" stroke="${colour}" stroke-width="2" ` +
+    `stroke-dasharray="${dash}" />`;
+
+  const row = (y: number, label: string, colour: string = GUIDE.binding): string =>
+    `<line x1="0" y1="${String(y * scale)}" x2="${String(width)}" y2="${String(y * scale)}" ` +
+    `stroke="${colour}" stroke-width="2" stroke-dasharray="10 8" opacity="0.85" />` +
+    `<text x="8" y="${String(y * scale - 6)}" font-family="monospace" font-size="15" ` +
+    `fill="${colour}">${label}</text>`;
+
+  void marks;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${String(width)}" height="${String(height)}">
+    <defs>
+      <pattern id="body" width="16" height="16" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+        <rect width="16" height="16" fill="#241B20" />
+        <rect width="8" height="16" fill="#31252B" />
+      </pattern>
+    </defs>
+    <rect width="${String(width)}" height="${String(height)}" fill="#2E2226" />
+
+    <g shape-rendering="crispEdges">
+      ${runs
+        .map(
+          (run) =>
+            `<rect x="${String(run.x * scale)}" y="${String(run.y * scale)}" ` +
+            `width="${String(run.w * scale)}" height="${String(run.h * scale)}" fill="${run.value}" />`,
+        )
+        .join('')}
+    </g>
+    <rect x="0" y="${String(BUILD_REGISTRATION.shoulderBand.from * scale)}" width="${String(width)}"
+      height="${String(height - BUILD_REGISTRATION.shoulderBand.from * scale)}" fill="url(#body)" opacity="0.55" />
+    <text x="${String(width / 2)}" y="${String(height - 26)}" text-anchor="middle"
+      font-family="monospace" font-size="19" fill="#FFD98A">ACCEPTED BODY — DO NOT REPAINT</text>
+
+    ${box(HEAD.left, HEAD.top, HEAD.right - HEAD.left, HEAD.bottom - HEAD.top, GUIDE.binding)}
+    ${box(FACE.eyeLeft, FACE.eyeY, FACE.eyeWidth, FACE.eyeHeight, GUIDE.binding, '2 2')}
+    ${box(FACE.eyeRight, FACE.eyeY, FACE.eyeWidth, FACE.eyeHeight, GUIDE.binding, '2 2')}
+    ${box(EAR.leftCx - EAR.rx, EAR.cy - EAR.ry, EAR.rx * 2, EAR.ry * 2, GUIDE.advisory, '2 2')}
+    ${box(EAR.rightCx - EAR.rx, EAR.cy - EAR.ry, EAR.rx * 2, EAR.ry * 2, GUIDE.advisory, '2 2')}
+    ${box(NECK.left, NECK.top, NECK.width, NECK.bottom - NECK.top, GUIDE.binding)}
+    ${box(HEAD.left, HEAD.top, HEAD.right - HEAD.left, 10, GUIDE.binding, '1 3')}
+
+    ${row(HEAD.top, `skull top ${String(HEAD.top)} — hair is drawn to this envelope`)}
+    ${row(FACE.browY, `brow ${String(FACE.browY)}`)}
+    ${row(FACE.eyeY, `EYE LINE ${String(FACE.eyeY)} — fixed`)}
+    ${row(FACE.noseY, `nose tip ${String(FACE.noseY)}`)}
+    ${row(FACE.mouthY, `MOUTH ${String(FACE.mouthY)} — beards are drawn to this`)}
+    ${row(HEAD.bottom, `jaw ${String(HEAD.bottom)}`)}
+    ${row(NECK.bottom - 1, `collar meets here ${String(NECK.bottom - 1)}`, GUIDE.advisory)}
+
+    <text x="8" y="20" font-family="monospace" font-size="17" fill="#FFD98A">PAINT THE HEAD, EARS, FACE AND NECK ONLY</text>
+    <text x="8" y="40" font-family="monospace" font-size="13" fill="#B5A8A9">bald · clean-shaven · no hat · no accessories</text>
+  </svg>`;
+
+  return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
 /** The labelled plate a person takes into an image-generation session. */
@@ -516,6 +608,7 @@ async function main(): Promise<void> {
     await paintOverPlate(marks),
   );
   writeFileSync(path.join(OUT, 'manager_reference_sheet.png'), await referenceSheet());
+  writeFileSync(path.join(OUT, 'manager_head_paintover_672x1008.png'), await headPlateCanvas(marks));
   writeFileSync(
     path.join(OUT, 'manager_registration_jig.json'),
     `${JSON.stringify(
@@ -541,7 +634,7 @@ async function main(): Promise<void> {
     )}\n`,
   );
 
-  console.log(`Wrote five files to art/jigs/ — ${String(marks.length)} landmarks.`);
+  console.log(`Wrote six files to art/jigs/ — ${String(marks.length)} landmarks.`);
 }
 
 main().catch((error: unknown) => {

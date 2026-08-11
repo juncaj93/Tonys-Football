@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { toneGrid } from './art';
+import { hasBuildMask, toneGrid } from './art';
 import { SHORT_SLEEVE_END } from './art/garment';
 import {
   ARM,
@@ -16,7 +16,9 @@ import {
   mirror,
   mirrorCentre,
 } from './art/geometry';
+import { styleSlug } from './catalog';
 import { compositeRuns, composeCharacter, DEFAULT_CONFIGURATION } from './composite';
+import { enclosureProblems } from './enclosure';
 import { HAIR_COLOURS, HOUSE, SKIN_TONES, TOP_COLOURS } from './palette';
 import { rasterise, shade, type Op, type Tone } from './sprite';
 
@@ -172,60 +174,40 @@ describe('the composite passes', () => {
       .toBeGreaterThan(8);
   });
 
-  it('has no hole in it, on any top', () => {
+  it('encloses only the space its pose actually needs, on every top', () => {
     /*
      * **The defect this is written against shipped twice in one afternoon and
-     * looked like a style choice both times.**
+     * looked like a style choice both times** — a two-column hole down each side
+     * from the armpit to the hem, and twelve pixels through a collarbone. Both
+     * read as a deliberate dark seam in a thumbnail, which is why looking never
+     * found them.
      *
-     * The arm's inner edge and the torso's outer edge were authored to *meet*.
-     * They did — at the shoulder, where a round cap covers the join. Below it the
-     * torso narrows towards the waist and the arm narrows towards the wrist, so
-     * the two edges walked apart and left a two-column gap down each side of the
-     * figure, from the armpit to the hem, with the room showing through it. In a
-     * thumbnail it reads as a deliberate dark seam. It is a hole.
+     * The rule was *"zero enclosed empty pixels"* until 2026-08-11, when a
+     * commissioner ruling gave each painted build its own pose. A figure with one
+     * hand in a pocket and the other arm hanging free encloses space under the
+     * bent arm and beside the hanging hand **by construction**, so the blanket
+     * rule and the ruling could not both hold.
      *
-     * Flood-filled from outside rather than asserted per row, because the shape
-     * of the next hole is not predictable and a row test would have to be
-     * rewritten for it. Anything empty and unreachable from the edge of the
-     * canvas is a hole, whatever made it.
+     * `lib/character/enclosure.ts` carries the narrowed rule and the reasoning:
+     * a drawn top may still enclose nothing, and a painted build may enclose a
+     * *space* but never a *seam*. Both historical defects are seams and both are
+     * still caught — `enclosure.test.ts` runs them.
      */
     for (let top = 0; top < 6; top++) {
-      const grid: boolean[][] = Array.from({ length: CANVAS.height }, () =>
+      const slug = styleSlug('top', top);
+      const solid: boolean[][] = Array.from({ length: CANVAS.height }, () =>
         Array.from({ length: CANVAS.width }, () => false),
       );
       for (const run of compositeRuns(composeCharacter({ ...DEFAULT_CONFIGURATION, top }))) {
         for (let y = run.y; y < run.y + run.h; y++) {
-          for (let x = run.x; x < run.x + run.w; x++) grid[y]![x] = true;
+          for (let x = run.x; x < run.x + run.w; x++) solid[y]![x] = true;
         }
       }
 
-      const seen = Array.from({ length: CANVAS.height }, () =>
-        Array.from({ length: CANVAS.width }, () => false),
-      );
-      const queue: [number, number][] = [];
-      for (let x = 0; x < CANVAS.width; x++) {
-        queue.push([x, 0], [x, CANVAS.height - 1]);
-      }
-      for (let y = 0; y < CANVAS.height; y++) {
-        queue.push([0, y], [CANVAS.width - 1, y]);
-      }
-
-      while (queue.length > 0) {
-        const [x, y] = queue.pop()!;
-        if (x < 0 || y < 0 || x >= CANVAS.width || y >= CANVAS.height) continue;
-        if (seen[y]![x] || grid[y]![x]) continue;
-        seen[y]![x] = true;
-        queue.push([x + 1, y], [x - 1, y], [x, y + 1], [x, y - 1]);
-      }
-
-      let enclosed = 0;
-      for (let y = 0; y < CANVAS.height; y++) {
-        for (let x = 0; x < CANVAS.width; x++) {
-          if (!grid[y]![x] && !seen[y]![x]) enclosed++;
-        }
-      }
-      expect(enclosed, `top ${String(top)} leaves ${String(enclosed)} pixels of room showing through the figure`)
-        .toBe(0);
+      const problems = enclosureProblems(solid, {
+        painted: slug !== null && hasBuildMask(slug),
+      });
+      expect(problems, `top ${String(top)} (${slug ?? 'none'}): ${problems.join(' · ')}`).toEqual([]);
     }
   });
 

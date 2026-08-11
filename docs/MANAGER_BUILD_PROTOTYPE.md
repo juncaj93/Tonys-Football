@@ -404,3 +404,69 @@ for it to stop.
 The body is Tony-grade and holds at 390. The **head** is now the weakest thing in
 the frame — still the drawn plate, because painting it is not authorised — and it
 is where a viewer's eye goes. `docs/evidence/manager-build-prototype/`.
+
+---
+
+## 11. The narrowed enclosure rule, and the head prototype
+
+### 11.1 The rule the ruling asked for
+
+`lib/character/enclosure.ts`. The blanket *"zero enclosed empty pixels"* is
+**kept unchanged for drawn builds** and narrowed for painted ones along the axis
+that actually separates the two historical defects from the two legitimate gaps:
+
+| | shape | 3 × 3 empty block? |
+|---|---|---|
+| armpit-to-hem seam *(shipped)* | 2 columns × ~50 rows | **no** |
+| collarbone hole *(shipped)* | ~6 × 2 | **no** |
+| gap under a bent arm | 5 × 8 | yes |
+| gap beside a hanging hand | 4 × 19 | yes |
+
+A painted build may enclose a **space**; it may not enclose a **seam**. Two
+further limits, both calibrated on real numbers rather than chosen:
+
+- **`SEAM_BUDGET = 12`** — the size of the smallest defect this guard has ever
+  had to catch. It is not zero because it cannot be: where a painted arm's
+  outline converges on a hip's, the majority vote that turns 1024 source pixels
+  into 112 leaves a **pinch pocket** of one or two pixels. The accepted build
+  carries two, four pixels between them. A *budget* rather than a per-region
+  allowance, so a real seam cannot arrive as a chain of tolerable specks.
+- **`ENCLOSED_AREA_LIMIT = 3%`** — the accepted build's gaps are 1.36% of it.
+  This is for the failure thickness cannot see: a chunk simply missing from the
+  middle of a figure.
+
+`lib/character/enclosure.test.ts` runs **both historical defects, both
+legitimate gaps, the pinch pockets, a seam delivered as a chain of specks, a
+missing chunk, and a drawn build refusing a gap that a painted build is allowed**.
+
+**One idea was built and removed.** The two pinch pockets were at first assumed
+to be tapering tips of the gaps beside them, and components within two pixels
+were merged. They are not tips — they sit five to eight rows away — so the
+merging never fired and was deleted rather than left in as machinery that looks
+load-bearing.
+
+### 11.2 The head is authorised and the packet is built
+
+`docs/art/MANAGER_HEAD_BRIEF.md`, plus
+`art/jigs/manager_head_paintover_672x1008.png`.
+
+**The plate shows the accepted body at full strength**, which is the design
+rather than a courtesy: the ruling asks for *"a neck that visually belongs to the
+accepted painted body"*, and handing somebody an empty rectangle and that
+sentence is asking them to match what they cannot see.
+
+**What is fixed** is only what another layer depends on, measured rather than
+assumed — hair occupies rows 11–50 and facial hair rows 39–57, so the skull
+envelope, the eye line, the mouth and the jaw are binding and everything inside
+them is free. The jaw may be narrowed and squared; the cranium may not widen,
+because hair is painted to that curve.
+
+**Two mask keys were appended**: `Skin highlight` (pending) and `Eye white`. Tony's
+hands use three skin values, which is why the build's three were left alone — but
+his *face* uses five, and a brow, a cheekbone and a nose bridge are what a fourth
+step is for. `Eye white` is not pending; `FIXED.white` has always existed and
+simply had nothing to encode, because no build has eyes.
+
+**Placement normalisation is deliberately not offered for a head.** A build may be
+a few rows out because only its own silhouette depends on that; ten other layers
+are drawn to the head's landmarks, so a head that misses them is regenerated.

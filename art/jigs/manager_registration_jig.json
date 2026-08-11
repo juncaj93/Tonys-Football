@@ -281,6 +281,22 @@
       "name": "Sole base",
       "hex": "#2E2226",
       "pending": false
+    },
+    {
+      "index": 18,
+      "channel": "skin",
+      "step": "light2",
+      "name": "Skin highlight",
+      "hex": "#FFD98A",
+      "pending": true
+    },
+    {
+      "index": 19,
+      "channel": "fixed",
+      "step": "base",
+      "name": "Eye white",
+      "hex": "#F5EDDC",
+      "pending": false
     }
   ],
   "outline": "#1A1214"
