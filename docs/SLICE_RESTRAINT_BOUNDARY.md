@@ -175,7 +175,70 @@ writing, and exports the check for it. Two fixes, both in
 
 ---
 
-## 5. What did not change
+## 5. A defect in the product, found by refusing to trust a plausible story
+
+The first two sweeps of this branch failed the console gate with **3** and then
+**5** quarantined React `#418` hydration errors, against a ceiling of 2.
+
+They looked exactly like the documented background. Visual debt 16 is an
+intermittent `#418` that `scripts/visual-qa-quarantine.ts` describes as appearing
+*"under six different state names across five routes and three widths, never
+twice in the same place"*, and the two runs shared **not one** state between
+them. The quarantine's own discriminator seemed to clear this branch too:
+
+> A newly introduced structural mismatch is **deterministic**. It fires on every
+> capture of the state it affects — at minimum three times, once per width.
+
+Nothing fired at more than one width, and two of the routes — `/door`, `/profile`
+— render nothing this branch touched.
+
+**That reading was wrong, and a baseline is what showed it.** `main`, checked out
+and rebuilt in the same container, against the same Chromium and the same seeded
+database, logged **1** and passed.
+
+| Build | Quarantined `#418` | Result |
+|---|---|---|
+| `main` | 1 | passed |
+| this branch, before the fix | 3, then 5 | failed |
+| this branch, after the fix | 2 | passed |
+
+### The cause
+
+The collapsed board row put a heading between two spans inside a `<summary>`:
+
+```html
+<summary>
+  <span aria-hidden>+</span>
+  <h3>Alex</h3>          <!-- invalid -->
+  <span>A+</span>
+</summary>
+```
+
+`<summary>`'s content model is **phrasing content, _or_ one element of heading
+content** — not a heading *among* phrasing siblings. Invalid nesting is nesting
+the parser is free to restructure, and a restructured tree is a `#418`
+`args[]=HTML` structural mismatch by construction.
+
+The scatter is explained too: console errors surface asynchronously and are
+attributed to whatever page the driver has reached by the time they land, which
+is why they showed up on routes this branch cannot reach. **The distribution was
+real and the inference from it was not.**
+
+The `<h3>` was inherited from the standalone team section this row replaced,
+where it genuinely was a section heading. In a ledger row it is not one, so
+making it a `<span>` costs nothing in the document outline.
+
+### What this is worth remembering for
+
+Two of the three defects in this branch were **self-inflicted and caught only by
+measurement** — this one and the stale-server photograph in §4. Both were
+plausible-story failures: there was a good reason to believe nothing was wrong,
+and the good reason was wrong. The baseline run is cheap and it is the only thing
+that separates *"the gate is flaky"* from *"I broke something."*
+
+---
+
+## 6. What did not change
 
 - **No story rule, no selection rule, no significance threshold.** What leads a
   week is exactly what led it before.
