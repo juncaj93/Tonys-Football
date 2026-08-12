@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
 import { openBoxAction, type RevealPayload } from '@/app/actions/counter';
+import { attempt } from '@/lib/reliability/attempt';
 import { TYPE } from '@/lib/design/type';
 import { RoomDoor, roomObjectAttributes } from '@/components/scene/room-object';
 import { useRoomStage } from '@/components/scene/room-stage';
@@ -93,7 +94,7 @@ import {
 /** Long enough to be a beat. See the note above. */
 const ANTICIPATION_MS = 1100;
 
-type Phase = 'idle' | 'anticipation' | 'reveal' | 'lost';
+type Phase = 'idle' | 'anticipation' | 'reveal' | 'lost' | 'unreachable';
 
 export function CounterTray({
   spec,
@@ -188,7 +189,22 @@ export function CounterTray({
     }
 
     startTransition(async () => {
-      const result = await openBoxAction(ownedBoxId);
+      const outcome = await attempt(() => openBoxAction(ownedBoxId));
+      /*
+       * The ask never landed, so the box is still on the tray, still unopened.
+       *
+       * Deliberately **not** `lost`: that phase says *"there's nothing on it"*,
+       * which would be a lie about the manager's property and would send them to
+       * a shelf that has nothing new on it. `box_openings.box_id UNIQUE` makes
+       * a second tap safe whatever happened server-side — a box that did open
+       * comes back as `replayed` with the same collectible — so the honest
+       * recovery is to put the box back and let them tap it again.
+       */
+      if (!outcome.ok) {
+        setPhase('unreachable');
+        return;
+      }
+      const result = outcome.value;
       if (!result.ok) {
         // The box is not there any more. Say so in the room's voice and re-read
         // the truth from the server rather than guessing at a recovery.
@@ -199,6 +215,20 @@ export function CounterTray({
       if (result.reveal.replayed) setBeatOver(true);
       setReveal(result.reveal);
     });
+  };
+
+  /**
+   * Put the box back and let them try again.
+   *
+   * No `router.refresh()`, unlike `done`: the server is what could not be
+   * reached, so a refresh would either fail or replace this with a spinner. The
+   * server's state is unchanged — that is what makes returning to `idle` honest
+   * rather than optimistic.
+   */
+  const retry = (): void => {
+    setPhase('idle');
+    setReveal(null);
+    setBeatOver(false);
   };
 
   /** Cut the beat short. Nothing is lost; the roll already happened. */
@@ -289,6 +319,16 @@ export function CounterTray({
       )}
 
       {phase === 'lost' && <Lost spec={spec} onDone={done} />}
+
+      {/*
+        * Tony did not hear the question. The box is untouched.
+        *
+        * `retry` rather than `done`: `done` calls `router.refresh()`, and a
+        * refresh is exactly the thing that will not work while the network is
+        * the problem. Returning to `idle` puts the lit box back under the
+        * manager's thumb, which is the gesture that fixes it.
+        */}
+      {phase === 'unreachable' && <Unreachable spec={spec} onRetry={retry} />}
     </>
   );
 }
@@ -531,6 +571,40 @@ function Revealed({
             ? `${reveal.name}, ${reveal.rarity}. Put it away.`
             : `${reveal.name}, ${reveal.rarity}, a spare worth ${String(reveal.salvageTokens)} tokens. Put it away.`
         }
+        style={place(spec.rect)}
+        className="room-shape absolute z-30 outline-none"
+        {...roomObjectAttributes(spec)}
+      />
+    </>
+  );
+}
+
+/**
+ * The ask never reached the counter.
+ *
+ * The mirror of `Lost`, and the difference matters: `Lost` is the server saying
+ * the box is not there, this is the server saying nothing at all. The box is
+ * still on the tray behind this plate, so the sentence must not claim otherwise.
+ */
+function Unreachable({ spec, onRetry }: { spec: RoomObjectSpec; onRetry: () => void }) {
+  return (
+    <>
+      <div
+        role="status"
+        aria-live="polite"
+        className="panel-rise pixel-edge absolute z-[26] border-2 border-wood-dark bg-paper-mid px-3 py-2.5 text-ink-900"
+        style={placePlate()}
+      >
+        <p className={TYPE.bodyCompact}>
+          Tony didn&rsquo;t hear you. The box is still on the tray &mdash; tap it
+          again.
+        </p>
+      </div>
+
+      <button
+        type="button"
+        onClick={onRetry}
+        aria-label="Try opening your pizza box again"
         style={place(spec.rect)}
         className="room-shape absolute z-30 outline-none"
         {...roomObjectAttributes(spec)}

@@ -284,6 +284,21 @@ type StateName =
    * precisely the one where being wrong is least recoverable.
    */
   | 'back-hall-shut'
+  /*
+   * A door that is not there.
+   *
+   * `requireAdmin()` and `/rooms/[userId]` both answer `notFound()` on purpose,
+   * so this is not a rare screen — it is what a manager gets for a stale
+   * bookmark, a restored Safari tab, or a room they may not visit. Until
+   * `app/not-found.tsx` existed it was Next's own black-on-white `404: This page
+   * could not be found.` with **no link on it**, which is the definition of
+   * stranded in a product that is otherwise one dark room.
+   *
+   * Photographed because it is a real destination rather than an error: nobody
+   * would have looked at it, which is exactly the argument `back-hall-shut`
+   * makes one line above.
+   */
+  | 'not-found'
   | 'keyboard-focus'
   | 'six-banners'
   | 'tray-owned-box'
@@ -1385,6 +1400,16 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForTimeout(1200);
       return;
 
+    /*
+     * Any address the product does not have. `/no-such-door` rather than a real
+     * protected route, so the state photographs the same screen whether or not
+     * the signed-in seat happens to hold the commissioner's keys.
+     */
+    case 'not-found':
+      await page.goto(`${BASE}/no-such-door`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(600);
+      return;
+
     case 'keyboard-focus':
       await home(page);
       await dismissTony(page);
@@ -2131,6 +2156,7 @@ const ALL_STATES: readonly StateName[] = [
   'counter',
   'back-hall',
   'back-hall-shut',
+  'not-found',
   'keyboard-focus',
   'six-banners',
   'tray-owned-box',
@@ -4498,6 +4524,68 @@ async function checkManagerBelongsInTheRoom(page: Page, at: string): Promise<voi
   }
 }
 
+/**
+ * A dead end must still be somewhere in the shop, with a way out.
+ *
+ * Three things, and the third is the one a screenshot cannot show. The screen
+ * must be **the product's** rather than Next's built-in fallback; it must carry
+ * **a link back to the parlor**, because being stranded was the whole defect;
+ * and it must still be a **404**, because `requireAdmin()` and `/rooms/[userId]`
+ * answer `notFound()` deliberately so that probing an address teaches nothing.
+ *
+ * The status is asserted rather than assumed: a `not-found` boundary that
+ * accidentally rendered at 200 would look identical in every photograph and
+ * would have quietly converted a security decision into a cosmetic one.
+ */
+async function checkNotFound(page: Page, width: number, state: string): Promise<void> {
+  if (state !== 'not-found') return;
+  const at = `@${String(width)} ${state}`;
+
+  if ((await page.locator('[data-not-found]').count()) === 0) {
+    fail(
+      'not-found',
+      `${at} did not render the product's own not-found screen. Next's fallback is ` +
+        'black on white with no link on it — a manager who taps a room they cannot ' +
+        'visit would have no way back.',
+    );
+    return;
+  }
+
+  const home = page.locator('[data-not-found-home]');
+  if ((await home.count()) === 0) {
+    fail('not-found', `${at} offers no way back to the parlor.`);
+  } else {
+    const box = await home.first().boundingBox();
+    if (box === null || box.height < 44) {
+      fail(
+        'not-found',
+        `${at} draws the way back at ${String(Math.round(box?.height ?? 0))}px tall, under the 44px floor.`,
+      );
+    }
+  }
+
+  /*
+   * The status of the navigation that is already on screen, not a second
+   * request for it.
+   *
+   * A `fetch()` here would ask the server for the same missing page again,
+   * which lands a second `Failed to load resource: 404` in the console gate —
+   * the check generating the noise it is standing next to. Navigation Timing
+   * already recorded what the document answered.
+   */
+  const status = await page.evaluate(() => {
+    const [entry] = performance.getEntriesByType('navigation');
+    return (entry as PerformanceNavigationTiming | undefined)?.responseStatus ?? 0;
+  });
+  if (status !== 404) {
+    fail(
+      'not-found',
+      `${at} answered ${String(status)} rather than 404. The 404 is a security decision ` +
+        '(`requireAdmin()` answers it so a probe learns nothing) and styling the page must not have changed it.',
+    );
+  }
+}
+
 async function checkBackHall(page: Page, width: number, state: string): Promise<void> {
   const expected = BACK_HALL_STATES[state];
   if (expected === undefined) return;
@@ -5768,6 +5856,9 @@ async function run(): Promise<void> {
             if (state === 'room' || state === 'room-furnished') await checkTargets(page, width);
           }
 
+          // The dead end: the product's screen, a way out, and still a 404.
+          await checkNotFound(page, width, state);
+
           // The back hall's own map, and whether the doors match the state's name.
           if (state.startsWith('back-hall')) {
             await checkTargets(page, width);
@@ -5859,6 +5950,22 @@ async function run(): Promise<void> {
          * quarantined shape fails on sight, including the dev build's message,
          * which is the one that would finally name the element.
          */
+        /*
+         * The `not-found` state's document **is** a 404, and Chromium logs one
+         * console error per 404 response including the main document.
+         *
+         * So the one state whose entire subject is a missing page would fail
+         * the console gate for succeeding at its job. This is scoped as tightly
+         * as it can be — that exact message, on that one state — and it is not
+         * a mute: `checkNotFound` **asserts** the status is 404 from Navigation
+         * Timing, so the response this skips is separately proved to be the one
+         * claimed. A `not-found` state that started answering 200 would go red
+         * there rather than quietly here.
+         */
+        const isTheStatesOwn404 =
+          e.state === 'not-found' && /status of 404 \(Not Found\)/.test(e.text);
+        if (isTheStatesOwn404) continue;
+
         const known = quarantineFor(e.text);
         if (known === undefined) fail('console', detail);
         else quarantined.push({ debt: known.debt, why: known.why, detail });

@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
 
 import { saveCharacterAction } from "@/app/actions/character";
+import { attempt, UNREACHABLE_LINE } from "@/lib/reliability/attempt";
 import { PixelPanel } from "@/components/scene/panel";
 import { COLOUR_TRAITS, STYLE_TRAITS } from "@/lib/character/catalog";
 import {
@@ -206,7 +207,21 @@ export function Customiser({ configuration, equipped, owned, chosen }: Customise
     for (const slot of WEARABLE_SLOTS) equipment[slot] = worn[slot] ?? null;
 
     startTransition(async () => {
-      const result = await saveCharacterAction({ ...draft, equipment });
+      const outcome = await attempt(() => saveCharacterAction({ ...draft, equipment }));
+      /*
+       * **The draft is not cleared here, and that is the whole point.**
+       *
+       * `draft` and `worn` are this component's state, so staying mounted is
+       * what keeps a manager's choices. Before this, a dropped request during
+       * Save unmounted the tree and every trait they had picked went with it —
+       * measured on a production build at 390px. Saving is a full replace and
+       * therefore idempotent, so tapping Save again is always safe.
+       */
+      if (!outcome.ok) {
+        setRefused(UNREACHABLE_LINE);
+        return;
+      }
+      const result = outcome.value;
       if (!result.ok) {
         setRefused(result.reason);
         return;

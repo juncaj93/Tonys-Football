@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { clearSlotAction, placeInSlotAction } from '@/app/actions/rooms';
+import { attempt, UNREACHABLE_LINE } from '@/lib/reliability/attempt';
 import { RoomDisplay } from '@/components/scene/room-object';
 import { AssetView } from '@/lib/assets/placeholder';
 import { type AssetResolution } from '@/lib/assets/types';
@@ -66,22 +67,33 @@ export function SlotDisplay({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [refused, setRefused] = useState(false);
+  const [refused, setRefused] = useState<string | null>(null);
 
   const put = (collectibleId: string): void => {
     if (pending) return;
-    setRefused(false);
+    setRefused(null);
 
     // Tapping what is already here takes it down.
     const clearing = collectibleId === occupant?.collectibleId;
 
     startTransition(async () => {
-      const result = clearing
-        ? await clearSlotAction(slot)
-        : await placeInSlotAction(slot, collectibleId);
+      const outcome = await attempt(() =>
+        clearing ? clearSlotAction(slot) : placeInSlotAction(slot, collectibleId),
+      );
 
-      if (!result.ok) {
-        setRefused(true);
+      /*
+       * Nothing moved, and the shelf on screen is still the truth.
+       *
+       * Worth separating from a refusal: `place()` is idempotent and the
+       * database owns ownership, so tapping again is always safe — which is
+       * exactly what the sentence tells the manager to do.
+       */
+      if (!outcome.ok) {
+        setRefused(UNREACHABLE_LINE);
+        return;
+      }
+      if (!outcome.value.ok) {
+        setRefused('Tony can’t put that one there.');
         return;
       }
       router.refresh();
@@ -185,9 +197,9 @@ export function SlotDisplay({
         </>
       )}
 
-      {refused && (
-        <p className={`mt-3 ${TYPE.body} text-red-dark`} role="status">
-          Tony can’t put that one there.
+      {refused !== null && (
+        <p className={`mt-3 ${TYPE.body} text-red-dark`} role="status" aria-live="polite">
+          {refused}
         </p>
       )}
     </RoomDisplay>

@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from 'react';
 
 import { TYPE } from '@/lib/design/type';
 import { buyBoxAction } from '@/app/actions/counter';
+import { attempt, UNREACHABLE_LINE } from '@/lib/reliability/attempt';
 
 /**
  * Buying a box.
@@ -43,7 +44,23 @@ export function BuyBox({ price, balance }: { price: number; balance: number }) {
     setRefused(null);
 
     startTransition(async () => {
-      const result = await buyBoxAction(token.current);
+      const outcome = await attempt(() => buyBoxAction(token.current));
+
+      /*
+       * The purchase may or may not have happened, and the token is **kept**.
+       *
+       * That is the whole reason a retry is safe here: the same client token
+       * produces the same `purchase:<userId>:<token>` idempotency key, so if the
+       * server did commit and only the answer was lost, tapping again replays
+       * the key and spends nothing a second time. A new token is still minted
+       * only on a confirmed success, which is what keeps a *deliberate* second
+       * purchase a second purchase.
+       */
+      if (!outcome.ok) {
+        setRefused(UNREACHABLE_LINE);
+        return;
+      }
+      const result = outcome.value;
 
       if (result.ok) {
         // A different purchase next time.

@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { setShowcaseAction } from '@/app/actions/counter';
+import { attempt, UNREACHABLE_LINE } from '@/lib/reliability/attempt';
 import { TYPE } from '@/lib/design/type';
 import { AssetView } from '@/lib/assets/placeholder';
 import { type AssetResolution } from '@/lib/assets/types';
@@ -57,7 +58,12 @@ export function ShowcasePicker({
     const next = collectibleId === chosenId ? null : collectibleId;
 
     startTransition(async () => {
-      const result = await setShowcaseAction(next);
+      const outcome = await attempt(() => setShowcaseAction(next));
+      if (!outcome.ok) {
+        setRefused(UNREACHABLE_LINE);
+        return;
+      }
+      const result = outcome.value;
       if (!result.ok) {
         setRefused('Tony can’t put that one out.');
         return;

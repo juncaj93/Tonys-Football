@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from 'react';
 
 import { anotherLineAction } from '@/app/actions/tony';
+import { attempt } from '@/lib/reliability/attempt';
 import { RoomToy } from '@/components/scene/room-object';
 import { SpokenLine } from '@/components/scene/spoken-line';
 import { TYPE } from '@/lib/design/type';
@@ -78,7 +79,19 @@ export function TonyToy({
     setDismissed(false);
 
     startTransition(async () => {
-      const { text } = await anotherLineAction();
+      const outcome = await attempt(() => anotherLineAction());
+      /*
+       * He is a Toy, so an unreachable server is the same as having nothing to
+       * say: he keeps the line he already had, silently. There is deliberately
+       * no error line here — poking Tony is not a request that can fail in a way
+       * a manager needs told about, and an apology in the middle of the parlor
+       * would be the room reporting on its own plumbing.
+       *
+       * The cooldown has already been spent, which is correct: it paces taps,
+       * and a failed tap was still a tap.
+       */
+      if (!outcome.ok) return;
+      const { text } = outcome.value;
       // Null means he has nothing else true to say, which is a valid outcome
       // (`16 §10`) — he keeps the line he already had rather than going blank.
       // He also keeps it silently: nothing new arrived, so nothing retypes.

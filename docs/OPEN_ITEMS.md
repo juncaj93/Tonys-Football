@@ -724,6 +724,37 @@ one-line change.
 record stands, and nothing downstream reads the run status to decide what is
 true. If it is ever picked up, it is a hardening task with its own scope.
 
+### E8 · A lost sign-in response leaves a phantom device on the key ring
+
+Found 2026-08-12 by the mobile-reliability audit
+(`docs/MOBILE_RELIABILITY_BOUNDARY.md §9`), which fixed the rest of what it
+found. This one is reported rather than fixed, deliberately.
+
+`signInAction` inserts a new `sessions` row on every successful sign-in. If the
+response is lost in flight — the one network failure a phone produces most often
+— the cookie never reaches the browser, the manager taps again, and a **second
+row** is created. `/profile` then lists a device nobody holds, for 90 days, and
+two rows reading `iPhone · Safari` cannot answer the question that list exists to
+answer: *"is that my phone?"*
+
+**Nothing is granted by the orphan.** Its cookie value was never delivered to any
+browser, so it is unreachable by anyone; it is a row, not an access path. And it
+is already recoverable by a control that ships today — *"Change the locks
+everywhere"* revokes every session including the phantom.
+
+**Why it was not fixed under that audit's authority.** Every other repair in that
+workstream was a small change inside an existing mechanism. This one is not:
+deduplicating a sign-in needs either a schema change (a client-minted attempt key
+with a unique constraint, the shape `loot_boxes.grant_key` uses) or a token
+threaded through the door and into `issueSession`. The audit's standing
+constraint was **no schema migration unless absolutely unavoidable**, and a
+cosmetic, already-recoverable, non-granting duplicate does not clear that bar.
+
+**If it is picked up**, the honest fix is the `grant_key` shape rather than a
+best-effort *"reuse a session created in the last few seconds"* — a time window
+would silently collapse two deliberate sign-ins from the same phone, which is a
+real thing a manager does when they hand the phone to somebody.
+
 ---
 
 ## F — Monitored, not worked

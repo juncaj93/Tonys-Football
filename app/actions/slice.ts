@@ -151,8 +151,31 @@ export async function holdPublicationAction(formData: FormData): Promise<void> {
   redirect('/admin/slice');
 }
 
-/** The season a draft button defaults to. Read on the server; never posted by the form. */
+/**
+ * The season a draft button defaults to. Read on the server; never posted by the form.
+ *
+ * ## The guard was missing, and an export from a `'use server'` file is a door
+ *
+ * Every other action in this file opens with `requireAdmin()`; this one opened
+ * with a query. Next publishes each export of a `'use server'` module as a
+ * callable endpoint, so an unguarded one is reachable by anyone holding the
+ * URL — signed in or not — regardless of which component happens to call it.
+ * `16 §11` has exactly one unauthenticated surface and it is the door.
+ *
+ * What leaked was small: the newest open season's year, which is on Sleeper and
+ * on the wall of the shop. Nothing was mutated and nothing private was returned.
+ * It is guarded rather than argued about, because *"that particular read was
+ * harmless"* is a property of today's body, and the missing line is what the
+ * next body would inherit.
+ *
+ * **It also has no callers.** `app/page.tsx`, `lib/parlor/receipt.ts` and
+ * `lib/counter/showcase.ts` all import the identically-named function from
+ * `lib/league/membership.ts`; nothing imports this one. It is left in place with
+ * the guard rather than deleted — this workstream owns authorization, not the
+ * Slice's surface area, and removing an export is the Slice owner's call.
+ */
 export async function currentSeasonYear(): Promise<number | null> {
+  await requireAdmin();
   const season = await openSeason(getDb());
   return season?.year ?? null;
 }

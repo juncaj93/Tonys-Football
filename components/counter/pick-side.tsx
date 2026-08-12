@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 
 import { TYPE } from '@/lib/design/type';
 import { pickSideAction } from '@/app/actions/stakes';
+import { attempt, UNREACHABLE_LINE } from '@/lib/reliability/attempt';
 
 /**
  * Over or under, and nothing else.
@@ -51,7 +52,24 @@ export function PickSide({
     setRefused(null);
 
     startTransition(async () => {
-      const result = await pickSideAction(stakeId, side);
+      const outcome = await attempt(() => pickSideAction(stakeId, side));
+
+      /*
+       * No side was taken and nothing was staked.
+       *
+       * Retrying is safe without any token of its own: `UNIQUE(stake_id,
+       * user_id)` means a manager holds exactly one pick on a market forever, so
+       * a request that did commit before the answer was lost comes back as
+       * `already` rather than as a second wager. That constraint is the reason
+       * this surface never needed the idempotency token the counter mints, and
+       * it is unchanged here — nothing about the line, the stake, the payout or
+       * eligibility is touched by this file.
+       */
+      if (!outcome.ok) {
+        setRefused(UNREACHABLE_LINE);
+        return;
+      }
+      const result = outcome.value;
 
       if (result.ok) {
         router.refresh();

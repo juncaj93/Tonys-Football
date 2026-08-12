@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
 
 import { setThemeAction } from '@/app/actions/rooms';
+import { attempt, UNREACHABLE_LINE } from '@/lib/reliability/attempt';
 import { TYPE } from '@/lib/design/type';
 import { THEMES, THEME_SPECS, type Theme } from '@/lib/rooms/themes';
 
@@ -32,16 +33,21 @@ import { THEMES, THEME_SPECS, type Theme } from '@/lib/rooms/themes';
 export function ThemePicker({ current }: { current: Theme }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
-  const [refused, setRefused] = useState(false);
+  const [refused, setRefused] = useState<string | null>(null);
 
   const choose = (theme: Theme): void => {
     if (pending || theme === current) return;
-    setRefused(false);
+    setRefused(null);
 
     startTransition(async () => {
-      const result = await setThemeAction(theme);
-      if (!result.ok) {
-        setRefused(true);
+      const outcome = await attempt(() => setThemeAction(theme));
+      // Never reached the server, so the walls are still whatever they were.
+      if (!outcome.ok) {
+        setRefused(UNREACHABLE_LINE);
+        return;
+      }
+      if (!outcome.value.ok) {
+        setRefused('Tony can’t fit it out like that.');
         return;
       }
       router.refresh();
@@ -86,9 +92,18 @@ export function ThemePicker({ current }: { current: Theme }) {
         })}
       </ul>
 
-      {refused && (
-        <p className={`mt-3 ${TYPE.body} text-red-dark`} role="status">
-          Tony doesn’t have that one downstairs.
+      {/*
+        * One line for both kinds of no.
+        *
+        * A refusal and an unreachable server are different sentences and the
+        * same gesture, so they share the region rather than stacking two. It is
+        * `role="status"` and `aria-live` so a tap that did nothing is announced
+        * — the failure this replaces was a tap that did nothing *and said
+        * nothing*.
+        */}
+      {refused !== null && (
+        <p className={`mt-3 ${TYPE.body} text-red-dark`} role="status" aria-live="polite">
+          {refused}
         </p>
       )}
     </>
