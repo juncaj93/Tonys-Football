@@ -388,6 +388,22 @@ It is evidenced instead by a real database outage against the production build,
 captured at 390 / 375 / 360 in `docs/evidence/mobile-reliability/`, and by
 `checkNotFound`'s sibling assertions on the shared primitives.
 
+### R4 · A rehearsal test times out under load, and it is not this branch's
+
+`lib/rehearsal/week-16.test.ts`'s *"changes nothing when the Tuesday job runs
+twice on the semifinal"* failed once on a 5-second timeout while this
+workstream's dev server and visual-QA server were both running. In isolation it
+takes **2.35s**, and the whole file passes in 13.9s — so the test is correct and
+its headroom is about 2×, which a busy machine can eat.
+
+**Nothing was changed.** It is not in this workstream's area, it is not a product
+defect, and raising a timeout to make a branch green is the move this
+repository's own gate culture argues against. Recorded because it will be seen
+again by whoever next runs the suite beside a server, and because *"the playoff
+rehearsal is flaky"* is a much worse thing to discover without this note.
+
+The clean run — every server stopped — is **121 files, 2028 tests, exit 0**.
+
 ### R3 · The `#418` on the door is the known one — **not a new finding**
 
 A minified React `#418` was observed once on `/door` during rehearsal. Checked
