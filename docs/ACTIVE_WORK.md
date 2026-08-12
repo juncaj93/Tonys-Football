@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| *(nothing claimed)* | | | | |
+| V1 collectible catalog curation (content only, awaiting approval) | `claude/tonys-pizza-v1-curation-3ukg1w` | `docs/CATALOG_CURATION_PROPOSAL.md` · on approval, `art/assets.inventory.json` collectible names · `docs/art/BATCH_F_COLLECTIBLE_HANDOFF.md §3` · an optional `name` field in `lib/assets/registry.ts` + `lib/counter/catalog.ts` | any slug · any rarity · `CATALOG_SIZE` · `lib/counter/rewards.ts` · `lib/counter/tokens.ts` · any migration · any existing art file · `docs/OPEN_ITEMS.md` **G2** | 2026-08-12 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
