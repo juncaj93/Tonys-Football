@@ -114,24 +114,34 @@ export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
    * whole reveal is that you find out by being let in. Its accessible label is
    * what a manager can actually see: a curtain.
    *
-   * ## It has no `href`, and that is the honest state rather than an omission
+   * ## It has an `href` now, and that was the promised one line
    *
-   * `/underground` is **deliberately not a route** (`BACK_HALL_BOUNDARY §0`, and
-   * `18 §5` on the reveal). It was a `<Link>` to one once: Next prefetched it on
-   * hover, every visit to this page logged a 404, nothing rendered wrong, no
-   * test failed, and the console gate was the only evidence.
+   * `/underground` was **deliberately not a route** for as long as there was
+   * nothing behind it (`BACK_HALL_BOUNDARY §0`, and `18 §5` on the reveal). It
+   * was a `<Link>` to one once: Next prefetched it on hover, every visit to this
+   * page logged a 404, nothing rendered wrong, no test failed, and the console
+   * gate was the only evidence. `openTo` has thrown ever since — the standing
+   * rule for a state that is declared and unimplemented — and the note left here
+   * said that when the casino brought its route, *"this becomes one line"*.
    *
-   * So the door cannot be opened yet — not because the flag is off, but because
-   * there is nothing on the other side. `openTo` throws rather than handing back
-   * a Door with nowhere to go, which is the repository's standing rule for a
-   * state that is declared and unimplemented. When the casino lands in P10 it
-   * brings its route, and this becomes one line.
+   * W1 built the route and W2 built the second game. This is that line.
+   *
+   * **The flag still decides.** `underground: false` means every real manager
+   * meets the curtain and *"Don't worry about it."*; the `href` matters only on
+   * the day the commissioner opens it. Nothing on this door says what is behind
+   * it in any state — that is the reveal, and it is unchanged.
+   *
+   * **Found by the visual gate, not by reading.** Building the route without
+   * adding this line made `back-hall-both-open` a 500 at all three widths:
+   * `openTo` threw exactly as designed, on the first build where the flag could
+   * legitimately be opened. The mechanism worked.
    */
   {
     id: 'curtain',
     kind: 'door',
     label: 'The curtained doorway',
     destination: 'somewhere',
+    href: '/underground',
     rect: [118, 118, 86, 174],
   },
 

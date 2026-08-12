@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| *(nothing claimed)* | | | | |
+| Underground casino **W1 + W2** — slots and blackjack (authorized 2026-08-11 / 2026-08-12) | claude/underground-casino-investigation-mu3ayr | `lib/casino/**` · `drizzle/0019_casino_slots.sql` · `app/underground/**` · `app/actions/casino.ts` · `components/casino/**` · `components/scene/underground.tsx` · `lib/db/errors.ts` · `lib/flags.ts` (two new keys) · `lib/counter/tokens.ts` (casino reasons + the R12 allowlist) · the three new visual states · `lib/casino/blackjack*` · `drizzle/0020_casino_blackjack.sql` · `components/casino/**` · `app/actions/blackjack.ts` · `finalizeSeason`'s transaction · `docs/CASINO_BOUNDARY.md` | **W3** casino release gate · **W4** room artwork · any approved economy value (box price, rarity, salvage, weekly rewards, catalog size) · `art/**` · any third cron · `lib/stakes/**` · `lib/rewards/**` · **the Underground's production flag** | 2026-08-11 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of

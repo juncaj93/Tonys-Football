@@ -162,6 +162,8 @@ export type LiveTokenReason =
   | 'SEASON_START'
   | 'BOX_PURCHASE'
   | 'COMMISSIONER_ADJUSTMENT'
+  /** Declared in `0005` and deliberately unwired — no season award is paid yet. */
+  | 'SEASON_AWARD'
   /** A pick on Tony's Line, debited when it is placed (`lib/stakes/`). */
   | 'STAKE_PLACED'
   /** A winning pick, or a claimed bounty. Credited by settlement, once. */
@@ -171,7 +173,64 @@ export type LiveTokenReason =
   /** Posted the week's best score in a finalized week (`lib/rewards/`). */
   | 'WEEKLY_HIGH_SCORE'
   /** A spare from an exhausted tier, converted at the opening (`lib/counter/boxes.ts`). */
-  | 'DUPLICATE_SALVAGE';
+  | 'DUPLICATE_SALVAGE'
+  /** A stake placed on the slot machine, debited when the reels are pulled. */
+  | 'CASINO_WAGER'
+  /** What the machine paid back. Zero pays nothing and writes no row. */
+  | 'CASINO_PAYOUT';
+
+/**
+ * What counts toward `16 §8`'s token-leader award.
+ *
+ * > *"Token-leader award: measured on **tokens earned** (sum of positive ledger
+ * > entries), never tokens held."*
+ *
+ * **The award is not built yet** — no query, service or route computes it, and
+ * `SEASON_AWARD` is declared and unwired. This list exists so that when it is
+ * built it cannot be built wrong, and it is the whole of commissioner ruling
+ * R12 (2026-08-11).
+ *
+ * ## An allowlist, because it fails closed
+ *
+ * R12's own preference, and the reason is the failure mode of the alternative.
+ * *"All positive deltas except casino"* fails **open**: the next reason anybody
+ * adds — a promotion, a vending refund, a correction — counts toward the award
+ * silently, and nobody finds out until a manager wins it the wrong way. This
+ * list counts nothing until somebody adds it deliberately.
+ *
+ * `CASINO_PAYOUT` is absent, which is R12. `CASINO_WAGER` is absent and
+ * irrelevant: it is negative, and the award sums positives only, so it cannot
+ * distort the total in either direction. **No existing source changed meaning** —
+ * `STAKE_PAYOUT` and `DUPLICATE_SALVAGE` are already how this product pays a
+ * manager, and R12 says not to redefine non-casino sources without necessity.
+ *
+ * `tokens.test.ts` asserts this is exhaustive over `LiveTokenReason`, so a new
+ * reason fails the build rather than being silently uncounted.
+ */
+export const EARNED_TOKEN_REASONS = [
+  'SEASON_START',
+  'MATCHUP_WIN',
+  'WEEKLY_HIGH_SCORE',
+  'SEASON_AWARD',
+  'STAKE_PAYOUT',
+  'DUPLICATE_SALVAGE',
+] as const;
+
+export type EarnedTokenReason = (typeof EARNED_TOKEN_REASONS)[number];
+
+/** Reasons deliberately excluded from the award, each with the rule that excludes it. */
+export const UNEARNED_TOKEN_REASONS: Readonly<Record<string, string>> = {
+  BOX_PURCHASE: 'a spend, not an earning',
+  STAKE_PLACED: 'a spend, not an earning',
+  CASINO_WAGER: 'a spend, not an earning',
+  CASINO_PAYOUT: 'R12 — the award may not be won by grinding the casino',
+  COMMISSIONER_ADJUSTMENT: 'a correction, and a correction is not a performance',
+};
+
+/** Does this reason count toward the token-leader award? */
+export function countsAsEarned(reason: LiveTokenReason): boolean {
+  return (EARNED_TOKEN_REASONS as readonly string[]).includes(reason);
+}
 
 export interface TokenDelta {
   readonly userId: string;

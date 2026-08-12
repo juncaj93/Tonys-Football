@@ -807,7 +807,7 @@ a blanket re-opening.
 | Area | | Why |
 |---|---|---|
 | **Rooms / basements** | **NOW — built; the default room is painted** | Fully specified by `04 §10`, `06 §6.2`, `14 §5` and `16`'s P6 row, and shipped. The commissioner's art direction of 2026-08-09 made the room **shell-first**, and the approved storeroom shell landed on 2026-08-10. Two themes still draw the stand-in: see **A3** |
-| **Underground / casino** | **LATER — and it wants a decision, not a session** | See G1. Two commissioner-level sources disagree about what the games are, and no wager can settle before September |
+| **Underground / casino** | **DECIDED 2026-08-11 — blackjack + slots. Execution not authorized** | See G1. The contradiction is settled and the economy is measured (`docs/CASINO_BOUNDARY.md`). The door stays shut: `underground: false`, and a short list of wager parameters still needs a ruling |
 | **Silent auction** | **LATER** | `16` puts it in a **November** window, and it is a *spend-down* mechanism: it exists to give end-of-season tokens somewhere to go. There are no season tokens yet. Its inventory authority is also genuinely undecided — an auction of collectibles competes with the box for the same 24-item catalog the P3 simulation was just balanced around |
 | **Seasonal events** | **DO NOT BUILD** *(as an engine)* | The mission's own test — *"if a simple seasonal visual state can be expressed through existing architecture without a new abstraction, that is different"* — is already met. `16 §7.2`'s dressing resolver is built and the offseason dressing ships today. A generalized event engine is the speculative framework both the mission and `16 §4.1`'s deferral refuse |
 | **Season Story** | **LATER** | P7 thread detection over a season's results. There is no 2026 season. It is also the surface most likely to want the deferred `league_events` spine, so building it first would decide that question by accident |
@@ -815,10 +815,52 @@ a blanket re-opening.
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
 
-### G1 · The Underground — the decision that is actually wanted
+### G1 · The Underground — **RESOLVED by commissioner ruling, 2026-08-11**
 
-**Nothing was built and nothing should be until this is answered.** The
-reconciliation:
+> **Decision: the Underground opens with blackjack and slots**, staked in
+> fictional Tony Tokens. **Both games are now BUILT** — W1 slots (2026-08-11) and
+> W2 blackjack (2026-08-12), verified against a real Postgres and photographed at
+> all three widths.
+>
+> **The Underground is still CLOSED**, and that is the point. `underground`,
+> `slotMachine` and `blackjackTable` are all `false`; R11 keeps them there until
+> the commissioner announces the opening, which `18 §6` says can only be spent
+> once. This entry stays in **G** because *built* is not *open*, exactly as
+> **G2**'s *approved* is not *do it now*.
+>
+> **What is left before the curtain**: **W3** the casino economy release gate ·
+> **W4** the room artwork · a production smoke test · and the commissioner's
+> decision to open. A session may do W3 and W4; **no session may flip the flag.**
+>
+> **The contradiction below is settled and must not be re-raised.** `03 §14`,
+> `04 §11`, `09 §12` and `16 §13` P10 win; the 2026-08-09 reopening brief's
+> *"avoid building slots, roulette, blackjack clone, poker"* loses, for the
+> Underground only. Its *"league-native games"* preference still correctly
+> describes `16 §9`'s three Slice wagering families, which are built and live.
+>
+> Rulings **R1–R13** are recorded in [`docs/CASINO_BOUNDARY.md`](CASINO_BOUNDARY.md).
+> The architecture is `docs/UNDERGROUND_CASINO_INVESTIGATION.md`; the economy
+> measurement is `docs/evidence/casino/analysis.md`.
+
+**What is still open is a short list of numbers, not the decision.** Slots wager
+buttons and the per-spin ceiling need a second ruling, because R5's 40-token
+button and R7's 200-token cap are **jointly incompatible with a top prize** —
+together they permit no payout above 5× the stake, and the rarest combination
+ends up tying with two commoner ones. Both rulings anticipated this and asked for
+alternatives on evidence; `CASINO_BOUNDARY §4` and `§8` are that evidence.
+**Roulette is still never built.**
+
+**Of G1's three original preconditions, two are discharged.** The games are
+ruled; the *"there is nothing to wager on until football exists"* argument
+dissolved, because it was an argument about *football* wagers and a blackjack
+hand settles from a shuffled deck in the same request. The third — an economy
+simulation on the footing the box price got — is done: the approved gate is
+byte-identical with the casino off, and the mixed league passes with it on.
+
+The original reconciliation is kept below for provenance.
+
+**~~Nothing was built and nothing should be until this is answered.~~** The
+reconciliation, as it stood:
 
 - **`/underground` is deliberately not a route** (`18 §5`, `BACK_HALL_BOUNDARY
   §0`). It is an inert curtained plate in the Back Hall answering *"Don't worry
@@ -831,8 +873,9 @@ reconciliation:
   roulette, blackjack clone, poker"* and *"prefer a small number of meaningful
   league-native games."*
 
-That is a **material contradiction between two commissioner-level sources**, and
-`CLAUDE.md` requires it be reported rather than silently resolved.
+~~That is a **material contradiction between two commissioner-level sources**, and
+`CLAUDE.md` requires it be reported rather than silently resolved.~~
+**Reported, and ruled on 2026-08-11. See the box above.**
 
 Underneath it there is also a hard fact: **there is nothing to wager on.** The
 three approved wagering families (`16 §9`) — Tony's Line, bounties, the
@@ -843,15 +886,14 @@ itself twice over: `MIN_BASIS_TEAM_WEEKS = 12` returns `thin-basis` structurally
 and the `tonysLine` flag is shut. Neither should be relaxed — the 2026 season has
 no games at all.
 
-**So the Underground has no honest content until football exists**, whatever the
-games turn out to be. What would be needed to open it:
+~~**So the Underground has no honest content until football exists**, whatever the
+games turn out to be.~~ **Superseded.** This was an argument about *football*
+wagers, and the ruled games are not football wagers. What was needed to open it:
 
-1. a ruling on whether the Phase 10 games stand (blackjack + slots) or are
-   replaced by league-native ones — and if replaced, **what they are**, because
-   `16 §9` already owns every league-native wager this product has;
-2. a season, or at least twelve team-weeks, for anything settled from football;
-3. an economy simulation for whatever wagering is added, on the same footing as
-   the box's price (`16 §8`).
+1. ~~a ruling on whether the Phase 10 games stand~~ — **given, 2026-08-11: they stand;**
+2. ~~a season, or at least twelve team-weeks, for anything settled from football~~
+   — **not applicable.** Neither ruled game settles from football;
+3. ~~an economy simulation~~ — **done**, `docs/evidence/casino/analysis.md`.
 
 **Building it early costs the reveal.** An Underground that opens onto an empty
 room spends `18 §5`'s joke for nothing, and `18 §6` says a locked door opens for
