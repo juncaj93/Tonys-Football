@@ -316,6 +316,7 @@ oversight.
 | errors disappearing too quickly | none — nothing auto-dismisses |
 | 404 hiding recoverable state | **no.** Both `notFound()` callers are security-intentional and were preserved |
 | actions failing silently | **yes, before this branch** — a failed tap produced no acknowledgement at all. Every surface now has `role="status"` with `aria-live` |
+| the sign-in form losing a dropped response | the manager gets **Safari's own** offline page with a Reload button, and retypes six digits. A document-level POST that never returns is not something the application is present for, so this is inherent rather than a defect — recorded so it is not mistaken for one |
 | stale button state after failure | none — `useTransition` settles normally now that the scope no longer throws |
 
 ---
@@ -327,6 +328,10 @@ oversight.
 `signInAction` inserts a new `sessions` row per successful sign-in. If the
 response is lost the cookie never arrives, the manager taps again, and a second
 row is created — so the key ring can list a device nobody holds, for 90 days.
+
+**Measured** against the production build by letting the server commit and
+dropping the response: two sessions became three, and `/profile` listed three
+rows all reading `iPhone · Safari`. The numbers are in `OPEN_ITEMS` **E8**.
 
 **Not fixed** because it is the one place where the smallest durable mechanism is
 not small: deduplicating needs either a schema change or a client-minted token

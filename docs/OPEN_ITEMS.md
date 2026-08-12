@@ -734,8 +734,25 @@ found. This one is reported rather than fixed, deliberately.
 response is lost in flight — the one network failure a phone produces most often
 — the cookie never reaches the browser, the manager taps again, and a **second
 row** is created. `/profile` then lists a device nobody holds, for 90 days, and
-two rows reading `iPhone · Safari` cannot answer the question that list exists to
+rows reading `iPhone · Safari` cannot answer the question that list exists to
 answer: *"is that my phone?"*
+
+**Measured, not reasoned about.** Driven against the production build by letting
+the server genuinely commit and dropping the response on the way back:
+
+```
+sessions before          2
+[server committed; response dropped]
+sessions now             3      ← a row whose cookie reached no browser
+devices on the key ring  3
+labels                   ["iPhone · Safari", "iPhone · Safari", "iPhone · Safari"]
+```
+
+The manager's own view of the failure is Safari's *"You are not connected to the
+Internet"* page with a Reload button — the browser's, not the product's, because
+a document-level POST that never returns is not something the application is
+present for. Their six digits are lost and retyped. That part is inherent and is
+**not** part of this item.
 
 **Nothing is granted by the orphan.** Its cookie value was never delivered to any
 browser, so it is unreachable by anyone; it is a row, not an access path. And it
