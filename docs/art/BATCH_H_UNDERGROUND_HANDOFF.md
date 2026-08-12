@@ -2,6 +2,24 @@
 
 **Batch H · one asset · `zone_underground_shell`**
 
+> ## Round 1 candidate received, 2026-08-12 — **content approved, rendering register held.**
+>
+> The commissioner supplied a generated candidate. **Its content compliance is the best of
+> any first-round shell this project has had**: no people, no text, blank reel windows, a
+> bare baize, no gambling iconography anywhere, one staircase, and an exit that reads as the
+> way out with no label. §19 is the full review against §14.6.
+>
+> **It is not accepted yet, and the reason is not composition.** Beside the three approved
+> shells it is a **photographic render rather than an illustration** — soft volumetric light
+> cones, specular floor highlights, and large near-black regions that carry no detail. `18`'s
+> visual quality target is that this room *"must sit beside the approved Parlor, Back Hall
+> and Basement without looking like a fourth art style."*
+>
+> **One cheap experiment settles it and no opinion can** (§19.4): run the file through
+> `art:process` and put the 320 × 569 output beside the other three. This session could not —
+> the candidate exists only as a conversation attachment, and this container has no
+> `node_modules` and no image library. §19.6 is the tightened prompt if it needs a round 2.
+
 **Status:** specification only. **No artwork was generated. No code, geometry, registry
 row, flag, migration or route was touched.** This file is the paste-ready handoff for a
 separate image-generation session, plus the measurements it rests on.
@@ -1079,3 +1097,161 @@ modified. Nothing was merged. The Underground remains CLOSED.**
 > still shows `OPEN_ITEMS` **G1** open. Generating the image costs nothing and blocks nothing.
 > **Integrating it should wait for that branch to merge**, because §15 step 7 re-aims
 > `lib/casino/objects.ts` — a file that only exists there.
+
+---
+
+## 19. Round 1 candidate — acceptance review, 2026-08-12
+
+Reviewed against §14.6, by putting the candidate beside the three processed shells on disk
+(`public/assets/zone/zone_parlor_shell.png`, `zone_back_hall_shell.png`,
+`zone_room_shell_storeroom.png`) rather than against the prose of this document.
+
+**What this review could not do, stated first.** The candidate exists only as a conversation
+attachment. It is not on disk, this container has no `node_modules` and no image library, so
+**nothing here is a measurement**: no aspect ratio, no colour count, no quantized preview.
+Every figure below is an estimate read off the rendered image and is marked as one.
+
+### 19.1 What it gets right — and this is most of the brief
+
+| §14.6 | | |
+|---|---|---|
+| 3 | **No text anywhere** | ✅ The wall clock face is blank, the marquee is blank, the dartboard cabinet is shut, the fuse box is unlabelled. Nothing to redraw |
+| 4 | **No people** | ✅ And nothing that reads as one at thumbnail size — the jacket on the hook stays a jacket |
+| 5 | **Blank runtime surfaces** | ✅ **Three reel windows, flat dark, empty.** Marquee blank and unlit. **Baize completely bare** — chip-tray recess and card wells present and empty, exactly as asked. Desk top bare |
+| 6 | **No painted affordance** | ✅ Light comes *through* the opening; nothing is outlined, bloomed or arrowed |
+| 7 | **The way out is guessable** | ✅ **The best thing in the image.** Steps rising to a lit frame with the maroon curtain drawn back and warm light falling down them. It passes the cover-the-file test outright |
+| 8 | **Silhouette separation** | ✅ Tall narrow cabinet left, wide low table centre, opposite sides, sharing no edge |
+| 10 | **No second staircase** | ✅ One flight, and it is the exit |
+| 11 | Crop and status bands | ✅ Rows 0–48 are dark joists and a pipe run; the bottom is plain boards |
+| — | **No gambling iconography** | ✅ **Full compliance.** No suit, die, chip, seven or cherry used as pattern anywhere. No roulette, no second table, no bank of machines, no screen |
+| — | Dressing | ✅ Green-shaded pendants, brick, conduit, fuse box, radiator, crates, dough trays, freezer, stools, coat hook, ashtray, blank clock, newspaper, bricked-up arch, unfaded paint rectangle |
+
+`18 §5`'s test is passed by three of the four fixtures on sight. That is a strong candidate.
+
+### 19.2 The one content miss — the cash desk
+
+The brief asked for *"a small worn wooden service counter or half-window built into the
+right-hand wall… with a simple turned brass grille above it and one shelf behind."*
+
+What came back is **a barred window with a ledge under it**. Two problems, and the second is
+the one that matters:
+
+1. It reads as a **window**, not as a place you settle up — and this room has no windows by
+   its own description (*"coming from inside the room rather than from any window — there are
+   no windows"*). It is the only fixture that fails the cover-it-and-guess test.
+2. **It sits hard against the right edge and is partly cut by it.** Estimated at `x ≈ 272–320`,
+   which runs into §11's *no load-bearing fixture in `x 312–320`* rule and would put a 44 px
+   tap target against the device bezel at every width.
+
+The desk is a real Display carrying the manager's own tab and last five spins. It cannot be
+demoted to scenery, and it cannot be re-aimed onto a fixture that is half off the canvas.
+
+### 19.3 The rendering register — the reason this is not accepted yet
+
+**Continuous-tone source art is not the problem and must not be treated as one.**
+`docs/PALETTE_FIDELITY_BOUNDARY.md` established that the approved parlor shell *arrives*
+941 × 1672 with 153,738 distinct colours: **these are paintings, and the pixel-art look is
+manufactured by the pipeline.** A candidate that is not already pixel art is exactly what the
+preamble asks for.
+
+What is different here is **register and value range**, and it shows immediately against the
+three processed shells:
+
+| | Approved parlor / hall / storeroom | Round 1 candidate |
+|---|---|---|
+| Light | Flat pools with **stepped edges** | **Soft volumetric cones** with continuous falloff |
+| Surfaces | Flat fills separated by value; suggested texture | Rendered grain, **specular highlights on the floorboards** |
+| Darks | Still carry detail — the storeroom's pipes, crates and shelf all read inside shadow | Left wall, ceiling corners and lower right **collapse to near-black with no detail** |
+| Overall key | Storeroom is the darkest and still legible | **Visibly darker than the storeroom**, with heavy vignetting |
+
+The storeroom is the fair comparison — same building, same green-shaded pendant, same block
+walls, same pipes, same red rug — and it stays readable because its shadows are *value steps*
+rather than *falloff*. Lanczos downscale plus a 96-colour quantization is unforgiving of
+falloff: it bands, and banding across a large dark wall is the one failure
+`ASSET_PIPELINE §8` names explicitly.
+
+**The measured risk this creates.** §14.6.12's proxy is ~25–48 colours covering ≥0.5% of
+frame. The three approved shells measure 52 (parlor), 25 (storeroom), 19 (hall). This
+candidate's large flat near-blacks will very likely land **at or below the hall's 19**, and
+the hall is already the accepted low-water mark. The proxy does not decide — the picture at
+phone size does — but it is pointing the same way the eye is.
+
+### 19.4 The experiment that settles it, which no opinion can
+
+> **Save the candidate to `art/incoming/zone_underground_shell.png`, add the §12.3 registry
+> row, run `npm run art:prepare-incoming && npm run art:process`, and put the 320 × 569
+> output beside the other three shells at phone size.**
+
+That is fifteen minutes and it is the only evidence that counts. Both outcomes are actionable:
+
+- **It holds up** → accept, and follow §15 from step 5. The cash desk still needs §19.5.
+- **It muddies** → regenerate with §19.6. The composition is banked either way; nothing about
+  the layout has to change.
+
+`PALETTE_FIDELITY_BOUNDARY` is the standing evidence that proxies here can prefer the worse
+picture, so the processed file is the artefact to judge — **not this attachment, and not the
+colour count**.
+
+### 19.5 Geometry — estimated, and the re-aim looks legal
+
+Per §10.3 the code moves to the painting, once. Estimated delivered positions against the
+reserved rects:
+
+| Object | Reserved | Estimated delivered | Re-aim |
+|---|---|---|---|
+| `slots` | `[22, 150, 84, 200]` | ≈ `x 6–70, y 154–330` | narrower and further left. ~64 units wide still clears the 39.1 floor — **legal**, but verify against the left edge |
+| `blackjack` | `[126, 236, 132, 96]` | ≈ `x 102–272, y 273–358` | wider and lower. **Legal, and better for thumb reach** |
+| `return` | `[126, 96, 70, 120]` | ≈ `x 134–208, y 97–267` | very close. **Legal** |
+| `desk` | `[236, 150, 68, 76]` | ≈ `x 272–320, y 199–330` | **runs off the canvas.** §19.2 — this is the blocker, not the offsets |
+
+**`HORIZON` becomes vestigial rather than re-aimed.** The delivered back wall meets the floor
+at roughly `y 267` against the code's `400`. That constant has exactly one consumer —
+`components/scene/underground.tsx`, which §15 step 5 **deletes** — so it should be deleted
+with it rather than corrected to a number nothing reads.
+
+⚠️ **Aspect must be measured before processing.** The candidate looks near `0.58` against the
+required **`0.5624`**. `process-art.ts` uses `fit: 'fill'`, so a wrong aspect is **stretched,
+not cropped** — a 3% horizontal stretch on a painted room is the kind of error that is
+invisible in isolation and obvious beside the parlor.
+
+### 19.6 If a round 2 is needed — six prompt corrections, not a redesign
+
+**Keep the composition.** The fault is in how the room is *lit and rendered*, and two lines of
+the SUBJECT invited it.
+
+1. **Delete the two lines that asked for this.** *"slightly too dim, like a room lit by people
+   who did not want to be noticed from outside"* and *"leaving the corners in shadow"* are
+   where the darkness came from. Replace with: *"Warm and clearly lit. Every corner of the
+   room stays readable — shadow is one value step darker, never an absence of detail."*
+2. **Forbid falloff explicitly**, because the preamble's *"no soft shadows"* was
+   under-weighted at that distance: *"Light pools have flat, stepped edges. No volumetric
+   light cones, no continuous falloff, no specular highlights on the floor."*
+3. **Restate the style at the tail.** The preamble sits above a long SUBJECT and generators
+   weight the end. Add immediately before the NEGATIVE: *"Restating the style: flat colour
+   fills, crisp 1-pixel outlines, value-stepped shading, illustrated rather than
+   photographed."*
+4. **Name the reference by role.** *"Match the attached basement/storeroom image's rendering
+   register exactly — same flatness, same edge crispness, same amount of detail surviving
+   inside the dark areas. It is the same cellar in the same building."*
+5. **Rewrite the cash desk** so it cannot come back a window: *"A small wooden service counter
+   standing against the right-hand wall, free of the room's right edge, with a hinged flap,
+   a cash drawer and a shelf of ledgers behind it. It is a counter you settle up at, not a
+   window. There are no windows in this room."*
+6. **State the aspect as a hard number**: *"Output 940 × 1672 pixels, aspect 0.5624 exactly."*
+
+Add to the NEGATIVE: `· no volumetric light shafts or light cones · no specular or glossy
+highlights on any surface · no vignetting · no barred window, grille window or teller cage ·
+no window of any kind`.
+
+### 19.7 Verdict on round 1
+
+| | |
+|---|---|
+| Content, compliance, dressing, text, people, iconography | **Approved.** Nothing to change |
+| Composition and the exit | **Approved.** §3.3 and §7 are satisfied better than the brief asked |
+| Cash desk | **Must change**, whether or not the render is re-run — it is off-canvas and reads as a window |
+| Rendering register and value range | **Held.** Decide on the processed file, not on the attachment |
+| Aspect | **Measure before processing** |
+
+**This is a near miss on one axis, not a failed batch.** If §19.4 comes back clean, the only
+outstanding work is the cash desk.
