@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| *(nothing claimed)* | | | | |
+| Mobile reliability, session & failure recovery | claude/mobile-reliability-session-audit-42tzpu | `lib/auth/*` · `middleware.ts` · `app/actions/auth.ts` · `app/door/*` · `app/profile/*` · global error/not-found boundaries · shared retry/error UX on mature unclaimed flows · `docs/MOBILE_RELIABILITY_BOUNDARY.md` | casino · manager sprite / `lib/character/*` · Slice content & stake mechanics · collectible catalog · art & `art/*` · economy values · cron architecture · `lib/stats/*` semantics | 2026-08-12 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
