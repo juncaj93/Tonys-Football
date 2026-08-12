@@ -1037,10 +1037,25 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await dismissTony(page);
       await page.getByRole('button', { name: /2026/i }).click({ force: true });
       return;
+    /*
+     * Reached by `data-room-object`, not by its label.
+     *
+     * It matched `/prediction/i` until 2026-08-12, when the weekly prediction
+     * became **Tony's Chalkboard** and the label became *"Read the
+     * chalkboard"* — and three states aborted on a thirty-second timeout. That
+     * is the right failure and it is still the wrong coupling: the gate's job is
+     * to open the object, not to hold its copy still. `data-room-object` is the
+     * id `objects.ts` assigns and `roomObjectAttributes` writes onto every
+     * trigger in the room, and it does not move when a sentence does.
+     *
+     * The Back Hall's chain check paid for the other half of this lesson: it
+     * matched a Tailwind class, and restyling the chain would have made it match
+     * nothing — where *"no chain found"* is the **passing** answer.
+     */
     case 'prediction':
       await home(page);
       await dismissTony(page);
-      await page.getByRole('button', { name: /prediction/i }).click({ force: true });
+      await page.locator('[data-room-object="prediction"]').click({ force: true });
       return;
     case 'receipt':
       await home(page);
@@ -2037,7 +2052,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
 
       await page.goto(`${BASE}/?board=${key}&open=tonysLine`, { waitUntil: 'networkidle' });
       await dismissTony(page);
-      await page.getByRole('button', { name: /prediction/i }).click({ force: true });
+      await page.locator('[data-room-object="prediction"]').click({ force: true });
       await page.waitForTimeout(500);
       return;
     }
@@ -2061,7 +2076,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
         waitUntil: 'networkidle',
       });
       await dismissTony(page);
-      await page.getByRole('button', { name: /prediction/i }).click({ force: true });
+      await page.locator('[data-room-object="prediction"]').click({ force: true });
       await page.waitForTimeout(400);
       await page.getByRole('button', { name: /Take the over/i }).click();
       await page.waitForTimeout(1200);
