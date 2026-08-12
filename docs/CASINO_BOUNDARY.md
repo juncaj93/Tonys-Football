@@ -485,20 +485,35 @@ impossibility is **inverted rather than deleted**.
 | Full test suite | PASS — **2,053 passing**, including 16 slot-machine integration tests against a real Postgres 16 |
 | Migration applied to a live database | PASS |
 | Seed stores the paytable | PASS — `ad3386079ca387df · RTP 92.09% · buttons 5/10/20 · PROVISIONAL` |
-| **`npm run visual:qa`** | **NOT RUN** — see below |
+| **`npm run visual:qa`** | **PASS** — 129 states × 3 widths, 387 captures, 0 failures |
 
-**The visual gate did not run, and that is a gap rather than a pass.** The
-container's Playwright browser build does not match the version this repository
-pins, and downloading the matching one is blocked by the network policy. The
-driver was **not** modified to work around it: weakening a gate to make it pass in
-an environment it was not written for is the failure mode the gate exists to
-prevent.
+**The visual gate ran, and it found something.** The environment's Playwright
+browser build does not match the version this repository pins and the matching
+one cannot be downloaded here — but `scripts/visual-qa.mts` already accepts a
+`PLAYWRIGHT_CHROMIUM` executable path, so the gate runs **unmodified** against
+the pre-installed binary. Nothing was weakened, rewritten or bypassed to reach
+green. Two further environment values are required and were missing:
+`SESSION_SECRET` (sign-in fails without it) and `COMMISSIONER_SLEEPER_USER_ID`
+(the `draft-board` states answer `notFound()` without it).
 
-So three visual states — `underground`, `underground-covered` and
-`back-hall-both-open` — are **declared, wired and unphotographed**. Their
-`driver-coverage` tests pass, which proves the states are *declared*, not that
-they *look right*. **`npm run visual:qa` must run and pass before W1 merges**, and
-the Underground must not open until it has.
+**The defect it caught is the one the mechanism exists for.** W1 built
+`/underground` and never gave the Back Hall's curtained door an `href`, so the
+first sweep in which `back-hall-both-open` could legitimately be opened made it a
+**500 at all three widths**: `openTo()` threw, exactly as designed, because a
+flag says a feature shipped and cannot make a page exist. That state had been
+unphotographable since the hall was built, so **this was the first sweep that
+could ever have caught it.** One line, in `lib/backhall/objects.ts`, where the
+note predicting it had been waiting.
+
+Four Underground states are now photographed at 390 / 375 / 360:
+`underground` (machine live) · `underground-covered` (both shut) ·
+`underground-blackjack` (**a hand actually dealt**, not an empty felt) ·
+`back-hall-both-open` (the state the boundary document recorded as impossible).
+
+**Two errors are tolerated and printed, not muted**: the pre-existing quarantined
+React #418 on `/profile` at 360, at its ceiling of 2 (visual debt 16).
+
+---
 
 ---
 
