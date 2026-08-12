@@ -70,13 +70,22 @@ export default async function CounterPage() {
    * normal one — but "rare" is not "impossible", and the shop should never show a
    * stack-trace page to ten friends.
    */
-  const purse = season === null ? null : await purseFor(db, user.id, season.id);
-
-  // Whether they hold a seat at all, as opposed to holding one with no stored
-  // prices. `purseFor` collapses both to null on purpose — the *page* needs the
-  // difference only to say the right sentence.
-  const seated =
-    season === null ? false : (await wallet(db, { userId: user.id, seasonId: season.id })) !== null;
+  /*
+   * The wallet is read **once**.
+   *
+   * `purseFor` reads it, and the page then read it a second time with the same
+   * two arguments to answer a different question — *do they hold a seat at all*,
+   * as opposed to holding one with no stored prices. Two identical queries, one
+   * after the other, because `purseFor` collapses both cases to null on purpose
+   * and the page needed to tell them apart.
+   *
+   * So `purseFor` reports which null it means instead. The collapse survives
+   * where it belongs — in the return type the panel consumes — and the second
+   * query is gone.
+   */
+  const held = season === null ? { purse: null, seated: false } : await purseFor(db, user.id, season.id);
+  const purse = held.purse;
+  const seated = held.seated;
 
   return (
     <>
@@ -238,34 +247,47 @@ export default async function CounterPage() {
  * way — no seat this season, and no stored prices — because in both cases the
  * honest thing to say is "there is nothing to buy with right now". The log tells
  * the difference apart; the manager does not need to.
+ *
+ * `seated` is the one part of that difference the page *does* need, because the
+ * two cases deserve different sentences and a wrong reason is worse than a blunt
+ * one. It is reported here rather than re-derived by the caller, which is what
+ * the caller used to do — with a second, identical `wallet` query.
  */
 async function purseFor(
   db: ReturnType<typeof getDb>,
   userId: string,
   seasonId: string,
 ): Promise<{
-  balance: number;
-  economy: Awaited<ReturnType<typeof economyFor>>;
-  movements: readonly TabMovement[];
-} | null> {
+  seated: boolean;
+  purse: {
+    balance: number;
+    economy: Awaited<ReturnType<typeof economyFor>>;
+    movements: readonly TabMovement[];
+  } | null;
+}> {
   const held = await wallet(db, { userId, seasonId });
-  if (held === null) return null;
+  if (held === null) return { seated: false, purse: null };
 
   try {
-    return {
-      balance: held.balance,
-      economy: await economyFor(db, seasonId),
+    /*
+     * The prices and the statement are independent reads of the same season, so
+     * they go together rather than one after the other.
+     */
+    const [economy, movements] = await Promise.all([
+      economyFor(db, seasonId),
       /*
        * Six, because the statement sits under the thing a manager came here to
        * buy rather than being the page. A season's worth of Tuesdays belongs on
        * a surface built for it, and no such surface is in v1.
        */
-      movements: await recentTransactions(db, held.membershipId, 6),
-    };
+      recentTransactions(db, held.membershipId, 6),
+    ]);
+
+    return { seated: true, purse: { balance: held.balance, economy, movements } };
   } catch (error: unknown) {
     // Loud in the log, quiet in the shop.
     console.error('[counter] no economy config for the open season', error);
-    return null;
+    return { seated: true, purse: null };
   }
 }
 

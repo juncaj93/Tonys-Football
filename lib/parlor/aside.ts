@@ -7,6 +7,7 @@ import { contentEntries, contentUsageLog } from '@/lib/db/schema';
 import { seededDraw } from '@/lib/content/draw';
 import { renderTemplate, selectContent, type SelectableEntry } from '@/lib/content/select';
 import { type Expression } from '@/lib/content/parse';
+import { latestPacket, mostRecentChampion } from '@/lib/slice/edition';
 import { margin as writeMargin, points as writePoints, type FactPacket } from '@/lib/slice/packet';
 import { validateProse } from '@/lib/slice/validate';
 
@@ -238,6 +239,43 @@ function shownToday(
  * with no champion on file · no line off cooldown · a rendered line the validator
  * will not pass. None of those is an error and none of them is softened.
  */
+/**
+ * The aside, for the parlor — **the gate first, then the reads it needs.**
+ *
+ * `statsAsideFor` takes a packet and a champion because that is the honest
+ * signature for a *decision*: it is handed the facts and decides. The parlor
+ * then evaluated both as arguments, so the twenty-four queries behind them were
+ * paid on **every** homepage render — including the ones where rule 4 above
+ * refuses before reading either.
+ *
+ * That is not a rare case. A manager standing in front of an unopened box holds
+ * a moment tag, and on a freshly seeded league **every** manager does: the seed
+ * grants a welcome box and a season-opening box, so `momentTags` is non-empty
+ * for all ten until they tap the tray. Measured on the production build, the
+ * parlor issued 58 database queries and 24 of them fed a call that could only
+ * ever return null.
+ *
+ * So the gate lives here, in the file that owns it, ahead of the loading —
+ * rather than being restated in the page, where it would be one rule in two
+ * places and the copy would be the one that rotted. The reads are a pair and
+ * neither depends on the other, so they go together.
+ */
+export async function parlorAside(
+  db: Database,
+  request: { userId: string; momentTags: ReadonlySet<string> },
+): Promise<StatsAside | null> {
+  if (request.momentTags.size > 0) return null;
+
+  const [packet, champion] = await Promise.all([latestPacket(db), mostRecentChampion(db)]);
+
+  return statsAsideFor(db, {
+    userId: request.userId,
+    packet,
+    momentTags: request.momentTags,
+    champion,
+  });
+}
+
 export async function statsAsideFor(
   db: Database,
   request: AsideRequest,

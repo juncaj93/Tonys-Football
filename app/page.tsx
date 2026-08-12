@@ -14,8 +14,7 @@ import { resolveAsset } from '@/lib/assets/registry';
 import { requireUser } from '@/lib/auth/current-user';
 import { listDoorManagers } from '@/lib/auth/service';
 import { greetingFor } from '@/lib/content/greeting';
-import { statsAsideFor } from '@/lib/parlor/aside';
-import { latestPacket, mostRecentChampion } from '@/lib/slice/edition';
+import { parlorAside } from '@/lib/parlor/aside';
 import { ownedBox } from '@/lib/counter/boxes';
 import { showcaseFor } from '@/lib/counter/showcase';
 import { openSeason, wallet } from '@/lib/counter/tokens';
@@ -134,33 +133,64 @@ export default async function ParlorPage({
   const db = getDb();
   const clock = seasonClock();
 
-  const [tags, managers, tonight, banners, box, season, featured, boardYear] = await Promise.all([
-    loadTags(db),
-    listDoorManagers(db),
-    tonightBoard(db),
-    championBanners(db),
-    ownedBox(db, user.id),
-    openSeason(db),
-    // A Stats fact, or null. The board renders it or renders nothing — it never
-    // derives one (`PRODUCT_DELIVERY_MANDATE.md §9`).
-    featuredMatchup(db),
-    /*
-     * The season the board is about — the newest on record, not the open one.
-     *
-     * They differ in January: `openSeason` goes null the moment the books shut,
-     * while the room still has to name a season. Reading the newest keeps the
-     * face answerable in every state.
-     */
-    currentSeasonYear(db),
-  ]);
+  /*
+   * ## Two waves, and the room is what decides which reads are in the first one
+   *
+   * Everything a wave contains runs at once; a wave costs one database round
+   * trip's worth of latency rather than one per read. Production's database is a
+   * network hop away (Neon, pooled), so **the number of *sequential* reads is
+   * the page's latency** in a way it is not on a developer's machine — measured
+   * on the production build against a database modelled at a 2 ms round trip,
+   * the parlor's reads were essentially fully sequential and cost 110 ms of the
+   * page's 164 ms.
+   *
+   * Wave one is everything that depends only on *who is asking*. Wave two is
+   * everything that needed an answer from wave one. Nothing was merged, nothing
+   * was cached across requests, and every read below is the same read it was —
+   * `CLAUDE.md`'s fantasy-truth boundaries are untouched.
+   */
+  const query = await searchParams;
 
-  // Null when this manager holds no seat this season — a co-owner, or somebody not
-  // seated yet. A zero would make "no tab" and "spent everything" look the same.
-  const purse =
-    season === null ? null : await wallet(db, { userId: user.id, seasonId: season.id });
-
-  // What the league can see of them, so the room reflects the Showcase choice.
-  const shown = await showcaseFor(db, user.id);
+  const [tags, managers, tonight, banners, box, season, featured, boardYear, shown, moment] =
+    await Promise.all([
+      loadTags(db),
+      listDoorManagers(db),
+      tonightBoard(db),
+      championBanners(db),
+      ownedBox(db, user.id),
+      openSeason(db),
+      /*
+       * A Stats fact, or null. The board renders it or renders nothing — it
+       * never derives one (`PRODUCT_DELIVERY_MANDATE.md §9`).
+       *
+       * **Only in season.** It is the *fallback* inside `inSeasonFace`, and in
+       * the offseason `boardFace` is built from the countdown alone and never
+       * looks at it — so out of season these seven queries were read, paid for
+       * and dropped on the floor, every load, for the whole of the state the
+       * product launches into. The clock is synchronous, so asking it first
+       * costs nothing and keeps the read in the parallel wave when it is wanted.
+       */
+      clock.daysUntilKickoff === null ? featuredMatchup(db) : null,
+      /*
+       * The season the board is about — the newest on record, not the open one.
+       *
+       * They differ in January: `openSeason` goes null the moment the books shut,
+       * while the room still has to name a season. Reading the newest keeps the
+       * face answerable in every state.
+       */
+      currentSeasonYear(db),
+      // What the league can see of them, so the room reflects the Showcase choice.
+      showcaseFor(db, user.id),
+      /*
+       * Standing tags plus what is true right now.
+       *
+       * `loadTags` answers "what is true of this person across seasons". A box
+       * sitting shut on the counter is a different kind of fact — it is true this
+       * second and false the moment they tap it — so it is derived per request from
+       * server state (`lib/parlor/moment.ts`), never from anything the client said.
+       */
+      momentTags(db, user.id),
+    ]);
 
   /*
    * `?preview_reveal=legendary&preview_stage=first` — review only, and null
@@ -174,7 +204,6 @@ export default async function ParlorPage({
    * evaluated here, on the server, so this cannot be turned on from a URL bar in
    * production.
    */
-  const query = await searchParams;
   const preview = previewReveal(query['preview_reveal'], process.env, query['preview_stage']);
 
   /*
@@ -190,93 +219,96 @@ export default async function ParlorPage({
    * the 2026 season has no games, so nothing has been authored, so there is
    * nothing to write up.
    */
-  const previewed = await previewBoard(db, query['board'], process.env);
-  const board =
-    previewed?.board ??
-    (await chalkboardFor(db, {
-      userId: user.id,
-      flags: featureFlags(process.env, query['open']),
-    }));
-
   /*
-   * Standing tags plus what is true right now.
+   * Wave two: everything that needed an answer from wave one.
    *
-   * `loadTags` answers "what is true of this person across seasons". A box
-   * sitting shut on the counter is a different kind of fact — it is true this
-   * second and false the moment they tap it — so it is derived per request from
-   * server state (`lib/parlor/moment.ts`), never from anything the client said.
-   *
-   * They are merged into the *viewer's* set only. `leagueTags` below stays
+   * The moment tags are merged into the *viewer's* set only. `leagueTags` stays
    * history, which is what makes a moment line the most pointed thing Tony can
    * say: nobody else in the room is being handed their first box at this
    * instant, so its audience is zero and the existing smallest-audience rule
    * picks it over every standing line.
    */
-  const moment = await momentTags(db, user.id);
   const standing = tags.get(user.id) ?? new Set<string>();
 
-  const greeting = await greetingFor(db, {
-    userId: user.id,
-    displayName: user.displayName,
-    tags: new Set([...standing, ...moment]),
-    leagueTags: managers.map((manager) => tags.get(manager.id) ?? new Set<string>()),
-    daysUntilKickoff: clock.daysUntilKickoff,
-  });
+  const [purse, board, greeting, aside, face] = await Promise.all([
+    /*
+     * Null when this manager holds no seat this season — a co-owner, or somebody
+     * not seated yet. A zero would make "no tab" and "spent everything" look the
+     * same.
+     */
+    season === null ? null : wallet(db, { userId: user.id, seasonId: season.id }),
 
-  /*
-   * Occasionally, Tony mentions a result instead.
-   *
-   * The greeting is the default and stays the default — `17 §3`'s acceptance
-   * criterion is *one verified thing about you*, and a counter that opened with
-   * league trivia every day would have quietly stopped meeting it. The aside has
-   * a fortnight-long cooldown, refuses outright while a moment is in play, and
-   * refuses again if the Slice's validator will not pass the sentence
-   * (`lib/parlor/aside.ts`). Null is the usual answer.
-   */
-  const aside = await statsAsideFor(db, {
-    userId: user.id,
-    packet: await latestPacket(db),
-    momentTags: moment,
-    champion: await mostRecentChampion(db),
-  });
+    previewBoard(db, query['board'], process.env).then(
+      async (previewed) =>
+        previewed?.board ??
+        (await chalkboardFor(db, {
+          userId: user.id,
+          flags: featureFlags(process.env, query['open']),
+        })),
+    ),
+
+    greetingFor(db, {
+      userId: user.id,
+      displayName: user.displayName,
+      tags: new Set([...standing, ...moment]),
+      leagueTags: managers.map((manager) => tags.get(manager.id) ?? new Set<string>()),
+      daysUntilKickoff: clock.daysUntilKickoff,
+    }),
+
+    /*
+     * Occasionally, Tony mentions a result instead.
+     *
+     * The greeting is the default and stays the default — `17 §3`'s acceptance
+     * criterion is *one verified thing about you*, and a counter that opened with
+     * league trivia every day would have quietly stopped meeting it. The aside has
+     * a fortnight-long cooldown, refuses outright while a moment is in play, and
+     * refuses again if the Slice's validator will not pass the sentence
+     * (`lib/parlor/aside.ts`). Null is the usual answer.
+     *
+     * `parlorAside` is that last clause taken seriously: the refusal is checked
+     * before the packet is built rather than after, so a manager with a box on
+     * the counter no longer pays twenty-four queries to be told no.
+     */
+    parlorAside(db, { userId: user.id, momentTags: moment }),
+
+    /*
+     * The board's face: a hero and at most one short fact, in the two states it
+     * actually has.
+     *
+     * In the offseason the detail is the countdown — a verified clock value. Once
+     * the season is under way it is the matchup, and that matchup arrives as a
+     * **typed Stats fact** (`lib/stats/facts.ts`) rather than as anything this
+     * component worked out. Two names and nothing else: the intensity and the
+     * margin travel with the fact to surfaces that have room to state them, and a
+     * loaded word on the largest object in the room without its evidence is the
+     * thing `PRODUCT_DELIVERY_MANDATE.md §9` forbids. Null stays null — an absent
+     * fact leaves the detail empty rather than inventing prose.
+     *
+     * This used to be one call that omitted `week`, and `boardFace` defaulted a
+     * missing week to `WEEK ONE` — so from the opening Sunday to January the
+     * largest object in the room would have said week one, every week. It is
+     * invisible in week one, where the wrong answer and the right one are the same
+     * string; the midseason rehearsal is what made it visible
+     * (`docs/WEEK8_REHEARSAL.md`). `BoardFaceInput` is now two shapes so a caller
+     * that does not know the week cannot compile, which is the half of the fix
+     * that survives the next person editing this file.
+     *
+     * `currentWeekOf` counts forward from **closed** weeks. Nothing here infers an
+     * NFL schedule, because the product does not have one.
+     *
+     * The matchup is filtered by the season the hero names. `featuredMatchup`
+     * returns the strongest fact from the most recent *archived* season, and two
+     * bare names under `WEEK 9` are a claim about week 9 — true fact, false claim.
+     * `matchupLine` is where that boundary lives; null here is ordinary, and the
+     * panel behind the board still carries the whole fact with its season on it.
+     */
+    clock.daysUntilKickoff !== null
+      ? boardFace({ daysUntilKickoff: clock.daysUntilKickoff })
+      : inSeasonFace(db, boardYear, featured),
+  ]);
 
   const spoken = aside ?? greeting;
   const line = spoken?.text ?? `Tony nods at ${user.displayName} and goes back to the oven.`;
-  /*
-   * The board's face: a hero and at most one short fact, in the two states it
-   * actually has.
-   *
-   * In the offseason the detail is the countdown — a verified clock value. Once
-   * the season is under way it is the matchup, and that matchup arrives as a
-   * **typed Stats fact** (`lib/stats/facts.ts`) rather than as anything this
-   * component worked out. Two names and nothing else: the intensity and the
-   * margin travel with the fact to surfaces that have room to state them, and a
-   * loaded word on the largest object in the room without its evidence is the
-   * thing `PRODUCT_DELIVERY_MANDATE.md §9` forbids. Null stays null — an absent
-   * fact leaves the detail empty rather than inventing prose.
-   *
-   * This used to be one call that omitted `week`, and `boardFace` defaulted a
-   * missing week to `WEEK ONE` — so from the opening Sunday to January the
-   * largest object in the room would have said week one, every week. It is
-   * invisible in week one, where the wrong answer and the right one are the same
-   * string; the midseason rehearsal is what made it visible
-   * (`docs/WEEK8_REHEARSAL.md`). `BoardFaceInput` is now two shapes so a caller
-   * that does not know the week cannot compile, which is the half of the fix
-   * that survives the next person editing this file.
-   *
-   * `currentWeekOf` counts forward from **closed** weeks. Nothing here infers an
-   * NFL schedule, because the product does not have one.
-   *
-   * The matchup is filtered by the season the hero names. `featuredMatchup`
-   * returns the strongest fact from the most recent *archived* season, and two
-   * bare names under `WEEK 9` are a claim about week 9 — true fact, false claim.
-   * `matchupLine` is where that boundary lives; null here is ordinary, and the
-   * panel behind the board still carries the whole fact with its season on it.
-   */
-  const face =
-    clock.daysUntilKickoff !== null
-      ? boardFace({ daysUntilKickoff: clock.daysUntilKickoff })
-      : await inSeasonFace(db, boardYear, featured);
   const shell = resolveAsset('zone_parlor_shell');
 
   return (

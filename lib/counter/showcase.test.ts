@@ -185,6 +185,75 @@ describe.skipIf(!hasDatabase)('the showcase', () => {
     });
   });
 
+  describe('a champion', () => {
+    /*
+     * A championship ring, written the way `lib/counter/rings.ts` writes one.
+     *
+     * `item_championship_ring` is a real `collectibles` row and is deliberately
+     * outside the box catalog — `systemLayer`, earned rather than pulled — so
+     * every lookup on this page had to be asked whether it survives one.
+     */
+    async function grantRing(userId: string): Promise<string> {
+      const [row] = await db!
+        .insert(collectibles)
+        .values({
+          userId,
+          slug: 'item_championship_ring',
+          rarity: 'legendary',
+          acquiredAt: new Date('2026-01-06T00:00:00Z'),
+        })
+        .returning();
+      return row!.id;
+    }
+
+    /*
+     * **This is the defect that shipped.** Every reader here called
+     * `catalogItem`, which throws on a slug the catalog does not carry, so
+     * `/counter/showcase` answered 500 for every manager who had ever won the
+     * league — two of the ten on a freshly seeded database. Each of these three
+     * fails on the pre-fix module.
+     */
+    it('can open the showcase at all', async () => {
+      const alex = await manager('Alex');
+      await grantRing(alex.id);
+
+      await expect(showcaseChoices(db!, alex.id)).resolves.toEqual([]);
+      await expect(showcaseFor(db!, alex.id)).resolves.toBeNull();
+      await expect(leagueShowcase(db!)).resolves.toHaveLength(1);
+    });
+
+    it('is not offered their ring to put out — it is not something they chose', async () => {
+      // It already has a place that is *about* having won it. `lib/rooms/service.ts`
+      // refuses one onto a shelf for the same reason.
+      const alex = await manager('Alex');
+      await grantRing(alex.id);
+      const pulled = await pull(alex.id, 0, 'a');
+
+      const choices = await showcaseChoices(db!, alex.id);
+      expect(choices).toHaveLength(1);
+      expect(choices[0]!.collectibleId).toBe(pulled);
+      expect(choices.map((c) => c.slug)).not.toContain('item_championship_ring');
+    });
+
+    it('does not take the league wall down with them', async () => {
+      // The trigger enforces ownership, not catalog membership, so a ring can
+      // physically reach this column. One manager's unnameable pick must not
+      // stop the other nine rendering.
+      const alex = await manager('Alex');
+      const nick = await manager('Nick');
+      const ring = await grantRing(alex.id);
+      const pulled = await pull(nick.id, 0, 'b');
+
+      await setShowcase(db!, { userId: alex.id, collectibleId: ring });
+      await setShowcase(db!, { userId: nick.id, collectibleId: pulled });
+
+      const wall = await leagueShowcase(db!);
+      expect(wall).toHaveLength(2);
+      expect(wall.find((e) => e.userId === alex.id)!.item).toBeNull();
+      expect(wall.find((e) => e.userId === nick.id)!.item?.collectibleId).toBe(pulled);
+    });
+  });
+
   describe('the choices offered', () => {
     it('offers nothing before anything is pulled', async () => {
       const alex = await manager('Alex');

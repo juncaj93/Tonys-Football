@@ -5,7 +5,7 @@ import { type Queryable } from '@/lib/db';
 import { collectibles, seasonMemberships, seasons, users } from '@/lib/db/schema';
 import { activeSeat, currentSeasonYear } from '@/lib/league/membership';
 
-import { catalogItem, type Rarity } from './catalog';
+import { catalog, catalogItem, type Rarity } from './catalog';
 
 /**
  * The Showcase — one item, shown to the league.
@@ -30,6 +30,28 @@ import { catalogItem, type Rarity } from './catalog';
  * as a refusal rather than an exception — but the check that *matters* is the one
  * no caller can skip.
  */
+
+/**
+ * The catalog's entry for a slug, or null when the catalog does not carry it.
+ *
+ * **This module used to call `catalogItem` directly, and a champion could not
+ * open the Showcase.** `item_championship_ring` is a real `collectibles` row and
+ * is deliberately *outside* the box catalog (`systemLayer` — earned, never
+ * pulled), so `catalogItem` threw and `/counter/showcase` answered **500** for
+ * every manager who has ever won the league. On a freshly seeded database that
+ * is two of the ten, one of them the commissioner. The tests never saw it
+ * because they build managers from scratch and no manufactured manager has a
+ * ring.
+ *
+ * `catalogItem` staying strict is right — for the reveal and the Collection a
+ * hole *would* be a defect. Here the miss is a legitimate answer, and
+ * `lib/rooms/service.ts` had already reached exactly this conclusion for exactly
+ * this slug: a surface asking *"is this something to put out?"* is entitled to
+ * be told no without the page failing to render.
+ */
+function catalogEntryOrNull(slug: string): { name: string } | null {
+  return catalog().find((item) => item.slug === slug) ?? null;
+}
 
 export interface ShowcasedItem {
   readonly collectibleId: string;
@@ -66,10 +88,19 @@ export async function showcaseFor(
   const row = rows[0];
   if (row === undefined) return null;
 
+  /*
+   * A pick the catalog cannot name reads as *nothing out*, rather than as an
+   * exception. This is on the **parlor's** critical path — the receipt says what
+   * you have on display — so a throw here is not one screen failing, it is the
+   * shop failing.
+   */
+  const item = catalogEntryOrNull(row.slug);
+  if (item === null) return null;
+
   return {
     collectibleId: row.collectibleId,
     slug: row.slug,
-    name: catalogItem(row.slug).name,
+    name: item.name,
     rarity: row.rarity,
     acquiredAt: row.acquiredAt,
   };
@@ -123,20 +154,28 @@ export async function leagueShowcase(db: Queryable): Promise<LeagueShowcase[]> {
     .where(activeSeat(year))
     .orderBy(asc(users.displayName));
 
-  return rows.map((row) => ({
-    userId: row.userId,
-    displayName: row.displayName,
-    item:
+  return rows.map((row) => {
+    const item =
       row.collectibleId === null || row.slug === null || row.rarity === null
         ? null
-        : {
-            collectibleId: row.collectibleId,
-            slug: row.slug,
-            name: catalogItem(row.slug).name,
-            rarity: row.rarity,
-            acquiredAt: row.acquiredAt!,
-          },
-  }));
+        : catalogEntryOrNull(row.slug);
+
+    return {
+      userId: row.userId,
+      displayName: row.displayName,
+      // One manager's unnameable pick must not take the whole wall down with it.
+      item:
+        item === null
+          ? null
+          : {
+              collectibleId: row.collectibleId!,
+              slug: row.slug!,
+              name: item.name,
+              rarity: row.rarity!,
+              acquiredAt: row.acquiredAt!,
+            },
+    };
+  });
 }
 
 /**
@@ -165,6 +204,16 @@ export async function showcaseChoices(
   const bySlug = new Map<string, ShowcasedItem>();
   for (const row of owned) {
     if (bySlug.has(row.slug)) continue;
+    /*
+     * A ring is not something you choose to put out.
+     *
+     * It is granted rather than pulled, and it already has a place that is
+     * *about* having won it — the parlor's banner rail and the basement's
+     * championship rail, both derived, neither a slot. `lib/rooms/service.ts`
+     * refuses one for the same reason. Offering it here would make the rail's
+     * meaning a preference.
+     */
+    if (catalogEntryOrNull(row.slug) === null) continue;
     bySlug.set(row.slug, {
       collectibleId: row.id,
       slug: row.slug,
