@@ -3871,14 +3871,49 @@ async function checkPreseasonIssue(page: Page, width: number, state: string): Pr
     return;
   }
 
-  const grades = await page.locator('[data-preseason-grade]').count();
   const teams = await page.locator('[data-preseason-team]').count();
 
-  if (grades !== teams) {
+  /*
+   * Every row carries a grade, and **every grade is readable while collapsed**.
+   *
+   * This replaces a comparison that became tautological on 2026-08-11. The board
+   * and the ten team sections used to be two separate lists, so
+   * `grades !== teams` was a real question — *"does every manager on the board
+   * have a section"*. The restraint ruling merged them into one row per manager
+   * (`docs/SLICE_RESTRAINT_BOUNDARY.md §3`), which put both attributes on the
+   * **same element** and made the counts equal by construction. A check that
+   * cannot fail is worse than no check, because it reads as coverage.
+   *
+   * What is worth asserting instead is the merged board's whole claim: ten
+   * grades, none of them blank, and all ten legible **without opening
+   * anything**. `boundingBox()` is null for an element that is not rendered, so
+   * a grade that only appears inside the disclosure body fails here — which is
+   * precisely the regression a future tidy-up of the summary row would cause.
+   */
+  const rows = page.locator('[data-preseason-team]');
+  let visibleGrades = 0;
+
+  for (let index = 0; index < teams; index++) {
+    const row = rows.nth(index);
+    const grade = await row.getAttribute('data-preseason-grade');
+
+    if (grade === null || grade.trim() === '') {
+      fail('preseason', `@${String(width)} ${state}: row ${String(index + 1)} carries no grade`);
+      continue;
+    }
+
+    const printed = row.locator('summary').getByText(grade, { exact: true });
+    if ((await printed.count()) > 0 && (await printed.first().boundingBox()) !== null) {
+      visibleGrades++;
+    }
+  }
+
+  if (visibleGrades !== teams) {
     fail(
       'preseason',
-      `@${String(width)} ${state}: ${String(grades)} grades on the board and ${String(teams)} ` +
-        `team sections — every manager on the board must have a section`,
+      `@${String(width)} ${state}: ${String(visibleGrades)} of ${String(teams)} grades are ` +
+        `readable on the collapsed board — the board exists so nobody has to open a row to ` +
+        `find their own grade`,
     );
   }
 
