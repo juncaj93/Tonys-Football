@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| V1 collectible catalog curation (content only, awaiting approval) | `claude/tonys-pizza-v1-curation-3ukg1w` | `docs/CATALOG_CURATION_PROPOSAL.md` · on approval, `art/assets.inventory.json` collectible names · `docs/art/BATCH_F_COLLECTIBLE_HANDOFF.md §3` · an optional `name` field in `lib/assets/registry.ts` + `lib/counter/catalog.ts` | any slug · any rarity · `CATALOG_SIZE` · `lib/counter/rewards.ts` · `lib/counter/tokens.ts` · any migration · any existing art file · `docs/OPEN_ITEMS.md` **G2** | 2026-08-12 |
+| V1 collectible catalog lock and production reconciliation (planning only, awaiting rulings) | `claude/tonys-pizza-v1-curation-3ukg1w` | `docs/CATALOG_LOCK_RECONCILIATION.md` (+ the two superseded curation docs) · on approval, `art/assets.inventory.json` collectible names · `lib/economy/catalog-audit.ts` `ITEM_FORM` · `art/prompts/collectible.md` · `docs/art/BATCH_F_COLLECTIBLE_HANDOFF.md` · `docs/art/BRAND_EXCEPTIONS.md` · a `name` field in `lib/assets/registry.ts` + `lib/counter/catalog.ts` · a collectible-flavour surface on `content_entries` | any slug · any rarity · `CATALOG_SIZE` · `lib/counter/rewards.ts` · `lib/counter/tokens.ts` · any migration · any existing art file (retire, never overwrite) · `docs/OPEN_ITEMS.md` **G2** | 2026-08-12 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
