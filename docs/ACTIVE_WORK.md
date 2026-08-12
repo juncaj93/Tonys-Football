@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| *(nothing claimed)* | | | | |
+| Underground casino art production brief | claude/underground-casino-art-brief-6rsk1v | docs/art/BATCH_H_UNDERGROUND_HANDOFF.md — investigation and the image-generation handoff only | any code · `/underground` · `lib/casino/*` · `components/casino/*` · `components/scene/underground.tsx` · `lib/flags.ts` · `art/assets.inventory.json` · any migration · the casino branch `claude/underground-casino-investigation-mu3ayr` | 2026-08-12 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
