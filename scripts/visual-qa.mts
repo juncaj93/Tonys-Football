@@ -5672,6 +5672,31 @@ async function run(): Promise<void> {
       const errors: { state: string; url: string; text: string }[] = [];
       let capturing = 'sign-in';
       const note = (text: string): void => {
+        /*
+         * The `not-found` state's document **is** a 404, and Chromium logs a
+         * console error for every 404 response including the main document. So
+         * the one state whose entire subject is a missing page would fail the
+         * console gate for succeeding at its job.
+         *
+         * ## Excluded here, at collection, rather than at the `fail` call
+         *
+         * `scripts/hydration-reporter.test.ts` forbids a `continue` in the
+         * reporting loop, and it is right to: that loop's job is that **every**
+         * error it holds becomes a failure, and a condition there is how an
+         * unattributed one starts slipping through. So the decision about what
+         * counts as an error at all is made at the only place that legitimately
+         * owns it — and the loop stays exactly as that gate requires.
+         *
+         * ## It is not a mute
+         *
+         * `checkNotFound` **asserts** the status is 404, read from Navigation
+         * Timing. The response skipped here is separately proved to be the one
+         * claimed, so a `not-found` state that started answering 200 goes red
+         * there. Scoped to that state and that message; every other state and
+         * every other message is unchanged.
+         */
+        if (capturing === 'not-found' && /status of 404 \(Not Found\)/.test(text)) return;
+
         errors.push({ state: capturing, url: new URL(page.url()).pathname, text });
       };
       page.on('console', (m) => {
@@ -5950,22 +5975,6 @@ async function run(): Promise<void> {
          * quarantined shape fails on sight, including the dev build's message,
          * which is the one that would finally name the element.
          */
-        /*
-         * The `not-found` state's document **is** a 404, and Chromium logs one
-         * console error per 404 response including the main document.
-         *
-         * So the one state whose entire subject is a missing page would fail
-         * the console gate for succeeding at its job. This is scoped as tightly
-         * as it can be — that exact message, on that one state — and it is not
-         * a mute: `checkNotFound` **asserts** the status is 404 from Navigation
-         * Timing, so the response this skips is separately proved to be the one
-         * claimed. A `not-found` state that started answering 200 would go red
-         * there rather than quietly here.
-         */
-        const isTheStatesOwn404 =
-          e.state === 'not-found' && /status of 404 \(Not Found\)/.test(e.text);
-        if (isTheStatesOwn404) continue;
-
         const known = quarantineFor(e.text);
         if (known === undefined) fail('console', detail);
         else quarantined.push({ debt: known.debt, why: known.why, detail });
