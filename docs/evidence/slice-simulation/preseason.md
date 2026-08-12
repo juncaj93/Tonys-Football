@@ -37,7 +37,7 @@ _No week has been played, so there is no table._
 | settle | {} |
 | rewards | 0 paid · 0 tokens |
 | grants | 0 granted |
-| author | 0 offers written for the next week |
+| author | 1 offers written for the next week |
 | draft | created |
 | which paper | preseason |
 
@@ -79,7 +79,6 @@ makes that permanent — there is no ADP, no projection and no value model in th
 - Week 1 holds no publishable game, so it was not closed.
 - Nothing was open, so nothing settled.
 - Week 1 holds no game to pay anybody for.
-- Nothing new to put on the board for week 2.
 
 **The validator passed the whole issue.** Every number and every proper noun in the prose was declared by the packet first.
 
@@ -87,7 +86,25 @@ makes that permanent — there is no ADP, no projection and no value model in th
 
 ## 5. The wagers
 
-**Nothing was authored and nothing settled.** No flag was opened to give the simulation something to settle: `tonysLine` stays shut, a bounty needs twelve prior team-weeks and a chalkboard prediction needs a prior week.
+### Tony's Line — one number per manager
+
+_No line was authored. A personal line needs three of that manager's own team-weeks behind it, which the league reaches in week four._
+
+### Tony's Chalkboard — one shared call a week
+
+| Week | Question | Number | Tony | How it went |
+|---|---|---|---|---|
+| 2 | `photo-finish` | 10.00 | yes | — |
+
+**Nothing has settled yet, so Tony has no record.** The sentence is absent rather than zeroed.
+
+**Nobody wagered on any of it.** Every row above carries a null stake and a null reward, and the surface renders no control on a `CHALKBOARD` row.
+
+### Everything the season authored
+
+| Kind | Week | Status | Outcome |
+|---|---|---|---|
+| `CHALKBOARD` | 2 | open | — |
 
 ---
 
@@ -257,7 +274,7 @@ reach either stamp.
 | Closed weeks | 0 |
 | Rewards | 0 |
 | Ledger rows | 10 |
-| Stakes authored | 0 |
+| Stakes authored | 1 |
 | Stake resolutions | 0 |
 | Slice versions | 1 |
 

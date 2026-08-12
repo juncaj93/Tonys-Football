@@ -31,6 +31,7 @@ import { type ScriptedWeek, type SeasonScript } from '@/lib/rehearsal/script';
  * | Scenario | Comes from | Owned by |
  * |---|---|---|
  * | preseason | the recorded 2025 draft, re-seated (`lib/demo/draft-fixture.ts`) | `docs/PRESEASON_SLICE_BOUNDARY.md` |
+ * | week 4 | `MIDSEASON_GAMES`, stopped early — the same frozen scoreboard | `docs/WEEK8_REHEARSAL.md §11` |
  * | week 8 | `MIDSEASON_GAMES` — forty games, eighty scores, frozen | `docs/WEEK8_REHEARSAL.md §11` |
  * | week 16 | `WEEK_16_SCRIPT` — fourteen weeks and a bracket that advances | `docs/PLAYOFF_REHEARSAL.md` |
  *
@@ -48,7 +49,7 @@ import { type ScriptedWeek, type SeasonScript } from '@/lib/rehearsal/script';
  * production.
  */
 
-export const SIMULATION_KEYS = ['preseason', 'week-8', 'week-16'] as const;
+export const SIMULATION_KEYS = ['preseason', 'week-4', 'week-8', 'week-16'] as const;
 
 export type SimulationKey = (typeof SIMULATION_KEYS)[number];
 
@@ -171,6 +172,26 @@ const WEEK_8_SCRIPT: SeasonScript = {
   weeks: midseasonWeeks(8),
 };
 
+/**
+ * The same season, stopped at the earliest week a personal line can exist.
+ *
+ * `MIN_OWN_TEAM_WEEKS` is three, so the Tuesday that closes week three is the
+ * first one that can price anybody — and **week four is the first week the
+ * league can take a side**, which is the commissioner's *"available beginning
+ * around Week 4"* landing exactly.
+ *
+ * **Not a new scoreboard.** It is `MIDSEASON_GAMES` stopped early, which is the
+ * same discipline the week-8 scenario applies for the same reason: a second set
+ * of early-season scores would be a second answer to *"what does October look
+ * like"*, and the first time the two disagreed nobody would know which was the
+ * product.
+ */
+const WEEK_4_SCRIPT: SeasonScript = {
+  year: 2026,
+  leagueId: LEAGUE_2026,
+  weeks: midseasonWeeks(4),
+};
+
 /* -------------------------------------------------------------------------
  * The scenarios
  * ---------------------------------------------------------------------- */
@@ -196,6 +217,23 @@ export const SIMULATION_SCENARIOS: Readonly<Record<SimulationKey, SimulationScen
     draftReview: true,
     photograph: false,
     scheduledWeekOne: true,
+  },
+
+  'week-4': {
+    key: 'week-4',
+    title: 'Week 4 — the first line',
+    premise:
+      'The Tuesday that closed week three set the first ten lines — three of each ' +
+      'manager’s own team-weeks is the floor, and that is where they reach it. Week four ' +
+      'is the first week the league has ever been able to take a side, and Tony has had ' +
+      'a question on the chalkboard since week two.',
+    script: WEEK_4_SCRIPT,
+    seats: MIDSEASON_SEATS,
+    through: 4,
+    featured: 4,
+    draftReview: false,
+    photograph: true,
+    scheduledWeekOne: false,
   },
 
   'week-8': {

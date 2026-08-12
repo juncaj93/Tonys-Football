@@ -345,7 +345,8 @@ type StateName =
   | 'board-chalkboard-open'
   | 'board-chalkboard-hit'
   | 'board-chalkboard-missed'
-  | 'board-chalkboard-leader'
+  | 'board-chalkboard-cold'
+  | 'board-chalkboard-count'
   | 'board-line-pending'
   | 'board-line-incomplete'
   | 'board-line-won'
@@ -1989,7 +1990,8 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'board-chalkboard-open':
     case 'board-chalkboard-hit':
     case 'board-chalkboard-missed':
-    case 'board-chalkboard-leader':
+    case 'board-chalkboard-cold':
+    case 'board-chalkboard-count':
     case 'board-line-pending':
     case 'board-line-incomplete':
     case 'board-line-won':
@@ -2241,7 +2243,8 @@ const ALL_STATES: readonly StateName[] = [
   'board-chalkboard-open',
   'board-chalkboard-hit',
   'board-chalkboard-missed',
-  'board-chalkboard-leader',
+  'board-chalkboard-cold',
+  'board-chalkboard-count',
   'board-line-pending',
   'board-line-incomplete',
   'board-line-won',
@@ -3625,7 +3628,8 @@ const BOARD_EXPECTATIONS: Readonly<
   'board-chalkboard-open': { stakes: 1, states: ['awaiting-week'], chalk: 'written' },
   'board-chalkboard-hit': { stakes: 1, states: ['resolved'], chalk: 'settled' },
   'board-chalkboard-missed': { stakes: 1, states: ['resolved'], chalk: 'settled' },
-  'board-chalkboard-leader': { stakes: 1, states: ['resolved'], chalk: 'settled' },
+  'board-chalkboard-cold': { stakes: 1, states: ['resolved'], chalk: 'settled' },
+  'board-chalkboard-count': { stakes: 1, states: ['resolved'], chalk: 'settled' },
   'board-line-pending': { stakes: 2, states: ['awaiting-week'], chalk: 'written' },
   'board-line-incomplete': { stakes: 2, states: ['awaiting-final'], chalk: 'written' },
   'board-line-won': { stakes: 2, states: ['resolved'], chalk: 'settled' },

@@ -2,6 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 
 import { closePool, getDb } from '@/lib/db';
 import { resetDatabase } from '@/lib/db/test-helpers';
+import { RETIRED_CHALKBOARD_VARIANTS } from '@/lib/stakes/model';
 
 import { runSimulation, type SimulationRecord } from './lab';
 import { renderSimulationReport } from './report';
@@ -172,26 +173,144 @@ describe.skipIf(!hasDatabase)('the Tuesday Slice simulation lab', () => {
      * `featureFlags`.
      *
      * The property is not *"the market exists"* — it is **where it starts**. A
-     * line is a season median and `MIN_BASIS_TEAM_WEEKS` keeps one from being
-     * authored until the league has played roughly a fortnight, so an open flag
-     * must still author nothing in the preseason and nothing in week 1.
+     * personal line needs `MIN_OWN_TEAM_WEEKS` of that manager's own football, so
+     * an open flag must still author nothing in the preseason and nothing before
+     * week four.
      */
     const preseason = recordFor('preseason').after.stakes;
     expect(preseason.filter((stake) => stake.kind === 'TONYS_LINE')).toEqual([]);
 
-    for (const key of ['week-8', 'week-16'] as const) {
+    for (const key of ['week-4', 'week-8', 'week-16'] as const) {
       const lines = recordFor(key).after.stakes.filter((stake) => stake.kind === 'TONYS_LINE');
 
       expect(lines.length, `${key}: the market never opened`).toBeGreaterThan(0);
 
       /*
-       * Ten managers reach twelve team-weeks during week 2, so the first line a
-       * season can carry is week 3's. Earlier than that is a line computed from
-       * a basis too thin to be called a median, which is the exact claim the
-       * market rests on.
+       * Three of a manager's own team-weeks, so the first line a season can carry
+       * is week four's — the commissioner's *"available beginning around Week
+       * 4"*. Earlier than that is a line set from a sample too thin to be about
+       * that manager, which is the exact claim a personal line rests on.
        */
       const earliest = Math.min(...lines.map((stake) => stake.week));
-      expect(earliest, `${key}: a line was authored on a thin basis`).toBeGreaterThanOrEqual(3);
+      expect(earliest, `${key}: a line was authored on a thin basis`).toBeGreaterThanOrEqual(4);
+    }
+
+    /*
+     * And week four is where it really starts, not merely where it is allowed
+     * to. The `week-4` scenario stops at the earliest Tuesday that can author
+     * one, so a floor that had quietly moved would show as an empty board here
+     * rather than as an assertion that never fires.
+     */
+    const early = recordFor('week-4').after.stakes.filter(
+      (stake) => stake.kind === 'TONYS_LINE',
+    );
+    expect(Math.min(...early.map((stake) => stake.week))).toBe(4);
+  });
+
+  it("every manager gets their own line, and no two managers get the same one", () => {
+    /*
+     * Rulings 1 and 2, through the **real cron** on a season the cron played.
+     * `stakes.test.ts` asserts the rule against a fixture; this asserts it after
+     * sixteen weeks of football, which is where a formula that quietly collapsed
+     * onto the league median would show up.
+     */
+    for (const key of ['week-4', 'week-8', 'week-16'] as const) {
+      const record = recordFor(key);
+      const week = Math.max(
+        ...record.after.stakes
+          .filter((stake) => stake.kind === 'TONYS_LINE')
+          .map((stake) => stake.week),
+      );
+      const lines = record.after.stakes.filter(
+        (stake) => stake.kind === 'TONYS_LINE' && stake.week === week,
+      );
+
+      expect(lines.length, `${key}: fewer lines than seats`).toBe(10);
+      // One manager each, and nobody offered two.
+      for (const line of lines) expect(line.eligibleUserIds, key).toHaveLength(1);
+      expect(new Set(lines.map((line) => line.eligibleUserIds[0])).size, key).toBe(10);
+
+      /*
+       * And they are **different numbers**. A season of real scoring separates
+       * ten managers, and a line that came out identical for all of them would be
+       * the league median wearing a name.
+       */
+      const numbers = new Set(lines.map((line) => line.factRefs.values['line']));
+      expect(numbers.size, `${key}: every manager got the same number`).toBeGreaterThan(1);
+    }
+  });
+
+  it("Tony's Chalkboard runs from week one, and nobody wagers on it", () => {
+    /*
+     * Rulings 5–7. The two history-free families are what let the board say
+     * something in week one, and the whole point of the rotation is that the
+     * league is not asked the same question every Tuesday.
+     */
+    for (const key of ['week-4', 'week-8', 'week-16'] as const) {
+      const record = recordFor(key);
+      const calls = record.after.stakes.filter((stake) => stake.kind === 'CHALKBOARD');
+
+      /*
+       * The board is written up **the first Tuesday there is one to write**.
+       *
+       * The Tuesday job authors the week *ahead*, so the earliest call a season
+       * can carry is the week after its first played one — and at that point the
+       * league has a single week of history, which is not enough to price either
+       * percentile. The board still has something on it, which is exactly what
+       * the two flat-margin families are preserved for.
+       */
+      const opener = Math.min(...record.after.games.map((game) => game.week));
+      expect(Math.min(...calls.map((call) => call.week)), key).toBe(opener + 1);
+      expect(new Set(calls.map((call) => call.variant)).size, `${key}: one question all season`)
+        .toBeGreaterThan(1);
+
+      for (const call of calls) {
+        // Watch-only: no stake, no reward, and nobody's name on it.
+        expect(call.stakeTokens, `${key} w${String(call.week)}`).toBeNull();
+        expect(call.rewardTokens, `${key} w${String(call.week)}`).toBeNull();
+        expect(call.allowedNames, `${key} w${String(call.week)}`).toEqual([]);
+        // Retired families stay retired, however long the season runs.
+        expect(RETIRED_CHALKBOARD_VARIANTS, key).not.toContain(call.variant);
+      }
+    }
+  });
+
+  it('a low-margin playoff week is not printed as an ordinary Tuesday', () => {
+    /*
+     * **Ruling 12, and the observation that produced it.** The week-16 paper
+     * printed *"An ordinary week"* over a semifinal decided by 0.42 points,
+     * because significance scoring looked at the margins and found nothing loud.
+     * The margins were right; the sentence was wrong.
+     *
+     * The regression is asserted here rather than in a unit test because the
+     * unit test would have to build the packet, and it is the **cron's** packet
+     * that was wrong.
+     */
+    const edition = recordFor('week-16').desk?.edition;
+    expect(edition?.character).toBe('postseason');
+    expect(edition?.column.toLowerCase()).not.toContain('ordinary week');
+
+    /*
+     * And it claims nothing the deterministic layer cannot support. No round, no
+     * elimination, no advancement — `docs/OPEN_ITEMS.md` **E7** records that
+     * neither `playoff_week_start` nor a round count is persisted, and the ruling
+     * forbids inferring them.
+     */
+    for (const word of [
+      'semifinal',
+      'quarterfinal',
+      'championship game',
+      'win-and-in',
+      'advance',
+      'eliminat',
+      'round',
+    ]) {
+      expect(edition?.column.toLowerCase(), word).not.toContain(word);
+    }
+
+    // A regular week keeps the ordinary-season behaviour it always had.
+    for (const key of ['week-4', 'week-8'] as const) {
+      expect(recordFor(key).desk?.edition.character, key).not.toBe('postseason');
     }
   });
 

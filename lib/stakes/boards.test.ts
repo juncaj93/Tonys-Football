@@ -144,7 +144,8 @@ describe.skipIf(!hasDatabase)('each state is what its name says', () => {
     'chalkboard-open': { where: 'prediction', is: 'awaiting-week' },
     'chalkboard-hit': { where: 'prediction', is: 'resolved' },
     'chalkboard-missed': { where: 'prediction', is: 'resolved' },
-    'chalkboard-leader': { where: 'prediction', is: 'resolved' },
+    'chalkboard-cold': { where: 'prediction', is: 'resolved' },
+    'chalkboard-count': { where: 'prediction', is: 'resolved' },
     'line-pending': { where: 'market', is: 'awaiting-week' },
     'line-incomplete': { where: 'market', is: 'awaiting-final' },
     'line-won': { where: 'market', is: 'resolved' },
@@ -191,22 +192,61 @@ describe.skipIf(!hasDatabase)('each state is what its name says', () => {
     expect(lost!.entry?.verdict).toBe('You did not have it.');
   });
 
-  it('returns a pushed stake on the number exactly', async () => {
+  it('hands a stake back when the manager never had a week', async () => {
+    /*
+     * The only push a personal line can produce. An exact landing is impossible
+     * — every line is hung on the half point — so the reachable push is a manager
+     * charged for a market they were never given a chance to win.
+     */
     const push = (await resolveBoard(db!, 'line-push')).board.market;
-    expect(push!.entry?.verdict).toBe('Right on the number. Your stake came back.');
+    expect(push!.entry?.verdict).toBe('Nothing to settle. Your stake came back.');
   });
 
-  it('reaches the table prediction, which priority alone never would', async () => {
+  it('shows the same stake open and settled, so the pair is a real comparison', async () => {
     /*
-     * `nobody-clears-record` is first in priority and buildable in every week
-     * with a season behind it, so without the no-repeat rule two of Tony's three
-     * prediction shapes would be unreachable. That is worth knowing about the
-     * priority design rather than discovering in September.
+     * `chalkboard-open` and `chalkboard-missed` are 2025 week 9 before and after
+     * it was played. A reviewer comparing the two screenshots is comparing
+     * exactly the thing that changed, which is what a state pair is for — the
+     * line's `won`/`lost` pair was built on the same argument.
      */
-    const leader = (await resolveBoard(db!, 'chalkboard-leader')).board.prediction;
-    const plain = (await resolveBoard(db!, 'chalkboard-hit')).board.prediction;
-    expect(leader!.stakeKey).not.toBe(plain!.stakeKey);
-    expect(leader!.stakeKey).toContain('leader-holds');
+    const open = (await resolveBoard(db!, 'chalkboard-open')).board.prediction;
+    const settled = (await resolveBoard(db!, 'chalkboard-missed')).board.prediction;
+    expect(open!.stakeKey).toBe(settled!.stakeKey);
+    expect(open!.copy.verdict).toBeNull();
+    expect(settled!.copy.verdict).toBeTruthy();
+  });
+
+  it('has a question in week one that needs no history behind it', async () => {
+    /*
+     * Ruling 7's two history-free families, photographed. Week one can price
+     * neither percentile, so the rotation walks past both and still puts
+     * something on the board.
+     */
+    const cold = (await resolveBoard(db!, 'chalkboard-cold')).board.prediction;
+    expect(cold).not.toBeNull();
+    expect(cold!.week).toBe(1);
+    expect(cold!.stakeKey).toContain('photo-finish');
+  });
+
+  it('derives how many teams the counting question asks for', async () => {
+    // Four, because this league fields eight publishable teams a week. Nothing
+    // in the copy or the fixture says four; it comes out of the basis.
+    const count = (await resolveBoard(db!, 'chalkboard-count')).board.prediction;
+    expect(count!.copy.line).toMatch(/^4 teams over /);
+  });
+
+  it('never puts a wager control on the chalkboard', async () => {
+    /*
+     * Ruling 6: the Chalkboard is watch-only. `canPick` is what renders
+     * `PickSide`, and a chalkboard row must never carry one — on any state.
+     */
+    for (const key of BOARD_STATES) {
+      const prediction = (await resolveBoard(db!, key)).board.prediction;
+      if (prediction === null) continue;
+      expect(prediction.canPick, key).toBe(false);
+      expect(prediction.stakeTokens, key).toBeNull();
+      expect(prediction.entry, key).toBeNull();
+    }
   });
 
   it('offers both sides only while the week is unplayed', async () => {

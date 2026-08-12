@@ -75,6 +75,13 @@ const HEADLINE_ROLE: Record<Edition['character'], string> = {
   record: TYPE.headlineLoud,
   loud: TYPE.headlineLoud,
   ordinary: TYPE.headline,
+  /*
+   * The middle step, like an ordinary week. The postseason signal changes Tony's
+   * *voice*, not how loud the news was — a low-margin semifinal is still a
+   * low-margin semifinal, and setting it at championship size would be the
+   * component overruling the significance layer.
+   */
+  postseason: TYPE.headline,
   quiet: TYPE.headlineQuiet,
   empty: TYPE.headlineQuiet,
   /*
@@ -103,6 +110,13 @@ const MASTHEAD_FLAG: Record<Edition['character'], string | null> = {
   record: 'For the record',
   loud: null,
   ordinary: null,
+  /*
+   * A flag, because the dateline already carries `PLAYOFFS` and a reader who has
+   * got as far as the dateline has read the headline first. It says what the
+   * period is and not which round — the deterministic layer knows the former and
+   * cannot support the latter.
+   */
+  postseason: 'The postseason',
   quiet: null,
   empty: null,
   preseason: PRESEASON.flag,

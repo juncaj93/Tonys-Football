@@ -82,6 +82,40 @@ export interface StakeBasis {
   readonly standings: readonly StandingRow[];
   /** Managers who may be offered a stake, in stable order. */
   readonly eligibleUserIds: readonly string[];
+  /**
+   * Each manager's own team-weeks so far, ascending, keyed by user id.
+   *
+   * **The whole reason Tony's Line can be personal.** The league-wide order
+   * statistics above answer *"what does a score look like around here"*; this
+   * answers *"what does a score look like from **you**"*, and a line built from
+   * the second is a line about that manager's team.
+   *
+   * Built from exactly the same publishable games the league-wide sample is
+   * built from — same weeks, same disputed-game exclusion, same publication
+   * boundary — so a manager's own history can never contain a game the league's
+   * does not.
+   */
+  readonly scoresByUser: ReadonlyMap<string, readonly number[]>;
+}
+
+/**
+ * One publishable game, reduced to what a chalkboard proposition may ask about.
+ *
+ * The margin and the two ends of it, and nothing else. `WeekResult.teams` is a
+ * flat list on purpose — the line and the bounty are about scores — but *"did
+ * any game finish inside six points"* is a question about a **pairing**, and a
+ * pairing cannot be recovered from a flat list of ten scores.
+ *
+ * `winner` and `loser` are null together on a tie, exactly as `WeekGame` has
+ * them, because a tie is a result rather than a missing winner.
+ */
+export interface GameResult {
+  readonly key: string;
+  /** Exact, from integer cents. Zero on a tie. */
+  readonly marginCents: number;
+  readonly tie: boolean;
+  readonly winner: { readonly rosterId: number; readonly displayName: string } | null;
+  readonly loser: { readonly rosterId: number; readonly displayName: string } | null;
 }
 
 /** A week's finalized result, and whether it is allowed to settle anything. */
@@ -91,6 +125,8 @@ export interface WeekResult {
   readonly finality: Finality;
   /** Publishable team-weeks only, in stable order. */
   readonly teams: readonly TeamResult[];
+  /** The same games, as pairings. Only those with two nameable managers. */
+  readonly games: readonly GameResult[];
   readonly gameKeys: readonly string[];
 }
 
@@ -111,6 +147,30 @@ export function lowerMedian(ascending: readonly number[]): number | null {
 }
 
 /**
+ * The value at a percentile of an ascending sample, in cents.
+ *
+ * **Nearest-rank on the real sample**, never an interpolation between two
+ * scores: `round(f · (n − 1))`, clamped. The number that comes out is therefore
+ * a team-week somebody in this league actually posted, which is the same
+ * argument {@link lowerMedian} makes and it holds for the same reason — a
+ * chalkboard number is read as a score, and the first question anybody asks one
+ * is *where did that come from*.
+ *
+ * This is the **exact** function swept in the investigation
+ * (`docs/evidence/line-and-call/report.md`), so the calibrated settings there
+ * describe the thresholds this ships. A different percentile convention would
+ * quietly invalidate every YES rate in that report.
+ */
+export function percentileOf(ascending: readonly number[], fraction: number): number | null {
+  if (ascending.length === 0) return null;
+  const index = Math.min(
+    ascending.length - 1,
+    Math.max(0, Math.round(fraction * (ascending.length - 1))),
+  );
+  return ascending[index] ?? null;
+}
+
+/**
  * How many team-weeks a season median is allowed to be computed from.
  *
  * Twelve, which is roughly this league's opening fortnight once retired managers
@@ -119,6 +179,127 @@ export function lowerMedian(ascending: readonly number[]): number | null {
  * where a manager is most likely to look at it.
  */
 export const MIN_BASIS_TEAM_WEEKS = 12;
+
+/**
+ * How many of a manager's **own** team-weeks a personal line needs.
+ *
+ * Three, which puts the first line in week 4 — the commissioner's *"available
+ * beginning around Week 4"*. Three is defensible only because the line is
+ * **shrunk**: at n=3 the manager's own median carries 3/7 of the number and the
+ * league's carries the rest, so a thin sample moves the line a little rather
+ * than deciding it. Without the shrinkage this floor would be far too low.
+ */
+export const MIN_OWN_TEAM_WEEKS = 3;
+
+/**
+ * The shrinkage weight — how much of the line is *yours*.
+ *
+ * `n / (n + 4)`, the exact formulation measured in the investigation
+ * (`docs/evidence/line-and-call/report.md`) and approved by the commissioner on
+ * 2026-08-12. Four is the strength of the pull: at three of your own games the
+ * league still carries more than half the number, at eight it is a third, and by
+ * the end of a season it is a fifth. Nothing about it is tuned per manager.
+ */
+const SHRINK_PRIOR = 4;
+
+/**
+ * The middle of a sample, averaging the two middles of an even one.
+ *
+ * **Deliberately not `lowerMedian`.** That function exists so a published number
+ * is one the league actually posted, and its own header makes that argument. It
+ * does not apply here: a personal line is moved to the half-point below anyway
+ * (see {@link onTheHalf}), so it was never going to be a score somebody posted,
+ * and the ruling is to ship the formulation that was measured.
+ */
+function middle(ascending: readonly number[]): number | null {
+  if (ascending.length === 0) return null;
+  const mid = Math.floor((ascending.length - 1) / 2);
+  if (ascending.length % 2 === 1) return ascending[mid] ?? null;
+  return Math.round(((ascending[mid] ?? 0) + (ascending[mid + 1] ?? 0)) / 2);
+}
+
+/**
+ * The half-point hook, in cents.
+ *
+ * A line on a whole point can be landed on exactly, and a push is a wager with
+ * no answer — `weekly_stakes_line_pays_double` would have to pay or refund a
+ * result that is neither over nor under. Every line ends on `.50`, so settlement
+ * is always strictly one side.
+ */
+function onTheHalf(cents: number): number {
+  return Math.floor(cents / 100) * 100 + 50;
+}
+
+/**
+ * One manager's personal team-total line, in cents. Null below the floor.
+ *
+ * The approved formula, whole:
+ *
+ * ```
+ *   weight = n / (n + 4)                       n = that manager's own team-weeks
+ *   line   = weight · (their median)
+ *          + (1 - weight) · (the league's median)
+ *   line   = that, floored to the point and hung on the half
+ * ```
+ *
+ * Deterministic, and every input is a stored finalized team score. No
+ * projection, no ADP, no external ranking, no player-level data, no model.
+ */
+export function personalLineCents(input: {
+  /** That manager's own prior team-weeks, ascending. */
+  readonly own: readonly number[];
+  /** Every eligible manager's prior team-weeks, ascending. */
+  readonly league: readonly number[];
+}): number | null {
+  if (input.own.length < MIN_OWN_TEAM_WEEKS) return null;
+
+  const mine = middle(input.own);
+  const theirs = middle(input.league);
+  if (mine === null || theirs === null) return null;
+
+  const weight = input.own.length / (input.own.length + SHRINK_PRIOR);
+  return onTheHalf(Math.round(weight * mine + (1 - weight) * theirs));
+}
+
+/**
+ * How often a manager has cleared their own number lately.
+ *
+ * `{ cleared: 4, of: 6 }` becomes *"You've cleared this number in 4 of your last
+ * 6."* The window is the last six of their own scores, or **everything they
+ * have** when that is fewer — a truthful shorter window rather than a fabricated
+ * six (commissioner, 2026-08-12).
+ *
+ * The scores arrive ascending from the basis, so the caller supplies them in the
+ * order they were played; this counts, it does not order.
+ */
+export function clearedRecently(input: {
+  /** That manager's own prior scores, most recent last. */
+  readonly recentFirstToLast: readonly number[];
+  readonly lineCents: number;
+  readonly window?: number;
+}): { readonly cleared: number; readonly of: number } | null {
+  const window = input.window ?? 6;
+  const recent = input.recentFirstToLast.slice(-window);
+  if (recent.length === 0) return null;
+
+  return {
+    cleared: recent.filter((cents) => cents > input.lineCents).length,
+    of: recent.length,
+  };
+}
+
+/**
+ * Every eligible manager's prior team-weeks, ascending — the league sample.
+ *
+ * Derived from `scoresByUser` rather than stored a second time, because the two
+ * are built from the same loop over the same publishable games and a second copy
+ * is a second thing that can disagree.
+ */
+export function leagueScores(basis: {
+  readonly scoresByUser: ReadonlyMap<string, readonly number[]>;
+}): readonly number[] {
+  return [...basis.scoresByUser.values()].flat().sort((a, b) => a - b);
+}
 
 /** Points as a reader sees them. The Slice's formatter, so one form is written. */
 export function writePoints(cents: number): string {
@@ -145,6 +326,7 @@ export function buildBasis(input: {
     .sort((a, b) => a - b);
 
   const scores: { cents: number; by: string }[] = [];
+  const byUser = new Map<string, number[]>();
   const gameKeys: string[] = [];
   const basisWeeks: number[] = [];
 
@@ -191,6 +373,7 @@ export function buildBasis(input: {
       for (const team of [game.a, game.b]) {
         if (team.managerId === null || team.displayName === null) continue;
         scores.push({ cents: team.pointsCents, by: team.displayName });
+        byUser.set(team.managerId, [...(byUser.get(team.managerId) ?? []), team.pointsCents]);
       }
     }
   }
@@ -227,6 +410,16 @@ export function buildBasis(input: {
             (row) => row.managerId !== null && input.eligibleUserIds.has(row.managerId),
           ),
     eligibleUserIds: [...input.eligibleUserIds].sort(),
+    /*
+     * Ascending, so every consumer takes an order statistic off the same
+     * ordering rather than sorting it again and possibly differently.
+     */
+    scoresByUser: new Map(
+      [...byUser.entries()].map(([userId, cents]) => [
+        userId,
+        [...cents].sort((a, b) => a - b),
+      ]),
+    ),
   };
 }
 
@@ -263,6 +456,7 @@ export function buildWeekResult(input: {
   const open = publishableWeek(raw, input.eligibleUserIds);
 
   const teams: TeamResult[] = [];
+  const games: GameResult[] = [];
   for (const game of open.games) {
     for (const team of [game.a, game.b]) {
       if (team.managerId === null || team.displayName === null) continue;
@@ -274,6 +468,29 @@ export function buildWeekResult(input: {
         won: game.tie ? null : game.winner?.rosterId === team.rosterId,
       });
     }
+
+    /*
+     * A pairing is admitted only when **both** ends can be named.
+     *
+     * The flat `teams` list above drops one unnameable side and keeps the other,
+     * which is right for a score. It is wrong for a margin: half a game has no
+     * margin, and a proposition settled from one would be measuring a number
+     * against a game the league cannot see.
+     */
+    if (game.a.displayName === null || game.b.displayName === null) continue;
+    games.push({
+      key: game.key,
+      marginCents: game.marginCents,
+      tie: game.tie,
+      winner:
+        game.winner === null || game.winner.displayName === null
+          ? null
+          : { rosterId: game.winner.rosterId, displayName: game.winner.displayName },
+      loser:
+        game.loser === null || game.loser.displayName === null
+          ? null
+          : { rosterId: game.loser.rosterId, displayName: game.loser.displayName },
+    });
   }
 
   return {
@@ -285,6 +502,7 @@ export function buildWeekResult(input: {
       hasGames,
     }),
     teams,
+    games,
     gameKeys: open.games.map((game) => game.key),
   };
 }

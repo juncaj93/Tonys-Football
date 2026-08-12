@@ -1,4 +1,4 @@
-# Slice simulation evidence — three Tuesdays
+# Slice simulation evidence — four Tuesdays
 
 **Generated.** `npm run simulate -- all` writes the reports; `npm run
 simulate:shots` writes the pictures. `docs/SLICE_SIMULATION_LAB.md` is the
@@ -33,6 +33,29 @@ place costs 750 px.
 
 ---
 
+## WEEK 4 — the first line
+
+The Tuesday that closed week three set the first ten lines: three of a manager's
+own team-weeks is the floor, and that is where the league reaches it. **Week four
+is the first week anybody has ever been able to take a side.**
+
+| | |
+|---|---|
+| **The report** | [`week-4.md`](week-4.md) |
+| First screen | [390](week-4-slice-390-fold.png) · [375](week-4-slice-375-fold.png) · [360](week-4-slice-360-fold.png) |
+| The whole issue | [390](week-4-slice-390.png) · [375](week-4-slice-375.png) · [360](week-4-slice-360.png) |
+
+**Ten different numbers, from 109.50 to 130.50**, each hung on the half point so
+no score can land on one. The explainer is a truthful **four**-game window rather
+than a fabricated six — *"You've cleared this number in 2 of your last 4"* — and
+it ranges from 0 of 4 to 4 of 4 across the ten.
+
+Tony's Chalkboard has been up since week two and is **3 of 3** here, which is why
+the record prints at all: below three settled calls the sentence is absent rather
+than zeroed.
+
+---
+
 ## WEEK 8 — midseason
 
 Seven Tuesdays already played through the real cron. Two managers level on wins
@@ -49,9 +72,11 @@ Headline: *It stopped being a game* — a `blowout` lead, a `nail-biter` demoted
 the novelty rule, and a `streak`. The week-5 bounty was claimed.
 
 **No board.** `08 §1` and `08 §29`: the paper is highlights, and results live on
-the standings surfaces. Under it, **Tony's Line is open** — *"Tony has the week
-at 119.83. Over or under — your call."* with the OVER / UNDER control and the
-stake beneath it.
+the standings surfaces. Under it, **Tony's Line is open and personal** — *"Tony
+has Alex at 133.50 this week. Over or under — your call."* with the OVER / UNDER
+control, the stake, and one plain sentence of that manager's own recent history
+beneath it. Beside it, **Tony's Chalkboard**: one shared question the league
+watches, with his record for the season under it and no control anywhere.
 
 ---
 
@@ -66,9 +91,12 @@ settle here; the four deciding a championship do not.
 | First screen | [390](week-16-slice-390-fold.png) · [375](week-16-slice-375-fold.png) · [360](week-16-slice-360-fold.png) |
 | The whole issue | [390](week-16-slice-390.png) · [375](week-16-slice-375.png) · [360](week-16-slice-360.png) |
 
-Headline: *A hair in it* — a semifinal decided by 0.42. Its report carries §6a,
-**the same week re-assembled a week later**, which is where the `elimination`
-story appears and where it demonstrably could not have.
+Headline: *A hair in it* — a semifinal decided by 0.42. The paper's character is
+**`postseason`** rather than `ordinary`, which is the 2026-08-12 ruling: Tony's
+column no longer calls a December semifinal an ordinary week, and it still names
+no round, nobody eliminated and nobody advanced. Its report carries §6a, **the
+same week re-assembled a week later**, which is where the `elimination` story
+appears and where it demonstrably could not have.
 
 ---
 

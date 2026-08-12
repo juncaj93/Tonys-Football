@@ -5,11 +5,10 @@ import { seasons } from '@/lib/db/schema';
 import { type StoredWeekGame } from '@/lib/stats/week';
 import { desc, isNull } from 'drizzle-orm';
 
-import { authorBounty, authorChalkboard, authorTonysLine, type AuthoredStake } from './author';
+import { authorBounty, authorChalkboard, authorTonysLines, type AuthoredStake } from './author';
 import { WAITING } from './copy';
 import { buildBasis, buildWeekResult, stakeSeason, type WeekResult } from './facts';
 import {
-  VARIANTS,
   settlementKeyFor,
   type Evidence,
   type Presentation,
@@ -84,7 +83,8 @@ export const BOARD_STATES = [
   'thin-basis',
   'retired-excluded',
   'long-names',
-  'chalkboard-leader',
+  'chalkboard-cold',
+  'chalkboard-count',
 ] as const;
 
 export type BoardStateKey = (typeof BOARD_STATES)[number];
@@ -110,7 +110,7 @@ export const BOARD_DESCRIPTIONS: Readonly<Record<BoardStateKey, string>> = {
   'line-incomplete': "the week played and the books open, so nothing settles",
   'line-won': 'a manager who took a side and had it',
   'line-lost': 'a manager who took a side and did not',
-  'line-push': 'a team that landed exactly on the number',
+  'line-push': 'a manager whose week never happened — the stake comes back',
   'bounty-open': 'a bounty on the board, unclaimed',
   'bounty-missed': 'a week where nobody got near it, and it rolls on',
   'bounty-claimed': 'somebody took it off the board',
@@ -118,7 +118,10 @@ export const BOARD_DESCRIPTIONS: Readonly<Record<BoardStateKey, string>> = {
   'thin-basis': 'too little season to set a line from — the board stays quiet',
   'retired-excluded': 'a week whose loudest score belongs to somebody not in this league',
   'long-names': 'the longest names this league has, in every slot at once',
-  'chalkboard-leader': 'the table prediction, which only the no-repeat rule reaches',
+  'chalkboard-cold':
+    'week one, with no history at all — the question that needs none, and it lands',
+  'chalkboard-count':
+    'the counting question, where the number of teams is derived from the field',
 };
 
 /* -------------------------------------------------------------------------
@@ -151,8 +154,16 @@ interface HistoricalBoard {
  * review. That check exists because the Slice's editions needed it and found two.
  */
 const HISTORICAL: Readonly<Partial<Record<BoardStateKey, HistoricalBoard>>> = {
-  // 2025 week 9: the record through week 8 is 172.28 and the week's best is
-  // 139.02, so the prediction stands. Read off the pipeline, not guessed.
+  /*
+   * 2025 week 9 is the rotation's `anybody-breaks` slot, and the number it sets
+   * from the season so far is **160.54**. The week's best is 139.02, so Tony eats
+   * that one — which makes `chalkboard-open` and `chalkboard-missed` **the same
+   * stake, before and after**, and a reviewer comparing the two screenshots is
+   * comparing exactly the thing that changed.
+   *
+   * Read off the pipeline rather than guessed, and `boards.test.ts` pins the
+   * character so a recalibration cannot quietly turn one of these into the other.
+   */
   'chalkboard-open': {
     season: 2025,
     week: 9,
@@ -160,27 +171,24 @@ const HISTORICAL: Readonly<Partial<Record<BoardStateKey, HistoricalBoard>>> = {
     settleWeek: null,
     unplayed: true,
   },
-  'chalkboard-hit': { season: 2025, week: 9, show: ['chalkboard'], settleWeek: 9 },
-  // 2025 week 4: the record through week 3 is 161.36 and somebody puts up 182.52.
-  // Tony eats one. The only shape of week that produces `missed` on this variant.
-  'chalkboard-missed': { season: 2025, week: 4, show: ['chalkboard'], settleWeek: 4 },
+  'chalkboard-missed': { season: 2025, week: 9, show: ['chalkboard'], settleWeek: 9 },
+  // 2024 week 5: the number is 153.18 and Brandon puts up 171.16. Tony called it.
+  'chalkboard-hit': { season: 2024, week: 5, show: ['chalkboard'], settleWeek: 5 },
   /*
-   * The second prediction shape, and it is only reachable through the no-repeat
-   * rule.
+   * Week one of a season, with nothing behind it.
    *
-   * `nobody-clears-record` is first in priority and can be built in every week
-   * with a season behind it, so without `lastVariant` the other two variants
-   * would never author — and two of the three shapes Tony can put on the board
-   * would be unphotographable. That is worth knowing about the priority design
-   * rather than discovering in September.
+   * The two calibrated families cannot be priced from no history, so the rotation
+   * walks past them and lands on a flat-margin question — which is exactly why
+   * the commissioner's ruling asks for the history-free families to be preserved.
+   * 2025 week 1 contains a **0.18** game, so it lands.
    */
-  'chalkboard-leader': {
-    season: 2025,
-    week: 9,
-    show: ['chalkboard'],
-    settleWeek: 9,
-    lastVariant: VARIANTS.nobodyClearsRecord,
-  },
+  'chalkboard-cold': { season: 2025, week: 1, show: ['chalkboard'], settleWeek: 1 },
+  /*
+   * The counting question, whose *number of teams* is derived from the field
+   * rather than fixed. 2025 week 3 asks for four over 125.60 and gets exactly
+   * four — the closest thing this archive has to the question being even.
+   */
+  'chalkboard-count': { season: 2025, week: 3, show: ['chalkboard'], settleWeek: 3 },
   'line-pending': {
     season: 2025,
     week: 9,
@@ -235,11 +243,19 @@ const HISTORICAL: Readonly<Partial<Record<BoardStateKey, HistoricalBoard>>> = {
     settleWeek: null,
     unplayed: true,
   },
-  // Week one: no basis at all, so every variant refuses and the slate stays wiped.
+  /*
+   * Week one: no basis at all, so the line and the bounty both refuse and the
+   * slate stays wiped.
+   *
+   * **The chalkboard is deliberately not shown here.** It has something to say in
+   * week one — that is `chalkboard-cold`, and it is the point of the two
+   * history-free families — so including it would make this state a picture of a
+   * board that is not quiet, under a name that says it is.
+   */
   'thin-basis': {
     season: 2025,
     week: 1,
-    show: ['chalkboard', 'line', 'bounty'],
+    show: ['line', 'bounty'],
     settleWeek: null,
     unplayed: true,
   },
@@ -317,17 +333,23 @@ const LONG_GAMES: readonly FixtureGame[] = [
 
 const FIXTURES: Readonly<Partial<Record<BoardStateKey, BoardFixture>>> = {
   /*
-   * A team landing **exactly** on the line.
+   * A manager whose week never happened, and the stake handed back.
    *
-   * It has never happened in this league's recorded history and it is a real
-   * outcome of a market whose line is a real score to the cent — so it is a
-   * fixture, and that is the fact layer being right rather than a gap.
+   * ## This state used to be a different push, and the change is a real one
    *
-   * Three flat weeks put twenty-four team-weeks in the basis, whose lower median
-   * is **108.00** — and `Ade` posts exactly 108.00 in week four. The number is
-   * derived by the same code the market uses, so changing a fixture score without
-   * re-deriving it breaks `boards.test.ts` rather than quietly turning this into
-   * a state that is no longer a push.
+   * It was *"a team landing **exactly** on the line"* — reachable while the line
+   * was a league median, which is a real score to the cent. A personal line is
+   * **hung on the half point** (`onTheHalf`), so landing exactly on one is now
+   * arithmetically impossible: a stored score has two decimal places and the
+   * number always ends `.50` with nothing behind it. `settleEntry` still refuses
+   * to call an exact landing either way, and nothing can reach that branch.
+   *
+   * The push that **can** happen is a manager with no publishable game — a bye,
+   * or a game the publication boundary dropped. They were charged for a market
+   * they were never given a chance to win, so the stake comes back, and this is
+   * the state that photographs it.
+   *
+   * `Ade` is priced from three flat weeks and then does not appear in week four.
    */
   'line-push': {
     season: 2026,
@@ -343,7 +365,6 @@ const FIXTURES: Readonly<Partial<Record<BoardStateKey, BoardFixture>>> = {
       {
         week: 4,
         games: [
-          { a: F[0], aPoints: 108.0, b: F[1], bPoints: 99.0 },
           { a: F[2], aPoints: 121.0, b: F[3], bPoints: 104.0 },
           { a: F[4], aPoints: 116.0, b: F[5], bPoints: 107.0 },
           { a: F[6], aPoints: 119.0, b: F[7], bPoints: 101.0 },
@@ -401,7 +422,7 @@ export async function previewBoard(
 }
 
 const EMPTY: BoardPreview = {
-  board: { prediction: null, market: null, quiet: true },
+  board: { prediction: null, market: null, record: null, quiet: true },
   bounty: null,
 };
 
@@ -593,6 +614,7 @@ function emptyWeek(season: number, week: number): WeekResult {
     week,
     finality: { final: false, reason: 'no-games', source: null },
     teams: [],
+    games: [],
     gameKeys: [],
   };
 }
@@ -631,7 +653,14 @@ function assemble(input: {
     chalkboard: input.show.includes('chalkboard')
       ? authorChalkboard(input.basis, input.economy, input.lastVariant)
       : null,
-    line: input.show.includes('line') ? authorTonysLine(input.basis, input.economy) : null,
+    /*
+     * The preview shows **one** line — the first seat that could be priced.
+     * A board state is a photograph of the surface, and the surface a manager
+     * sees carries their own line and no other.
+     */
+    line: input.show.includes('line')
+      ? (authorTonysLines(input.basis, input.economy).authored[0] ?? null)
+      : null,
     bounty: input.show.includes('bounty') ? authorBounty(input.basis, input.economy) : null,
   };
 
@@ -705,6 +734,14 @@ function assemble(input: {
     board: {
       prediction: build(authored.chalkboard),
       market: build(authored.line),
+      /*
+       * A preview settles one week in memory and stores nothing, so there is no
+       * resolution history to count Tony's season record off — and inventing one
+       * would put a hand-authored record on the surface whose whole rule is that
+       * it is derived. The record is a live-read fact; the states photograph the
+       * board without it.
+       */
+      record: null,
       quiet: build(authored.chalkboard) === null && build(authored.line) === null,
     },
     bounty,

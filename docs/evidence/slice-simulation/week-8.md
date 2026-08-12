@@ -54,10 +54,10 @@ Weeks played through the real Tuesday cron before the featured week: **7**.
 | sync | read cleanly · 15 records changed |
 | week resolved | 8 |
 | finalize | closed over 5 games |
-| settle | {"settled":2} |
+| settle | {"settled":12} |
 | rewards | 6 paid · 1150 tokens |
 | grants | 0 granted |
-| author | 2 offers written for the next week |
+| author | 12 offers written for the next week |
 | draft | created |
 | which paper | weekly |
 
@@ -108,21 +108,117 @@ last thing it does; the draft lands on the press desk and stops (`16 §9`).
 
 ## 5. The wagers
 
+### Tony's Line — one number per manager
+
+Week 9, the newest the scenario authored. Every number is that manager's own scoring median pulled toward the league's, hung on the half point so no score can land on it.
+
+| Manager | Line | Own weeks | Cleared it recently | Offered to |
+|---|---|---|---|---|
+| Alex | 133.50 | 8 | 6 of 6 | 1 |
+| Nathan | 124.50 | 8 | 6 of 6 | 1 |
+| Joe | 110.50 | 8 | 2 of 6 | 1 |
+| Zack | 107.50 | 8 | 2 of 6 | 1 |
+| Nick | 114.50 | 8 | 4 of 6 | 1 |
+| Ryan | 104.50 | 8 | 1 of 6 | 1 |
+| Brandon | 125.50 | 8 | 6 of 6 | 1 |
+| Cheese | 115.50 | 8 | 3 of 6 | 1 |
+| Matt Lee | 126.50 | 8 | 6 of 6 | 1 |
+| Matty B | 126.50 | 8 | 4 of 6 | 1 |
+
+**One manager per row, and the last column is the point.** Each of those stakes carries an eligibility snapshot of exactly one person, and `stake_entries` has a trigger refusing anybody else — so a manager cannot take a side on somebody else's team total however they reach the table.
+
+### Tony's Chalkboard — one shared call a week
+
+| Week | Question | Number | Tony | How it went |
+|---|---|---|---|---|
+| 2 | `photo-finish` | 10.00 | yes | right |
+| 3 | `half-over` | 118.90 | yes | right |
+| 4 | `a-hiding` | 45.00 | yes | right |
+| 5 | `anybody-breaks` | 144.10 | yes | wrong |
+| 6 | `photo-finish` | 10.00 | yes | right |
+| 7 | `half-over` | 119.83 | yes | right |
+| 8 | `a-hiding` | 45.00 | yes | right |
+| 9 | `anybody-breaks` | 144.71 | yes | — |
+
+**Tony was right 6 of 7.** Counted off `stake_resolutions` and never hand-authored — possible only because he backs the affirmative every time, so `hit` means *the proposition happened* and *Tony was right* at once.
+
+**Nobody wagered on any of it.** Every row above carries a null stake and a null reward, and the surface renders no control on a `CHALKBOARD` row.
+
+### Everything the season authored
+
 | Kind | Week | Status | Outcome |
 |---|---|---|---|
 | `CHALKBOARD` | 2 | resolved | hit |
 | `CHALKBOARD` | 3 | resolved | hit |
 | `BOUNTY` | 3 | resolved | hit |
 | `CHALKBOARD` | 4 | resolved | hit |
-| `CHALKBOARD` | 5 | resolved | hit |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `CHALKBOARD` | 5 | resolved | missed |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
 | `BOUNTY` | 5 | resolved | hit |
-| `CHALKBOARD` | 6 | resolved | missed |
+| `CHALKBOARD` | 6 | resolved | hit |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
 | `CHALKBOARD` | 7 | resolved | hit |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
 | `CHALKBOARD` | 8 | resolved | hit |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
 | `CHALKBOARD` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
+| `TONYS_LINE` | 9 | open | — |
 | `BOUNTY` | 9 | open | — |
-
-**Tony's Line is absent from every row, and that is correct.** `18 §3.4` puts it behind a shut flag and the job reads the same flag every surface reads. Nothing here opened it.
 
 ---
 
@@ -195,8 +291,8 @@ reach either stamp.
 | Closed weeks | 8 |
 | Rewards | 48 |
 | Ledger rows | 60 |
-| Stakes authored | 11 |
-| Stake resolutions | 9 |
+| Stakes authored | 71 |
+| Stake resolutions | 59 |
 | Slice versions | 8 |
 
 ### The table after the featured week

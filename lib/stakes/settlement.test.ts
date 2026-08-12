@@ -179,6 +179,17 @@ async function balanceOf(userId: string, seasonId: string): Promise<number> {
   return (await wallet(db!, { userId, seasonId }))?.balance ?? 0;
 }
 
+/**
+ * One manager's own Tony's Line, by the seat it belongs to.
+ *
+ * A week authors **one line per seat** since 2026-08-12, so there is no such
+ * thing as "the line" any more — asking for one without saying whose would be
+ * asking for whichever row came back first.
+ */
+async function lineIdFor(season: number, week: number, rosterId: number): Promise<string> {
+  return stakeIdFor(stakeKeyFor({ season, week, variant: VARIANTS.seasonMedian, rosterId }));
+}
+
 async function stakeIdFor(key: string): Promise<string> {
   const [row] = await db!
     .select({ id: weeklyStakes.id })
@@ -236,9 +247,15 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
       const { year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
 
+      /*
+       * Read off the **bounty**, which is offered to the league. A personal line
+       * carries a snapshot of exactly one manager — that is Ruling 2 and it is
+       * asserted below — so it is the wrong row to ask this question of.
+       */
       const [row] = await db!
         .select({ eligible: weeklyStakes.eligibleUserIds })
         .from(weeklyStakes)
+        .where(eq(weeklyStakes.kind, 'BOUNTY'))
         .limit(1);
 
       expect([...row!.eligible].sort()).toEqual(managers.map((m) => m.id).sort());
@@ -256,8 +273,75 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
       const [after] = await db!
         .select({ eligible: weeklyStakes.eligibleUserIds })
         .from(weeklyStakes)
+        .where(eq(weeklyStakes.kind, 'BOUNTY'))
         .limit(1);
       expect(after!.eligible).toEqual(row!.eligible);
+    });
+
+    it('writes one line per seat, each offered to exactly one manager', async () => {
+      /*
+       * Ruling 1 and Ruling 2, at the table. A week authors up to ten
+       * `TONYS_LINE` rows and each carries an eligibility snapshot of **one**
+       * manager — which is what makes `placeEntry`'s refusal and the trigger
+       * below about ownership rather than about presentation.
+       */
+      const { year, managers } = await league();
+      await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
+
+      const lines = await db!
+        .select({ key: weeklyStakes.stakeKey, eligible: weeklyStakes.eligibleUserIds })
+        .from(weeklyStakes)
+        .where(eq(weeklyStakes.kind, 'TONYS_LINE'));
+
+      expect(lines).toHaveLength(managers.length);
+      for (const line of lines) expect(line.eligible).toHaveLength(1);
+      // One per manager, and no manager offered two.
+      expect(new Set(lines.map((line) => line.eligible[0])).size).toBe(managers.length);
+      expect(new Set(lines.map((line) => line.key)).size).toBe(managers.length);
+    });
+
+    it('sets a different number for a strong manager than for a weak one', async () => {
+      /*
+       * The fixture's roster 4 outscores roster 1 in every week before the one
+       * being priced, so their numbers must differ. A formula that ignored the
+       * manager would put the same number on both and pass every other test in
+       * this file.
+       */
+      const { year } = await league();
+      await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
+
+      const numberOf = async (rosterId: number): Promise<string> => {
+        const [row] = await db!
+          .select({ factRefs: weeklyStakes.factRefs })
+          .from(weeklyStakes)
+          .where(eq(weeklyStakes.id, await lineIdFor(year, 4, rosterId)));
+        return (row!.factRefs as { values: Record<string, string> }).values['line']!;
+      };
+
+      const weak = Number.parseFloat(await numberOf(1));
+      const strong = Number.parseFloat(await numberOf(4));
+      expect(strong).toBeGreaterThan(weak);
+      // Every line is hung on the half point, so a push on an exact landing is
+      // arithmetically impossible.
+      for (const value of [weak, strong]) expect(value * 100 % 100).toBe(50);
+    });
+
+    it('authors the same numbers again when it is re-run', async () => {
+      const { year } = await league();
+      await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
+      const before = await db!
+        .select({ key: weeklyStakes.stakeKey, factRefs: weeklyStakes.factRefs })
+        .from(weeklyStakes)
+        .orderBy(weeklyStakes.stakeKey);
+
+      const again = await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
+      expect(again.written).toBe(0);
+
+      const after = await db!
+        .select({ key: weeklyStakes.stakeKey, factRefs: weeklyStakes.factRefs })
+        .from(weeklyStakes)
+        .orderBy(weeklyStakes.stakeKey);
+      expect(after).toEqual(before);
     });
   });
 
@@ -267,7 +351,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('debits the stake and records the pick in one transaction', async () => {
       const { seasonId, year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       const before = await balanceOf(managers[0]!.id, seasonId);
       const result = await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
@@ -285,7 +369,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('lets a manager take exactly one side, forever', async () => {
       const { seasonId, year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
       const again = await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'under' });
@@ -303,7 +387,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
        */
       const { seasonId, year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       await Promise.allSettled(
         Array.from({ length: 10 }, () =>
@@ -322,7 +406,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('refuses a manager who was not on the eligibility snapshot', async () => {
       const { year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       const [outsider] = await db!
         .insert(users)
@@ -338,7 +422,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('refuses a pick the tab cannot cover, and the database is what refuses it', async () => {
       const { seasonId, year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       await applyTokenDelta(db!, {
         userId: managers[0]!.id,
@@ -360,7 +444,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('cannot be changed once placed', async () => {
       const { year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
 
       await expectPgMessage(
@@ -372,12 +456,72 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('cannot be deleted', async () => {
       const { year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
 
       await expectPgMessage(
         db!.delete(stakeEntries).where(eq(stakeEntries.stakeId, id)),
         /part of the audit trail/,
+      );
+    });
+
+    it('lets the manager the line belongs to take a side', async () => {
+      const { year, managers } = await league();
+      await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
+
+      // Every seat, on their own number. Ownership is not a rule about roster 1.
+      for (const [index, manager] of managers.entries()) {
+        const own = await lineIdFor(year, 4, index + 1);
+        expect(
+          (await placeEntry(db!, { stakeId: own, userId: manager.id, side: 'over' })).status,
+          `roster ${String(index + 1)}`,
+        ).toBe('placed');
+      }
+    });
+
+    it('refuses a manager taking a side on somebody else’s team total', async () => {
+      /*
+       * **Ruling 2, and the reason it is a real authorization boundary.** A line
+       * is a number set for one manager's own team, and a wager somebody else
+       * places on it is a wager on a team they do not play.
+       */
+      const { seasonId, year, managers } = await league();
+      await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
+      const notTheirs = await lineIdFor(year, 4, 1);
+
+      expect(await placeEntry(db!, { stakeId: notTheirs, userId: managers[1]!.id, side: 'over' })).toEqual(
+        { status: 'not_eligible' },
+      );
+
+      // Nothing left behind: no entry, and the tab is untouched.
+      expect(await db!.select({ id: stakeEntries.id }).from(stakeEntries)).toHaveLength(0);
+      expect(await balanceOf(managers[1]!.id, seasonId)).toBe(250);
+    });
+
+    it('refuses it in the database too, whatever holds the connection', async () => {
+      /*
+       * The service check is not allowed to be the only answer. `stake_entries`
+       * can be written by anything with a connection, so the rule lives where the
+       * Showcase's does (`0006`): a foreign key can say *"that stake exists"* and
+       * cannot say *"that stake is yours"*.
+       *
+       * The rule is about **eligibility**, not about the kind — *"you may only
+       * enter a stake you were offered"* is true of a bounty and a chalkboard
+       * too; they simply carry the whole league in the snapshot.
+       */
+      const { year, managers } = await league();
+      await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
+      const notTheirs = await lineIdFor(year, 4, 1);
+
+      await expectPgMessage(
+        db!.insert(stakeEntries).values({
+          stakeId: notTheirs,
+          userId: managers[1]!.id,
+          side: 'over',
+          stakedTokens: 10,
+          createdAt: FIXED,
+        }),
+        /was not offered stake/,
       );
     });
   });
@@ -388,18 +532,25 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('pays the winners, records the losers, and writes one resolution', async () => {
       const { seasonId, year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const key = stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian });
-      const id = await stakeIdFor(key);
+      const id = await lineIdFor(year, 4, 1);
 
-      // Roster 1 posts 150.00 in week 4; the median through week 3 is well below
-      // it, so `over` wins and `under` loses.
+      /*
+       * **Two lines, not two picks on one.** Roster 1 posts 150.00 in week 4
+       * against their own number and clears it; roster 2 posts 92.00 against
+       * theirs and does not. Both took `over`, and one of them was right — which
+       * is the whole point of the line being personal, and it is why this test
+       * could not be written as two entries on a single stake any more.
+       */
+      const theirs = await lineIdFor(year, 4, 2);
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
-      await placeEntry(db!, { stakeId: id, userId: managers[1]!.id, side: 'over' });
+      await placeEntry(db!, { stakeId: theirs, userId: managers[1]!.id, side: 'over' });
 
       await closeWeek(year, 4);
 
-      const settled = await settleStake(db!, { stakeId: id, season: year, week: 4 });
-      expect(settled.status).toBe('settled');
+      expect((await settleStake(db!, { stakeId: id, season: year, week: 4 })).status).toBe('settled');
+      expect((await settleStake(db!, { stakeId: theirs, season: year, week: 4 })).status).toBe(
+        'settled',
+      );
 
       const entries = await db!
         .select({
@@ -407,8 +558,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
           outcome: stakeEntries.outcome,
           payout: stakeEntries.payoutTokens,
         })
-        .from(stakeEntries)
-        .where(eq(stakeEntries.stakeId, id));
+        .from(stakeEntries);
 
       const byUser = new Map(entries.map((row) => [row.userId, row]));
       expect(byUser.get(managers[0]!.id)?.outcome).toBe('won');
@@ -429,7 +579,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
        */
       const { seasonId, year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
       await closeWeek(year, 4);
 
@@ -453,7 +603,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('collapses ten simultaneous settlements into one payout', async () => {
       const { seasonId, year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
       await closeWeek(year, 4);
 
@@ -477,7 +627,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
        */
       const { year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
 
       const result = await settleStake(db!, { stakeId: id, season: year, week: 4 });
@@ -490,7 +640,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('records why it resolved, as data a manager could recompute', async () => {
       const { year } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await closeWeek(year, 4);
       await settleStake(db!, { stakeId: id, season: year, week: 4 });
 
@@ -508,7 +658,9 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
 
       expect(row!.week).toBe(4);
       expect(evidence.statementKey).toBe('line-settled');
-      expect(evidence.statement).toContain('cleared it');
+      // The manager the line belongs to, and what they put up — not a league split.
+      expect(evidence.values['subject']).toBeDefined();
+      expect(evidence.values['scored']).toMatch(/^\d+\.\d\d$/);
       // The games behind it, so the claim is checkable rather than merely stated.
       expect(evidence.gameKeys.length).toBeGreaterThan(0);
       expect(evidence.values['line']).toMatch(/^\d+\.\d\d$/);
@@ -521,7 +673,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('refuses to have its resolution rewritten or deleted', async () => {
       const { year } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await closeWeek(year, 4);
       await settleStake(db!, { stakeId: id, season: year, week: 4 });
 
@@ -544,7 +696,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
       // after a stat correction would settle a different bet from the one taken.
       const { year } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       await expectPgMessage(
         db!
@@ -558,7 +710,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('refuses to be deleted', async () => {
       const { year } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       await expectPgMessage(
         db!.delete(weeklyStakes).where(eq(weeklyStakes.id, id)),
@@ -569,7 +721,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('refuses a second status transition', async () => {
       const { year } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await closeWeek(year, 4);
       await settleStake(db!, { stakeId: id, season: year, week: 4 });
 
@@ -656,7 +808,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('refuses a void with no reason, and a reason with no void', async () => {
       const { year } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       await expectPgError(
         db!.update(weeklyStakes).set({ status: 'void' }).where(eq(weeklyStakes.id, id)),
@@ -677,7 +829,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('refuses an outcome the kind cannot have', async () => {
       const { year } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       await expectPgMessage(
         db!.insert(stakeResolutions).values({
@@ -694,7 +846,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('refuses a claimant on anything but a claimed bounty', async () => {
       const { year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
 
       await expectPgMessage(
         db!.insert(stakeResolutions).values({
@@ -786,7 +938,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
       // own statement from the commissioner correcting something by hand.
       const { year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
       await closeWeek(year, 4);
       await settleStake(db!, { stakeId: id, season: year, week: 4 });
@@ -804,8 +956,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
     it('namespaces every key under the stake it settles', async () => {
       const { year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const key = stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian });
-      const id = await stakeIdFor(key);
+      const id = await lineIdFor(year, 4, 1);
       await placeEntry(db!, { stakeId: id, userId: managers[0]!.id, side: 'over' });
       await closeWeek(year, 4);
       await settleStake(db!, { stakeId: id, season: year, week: 4 });
@@ -815,6 +966,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
         .from(tokenTransactions)
         .where(sql`${tokenTransactions.reasonCode} in ('STAKE_PLACED','STAKE_PAYOUT')`);
 
+      const key = stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian, rosterId: 1 });
       for (const row of rows) {
         expect(row.key.startsWith(settlementKeyFor(key)), row.key).toBe(true);
       }
@@ -826,7 +978,7 @@ describe.skipIf(!hasDatabase)('weekly stakes, settled', () => {
       // ledger records movement.
       const { seasonId, year, managers } = await league();
       await authorStakesForWeek(db!, { season: year, week: 4, lineOpen: true });
-      const id = await stakeIdFor(stakeKeyFor({ season: year, week: 4, variant: VARIANTS.seasonMedian }));
+      const id = await lineIdFor(year, 4, 1);
       /*
        * Roster 1 posts 150.00 against a line of 110.00, so `under` is the losing
        * side. Chosen from the fixture rather than assumed — the first draft used

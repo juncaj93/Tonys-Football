@@ -4,7 +4,7 @@ import { type Queryable } from '@/lib/db';
 import { seasons, stakeEntries, stakeResolutions, weeklyStakes } from '@/lib/db/schema';
 import { type FeatureFlags } from '@/lib/flags';
 
-import { WAITING } from './copy';
+import { TONY_RECORD, WAITING, fill } from './copy';
 import { buildWeekResult, stakeSeason } from './facts';
 import {
   type Entry,
@@ -81,11 +81,61 @@ export interface Chalkboard {
   readonly prediction: BoardItem | null;
   /** The market. Null when the flag is shut, or nothing was authored. */
   readonly market: BoardItem | null;
+  /**
+   * How Tony has done on the board this season, as one curated sentence.
+   *
+   * Null until enough calls have settled — see {@link MIN_RECORDED_CALLS}.
+   */
+  readonly record: string | null;
   /** True when there is nothing at all — the wiped-slate state. */
   readonly quiet: boolean;
 }
 
-export const EMPTY_CHALKBOARD: Chalkboard = { prediction: null, market: null, quiet: true };
+export const EMPTY_CHALKBOARD: Chalkboard = {
+  prediction: null,
+  market: null,
+  record: null,
+  quiet: true,
+};
+
+/**
+ * How many calls have to have settled before Tony has a record.
+ *
+ * Three. *"Tony's been right 1 of 1 this year"* is not a fabricated record and
+ * it is not a record either — it is a coincidence with a denominator, and the
+ * ruling asks for no record before enough resolved calls exist. Below the floor
+ * the sentence is **absent** rather than zeroed or rounded.
+ */
+export const MIN_RECORDED_CALLS = 3;
+
+/**
+ * Tony's chalkboard record for a season, or nothing.
+ *
+ * Counted straight off `stake_resolutions` — **no separate tracking table**,
+ * which the ruling asks for explicitly and which is possible only because he
+ * backs the affirmative every time: `hit` therefore means *the proposition
+ * happened* and *Tony was right* at once, so one column answers both.
+ *
+ * Finalized outcomes only, by construction: a row exists in `stake_resolutions`
+ * exactly when `resolveStake` accepted a final week.
+ */
+export async function tonyRecordFor(
+  db: Queryable,
+  seasonId: string,
+): Promise<{ readonly right: number; readonly calls: number } | null> {
+  const rows = await db
+    .select({ outcome: stakeResolutions.outcome })
+    .from(stakeResolutions)
+    .innerJoin(weeklyStakes, eq(weeklyStakes.id, stakeResolutions.stakeId))
+    .where(and(eq(weeklyStakes.seasonId, seasonId), eq(weeklyStakes.kind, 'CHALKBOARD')));
+
+  if (rows.length < MIN_RECORDED_CALLS) return null;
+
+  return {
+    right: rows.filter((row) => row.outcome === 'hit').length,
+    calls: rows.length,
+  };
+}
 
 interface Row {
   id: string;
@@ -298,18 +348,36 @@ export async function chalkboardFor(
   const prediction = stakes.filter((stake) => stake.kind === 'CHALKBOARD').map(build).find(Boolean);
 
   /*
-   * The market appears only when the flag is open.
+   * The market appears only when the flag is open, **and only the manager's
+   * own.**
    *
-   * Checked here rather than in the component, because a flag read in the
-   * browser is a flag a browser can flip — and this one gates a token market.
+   * A week now authors up to ten `TONYS_LINE` rows, one per seat. Taking the
+   * first of them would show a manager somebody else's number on their own
+   * homepage — and, worse, would show a control they could press. Signed out
+   * there is no *own* line, so the sign carries the prediction alone.
+   *
+   * The flag is checked here rather than in the component, because a flag read
+   * in the browser is a flag a browser can flip, and this one gates a market.
    */
-  const market = input.flags.tonysLine
-    ? stakes.filter((stake) => stake.kind === 'TONYS_LINE').map(build).find(Boolean)
-    : undefined;
+  const mine =
+    input.userId === null
+      ? []
+      : stakes.filter(
+          (stake) =>
+            stake.kind === 'TONYS_LINE' && stake.eligibleUserIds.includes(input.userId!),
+        );
+  const market = input.flags.tonysLine ? mine.map(build).find(Boolean) : undefined;
+
+  const counted = await tonyRecordFor(db, rows[0]!.seasonId);
+  const record =
+    counted === null
+      ? null
+      : fill(TONY_RECORD, { right: String(counted.right), calls: String(counted.calls) });
 
   return {
     prediction: prediction ?? null,
     market: market ?? null,
+    record,
     quiet: (prediction ?? null) === null && (market ?? null) === null,
   };
 }

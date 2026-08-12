@@ -409,14 +409,110 @@ export function renderSimulationReport(record: SimulationRecord): string {
   const stakes = record.after.stakes;
   if (stakes.length === 0) {
     out.push(
-      '**Nothing was authored and nothing settled.** No flag was opened to give the ' +
-        'simulation something to settle: `tonysLine` stays shut, a bounty needs twelve prior ' +
-        'team-weeks and a chalkboard prediction needs a prior week.',
+      '**Nothing was authored and nothing settled.** A personal line needs three of that ' +
+        "manager's own team-weeks, a bounty needs twelve prior team-weeks, and a chalkboard " +
+        'question needs a prior Tuesday. This scenario reaches none of them.',
       '',
     );
   } else {
     const settledBy = new Map(record.after.resolutions.map((row) => [row.stakeKey, row.outcome]));
+
+    /* ---------------------------------------------------------- the line -- */
+
+    const lines = stakes.filter((stake) => stake.kind === 'TONYS_LINE');
+    out.push("### Tony's Line — one number per manager", '');
+
+    if (lines.length === 0) {
+      out.push(
+        '_No line was authored. A personal line needs three of that manager\'s own ' +
+          'team-weeks behind it, which the league reaches in week four._',
+        '',
+      );
+    } else {
+      const newest = Math.max(...lines.map((line) => line.week));
+      const latest = [...lines]
+        .filter((line) => line.week === newest)
+        .sort(
+          (left, right) =>
+            Number(left.factRefs.values['rosterId'] ?? 0) -
+            Number(right.factRefs.values['rosterId'] ?? 0),
+        );
+
+      out.push(
+        `Week ${String(newest)}, the newest the scenario authored. Every number is that ` +
+          "manager's own scoring median pulled toward the league's, hung on the half point so " +
+          'no score can land on it.',
+        '',
+        table(
+          ['Manager', 'Line', 'Own weeks', 'Cleared it recently', 'Offered to'],
+          latest.map((line) => [
+            line.factRefs.values['subject'] ?? '—',
+            line.factRefs.values['line'] ?? '—',
+            line.factRefs.values['ownTeamWeeks'] ?? '—',
+            line.factRefs.values['cleared'] === undefined
+              ? '—'
+              : `${line.factRefs.values['cleared']} of ${line.factRefs.values['clearedOf'] ?? '?'}`,
+            String(line.eligibleUserIds.length),
+          ]),
+        ),
+        '',
+        '**One manager per row, and the last column is the point.** Each of those stakes ' +
+          'carries an eligibility snapshot of exactly one person, and `stake_entries` has a ' +
+          'trigger refusing anybody else — so a manager cannot take a side on somebody ' +
+          "else's team total however they reach the table.",
+        '',
+      );
+    }
+
+    /* ---------------------------------------------------- the chalkboard -- */
+
+    const calls = stakes
+      .filter((stake) => stake.kind === 'CHALKBOARD')
+      .sort((left, right) => left.week - right.week);
+
+    out.push("### Tony's Chalkboard — one shared call a week", '');
+
+    if (calls.length === 0) {
+      out.push('_No question was written up._', '');
+    } else {
+      const decided = calls.filter((call) => settledBy.has(call.stakeKey));
+      const right = decided.filter((call) => settledBy.get(call.stakeKey) === 'hit').length;
+
+      out.push(
+        table(
+          ['Week', 'Question', 'Number', 'Tony', 'How it went'],
+          calls.map((call) => [
+            String(call.week),
+            `\`${call.variant}\``,
+            call.factRefs.values['line'] ?? call.factRefs.values['margin'] ?? '—',
+            'yes',
+            settledBy.get(call.stakeKey) === 'hit'
+              ? 'right'
+              : settledBy.get(call.stakeKey) === 'missed'
+                ? 'wrong'
+                : '—',
+          ]),
+        ),
+        '',
+        decided.length === 0
+          ? '**Nothing has settled yet, so Tony has no record.** The sentence is absent ' +
+            'rather than zeroed.'
+          : `**Tony was right ${String(right)} of ${String(decided.length)}.** Counted off ` +
+            '`stake_resolutions` and never hand-authored — possible only because he backs ' +
+            'the affirmative every time, so `hit` means *the proposition happened* and ' +
+            '*Tony was right* at once.',
+        '',
+        '**Nobody wagered on any of it.** Every row above carries a null stake and a null ' +
+          'reward, and the surface renders no control on a `CHALKBOARD` row.',
+        '',
+      );
+    }
+
+    /* -------------------------------------------------------- everything -- */
+
     out.push(
+      '### Everything the season authored',
+      '',
       table(
         ['Kind', 'Week', 'Status', 'Outcome'],
         stakes.map((stake) => [
@@ -426,10 +522,6 @@ export function renderSimulationReport(record: SimulationRecord): string {
           settledBy.get(stake.stakeKey) ?? '—',
         ]),
       ),
-      '',
-      "**Tony's Line is absent from every row, and that is correct.** `18 §3.4` puts it " +
-        'behind a shut flag and the job reads the same flag every surface reads. Nothing here ' +
-        'opened it.',
       '',
     );
   }

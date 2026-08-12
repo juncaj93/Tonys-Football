@@ -53,7 +53,7 @@ const PIN = '424242';
  */
 const SCRATCH = path.join('.simulate-shots');
 
-const SCENARIOS = ['preseason', 'week-8', 'week-16'] as const;
+const SCENARIOS = ['preseason', 'week-4', 'week-8', 'week-16'] as const;
 type Scenario = (typeof SCENARIOS)[number];
 
 /** Databases this must never touch. See the header. */

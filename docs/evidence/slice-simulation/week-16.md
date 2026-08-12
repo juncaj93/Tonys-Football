@@ -54,10 +54,10 @@ Weeks played through the real Tuesday cron before the featured week: **15**.
 | sync | read cleanly · 11 records changed |
 | week resolved | 16 |
 | finalize | closed over 5 games |
-| settle | {"settled":2} |
+| settle | {"settled":12} |
 | rewards | 6 paid · 1150 tokens |
 | grants | 0 granted |
-| author | 2 offers written for the next week |
+| author | 12 offers written for the next week |
 | draft | created |
 | which paper | weekly |
 
@@ -107,32 +107,216 @@ last thing it does; the draft lands on the press desk and stops (`16 §9`).
 
 ## 5. The wagers
 
+### Tony's Line — one number per manager
+
+Week 17, the newest the scenario authored. Every number is that manager's own scoring median pulled toward the league's, hung on the half point so no score can land on it.
+
+| Manager | Line | Own weeks | Cleared it recently | Offered to |
+|---|---|---|---|---|
+| Alex | 114.50 | 16 | 6 of 6 | 1 |
+| Nathan | 105.50 | 16 | 6 of 6 | 1 |
+| Joe | 117.50 | 15 | 6 of 6 | 1 |
+| Zack | 109.50 | 16 | 6 of 6 | 1 |
+| Nick | 102.50 | 16 | 6 of 6 | 1 |
+| Ryan | 115.50 | 15 | 6 of 6 | 1 |
+| Brandon | 107.50 | 16 | 6 of 6 | 1 |
+| Cheese | 111.50 | 16 | 6 of 6 | 1 |
+| Matt Lee | 104.50 | 16 | 6 of 6 | 1 |
+| Matty B | 110.50 | 16 | 6 of 6 | 1 |
+
+**One manager per row, and the last column is the point.** Each of those stakes carries an eligibility snapshot of exactly one person, and `stake_entries` has a trigger refusing anybody else — so a manager cannot take a side on somebody else's team total however they reach the table.
+
+### Tony's Chalkboard — one shared call a week
+
+| Week | Question | Number | Tony | How it went |
+|---|---|---|---|---|
+| 2 | `photo-finish` | 10.00 | yes | wrong |
+| 3 | `half-over` | 100.95 | yes | right |
+| 4 | `a-hiding` | 45.00 | yes | wrong |
+| 5 | `anybody-breaks` | 124.09 | yes | right |
+| 6 | `photo-finish` | 10.00 | yes | right |
+| 7 | `half-over` | 112.42 | yes | wrong |
+| 8 | `a-hiding` | 45.00 | yes | wrong |
+| 9 | `anybody-breaks` | 131.34 | yes | wrong |
+| 10 | `photo-finish` | 10.00 | yes | right |
+| 11 | `half-over` | 109.15 | yes | right |
+| 12 | `a-hiding` | 45.00 | yes | right |
+| 13 | `anybody-breaks` | 133.29 | yes | wrong |
+| 14 | `photo-finish` | 10.00 | yes | right |
+| 15 | `half-over` | 108.27 | yes | right |
+| 16 | `a-hiding` | 45.00 | yes | wrong |
+| 17 | `anybody-breaks` | 133.29 | yes | — |
+
+**Tony was right 8 of 15.** Counted off `stake_resolutions` and never hand-authored — possible only because he backs the affirmative every time, so `hit` means *the proposition happened* and *Tony was right* at once.
+
+**Nobody wagered on any of it.** Every row above carries a null stake and a null reward, and the surface renders no control on a `CHALKBOARD` row.
+
+### Everything the season authored
+
 | Kind | Week | Status | Outcome |
 |---|---|---|---|
 | `CHALKBOARD` | 2 | resolved | missed |
 | `CHALKBOARD` | 3 | resolved | hit |
 | `BOUNTY` | 3 | resolved | hit |
-| `CHALKBOARD` | 4 | resolved | hit |
-| `CHALKBOARD` | 5 | resolved | missed |
+| `CHALKBOARD` | 4 | resolved | missed |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `TONYS_LINE` | 4 | resolved | settled |
+| `CHALKBOARD` | 5 | resolved | hit |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
+| `TONYS_LINE` | 5 | resolved | settled |
 | `CHALKBOARD` | 6 | resolved | hit |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
+| `TONYS_LINE` | 6 | resolved | settled |
 | `BOUNTY` | 6 | resolved | hit |
-| `CHALKBOARD` | 7 | resolved | hit |
+| `CHALKBOARD` | 7 | resolved | missed |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
+| `TONYS_LINE` | 7 | resolved | settled |
 | `BOUNTY` | 7 | expired | unclaimed |
-| `CHALKBOARD` | 8 | resolved | hit |
-| `CHALKBOARD` | 9 | resolved | hit |
+| `CHALKBOARD` | 8 | resolved | missed |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `TONYS_LINE` | 8 | resolved | settled |
+| `CHALKBOARD` | 9 | resolved | missed |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
+| `TONYS_LINE` | 9 | resolved | settled |
 | `CHALKBOARD` | 10 | resolved | hit |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
+| `TONYS_LINE` | 10 | resolved | settled |
 | `CHALKBOARD` | 11 | resolved | hit |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
+| `TONYS_LINE` | 11 | resolved | settled |
 | `BOUNTY` | 11 | expired | unclaimed |
 | `CHALKBOARD` | 12 | resolved | hit |
-| `CHALKBOARD` | 13 | resolved | hit |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `TONYS_LINE` | 12 | resolved | settled |
+| `CHALKBOARD` | 13 | resolved | missed |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
+| `TONYS_LINE` | 13 | resolved | settled |
 | `CHALKBOARD` | 14 | resolved | hit |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
+| `TONYS_LINE` | 14 | resolved | settled |
 | `CHALKBOARD` | 15 | resolved | hit |
+| `TONYS_LINE` | 15 | resolved | settled |
+| `TONYS_LINE` | 15 | resolved | settled |
+| `TONYS_LINE` | 15 | resolved | settled |
+| `TONYS_LINE` | 15 | resolved | push |
+| `TONYS_LINE` | 15 | resolved | settled |
+| `TONYS_LINE` | 15 | resolved | settled |
+| `TONYS_LINE` | 15 | resolved | push |
+| `TONYS_LINE` | 15 | resolved | settled |
+| `TONYS_LINE` | 15 | resolved | settled |
+| `TONYS_LINE` | 15 | resolved | settled |
 | `BOUNTY` | 15 | resolved | hit |
-| `CHALKBOARD` | 16 | resolved | hit |
+| `CHALKBOARD` | 16 | resolved | missed |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
+| `TONYS_LINE` | 16 | resolved | settled |
 | `CHALKBOARD` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
+| `TONYS_LINE` | 17 | open | — |
 | `BOUNTY` | 17 | open | — |
-
-**Tony's Line is absent from every row, and that is correct.** `18 §3.4` puts it behind a shut flag and the job reads the same flag every surface reads. Nothing here opened it.
 
 ---
 
@@ -159,7 +343,7 @@ THE BOARD
   Nick 110.41 over Matt Lee 109.19
 
 TONY’S COLUMN
-  An ordinary week, and Tony prints those the same as the other kind.
+  Small margins now. Tony has watched enough of these to stop calling any of them ordinary.
 
 ```
 
@@ -184,7 +368,7 @@ TONY’S COLUMN
 |---|---|
 | issue | 2026 week 16 · kind `weekly` |
 | version | 1 |
-| content hash | `65a5c9b841644d52` |
+| content hash | `54ef739b19d8900f` |
 | status when the cron finished | `needs_review` |
 | validator | passed |
 | approved by | Alex |
@@ -215,8 +399,8 @@ reach either stamp.
 | Closed weeks | 16 |
 | Rewards | 95 |
 | Ledger rows | 108 |
-| Stakes authored | 22 |
-| Stake resolutions | 20 |
+| Stakes authored | 162 |
+| Stake resolutions | 150 |
 | Slice versions | 16 |
 
 ### The table after the featured week

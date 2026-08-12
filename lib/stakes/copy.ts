@@ -39,16 +39,65 @@ import {
  * `favourite to` and `on pace for`, and these strings go through it.
  */
 export const CLAIMS: Readonly<Record<Variant, string>> = {
+  /*
+   * Personal since 2026-08-12. It read *"Tony has the week at {line}"* while the
+   * line was one league-wide number; it now names the manager it belongs to,
+   * because a line nobody is named on reads as the league's even when it is not.
+   */
   [VARIANTS.seasonMedian]:
-    "Tony has the week at {line}. Over or under — your call.",
+    "Tony has {subject} at {line} this week. Over or under — your call.",
   [VARIANTS.weekScore]:
     "Beat {target} in a single week and the board is yours. {holder} set it.",
+
+  /*
+   * Tony's Chalkboard — the four live propositions.
+   *
+   * Each is a **question Tony then answers**, and the answer is always yes
+   * (commissioner, 2026-08-12). The rule behind that is not in the copy and must
+   * not be: a board explaining that Tony always backs his own question has told
+   * the reader the call carries no information.
+   */
+  [VARIANTS.anybodyBreaks]: "Anybody putting up {line} this week? Tony says yes.",
+  [VARIANTS.photoFinish]:
+    "A game finishing inside {margin} this week? Tony says yes.",
+  [VARIANTS.halfOver]: "{teams} teams over {line} this week? Tony says yes.",
+  [VARIANTS.aHiding]:
+    "Somebody winning by more than {margin} this week? Tony says yes.",
+
+  /*
+   * Retired from authoring on 2026-08-12 and kept, because a variant is stored
+   * on the row and a stake authored before the ruling still has to be able to
+   * say what it claimed.
+   */
   [VARIANTS.nobodyClearsRecord]: "Tony says nobody touches {record} this week.",
   [VARIANTS.leaderHolds]:
     "Tony says {subject} wins again. He has been saying it a while.",
   [VARIANTS.bottomClubLoses]:
     "Tony says {subject} loses this one too. He is not being cruel.",
 };
+
+/**
+ * Tony's own record on the board this season.
+ *
+ * Derived from resolved chalkboard outcomes and never hand-authored
+ * (commissioner, 2026-08-12). Absent — not zeroed, not rounded up — until enough
+ * calls have settled to be a record rather than a coincidence.
+ */
+export const TONY_RECORD = "Tony’s been right {right} of {calls} this year.";
+
+/**
+ * The one sentence of context a personal line carries.
+ *
+ * Plain language and countable: how many of that manager's own recent scores
+ * cleared their own number. The window is six, or everything they have when that
+ * is fewer, and the sentence is **absent** rather than padded when there is
+ * nothing to count (commissioner, 2026-08-12).
+ *
+ * Nothing about the shrinkage, the weight, the median or the word *percentile*
+ * reaches a manager. The formula is the product's business; the number and
+ * whether they have been beating it are theirs.
+ */
+export const LINE_CONTEXT = "You’ve cleared this number in {cleared} of your last {clearedOf}.";
 
 /**
  * The verdict, keyed `KIND:outcome`.
@@ -64,7 +113,13 @@ export const VERDICTS: Readonly<Record<string, string>> = {
   "BOUNTY:hit": "Somebody took it off the board.",
   "BOUNTY:unclaimed": "Nobody got near it. Board wiped.",
   "TONYS_LINE:settled": "The line is settled.",
-  "TONYS_LINE:push": "Everybody landed on the number. Tabs squared.",
+  /*
+   * Personal since 2026-08-12. It said *"Everybody landed on the number"*, which
+   * described the league-wide market's only push. A personal line pushes when
+   * **its own manager** lands on the number or has no game, and neither of those
+   * is a statement about everybody.
+   */
+  "TONYS_LINE:push": "Nothing to settle. Tabs squared.",
 };
 
 /**
@@ -84,7 +139,12 @@ export const ENTRY_SIDE = "You called it {side}.";
 export const ENTRY_VERDICTS: Readonly<Record<EntryOutcome, string>> = {
   won: "You had it. Paid.",
   lost: "You did not have it.",
-  push: "Right on the number. Your stake came back.",
+  /*
+   * *"Right on the number"* described an exact landing, which a personal line
+   * makes arithmetically impossible — every line ends on the half point. The
+   * push that can happen is a manager with no publishable game.
+   */
+  push: "Nothing to settle. Your stake came back.",
 };
 
 /**
@@ -96,13 +156,32 @@ export const ENTRY_VERDICTS: Readonly<Record<EntryOutcome, string>> = {
  * it.
  */
 export const EVIDENCE: Readonly<Record<string, string>> = {
-  "line-settled": "The line was {line}. {over} cleared it, {under} did not.",
+  /*
+   * Personal since 2026-08-12, and it had to be.
+   *
+   * It read *"{over} cleared it, {under} did not"* while the line was one
+   * league-wide number. Against a number set for one manager those counts are
+   * true and irrelevant — nine other managers being above somebody else's line
+   * says nothing about whether that manager cleared their own.
+   */
+  "line-settled": "{subject} put up {scored}. The line was {line}.",
+  "line-no-game": "{subject} had no game. Tabs squared.",
   "bounty-claimed": "{claimant} put up {scored} in week {week}, past {target}.",
   "bounty-unclaimed": "Nobody cleared {target} before the board came down.",
   "record-stood": "Best of the week was {best}. The {record} stands.",
   "record-broken": "{subject} went past it with {best}.",
   "subject-result":
     "Tony had {subject} down to {expected}. They {result}, on {points}.",
+
+  /* The chalkboard, one pair per family: how it went, and the number behind it. */
+  "break-made": "{subject} went up to {best}, past {line}.",
+  "break-missed": "Best of the week was {best}. It never reached {line}.",
+  "photo-finish-made": "{winner} edged {loser} by {closest}.",
+  "photo-finish-missed": "Closest all week was {closest}.",
+  "half-over-made": "{cleared} teams cleared {line}. He asked for {teams}.",
+  "half-over-missed": "{cleared} cleared {line}. He asked for {teams}.",
+  "hiding-made": "{winner} put {widest} on {loser}.",
+  "hiding-missed": "Widest all week was {widest}.",
 };
 
 /**
@@ -174,6 +253,8 @@ export function fill(
 export function houseTemplates(): readonly string[] {
   return [
     ENTRY_SIDE,
+    LINE_CONTEXT,
+    TONY_RECORD,
     ...Object.values(CLAIMS),
     ...Object.values(VERDICTS),
     ...Object.values(ENTRY_VERDICTS),
