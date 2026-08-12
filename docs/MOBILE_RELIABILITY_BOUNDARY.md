@@ -190,6 +190,22 @@ one on purpose. It uses the type case like every other surface. If the styleshee
 genuinely were absent it degrades to browser defaults — a paragraph and two
 controls, unstyled but legible and operable, which is the whole job.
 
+### One defect was introduced by the repair, and found by reading the diff
+
+The tray gained a fourth phase, because opening a box has **three**
+distinguishable failures rather than two: a reveal, *"the box is gone"* (`lost`),
+and *"the server never answered"*. Collapsing the third into `lost` would have
+been worse than the crash it replaces — *"Tony looks at the tray. There's nothing
+on it"* is a false statement about a manager's property.
+
+The new plate says the box is still on the tray and to tap it again. **The box
+overlay's render condition did not include the new phase**, so the one screen
+that makes a claim about the box was the one screen the box was missing from. The
+plate and the sprite are separate branches of the same component and nothing
+asserts the words match the picture; no screenshot of a working tray would have
+caught it. Fixed in `db7fbd7`, and it is one of the five properties
+`counter-tray-recovery.test.tsx` now holds.
+
 ### `app/not-found.tsx` — the dead end is still in the shop
 
 Next's built-in fallback is `404: This page could not be found.` in black on
@@ -375,8 +391,38 @@ publication policy, and no `docs/ACTIVATION.md` item moved.
   `attempt`. It sees through parentheses and conditionals — the room's slot used
   a conditional — carries a control assertion so it cannot pass vacuously, and
   **goes red on all four pre-fix files**.
+- `components/scene/counter-tray-recovery.test.tsx` — five source assertions on
+  the one surface with **three** distinguishable failures rather than two. All
+  five go red on the pre-workstream file.
 - `checkNotFound` in `scripts/visual-qa.mts` — the product's screen, a way back
-  at ≥44px, and **still a 404**.
+  at ≥44px, and **still a 404**. Verified to go red at all three widths when the
+  state is pointed at a page that is not a 404, so it cannot pass vacuously.
+- `not-found` is a new state in `ALL_STATES`, photographed at 390 / 375 / 360.
+
+### What was driven, and what was not
+
+Stated separately because they are different strengths of evidence.
+
+**Driven end to end in a browser**, against the production build, before and
+after: the room's theme picker (network cut, and server 500), the character
+customiser's Save (network cut, at all three widths), sign-out, cross-tab
+sign-out, session revoked mid-mutation, Back and Forward after a committed
+mutation, two tabs mutating the same state, a signed-in non-admin probing
+`/admin`, and a full database outage during a page render.
+
+**Not driven**: the tray's own `unreachable` phase. The hit region sits under the
+parlor's overlay stack and this workstream's ad-hoc harness could not reach it —
+the visual driver can, which is why `tray-owned-box` and `tray-reveal` remain the
+coverage for the real path. The recovery phase is pinned by the source
+assertions above instead. Recorded rather than glossed: it is the one repair here
+whose behaviour was reasoned about rather than watched.
+
+The other five surfaces — the showcase picker, the room's slots, the buy button,
+the stake's pick-side and Tony's toy — were **not individually driven**. They are
+the identical three-line change against the identical mechanism, the call-site
+guard proves each one goes through `attempt`, and each keeps its own already-
+tested refusal path. Named here so *"every surface was rehearsed"* is not read
+into the tables above.
 
 ---
 
