@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| *(nothing claimed)* | | | | |
+| iPhone performance & interaction smoothness | claude/tonys-pizza-iphone-perf-ix8qse | server-side read composition in `app/page.tsx` · `app/counter/page.tsx` · `app/slice/page.tsx` · `app/rooms/page.tsx` · `lib/counter/showcase.ts` · `lib/parlor/aside.ts` (one added entry point) · `scripts/query-budget.test.ts` · `docs/MOBILE_PERFORMANCE_BOUNDARY.md` | any art or asset · any economy value · rarity · catalog size or contents · token semantics · the manager sprite / character system · the Underground · Slice editorial or content mechanics · cron count or schedule · fantasy source-of-truth architecture · publication approval · historical-analysis semantics · any visual design decision · `lib/flags.ts` | 2026-08-12 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
