@@ -262,7 +262,16 @@ export function CounterTray({
         * therefore the first time it glows. Before this slice both baked Doors
         * were correctly silent.
         */}
-      {(phase === 'idle' || opening) && (
+      {/*
+        * `unreachable` draws the box too, and that is not cosmetic.
+        *
+        * The plate for that phase says *"the box is still on the tray"*. It was
+        * hidden here, because the condition was written when the only phases
+        * that showed it were `idle` and `opening` — so the one screen that makes
+        * a claim about the box was the one screen the box was missing from. A
+        * sentence the picture contradicts is worse than no sentence.
+        */}
+      {(phase === 'idle' || opening || phase === 'unreachable') && (
         <div
           aria-hidden="true"
           className={`pointer-events-none absolute z-[22] ${opening ? 'box-opening' : 'box-owned'}`}
