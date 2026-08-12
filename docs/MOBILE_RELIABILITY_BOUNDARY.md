@@ -37,8 +37,9 @@ text message, which is exactly how this league will open the site.
 
 ## 2 · What was rehearsed
 
-Every row was driven against the production build. **Before** is the behaviour on
-`main`; **after** is this branch.
+**Before** is the behaviour on `main`; **after** is this branch. Every row below
+was driven against the production build in a browser — §12 lists separately the
+two things that were *not*, so nothing here is read wider than it was measured.
 
 ### Session
 
@@ -248,7 +249,7 @@ financial guarantees were not touched.
 | `resetPinAction` | **RETRY-SAFE** | one transaction: clear hash, revoke sessions, write the audit row |
 
 **`signInAction` is the one exception, and it is reported rather than fixed** —
-see §9.
+see §10.
 
 ---
 
@@ -321,7 +322,44 @@ oversight.
 
 ---
 
-## 9 · Remaining risks, reported not fixed
+## 9 · Security sanity check
+
+Not a penetration test. The obvious invariants, checked while reading the auth
+code, with **one** evidence-backed finding.
+
+| Invariant | Result |
+|---|---|
+| Cookie attributes appropriate for production | `HttpOnly` · `SameSite=Lax` · `Secure` when `NODE_ENV=production` · host-only · 90-day `Max-Age`. **Pass** |
+| Authorization from the server session, never a form field | **Pass.** The room actions take no `userId` at all — `requireUser()` supplies it. `resetPinAction` derives the actor from the session and refuses the actor as its own subject |
+| A manager cannot mutate another manager's private state | **Pass**, three deep: no parameter to name someone else, a service check, and a **trigger** — `room_placements_must_be_owned` and the Showcase's equivalent — because a foreign key can say *"that collectible exists"* and cannot say *"it is theirs"* |
+| Admin identity server-derived | **Pass.** `users.is_admin` from the deploy seed; there is no client-supplied admin claim anywhere, and unset `COMMISSIONER_SLEEPER_USER_ID` means nobody |
+| Revocation actually revokes | **Pass**, rehearsed: a session revoked from another device redirects on its next navigation or mutation |
+| Sensitive actions authorize before acting | **One finding — fixed.** See below |
+| No private data in public or static artifacts | **Pass.** One route prerenders (`/dev/assets`); it contains no manager name, balance or PIN material, and the build emits no other static HTML carrying league data |
+
+### The finding · an unguarded export from a `'use server'` file
+
+`app/actions/slice.ts` opened every action with `requireAdmin()` **except
+`currentSeasonYear`**, which opened with a query. Next publishes each export of a
+`'use server'` module as a callable endpoint, so an unguarded one is reachable by
+anyone holding the URL, signed in or not — and `16 §11` has exactly one
+unauthenticated surface, the door.
+
+**What it exposed is small**: the newest open season's year, which is on Sleeper
+and on the wall of the shop. Nothing was mutated and nothing private returned.
+
+**It also has no callers.** `app/page.tsx`, `lib/parlor/receipt.ts` and
+`lib/counter/showcase.ts` all import the identically-named function from
+`lib/league/membership.ts`; nothing imports this one. That is the same shape as
+the `@E352` defect — an unused export from a `'use server'` file — which is why
+it is worth naming rather than shrugging at.
+
+**Guarded rather than deleted.** One line. *"That particular read was harmless"*
+is a property of today's body, and the missing line is what the next body would
+inherit; removing an export is the Slice owner's call, and this workstream owns
+authorization rather than the Slice's surface area.
+
+## 10 · Remaining risks, reported not fixed
 
 ### R1 · A lost sign-in response leaves a phantom device
 
@@ -365,7 +403,7 @@ something this workstream introduced.
 
 ---
 
-## 10 · Deferred — active-work conflicts
+## 11 · Deferred — active-work conflicts
 
 **None.** `docs/ACTIVE_WORK.md` was empty when this branch opened and the claim
 was the first commit on it. Nothing was skipped for ownership reasons.
@@ -386,7 +424,7 @@ publication policy, and no `docs/ACTIVATION.md` item moved.
 
 ---
 
-## 11 · The gates
+## 12 · The gates
 
 - `lib/reliability/attempt.test.ts` — 8 tests: a dropped request and a 500 both
   become answers; a redirect and both not-found digests are **re-thrown**; a
@@ -431,7 +469,7 @@ into the tables above.
 
 ---
 
-## 12 · The verdict
+## 13 · The verdict
 
 > **Can a normal manager lose work, duplicate an action, or get stranded by
 > ordinary iPhone/Safari/session failures?**
