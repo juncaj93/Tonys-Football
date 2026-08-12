@@ -221,7 +221,14 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
   {
     id: 'prediction',
     kind: 'display',
-    label: "Read Tony's prediction",
+    /*
+     * *"Read the chalkboard"* since 2026-08-12, when the weekly prediction
+     * became **Tony's Chalkboard**. The object id stays `prediction` — it is
+     * internal, and renaming it would move hit regions, tests and the navigation
+     * map for nothing — but a label is what a screen reader says out loud, and
+     * it has to be the name the product uses.
+     */
+    label: "Read the chalkboard",
     rect: [151, 184, 44, 59],
   },
 

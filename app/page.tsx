@@ -601,7 +601,16 @@ export default async function ParlorPage({
 
             <BannerRail banners={banners} />
 
-            <RoomDisplay spec={roomObject('prediction')} title="Tony's prediction">
+            {/*
+              * *"On the board"*, which names the **sign** rather than one of the
+              * things on it.
+              *
+              * It said *"Tony's prediction"*, and with the flag open the panel
+              * carries two items — Tony's Chalkboard and Tony's Line — so a title
+              * naming one of them was already wrong. It is also the Slice band's
+              * heading, which is the same two items printed on paper.
+              */}
+            <RoomDisplay spec={roomObject('prediction')} title="On the board">
               <BoardPanel board={board} />
             </RoomDisplay>
 
