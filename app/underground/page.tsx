@@ -1,11 +1,13 @@
 import { notFound } from 'next/navigation';
 
+import { BlackjackTable } from '@/components/casino/blackjack-table';
 import { SlotMachine } from '@/components/casino/slot-machine';
 import { RoomDisplay, RoomDoor } from '@/components/scene/room-object';
 import { RoomStage } from '@/components/scene/room-stage';
 import { UndergroundScene } from '@/components/scene/underground';
 import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
+import { blackjackRulesFor } from '@/lib/casino/blackjack-rules';
 import { casinoTableFor } from '@/lib/casino/table';
 import { recentSpins } from '@/lib/casino/slots';
 import { COVERED_LINES, UNDERGROUND, undergroundObject } from '@/lib/casino/objects';
@@ -62,6 +64,7 @@ export default async function UndergroundPage({
   const seat = season === null ? null : await wallet(db, { userId: user.id, seasonId: season.id });
 
   const { table } = await casinoTableFor(db);
+  const { rules } = await blackjackRulesFor(db);
   const history = await recentSpins(db, user.id, 5);
 
   return (
@@ -89,16 +92,17 @@ export default async function UndergroundPage({
             />
 
             {/*
-              * The table, drawn from the first day and shut until W2.
-              *
-              * `18 §6.1`: a locked destination is a closed door, never a hidden
-              * one. Hiding it would make the room look finished when it is not,
-              * and would make the day blackjack arrives read as a new room
-              * rather than as a dealer turning up.
+              * The table. Built in W2 and, like the machine, drawn whether or not
+              * it is dealing — `18 §6.1`: a locked destination is a closed door,
+              * never a hidden one.
               */}
-            <RoomDisplay spec={undergroundObject('blackjack')} title="The table" material="enamel">
-              <p className={`${TYPE.dialogue} text-paper-mid`}>{COVERED_LINES['blackjack']}</p>
-            </RoomDisplay>
+            <BlackjackTable
+              spec={undergroundObject('blackjack')}
+              wagers={rules.wagers}
+              balance={seat?.balance ?? 0}
+              live={flags.blackjackTable}
+              coveredLine={COVERED_LINES['blackjack'] ?? ''}
+            />
 
             {/*
               * The cash desk — a manager's own tab and their own last few pulls.

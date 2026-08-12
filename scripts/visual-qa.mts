@@ -313,6 +313,15 @@ type StateName =
    * the state that proves they read as covered rather than as missing.
    */
   | 'underground-covered'
+  /*
+   * The blackjack table, mid-hand.
+   *
+   * Photographed **with a hand actually dealt**, not with the panel open on an
+   * empty table: a screenshot of a form is not a test of the form, which is what
+   * `character-saved` was added to say. The driver presses Deal and captures what
+   * a player is looking at while they decide.
+   */
+  | 'underground-blackjack'
   | 'keyboard-focus'
   | 'six-banners'
   | 'tray-owned-box'
@@ -1439,6 +1448,35 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForTimeout(1200);
       return;
 
+    /*
+     * A hand in progress.
+     *
+     * The table is opened and **dealt**, so what is captured is cards, totals and
+     * two decisions rather than an empty felt. `deal` is the real server action
+     * against the real database — the demo seat wagers real (fictional) tokens
+     * and the hand is a genuine row, which is the point of a demo that proves the
+     * product works rather than that it renders.
+     */
+    case 'underground-blackjack': {
+      await page.goto(`${BASE}/underground?open=underground,blackjackTable`, {
+        waitUntil: 'networkidle',
+      });
+      await page.getByRole('button', { name: /blackjack table/i }).click({ force: true });
+      await page.waitForTimeout(400);
+      const deal = page.locator('[data-blackjack-deal]');
+      if ((await deal.count()) > 0) {
+        await deal.first().click({ force: true });
+        // The hand is a round trip: wait for cards rather than for a timer.
+        await page
+          .locator('[data-player-cards] [data-card]')
+          .first()
+          .waitFor({ timeout: 15_000 })
+          .catch(() => undefined);
+      }
+      await page.waitForTimeout(600);
+      return;
+    }
+
     case 'keyboard-focus':
       await home(page);
       await dismissTony(page);
@@ -2188,6 +2226,7 @@ const ALL_STATES: readonly StateName[] = [
   'back-hall-both-open',
   'underground',
   'underground-covered',
+  'underground-blackjack',
   'keyboard-focus',
   'six-banners',
   'tray-owned-box',

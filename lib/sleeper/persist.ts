@@ -30,6 +30,7 @@
  */
 import { and, desc, eq, inArray } from 'drizzle-orm';
 
+import { settleOpenHandsAtSeasonClose } from '@/lib/casino/blackjack';
 import { now } from '@/lib/clock';
 import { type Database, type Queryable } from '@/lib/db';
 import {
@@ -894,19 +895,44 @@ export async function persistChain(
  * status, which is the same authority `finalized_at` already carries.
  */
 export async function finalizeSeason(db: Database, year: number): Promise<boolean> {
-  const [season] = await db
-    .select({ id: seasons.id, finalizedAt: seasons.finalizedAt })
-    .from(seasons)
-    .where(eq(seasons.year, year));
+  /*
+   * ## One transaction, and the order inside it is load-bearing
+   *
+   * `apply_token_delta` refuses a finalized season. So an open blackjack hand
+   * that survived the close could **never** be settled: its payout would be
+   * unwritable forever, and `blackjack_hands_one_open_per_user` would jam that
+   * manager's seat permanently. There is no cleanup job to rescue it —
+   * `16 §4.3` allows two crons and this would be a third.
+   *
+   * The answer is ordering rather than machinery. Inside one transaction:
+   * settle every open hand **first**, then shut the books. A hand cannot be
+   * stranded because the books are still open while it settles, and a hand
+   * dealt concurrently cannot slip past because the settlement takes
+   * `FOR UPDATE` on every open row — a `HIT` racing the close either commits
+   * before it and gets swept, or blocks and finds the hand already settled.
+   *
+   * The commissioner's ruling is that abandonment is **not** refunded: the
+   * player is stood on whatever they were holding and the dealer runs normally.
+   * `lib/casino/blackjack.ts` carries the reasoning; this is where it happens.
+   */
+  return db.transaction(async (tx) => {
+    const [season] = await tx
+      .select({ id: seasons.id, finalizedAt: seasons.finalizedAt })
+      .from(seasons)
+      .where(eq(seasons.year, year))
+      .for('update');
 
-  if (season === undefined || season.finalizedAt !== null) return false;
+    if (season === undefined || season.finalizedAt !== null) return false;
 
-  await db
-    .update(seasons)
-    .set({ finalizedAt: now(), status: 'ARCHIVED', updatedAt: now() })
-    .where(eq(seasons.id, season.id));
+    await settleOpenHandsAtSeasonClose(tx, season.id);
 
-  return true;
+    await tx
+      .update(seasons)
+      .set({ finalizedAt: now(), status: 'ARCHIVED', updatedAt: now() })
+      .where(eq(seasons.id, season.id));
+
+    return true;
+  });
 }
 
 /**

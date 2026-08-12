@@ -80,6 +80,10 @@ export async function resetDatabase(db: Database): Promise<void> {
       -- first spin of the next test roll against a version the test did not
       -- store.
       slot_spins,
+      -- Blackjack. Actions before hands: an action holds a RESTRICT reference to
+      -- its hand, and both refuse DELETE by trigger.
+      blackjack_actions,
+      blackjack_hands,
       casino_tables,
       weekly_rewards,
       -- The Slice review chain, listed for the same reason: versions, reviews

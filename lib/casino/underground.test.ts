@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -231,5 +234,38 @@ describe('the token-leader award (R12)', () => {
   it('never counts a spend', () => {
     expect(countsAsEarned('BOX_PURCHASE')).toBe(false);
     expect(countsAsEarned('STAKE_PLACED')).toBe(false);
+  });
+});
+
+describe('the casino server actions guard themselves', () => {
+  /**
+   * A server action is a **public endpoint**.
+   *
+   * It is reachable by anybody who can guess its id, whether or not a page
+   * renders a button that calls it — so a shut machine that only hid its UI
+   * would still take wagers. Every exported action in both casino files must
+   * check `underground` **and** its own game's flag before it touches anything.
+   *
+   * Asserted by parsing the source rather than by calling the action, because
+   * calling it needs a session and a database and this needs to fail on a
+   * refactor, not on an environment.
+   */
+  it.each([
+    ['app/actions/casino.ts', 'slotMachine'],
+    ['app/actions/blackjack.ts', 'blackjackTable'],
+  ])('%s refuses when the flags are shut', (file, gameFlag) => {
+    const source = readFileSync(join(process.cwd(), file), 'utf8');
+
+    // Every exported action, by name.
+    const actions = [...source.matchAll(/export async function (\w+)/g)].map((m) => m[1]);
+    expect(actions.length).toBeGreaterThan(0);
+
+    // The guard, once per action. A file-level count is enough: the guard is a
+    // single expression and there is no other reason for it to appear.
+    const guards = [...source.matchAll(/!flags\.underground \|\| !flags\.\w+/g)];
+    expect(guards.length, `${file} guards ${String(guards.length)} of ${String(actions.length)} actions`).toBe(
+      actions.length,
+    );
+    expect(source).toContain(`!flags.${gameFlag}`);
   });
 });

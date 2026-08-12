@@ -22,6 +22,7 @@ import { eq } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
+import { SHIPPED_RULES, ensureBlackjackRules } from '@/lib/casino/blackjack-rules';
 import {
   SHIPPED_TABLE,
   ensureCasinoTable,
@@ -222,6 +223,18 @@ async function main(): Promise<void> {
     console.log(
       `Casino   slots table ${casino.version} · RTP ${(shippedReturnRate() * 100).toFixed(2)}% · ` +
         `buttons ${SHIPPED_TABLE.wagers.join('/')} · PROVISIONAL — the Underground is shut`,
+    );
+
+    //
+    // The blackjack rules, versioned the same way and refusing the same way: an
+    // odd wager cannot pay 3:2 in whole tokens, so `ensureBlackjackRules` will
+    // not store a ladder that contains one.
+    //
+    const blackjack = await ensureBlackjackRules(db);
+    console.log(
+      `Casino   blackjack rules ${blackjack.version} · wagers ${SHIPPED_RULES.wagers.join('/')} · ` +
+        `natural ${String(SHIPPED_RULES.naturalNumerator)}:${String(SHIPPED_RULES.naturalDenominator)} · ` +
+        `dealer stands on ${String(SHIPPED_RULES.dealerStandsOn)} · PROVISIONAL — the table is shut`,
     );
 
     if (table.entries.length !== CATALOG_SIZE) {

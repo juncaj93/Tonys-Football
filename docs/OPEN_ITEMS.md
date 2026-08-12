@@ -818,10 +818,19 @@ a blanket re-opening.
 ### G1 · The Underground — **RESOLVED by commissioner ruling, 2026-08-11**
 
 > **Decision: the Underground opens with blackjack and slots**, staked in
-> fictional Tony Tokens. **Execution: not authorized.** The two halves are
-> separate exactly as **G2**'s are — this entry stays in **G** because *resolved*
-> is not *build it*, and the Underground is deliberately **CLOSED** with
-> `underground: false` untouched.
+> fictional Tony Tokens. **Both games are now BUILT** — W1 slots (2026-08-11) and
+> W2 blackjack (2026-08-12), verified against a real Postgres and photographed at
+> all three widths.
+>
+> **The Underground is still CLOSED**, and that is the point. `underground`,
+> `slotMachine` and `blackjackTable` are all `false`; R11 keeps them there until
+> the commissioner announces the opening, which `18 §6` says can only be spent
+> once. This entry stays in **G** because *built* is not *open*, exactly as
+> **G2**'s *approved* is not *do it now*.
+>
+> **What is left before the curtain**: **W3** the casino economy release gate ·
+> **W4** the room artwork · a production smoke test · and the commissioner's
+> decision to open. A session may do W3 and W4; **no session may flip the flag.**
 >
 > **The contradiction below is settled and must not be re-raised.** `03 §14`,
 > `04 §11`, `09 §12` and `16 §13` P10 win; the 2026-08-09 reopening brief's

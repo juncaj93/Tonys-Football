@@ -502,6 +502,95 @@ the Underground must not open until it has.
 
 ---
 
+## 13. W2 — the blackjack table
+
+**Commissioner rulings of 2026-08-12.** Built, verified, and **still behind the
+curtain**: `underground: false`, `slotMachine: false`, `blackjackTable: false`.
+
+### 13.1 The rules, exactly as implemented
+
+Deal · **hit** · **stand** · natural · bust · dealer draw · push · settlement.
+**No** double, split, surrender or insurance — and no placeholders for them.
+Dealer **stands on all 17**, hard or soft. One freshly shuffled 52-card deck per
+hand, stored as a permutation on the row. Wagers **20 / 40 / 80**. A natural pays
+**3:2** (50 / 100 / 200 returned). A push is a wager debit and a wager return.
+
+### 13.2 A hand is durable server state
+
+The row *is* the game. There is no session, no cache and no temporary state
+beside it, which is what makes refresh, a second tab, a killed browser and a
+second device all correct for free — they each ask the server what the hand is.
+
+**`blackjack_hands_one_open_per_user`**, a partial unique index, is the
+one-open-hand rule. A service check would be a race: two deals would both read
+*"no open hand"* and both write one.
+
+### 13.3 Four defences, each answering a different failure
+
+| # | Mechanism | Catches |
+|---|---|---|
+| 1 | Partial unique index on `(user_id) WHERE status = 'OPEN'` | Two deals racing |
+| 2 | `SELECT … FOR UPDATE` on the hand | Two actions interleaving mid-transition |
+| 3 | `revision`, monotonic and **trigger-enforced** | The stale tab |
+| 4 | `blackjack_actions.action_key UNIQUE` | A retry after a lost response |
+
+**The order of 4 and 3 is the whole design.** A committed action whose response
+was lost is retried with a revision that is now stale by exactly one. If the
+revision were checked first, every lost response would surface as *"somebody else
+moved"* instead of resolving to the committed result. So the action key is
+checked **first**, and a stale revision is only a stale revision when the action
+is genuinely new.
+
+A stale action is **refused and answered with the real hand**, so the tab shows
+what actually happened rather than silently applying a decision to a state the
+player never saw.
+
+### 13.4 Abandonment is stood, not refunded
+
+**The correction the commissioner made to the proposed design.** A refund would
+be a free option: deal, look at sixteen, walk away, get the wager back. Instead
+season close stands the player on whatever they hold and runs the dealer
+normally — deterministic, and it gives them exactly the hand they had.
+
+**The ordering is the safety property.** `apply_token_delta` refuses a finalized
+season, so a hand settled *after* the close could never be paid, and the
+one-open-hand index would then jam that seat permanently. There is no cleanup
+job to rescue it — `16 §4.3` allows two crons and this would be a third. So
+`finalizeSeason` became one transaction that settles every open hand **first**
+and shuts the books second. A `HIT` racing the close either commits before it and
+gets swept, or blocks on the same row lock and finds the hand already settled.
+
+Neither a bust nor a natural can be waiting there: both settle the moment they
+happen.
+
+### 13.5 What the database refuses
+
+Two open hands · a hand without its wager (`wager_tx_id NOT NULL`) · a payout
+without a ledger row (`blackjack_hands_payout_is_paid`) · a second settlement or
+any change to a settled hand (trigger) · a revision that skips or repeats
+(trigger) · a rewritten deck or wager (trigger) · a deck position that disagrees
+with the cards (CHECK) · a duplicate action key or two actions at one revision
+(UNIQUE) · a negative balance (the existing CHECK) · a deleted hand or action
+(triggers).
+
+### 13.6 The bridge to the measured edge
+
+`cards.ts` deals 0–51 so a player can see a queen; `blackjack-model.ts` works in
+collapsed rank indices because that is what the exact solve and the
+20-million-hand measurement ran on. **`modelRank` is the single function joining
+them**, and every total, soft-ace demotion and natural in the shipped game is
+computed by the *same code the 2.03% was measured from*. Cut that bridge and the
+approved edge stops being a statement about this game;
+`blackjack-unit.test.ts` asserts the mapping over all fifty-two.
+
+### 13.7 The hole card never leaves the server
+
+`HandView` returns the up-card only while a hand is open, and never the undealt
+deck. A view that leaked either would let a player read the future off a network
+tab, and no amount of UI would fix it.
+
+---
+
 ## 10. What this slice deliberately did not do
 
 No migration · no route · no server action · no component · no feature-flag
