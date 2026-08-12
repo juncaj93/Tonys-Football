@@ -419,6 +419,16 @@ prototype as it stands would make five tops look worse by comparison — so *whe
 land it is a judgement call the commissioner has to make. Only the commissioner can
 close this.
 
+**Paused 2026-08-12, and everything is on an unmerged branch.**
+`claude/manager-visual-redesign-investigation-eshqcb` @ `5125264`, pushed, clean,
+**no PR has ever been opened and nothing is on `main`**. It merges cleanly against
+`main` as of `1692a14` (verified with `git merge-tree`, no conflicts).
+**`docs/MANAGER_BUILD_PROTOTYPE.md §13` is the closeout** — what is on the branch,
+what the commissioner ruled, what was measured, what is rejected, and the one
+question that has to be answered before any more code: *land the prototype now, or
+hold it until more assets are painted?* `docs/evidence/manager-head-prototype/six-tops.png`
+is the picture that question turns on.
+
 The four things this entry has always said stay true remain true: the canvas must
 not regress, colour stays a runtime parameter, the six traits and their stored
 integers do not move, and `docs/CHARACTER_CUSTOMISATION_BOUNDARY.md` stays

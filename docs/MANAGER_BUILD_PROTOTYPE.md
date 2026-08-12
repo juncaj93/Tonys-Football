@@ -1,8 +1,8 @@
 # The painted manager build — prototype phase
 
-**Status: infrastructure built and revised once against a real delivery,
-2026-08-11. No artwork exists, and nothing a manager sees has changed by a single
-pixel.**
+**Status, 2026-08-12: two of seventeen assets painted and registered, all three
+plate contracts complete, nothing merged.** The workstream is paused here — see
+**§13** for the closeout, the branch, and what a fresh session should do first.
 
 > **Revision 2.** Round 1 came back as excellent art in a file the pipeline
 > refused. Three of the five refusals were **ours**, and §9 is the account of what
@@ -36,9 +36,18 @@ instructions for what happens when the art comes back.
 
 ## 1. Nothing changes until a mask is registered, and that is the whole safety story
 
-`lib/character/art/masks/index.ts` exports an **empty** `BUILD_MASKS`. Every top
-resolves to the drawn sprite, `composeCharacter` returns the same layers it
-always did, and the rendered output is unchanged pixel for pixel.
+> **Written when the map was empty, and it stayed true when it stopped being.**
+> `lib/character/art/masks/index.ts` now registers two masks — the T-shirt build
+> and the head plate — and the map is called `PAINTED_MASKS`. Everything below
+> still holds **per top**: the five unpainted tops resolve to the drawn sprite and
+> render pixel for pixel as they always did, no database or trait moved, and
+> reverting either registration is deleting one line. `build.test.ts` asserts the
+> unpainted path explicitly, precisely so this paragraph cannot quietly stop being
+> true.
+
+`lib/character/art/masks/index.ts` originally exported an **empty** map. Every top
+resolved to the drawn sprite, `composeCharacter` returned the same layers it
+always did, and the rendered output was unchanged pixel for pixel.
 
 That is what makes landing the infrastructure ahead of the art a safe thing to do
 rather than a leap of faith:
@@ -586,3 +595,187 @@ One rule was tightened during the work rather than loosened: the facial-hair mou
 check was a band of rows, which a pair of sideburns at the temples satisfies. It is
 a box now — the moustache's own sixteen columns — and the case that exposed it is
 in the suite.
+
+---
+
+## 13. Session closeout, 2026-08-12 — **read this first if you are arriving cold**
+
+The commissioner paused the project here and the originating conversation was
+archived. **Nothing in that chat is needed to resume.** This section is the
+handoff; §§0–12 above are the reasoning behind it.
+
+### 13.1 Where the code is
+
+| | |
+|---|---|
+| **Branch** | `claude/manager-visual-redesign-investigation-eshqcb` |
+| **HEAD** | `5125264` — *Build the hair and facial-hair plate contract* |
+| **Pushed** | yes, `origin` matches `HEAD` |
+| **Working tree** | clean |
+| **Pull request** | **none has ever been opened** |
+| **Merged** | **nothing.** Not one line of this workstream is on `main` |
+| **`main` at closeout** | `1692a14` — the Back Hall art workstream (#101, #102), a *different* workstream that merged while this one was open |
+| **Merges cleanly?** | **yes.** Verified with `git merge-tree --write-tree HEAD origin/main`: no conflicts, and the merged `art/assets.inventory.json` keeps both `totalSlugs: 116` and the Back Hall's `art_status: generated` |
+
+Three files are touched by both branches — `art/assets.inventory.json`,
+`docs/OPEN_ITEMS.md`, `docs/VISUAL_DEBT.md` — in disjoint regions. **Do not rebase
+this branch for tidiness**; it is 16 commits of reasoning and the merge is clean
+as it stands.
+
+### 13.2 What is actually on the branch, in five buckets
+
+**Merged / shipped to `main`: nothing.**
+
+**Implemented and working, but unmerged** — all of it on `5125264`:
+
+- the **role-mask contract** (`lib/character/mask.ts`): 23 keys, three plates
+  (`build` · `head` · `hair`), per-plate candidate restriction, four validators,
+  `extractHairChannel`;
+- **two painted assets registered** — `avatar_body_starter_04` (the T-shirt build)
+  and `avatar_body_head` (the head plate). A manager on the T-shirt is painted from
+  crown to soles, in 4 skin tones × 8 shirt colours, **from two files**;
+- the **narrowed enclosure guard** (`lib/character/enclosure.ts`) — painted builds
+  may enclose a *space*, not a *seam*, with regression cover both ways;
+- **tooling**: `npm run art:jig` (eight plates in `art/jigs/`), `npm run art:mask`
+  (validate → encode → preview, plate chosen by slug);
+- **briefs**: `docs/art/MANAGER_{BUILD_TSHIRT,HEAD,HAIR}_BRIEF.md`;
+- **evidence**: `docs/evidence/manager-{sprite-quality,build-prototype,head-prototype}/`.
+
+**Approved by the commissioner but not implemented** — preserve these, do not
+re-litigate:
+
+- **R1–R6** (§0). In particular **R4**: an `avatar` palette extension is approved
+  *in principle* and the commissioner said **do not choose or add it yet**. Three
+  keys carry `pending: true` and `art/palette.json` is untouched.
+- The **remaining fifteen assets** — five builds, six hairstyles, four facial-hair
+  pieces — are approved in architecture and **not commissioned**. No hair or
+  facial-hair art has ever been requested, generated or registered.
+
+**Investigated, recommended, and never ruled on** — genuinely open:
+
+- **When to merge.** `docs/evidence/manager-head-prototype/six-tops.png` is the
+  picture: one painted top beside five drawn ones. A manager on a drawn top is
+  untouched, but a league where one manager is painted and nine are not reads worse
+  than one where nobody is. The recommendation was **do not merge until at least
+  the hoodie build and one or two hair layers are painted.** The commissioner never
+  answered.
+- **Palette drift has been 19–25 on all four deliveries.** Every one survived on
+  tone *ordering* rather than on being painted in the keys — which is luck, not a
+  property. Nobody has decided whether to push back on it.
+
+**Rejected or superseded — do not resurrect:**
+
+- **A full-colour PNG per layer.** Priced at 132 files in `ROOMS_BOUNDARY §14.1`
+  and it silently deletes seven of eight hair colours. The role mask exists
+  because of this.
+- **Redesigning the customiser.** `docs/CHARACTER_CUSTOMISATION_BOUNDARY.md` is
+  **CLOSED**: six traits, the same indices, slugs, catalog and defaults, 11,520
+  combinations. This workstream changed none of them.
+- **A coarser canvas.** `112 × 168` is `roomObject('manager').rect` exactly, and
+  regressing it is the defect visual debt 17 was filed for.
+- **The commissioner's ten-head reference sheet as an asset.**
+  `art/incoming/4214B2A5-E9-…png` — see §13.4. It is a *visual target* and cannot
+  be ingested. Do not attempt to decompose it.
+- **Fitting a hair delivery by its skull** (§12.4) and **discarding the delivered
+  outline** (§12.4). Both were implemented, measured, and are wrong.
+
+### 13.3 The measurements worth not rediscovering
+
+- The manager's flatness is **architectural, not artistic**: one body serving six
+  garments cannot pose, overlap or be asymmetric at any resolution. Measured gap to
+  Tony: 14 colours against 40, 27% interior detail against 71%, 2.5–2.8 head-widths
+  across the shoulders against 2.05.
+- **`skin-2` and `wood-pale` are 45 apart** — closer than a delivery's own drift.
+  This put 25% of one head onto boot keys. It is why the snap is plate-restricted
+  and why the hair keys are green.
+- **Erosion cost of throwing away a delivered outline: 269 pixels on one
+  hairstyle** (974 → 705).
+- **Skull-fitting a hair delivery rescales it 0.66×** because hair changes the
+  silhouette the jaw-finder measures.
+- The drawn hairstyles span rows **11–77**, the beards rows **39–56**, and all ten
+  clear both eye rectangles **exactly**. Every registration bound is one of those,
+  widened.
+- **A generative image session cannot deliver layers.** Four rounds established it:
+  it returns one flat opaque composite, redraws anything you ask it to preserve,
+  and places objects unreliably. Every contract here is shaped around that.
+
+### 13.4 The reference sheet the commissioner supplied
+
+`art/incoming/4214B2A5-42E9-41D0-90D9-70FB48FAE8D2.png` — ten finished heads, six
+hairstyles and four beards. It is the **best statement of the visual target** for
+those ten layers and it **cannot be ingested**, measured rather than assumed:
+
+- `1536 × 1024`, three channels, **no alpha**, zero transparent pixels — the shirt
+  and background are baked in;
+- **72,199 distinct colours**, no role encoding, so it can produce exactly one
+  manager out of 11,520;
+- it is **ten independently drawn heads, not one head under ten layers**. Diffing
+  the upper skull of the two bald panels — same skull, differing only in stubble —
+  gives **39.4% of pixels differing, max channel delta 555 of 765.**
+
+Keep it as the reference. `docs/art/MANAGER_HAIR_BRIEF.md §5` points at it.
+
+### 13.5 RESUME HERE
+
+1. Read this section, then `docs/MANAGER_SPRITE_QUALITY_INVESTIGATION.md` for the
+   *why* and §§0–12 above for the *how*.
+2. `git checkout claude/manager-visual-redesign-investigation-eshqcb`
+   (`HEAD` should be `5125264`).
+3. Look at `docs/evidence/manager-head-prototype/six-tops.png` and
+   `room-closeup.png`. They are the merge decision.
+4. **Ask the commissioner the one open question before writing any code:** land the
+   prototype now, or hold it until more assets are painted? Nothing else is blocked
+   on engineering.
+5. If more art is authorised, the next asset is **`avatar_hair_01` (Short)**, one
+   layer, through `docs/art/MANAGER_HAIR_BRIEF.md`. Then
+   `npm run art:mask -- <file> avatar_hair_01`, register the one line, regenerate
+   the evidence, and look at it in the basement before asking for a second.
+
+**Do not** open a PR, merge, or start the remaining fifteen assets without an
+explicit commissioner instruction. `docs/ACTIVE_WORK.md` carries this branch's
+claim; release it if you take the area over.
+
+### 13.6 What this workstream never touched
+
+No migration, no schema change, no feature flag, no route, no economy value, no
+Slice, no rehearsal, no room geometry, no Tony, no `art/palette.json`, no
+wearable, and nothing in `docs/ACTIVATION.md`. **The five human activation steps
+are exactly where they were.** No visual-QA assertion was weakened, replaced or
+deleted anywhere in the sixteen commits.
+
+### 13.7 Validation status at `5125264` — stated exactly
+
+**Run and green:**
+
+| Gate | Result |
+|---|---|
+| `tsc --noEmit` (whole project) | clean |
+| `eslint` on every changed file | clean |
+| `lib/character/mask.test.ts` | 25 passed |
+| `lib/character/hair.test.ts` | 40 passed |
+| `lib/character/build.test.ts` | 11 passed |
+| `lib/character/head.test.ts` | 13 passed |
+| `lib/character/enclosure.test.ts` | 15 passed |
+| `lib/character/shading.test.ts` | 27 passed |
+| `lib/character/character.test.ts` | 64 passed, 19 skipped |
+| `scripts/manager-mask.test.ts` | 14 passed |
+| `scripts/manager-jig.test.ts` | 17 passed |
+| `scripts/process-art.test.ts` | 30 passed |
+| plus `separation`, `driver-coverage`, `economy/simulate`, `slice/preseason-coverage`, `auth/pin`, `sleeper/{reconcile,chain}`, `design/typography` | passed |
+
+**Not run, and why — do not read these as passing:**
+
+- **`npm run test` in full does not terminate in this container.** `DATABASE_URL`
+  is unset, so the database-backed suites hang on a connection rather than failing.
+  A partial run reached **12 files / 324 tests, 0 failures**, then stopped
+  progressing. This is a **pre-existing environment limitation** — the same
+  behaviour was observed on a clean tree before any of this work — and it is *not*
+  evidence about this branch. A machine with a database must run it before merge.
+- **`npm run build`** — not run at this HEAD.
+- **`npm run visual:qa`** — not run at this HEAD. It needs a production build and a
+  database. **No visual state was added and no assertion was weakened**, but that is
+  an argument, not a measurement.
+
+**Merge blockers, therefore:** run `npm run check` and `npm run visual:qa` in full,
+locally, on a production build against a fresh database — and get the commissioner's
+answer to §13.5 step 4 first, because it may change what merges.

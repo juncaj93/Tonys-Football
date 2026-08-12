@@ -6,6 +6,7 @@ files.
 
 | File | What it shows |
 |---|---|
+| `six-tops.png` | **the state a merge would actually ship** — one manager, six tops, same colours. Third from the left is the painted T-shirt; the other five are the drawn figures, unchanged |
 | `complete-managers.png` | four complete managers — painted head, painted body, drawn hair and beards |
 | `head-vs-layers.png` | the painted head under **all six hairstyles and all four beards**, which is the evidence the eye tolerance was widened on |
 | `room-390/375/360.png` | the storeroom at each phone width |
@@ -43,6 +44,15 @@ Two limits were also widened, both on evidence rather than for convenience:
 - **an outline budget of 8**, for the same mechanical reason the build has a seam
   budget: the majority vote drops the outline on a pixel or two where the crown is
   flattest. Round 1 left 24, round 2 left 6.
+
+## What `six-tops.png` is for
+
+It is the picture the merge decision turns on, and it is not flattering. A manager
+on a drawn top is untouched — that is the property the whole per-top switch exists
+for — but a league where one manager is painted and nine are not reads **worse**
+than one where nobody is. That is a product judgement rather than an engineering
+one, and it is why the prototype sat unmerged rather than being landed as soon as
+it passed.
 
 ## What is still open
 
