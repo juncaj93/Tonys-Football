@@ -871,6 +871,38 @@ more**.
 
 Neither session changed the number.
 
+**A third independent measurement, 2026-08-12, and it is the strongest of the
+three** — because this time the branch was swept **twice**, so the same build
+appears on both sides of the ceiling.
+
+| Sweep | Commit | Sightings | Where |
+|---|---|---|---|
+| performance branch | `7ff0387` | **3** — over the ceiling, **failed** | `/profile@390` · `/door@375` · `/admin@375` |
+| **clean `main`** | `1692a14` | **1** — passed | `/door@375` |
+| **performance branch, again** | `7ff0387` | **2** — exactly on the ceiling, passed | `/admin/slice/<id>@375` · `/admin@360` |
+
+Two facts fall out of it that the earlier runs could not supply:
+
+- **The same commit failed and then passed**, 3 then 2, on the same runner
+  against a freshly seeded database each time. Whatever the gate measured on the
+  first run, it was not a property of the code.
+- **`main` reproduced the defect at `/door@375` during `profile` — the identical
+  route, state and width as one of the branch's three.** A location the branch
+  does not touch, on a build that does not contain it.
+
+Six sightings across the three sweeps, on **six different route/state/width
+combinations, none repeated**, which is the same signature again. All six are on
+`/profile`, `/door`, `/admin` or `/admin/slice` — none is on a route the
+performance branch changed.
+
+**Nothing was changed in response, again.** The sweep now holds **375 captures**,
+which is where this entry's own arithmetic points: at the documented
+one-per-two-hundred rate a 375-capture sweep expects ~1.9 sightings and clears a
+ceiling of 2 by chance alone a substantial fraction of the time. **The ceiling
+and the rate still want re-deriving together**, by a session that takes that as
+its work. Three sessions have now declined to move it, which is the entry
+working as intended.
+
 ### F2 · Visual debt 1, 2 and 14
 
 The collection's empty-state scroll rhythm; the reveal plate's caption

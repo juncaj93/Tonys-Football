@@ -357,7 +357,45 @@ behind it.
 
 ---
 
-## 9. One honest caveat about the local sweep
+## 9. The gates, and the one that failed first
+
+**`npm run check` — green**, exit 0: preflight, typecheck, lint, the full suite
+against a real Postgres, production build.
+
+**`npm run visual:qa` — green**, 125 states × 3 widths, 375 captures, every
+deterministic gate passing — including `/counter/showcase`, which this branch
+stopped being a 500.
+
+It did **not** pass first time, and the way that was resolved is worth recording
+because the answer was measurement rather than a ceiling change.
+
+| Sweep | Commit | Sightings of React `#418` | |
+|---|---|---|---|
+| this branch | `7ff0387` | **3** | **failed** — over the quarantine ceiling of 2 |
+| **clean `main`** | `1692a14` | **1** | passed |
+| **this branch, again** | `7ff0387` | **2** | passed |
+
+The middle row is the control `docs/OPEN_ITEMS.md` **F1** asks for, and it
+reproduced the defect at **`/door@375` during `profile` — the same route, state
+and width as one of the branch's three**, on a build that does not contain the
+branch. The third row is the same commit as the first, passing.
+
+Six sightings, **six different route/state/width combinations, none repeated**,
+every one of them on `/profile`, `/door`, `/admin` or `/admin/slice` — **not one
+on a route this branch changed**. That is the signature
+`scripts/visual-qa-quarantine.ts` describes, and the opposite of a newly
+introduced mismatch, which is deterministic and fires on the same state at all
+three widths.
+
+**The ceiling was not touched.** F1 is explicit that moving it to unblock a
+branch is the move its own header argues against, and that the ceiling and the
+per-capture rate want re-deriving *together* by a session that takes that on
+deliberately. The three measurements are added to F1 as evidence and nothing
+else.
+
+---
+
+## 10. One honest caveat about the local sweep
 
 `npm run visual:qa` was run locally against the production build and a freshly
 seeded `tonys_visual`, exactly as `visual-qa.yml` does — **except for the browser
@@ -374,7 +412,7 @@ sweep.
 
 ---
 
-## 10. What did not move
+## 11. What did not move
 
 No art, asset, palette or registry row. No economy value, price, rarity, catalog
 size or token rule. No schema, migration, trigger or index. No cron. No feature
