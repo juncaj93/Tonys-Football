@@ -745,6 +745,10 @@ deleted anywhere in the sixteen commits.
 
 ### 13.7 Validation status at `5125264` — stated exactly
 
+*(`HEAD` is `3b6c5d3`, which is this closeout: documentation and one evidence
+render, no code. `5125264` is the last commit that changed anything executable,
+so it is the commit these results belong to.)*
+
 **Run and green:**
 
 | Gate | Result |
