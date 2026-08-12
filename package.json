@@ -28,6 +28,7 @@
     "demo": "tsx scripts/demo.ts",
     "rehearse": "tsx scripts/rehearse.ts",
     "simulate": "tsx scripts/simulate.ts",
+    "line-lab": "tsx scripts/line-lab.ts",
     "simulate:shots": "tsx scripts/simulate-shots.mts",
     "sleeper:record": "tsx scripts/record-fixtures.ts",
     "sleeper:check": "tsx scripts/record-fixtures.ts -- --check",
