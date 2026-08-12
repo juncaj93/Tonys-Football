@@ -30,6 +30,11 @@ import { featureFlags } from '@/lib/flags';
  * viewport, transparent hit regions over it in room units, nothing scrolling,
  * and the way out is a door in the wall.
  *
+ * **And since 2026-08-11 the scene is a painting** — `zone_back_hall_shell`,
+ * processed unmodified through `art:process`, replacing the drawn stand-in that
+ * held this route for a milestone. The three hit rectangles were re-measured off
+ * the delivered file; nothing else about this page moved.
+ *
  * ## Why this room exists at all
  *
  * Rooms and the Underground are **two taps** from the parlor, the one approved
