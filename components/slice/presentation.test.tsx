@@ -60,53 +60,69 @@ const SCORE = {
 
 /* -------------------------------------------------------------------- board */
 
-describe('the board', () => {
-  it('prints the exact strings the packet supplied, and no others', () => {
+describe('the board is not printed', () => {
+  /*
+   * **Commissioner ruling, 2026-08-11: the paper stops printing the scoreboard.**
+   * `08 §1` — not *"a box-score summary"*; `08 §29` — *"no fixed section is
+   * forced."*
+   *
+   * These assertions replace four that tested how the board rendered, and the
+   * replacement is deliberate rather than a deletion. Two of the four could not
+   * survive a section that no longer exists. The other two would have gone on
+   * **passing vacuously**: the fixture's own deck and body carry `154.42`, so
+   * `expect(markup).toContain('154.42')` stayed green with the board gone and
+   * tested nothing at all. That is the false-green shape this repository has
+   * paid for twice, and it is why the numbers below appear nowhere else in the
+   * fixture.
+   *
+   * The tie guarantee those tests protected has moved rather than gone —
+   * `lib/slice/slice.test.ts` pins it on `renderEdition`, which is where the
+   * data is made and where it still matters for whoever prints a board next.
+   */
+  const UNIQUE = {
+    key: 'g-unique',
+    leftName: 'Zebediah',
+    leftPoints: '199.91',
+    rightName: 'Quintus',
+    rightPoints: '101.19',
+    leftWon: true,
+    tie: false,
+  } as const;
+
+  it('prints no score from the scoreboard, and no name only the scoreboard knows', () => {
     const markup = renderToStaticMarkup(
-      <Newspaper issue={edition({ scoreboard: [SCORE] })} />,
+      <Newspaper issue={edition({ scoreboard: [UNIQUE] })} />,
     );
 
-    expect(markup).toContain('154.42');
-    expect(markup).toContain('118.06');
-    // The component neither rounds nor recomputes: a rounded score is a derived
-    // fantasy fact, which is exactly what `MANDATE §9` forbids the interface.
-    expect(markup).not.toContain('154.4<');
-    expect(markup).not.toContain('>154<');
-    // And it does not invent a margin. 154.42 - 118.06 = 36.36.
-    expect(markup).not.toContain('36.36');
+    expect(markup).not.toContain('199.91');
+    expect(markup).not.toContain('101.19');
+    expect(markup).not.toContain('Zebediah');
+    expect(markup).not.toContain('Quintus');
+    expect(markup).not.toContain('The board');
   });
 
-  it('never says one side won a drawn game', () => {
+  it('renders the same paper whether or not a scoreboard was supplied', () => {
     /*
-     * The defect this pins. `leftWon` is false on a tie, and the board's only
-     * separator was the literal word `over` — so a drawn game printed
-     * *"Cheese over Nathan"*, a claim about a result that did not happen, on the
-     * surface the league reads as true. `RenderedScore` has carried `tie` since
-     * it was written and nothing read it.
+     * The strongest form of *"it is not printed"*: the markup is byte-identical
+     * with a full board and with none. A stray separator, heading or empty rule
+     * left behind by the removal fails here and nowhere else.
      */
-    const drawn = { ...SCORE, leftWon: false, tie: true, rightPoints: '154.42' };
-    const markup = renderToStaticMarkup(<Newspaper issue={edition({ scoreboard: [drawn] })} />);
+    const withBoard = renderToStaticMarkup(
+      <Newspaper issue={edition({ scoreboard: [UNIQUE, SCORE] })} />,
+    );
+    const without = renderToStaticMarkup(<Newspaper issue={edition({ scoreboard: [] })} />);
 
-    expect(markup).toContain('ties');
-    expect(markup).not.toContain('over');
+    expect(withBoard).toBe(without);
   });
 
-  it('still says over when somebody won', () => {
-    const markup = renderToStaticMarkup(<Newspaper issue={edition({ scoreboard: [SCORE] })} />);
-    expect(markup).toContain('over');
-    expect(markup).not.toContain('ties');
-  });
-
-  it('does not synthesise a bold weight on the body face', () => {
+  it('still carries the scoreboard in the edition, because the record is not the page', () => {
     /*
-     * VT323 ships at 400 only. `font-bold` on a name has the browser fake the
-     * weight, which smears a pixel face — the blurry type the art direction is
-     * written against. The winner is carried by the word between the names and
-     * by the display face's real 700 on the score.
+     * `Edition.scoreboard` is untouched by the ruling — it stays in the packet,
+     * in the published snapshot and in `editionHash`, so no version's hash
+     * moved. This asserts the distinction the ruling rests on: the paper stopped
+     * *printing* the week's results, not *knowing* them.
      */
-    const markup = renderToStaticMarkup(<Newspaper issue={edition({ scoreboard: [SCORE] })} />);
-    const nameSpan = /<span class="[^"]*font-sans[^"]*font-(bold|semibold|medium)/.exec(markup);
-    expect(nameSpan, 'a name must not be set in a weight the body face does not ship').toBeNull();
+    expect(edition({ scoreboard: [UNIQUE] }).scoreboard).toEqual([UNIQUE]);
   });
 });
 

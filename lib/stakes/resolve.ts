@@ -1,5 +1,6 @@
 import { EVIDENCE, EXPECTED_VERB, RESULT_WORD, fill } from './copy';
 import { writePoints, type WeekResult } from './facts';
+import { propositionFor } from './propositions';
 import {
   VARIANTS,
   type EntryOutcome,
@@ -123,38 +124,98 @@ export function resolveStake(input: {
       return resolveSubjectResult(input.factRefs, week, 'wins');
     case VARIANTS.bottomClubLoses:
       return resolveSubjectResult(input.factRefs, week, 'loses');
+    case VARIANTS.anybodyBreaks:
+    case VARIANTS.photoFinish:
+    case VARIANTS.halfOver:
+    case VARIANTS.aHiding:
+      return resolveProposition(input.variant, input.factRefs, week);
   }
 }
 
 /**
- * Tony's Line.
+ * Tony's Line — one manager, one number.
  *
- * The stake-level outcome is `settled` — the reference number was published and
- * every entry pays from it. `push` is reserved for the case where **every**
- * publishable team landed exactly on the line, the only situation in which the
- * market as a whole had nothing to say. A single manager landing on the number is
- * that manager's push, decided per entry by {@link settleEntry}.
+ * Personal since 2026-08-12, and the resolver moved with it. The stake-level
+ * outcome is about **the manager whose line it is**, because that is who it was
+ * offered to; every other score in the week is a fact about somebody else's
+ * market.
+ *
+ * `push` when the subject landed exactly on the number, and when the subject had
+ * no publishable game. Both are situations in which no side could have been
+ * right, and {@link settleEntry} independently returns the stake in each — this
+ * is the same judgement recorded at the stake level so the board can say it.
  */
 function resolveLine(factRefs: FactRefs, week: WeekResult): ResolveResult {
   const line = cents(factRefs.values['line']);
-  if (line === null) return refuse('incomplete-facts');
+  const rosterId = Number.parseInt(factRefs.values['rosterId'] ?? '', 10);
+  const subject = factRefs.values['subject'];
+  if (line === null || !Number.isInteger(rosterId) || subject === undefined) {
+    return refuse('incomplete-facts');
+  }
 
-  const over = week.teams.filter((team) => team.pointsCents > line).length;
-  const under = week.teams.filter((team) => team.pointsCents < line).length;
+  const team = week.teams.find((candidate) => candidate.rosterId === rosterId);
+
+  if (team === undefined) {
+    /*
+     * Settled as a push rather than refused.
+     *
+     * `resolveSubjectResult` refuses `subject-did-not-play` and leaves its stake
+     * open, which is right for a prediction nobody paid for. A market is
+     * different: a manager has already spent the stake, and leaving the row open
+     * holds their tokens against a week that will never produce an answer.
+     */
+    const built = evidence('line-no-game', { subject }, week.gameKeys);
+    if (built === null) return refuse('incomplete-facts');
+    return { settled: true, outcome: 'push', evidence: built };
+  }
 
   const built = evidence(
     'line-settled',
     {
+      subject,
+      scored: writePoints(team.pointsCents),
       line: writePoints(line),
-      over: String(over),
-      under: String(under),
       week: String(week.week),
     },
     week.gameKeys,
   );
   if (built === null) return refuse('incomplete-facts');
 
-  return { settled: true, outcome: over === 0 && under === 0 ? 'push' : 'settled', evidence: built };
+  return {
+    settled: true,
+    outcome: team.pointsCents === line ? 'push' : 'settled',
+    evidence: built,
+  };
+}
+
+/**
+ * One chalkboard proposition, against the week it was written about.
+ *
+ * Nothing here knows which family it is holding. The number and the rule were
+ * chosen together in `propositions.ts` and frozen into the stake's terms; this
+ * reads them back, asks that family whether it happened, and turns the answer
+ * into the `hit` / `missed` the database already allows a chalkboard.
+ *
+ * **`hit` means Tony was right**, which is the same thing as the proposition
+ * being true, because he backs the affirmative every time. That equivalence is
+ * what lets his season record be counted straight off `stake_resolutions`
+ * without a second store.
+ */
+function resolveProposition(
+  variant: Variant,
+  factRefs: FactRefs,
+  week: WeekResult,
+): ResolveResult {
+  const proposition = propositionFor(variant);
+  if (proposition === null) return refuse('incomplete-facts');
+
+  const settlement = proposition.settle(factRefs.values, week);
+  if (settlement === null) return refuse('incomplete-facts');
+
+  const built = evidence(settlement.statementKey, settlement.values, week.gameKeys);
+  if (built === null) return refuse('incomplete-facts');
+
+  return { settled: true, outcome: settlement.happened ? 'hit' : 'missed', evidence: built };
 }
 
 /**

@@ -467,10 +467,14 @@ export async function runTuesday(
 
   // --- 5. Author the week ahead --------------------------------------------
   /*
-   * `18 §3.4` puts Tony's Line behind a deploy-time flag, and it is shut. The
-   * job reads the same flag every surface reads rather than deciding for itself
-   * — a cron that authored a market the room will not show is a cron writing
-   * rows nobody can act on.
+   * `18 §3.4` puts Tony's Line behind a deploy-time flag. It has been **open**
+   * since 2026-08-11, and the job still reads the same flag every surface reads
+   * rather than deciding for itself — a cron that authored a market the room
+   * will not show is a cron writing rows nobody can act on.
+   *
+   * With the flag open this step writes up to ten personal lines plus one
+   * chalkboard question a week. Nothing about the guard changed: a line still
+   * refuses until the manager it belongs to has three of their own team-weeks.
    */
   const flags = featureFlags(input.env ?? process.env);
   const authoring = (await attempt('author', failed, () =>

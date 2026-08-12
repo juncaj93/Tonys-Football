@@ -17,6 +17,14 @@ closed engineering item (**C3**); the catalog 24 → 32 growth is recorded as
 pointed at entries which had never been written are resolved (**E7**, **G5**).
 **No product behaviour, schema, economy value or test changed.**
 
+**What the 2026-08-12 rulings changed.** Fourteen commissioner rulings made
+Tony's Line personal, replaced the weekly-high prediction with **Tony's
+Chalkboard**, and gave a playoff-period issue its own editorial tone. `C4` is
+**closed** by the last of those. One migration (`0019`) adds a trigger and
+nothing else; **no economy value moved** — the wager, the payout multiple,
+settlement timing and every idempotency guarantee are untouched.
+`docs/CHALKBOARD_BOUNDARY.md` is the canonical account.
+
 > ## V1 engineering: FUNCTIONALLY READY
 >
 > Every v1 system is built, tested against a real Postgres, and photographed.
@@ -457,6 +465,37 @@ them code:
 **This is not authorization to redesign anything, to commission painted layers,
 or to propose an implementation.** It is the record that the question is open.
 `docs/VISUAL_DEBT.md` item **18** is the same finding at the surface it shows on.
+
+### C4 · Two editorial observations from the Slice simulation lab — **CLOSED, 2026-08-12**
+
+The simulation lab (`docs/SLICE_SIMULATION_LAB.md`) played the preseason, week 8
+and the week 16 semifinal through the real crons and photographed what printed.
+**Nothing in the product was changed** — the workstream's own rule was that a
+finding is recorded and the thing it measures is left alone. Two of its six
+observations are worth a commissioner's eye; the other four are simulation-input
+notes or already-settled behaviour and live in that document's §7.
+
+| | |
+|---|---|
+| ~~**The preseason issue is 8,024 px at 390 — about 9.5 screens**~~ | **RULED AND CLOSED, 2026-08-11.** The board and the ten team sections were the same ten managers twice. The board is now the only list and a row opens into the detail: **2,188 px, 2.6 screens.** `docs/SLICE_RESTRAINT_BOUNDARY.md §3` |
+| ~~**Week 16's column called a 0.42 semifinal "an ordinary week"**~~ | **RULED AND CLOSED, 2026-08-12 (Ruling 12).** `EditionCharacter` gained **`postseason`**, from `packet.weekType` — already in the packet, already on the dateline, nothing new persisted and nothing inferred. Applied **only** where the alternative was `ordinary`, so a derived signal is never overwritten by a coarse one. `docs/CHALKBOARD_BOUNDARY.md §3` |
+
+**Both entries are now ruled.** The playoff signal is **coarse on purpose** —
+regular-season issue versus playoff-period issue, and nothing else. It does not
+know the round, who advanced or who is out, and the column says none of those
+words; a test scans for seven of them. No `playoff_bracket` table and no bracket
+persistence were introduced, which **G5** still declines for v1. Evidence is
+[`docs/evidence/slice-simulation/`](evidence/slice-simulation/) — the reports and
+the photographs at 390 / 375 / 360.
+
+**Related and already settled, recorded so it is not refiled as new:** a playoff
+paper cannot name which round a game was, and `elimination` cannot be told on the
+Tuesday it happened. Both need the bracket's structure persisted, which **G5**
+declines for v1. The first of the two is no longer *visible* — the 2026-08-11
+ruling stopped the paper printing a board at all — but the gap is unchanged and
+still governs whatever prints playoff results next. The lab is the first thing to demonstrate the second one — the
+same week re-assembled after the final does carry the story, and the published
+issue does not move.
 
 ---
 
@@ -1073,10 +1112,13 @@ Remaining items are **D** (human), **E** (debt, unforced), **F** (monitored,
 restart conditions unmet) and **G** (deferred, now with G0's classification
 attached) — plus exactly one live entry in **C**.
 
-**That one C entry is `C3`, and it is deliberately not actionable yet.** The
-manager sprite's product acceptance is open, and the next step on it is
-*evidence and a target*, not an implementation pass. Category C is otherwise
-still empty of anything with clear value, and C3 does not reopen it.
+**The remaining C entry is a decision rather than a task, and it is not
+actionable yet.** `C3` is the manager sprite's product acceptance, whose next step
+is *evidence and a target* rather than an implementation pass. `C4` closed on
+2026-08-12: both of its observations were ruled on and both are implemented
+(`docs/SLICE_RESTRAINT_BOUNDARY.md §3`, `docs/CHALKBOARD_BOUNDARY.md §3`).
+Category C is otherwise still empty of anything with clear value, and the
+remaining entry does not reopen it.
 
 The reopened scope produced exactly one buildable slice — **Rooms** — and it is
 built. Everything else in G0 is LATER or DO NOT BUILD **for a stated reason**,

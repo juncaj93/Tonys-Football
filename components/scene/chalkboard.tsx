@@ -123,13 +123,30 @@ export function ChalkSlate({ board }: { board: Chalkboard }) {
  * different people, and the eyebrow is the only place that says so.
  */
 const KIND_LABELS: Readonly<Record<BoardItem["kind"], string>> = {
-  CHALKBOARD: "Tony's call",
+  /*
+   * **Tony's Chalkboard** since 2026-08-12. It read *"Tony's call"*, which named
+   * the act rather than the object — and the commissioner's ruling names the
+   * product, deliberately after the thing on the wall of the parlor and after the
+   * `CHALKBOARD` vocabulary the schema has used since the table was written.
+   *
+   * Not *Tony's Prop*, not *Tony's Side Bet*, and nothing that sounds like a
+   * sportsbook. Watch-only in v1: nobody stakes a token on it.
+   */
+  CHALKBOARD: "Tony's Chalkboard",
   TONYS_LINE: "Tony's Line",
   BOUNTY: "The bounty",
 };
 
 export function BoardEntry({
   item,
+  /**
+   * Tony's own record on the board this season, when there is one.
+   *
+   * Only the prediction is given it — a record is a fact about *the caller*, and
+   * printing it under a market Tony did not take a side in would read as a claim
+   * about the line. Null until enough calls have settled to be a record.
+   */
+  record = null,
   /**
    * Whether this entry prints its own waiting line.
    *
@@ -143,6 +160,7 @@ export function BoardEntry({
   showWaiting = true,
 }: {
   item: BoardItem;
+  record?: string | null;
   showWaiting?: boolean;
 }) {
   const settled =
@@ -198,8 +216,45 @@ export function BoardEntry({
         </p>
       )}
 
-      {item.canPick && item.stakeTokens !== null && (
+      {/*
+        * The control, and the two conditions that keep it off the Chalkboard.
+        *
+        * **Tony's Chalkboard is watch-only in v1** (commissioner, 2026-08-12):
+        * the league watches Tony make one shared call and nobody stakes tokens
+        * on it. `kind` is checked here as well as `stakeTokens` because the two
+        * say different things — `stakeTokens` is null on a chalkboard row today
+        * and that is a property of how it is authored, while the kind is the
+        * *rule*. A future authoring change that put a price on a chalkboard row
+        * would otherwise quietly grow a second market.
+        */}
+      {item.kind === 'TONYS_LINE' && item.canPick && item.stakeTokens !== null && (
         <PickSide stakeId={item.stakeId} stakeTokens={item.stakeTokens} />
+      )}
+
+      {/*
+        * The personal line's one sentence of context, under the control.
+        *
+        * Deliberately below the buttons: it is the reason to pick a side, and a
+        * reason printed above the choice reads as a heading rather than as
+        * Tony leaning over the counter.
+        */}
+      {item.copy.context !== null && (
+        <p className={`mt-2 ${TYPE.bodyCompact} text-ink-500`} data-stake-context="">
+          {item.copy.context}
+        </p>
+      )}
+
+      {/*
+        * How Tony has done, derived from settled calls and never hand-authored.
+        *
+        * Last, and quiet: it is the standing of the person making the claim
+        * rather than part of the claim, and a landlord who leads with his record
+        * is a landlord asking to be checked.
+        */}
+      {record !== null && (
+        <p className={`mt-2.5 ${TYPE.bodyCompact} text-ink-500`} data-tony-record="">
+          {record}
+        </p>
       )}
     </div>
   );
@@ -261,7 +316,11 @@ export function BoardPanel({ board }: { board: Chalkboard }) {
   return (
     <div className="space-y-4">
       {board.prediction !== null && (
-        <BoardEntry item={board.prediction} showWaiting={shared === null} />
+        <BoardEntry
+          item={board.prediction}
+          record={board.record}
+          showWaiting={shared === null}
+        />
       )}
       {board.market !== null && (
         <div

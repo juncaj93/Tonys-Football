@@ -69,7 +69,12 @@ export function StakesBand({
                   : "border-t-2 border-dotted border-ink-900/25 pt-4"
               }
             >
-              <BoardEntry item={item} showWaiting={shared === null} />
+              <BoardEntry
+                item={item}
+                /* Tony's record belongs to Tony's call, not to the market or the bounty. */
+                record={item.kind === 'CHALKBOARD' ? board.record : null}
+                showWaiting={shared === null}
+              />
             </div>
           ))}
           {/*

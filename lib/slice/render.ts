@@ -164,6 +164,27 @@ export type EditionCharacter =
   | 'loud'
   | 'ordinary'
   | 'quiet'
+  /**
+   * A week of the postseason that would otherwise have read as ordinary.
+   *
+   * **Commissioner ruling, 2026-08-12 (Ruling 12).** The week-16 simulation
+   * printed *"An ordinary week, and Tony prints those the same as the other
+   * kind"* over a semifinal decided by 0.42 points, because significance scoring
+   * looked at the margins and found nothing loud. The margins were right and the
+   * sentence was wrong: in December the smallness of a game is the story.
+   *
+   * The signal is **`packet.weekType`**, which is `fantasy_matchups.week_type`
+   * as Sleeper stored it at import — deterministic, already in the packet, and
+   * already on the dateline. Nothing new is persisted and nothing is inferred.
+   *
+   * It is **coarse on purpose**: regular-season issue versus playoff-period
+   * issue, and nothing else. It does not know which round it is, who is
+   * eliminated, who advanced, or what is at stake — `docs/OPEN_ITEMS.md` **E7**
+   * records that `playoff_week_start` and a round count are not persisted, and
+   * the ruling forbids both inferring them and storing them. The column below
+   * says none of those words.
+   */
+  | 'postseason'
   | 'empty'
   /**
    * The draft-review special.
@@ -425,6 +446,20 @@ export const COLUMN: Record<EditionCharacter, readonly string[]> = {
   quiet: [
     'Quiet week. Tony would rather say that than pretend otherwise.',
     'Not much happened, and the paper is not going to invent any of it.',
+  ],
+  /*
+   * The postseason column, and every word of it is chosen for what it does not
+   * claim.
+   *
+   * No round, no semifinal, no championship, no elimination, no advancement, no
+   * win-and-in — the deterministic layer cannot support one of them and the
+   * ruling forbids inventing any. What it *can* say is that it is December and
+   * the shop knows it, which is the whole gap this closes.
+   */
+  postseason: [
+    'Tony does not print December the way he prints October. Nobody reads it that way either.',
+    'This is the part of the year the shop stays open late for. Tony has said so all season.',
+    'Small margins now. Tony has watched enough of these to stop calling any of them ordinary.',
   ],
   empty: [
     'Tony has nothing for you this week, and would rather say so.',
@@ -793,7 +828,18 @@ function characterOf(packet: FactPacket): EditionCharacter {
   if (stories.some((story) => story.kind === 'record-margin' || story.kind === 'record-score')) {
     return 'record';
   }
-  return packet.lead.significance >= 700 ? 'loud' : 'ordinary';
+  if (packet.lead.significance >= 700) return 'loud';
+
+  /*
+   * The one place the playoff period changes the paper's voice.
+   *
+   * Applied **only** where the alternative is `ordinary`, which is exactly the
+   * failure the ruling names: a postseason week whose margins score low enough
+   * to be called an ordinary October Tuesday. `title`, `record` and `loud` are
+   * already louder than ordinary and already right, so the signal is not allowed
+   * to reach them — a coarse context signal must not overwrite a derived one.
+   */
+  return packet.weekType === 'playoff' ? 'postseason' : 'ordinary';
 }
 
 /**

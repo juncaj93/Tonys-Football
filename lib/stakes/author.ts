@@ -2,7 +2,13 @@ import { createHash } from 'node:crypto';
 
 import { type EconomyValues } from '@/lib/counter/tokens';
 
-import { writePoints, type StakeBasis } from './facts';
+import {
+  clearedRecently,
+  leagueScores,
+  personalLineCents,
+  writePoints,
+  type StakeBasis,
+} from './facts';
 import {
   VARIANTS,
   kindOfVariant,
@@ -12,6 +18,7 @@ import {
   type StakeKind,
   type Variant,
 } from './model';
+import { LIBRARY } from './propositions';
 
 /**
  * Authoring — turning what was known before a week into an offer.
@@ -120,6 +127,15 @@ const refs = (
 function draft(input: {
   readonly basis: StakeBasis;
   readonly variant: Variant;
+  /** Set on a stake that belongs to one seat. See `stakeKeyFor`. */
+  readonly rosterId?: number;
+  /**
+   * Who may enter, when it is not the whole eligible league.
+   *
+   * A personal line passes `[theirs]`, and that array **is** the authorization
+   * boundary — `placeEntry` checks it and a database trigger checks it again.
+   */
+  readonly eligibleUserIds?: readonly string[];
   readonly factRefs: FactRefs;
   readonly allowedNumbers: readonly string[];
   readonly allowedNames: readonly string[];
@@ -132,6 +148,7 @@ function draft(input: {
     season: input.basis.season,
     week: input.basis.week,
     variant: input.variant,
+    ...(input.rosterId === undefined ? {} : { rosterId: input.rosterId }),
   });
 
   return {
@@ -151,7 +168,7 @@ function draft(input: {
      */
     allowedNumbers: [...new Set(input.allowedNumbers)].sort(),
     allowedNames: [...new Set(input.allowedNames)].sort(),
-    eligibleUserIds: input.basis.eligibleUserIds,
+    eligibleUserIds: input.eligibleUserIds ?? input.basis.eligibleUserIds,
     stakeTokens: input.stakeTokens,
     rewardTokens: input.rewardTokens,
     expiresAfterWeek: input.expiresAfterWeek,
@@ -160,58 +177,156 @@ function draft(input: {
 }
 
 /**
- * Tony's Line for a week, or nothing.
+ * Tony's Line — one per manager, or none.
  *
- * The line is the **lower median team-week score to date** and the question is
- * whether a manager's own team clears it. That is `16 §9`'s market: structurally
- * around even by construction, settled from finalized results, and using no
- * projection of any kind — which is what killed the prop-bet system it replaces
- * (`16 A.1`: *"needs reliable projections that `07 §3` itself calls
- * unreliable"*).
+ * ## It became personal on 2026-08-12, and that is the whole change
  *
- * The stake and the payout are the same for everybody and are not negotiable at
- * the row level: `weekly_stakes_line_pays_double` enforces `16 §9`'s fixed 2x in
- * the database, so no service can quietly change the multiplier.
+ * It used to be **one league-wide number**: the season's lower median team-week,
+ * offered to everybody, each betting it about their own team. The simulation lab
+ * put that on a phone and the commissioner named the problem — a number about the
+ * league is not a line about *you*, and a strong manager takes the Over every
+ * week while a weak one takes the Under. `docs/evidence/line-and-call/report.md`
+ * measured three replacements against the real 2024 and 2025 seasons; this is
+ * the approved one.
+ *
+ * ```
+ *   weight = n / (n + 4)                    n = that manager's own team-weeks
+ *   line   = weight · (their median)  +  (1 - weight) · (the league's median)
+ *   line   hung on the half-point
+ * ```
+ *
+ * Measured over 320 real team-weeks: **50.0% overs**, the smallest week-to-week
+ * movement of the three candidates, and a 26.8-point spread between the league's
+ * highest and lowest line. The shrinkage is what makes a three-game sample safe
+ * to price at all — see `MIN_OWN_TEAM_WEEKS`.
+ *
+ * ## Up to ten stakes, and each belongs to exactly one manager
+ *
+ * `eligibleUserIds` is `[theirs]` rather than the league, which is not a display
+ * decision: `placeEntry` refuses `not_eligible` against that stored snapshot, and
+ * `stake_entries_only_the_owner_may_enter` refuses it again in the database. A
+ * manager cannot take a side on somebody else's team total.
+ *
+ * **No new stake kind.** These are `TONYS_LINE` rows with a per-roster key, so
+ * settlement, the payout multiple, the token path and every idempotency
+ * guarantee are the approved ones, untouched.
  */
-export function authorTonysLine(
+export function authorTonysLines(
   basis: StakeBasis,
   economy: EconomyValues,
-): AuthoredStake | AuthorRefusal {
-  if (basis.eligibleUserIds.length === 0) return 'nobody-eligible';
-  if (basis.medianTeamScoreCents === null) return 'thin-basis';
+): { readonly authored: readonly AuthoredStake[]; readonly refusal: AuthorRefusal | null } {
+  if (basis.eligibleUserIds.length === 0) {
+    return { authored: [], refusal: 'nobody-eligible' };
+  }
 
-  const line = writePoints(basis.medianTeamScoreCents);
+  const league = leagueScores(basis);
+  const authored: AuthoredStake[] = [];
 
-  return draft({
-    basis,
-    variant: VARIANTS.seasonMedian,
-    factRefs: refs(basis, {
-      line,
-      teamWeeks: String(basis.teamWeeks),
-      throughWeek: String(basis.basisWeeks.at(-1) ?? 0),
-    }),
-    /*
-     * The line, the stake and the payout — the three numbers a sentence about
-     * this market may contain, and nothing else.
-     *
-     * The week and the season are added by the caller's packet, the way the
-     * Slice's are. A renderer that reaches for anything else is refused by the
-     * Slice's own validator rather than by a second implementation of it.
-     */
-    allowedNumbers: [
-      line,
-      String(economy.weeklyLineStakeTokens),
-      String(economy.weeklyLineStakeTokens * 2),
-      String(basis.season),
-      String(basis.week),
-    ],
-    /* A market names nobody. It is about every manager's own team. */
-    allowedNames: [],
-    stakeTokens: economy.weeklyLineStakeTokens,
-    rewardTokens: economy.weeklyLineStakeTokens * 2,
-    expiresAfterWeek: null,
-    version: authorVersion(economy),
+  /*
+   * Ordered by roster id, so a week's ten stakes are written in the same order
+   * every run. `standings` is the only place the basis carries the seat and the
+   * name together, and it is already filtered to eligible managers.
+   */
+  const seats = [...basis.standings]
+    .filter((row) => row.managerId !== null && row.displayName !== null)
+    .sort((a, b) => a.rosterId - b.rosterId);
+
+  for (const seat of seats) {
+    const userId = seat.managerId!;
+    const own = basis.scoresByUser.get(userId) ?? [];
+
+    const lineCents = personalLineCents({ own, league });
+    if (lineCents === null) continue;
+
+    const line = writePoints(lineCents);
+
+    authored.push(
+      draft({
+        basis,
+        variant: VARIANTS.seasonMedian,
+        rosterId: seat.rosterId,
+        eligibleUserIds: [userId],
+        factRefs: refs(basis, {
+          line,
+          subject: seat.displayName!,
+          rosterId: String(seat.rosterId),
+          ownTeamWeeks: String(own.length),
+          teamWeeks: String(basis.teamWeeks),
+          throughWeek: String(basis.basisWeeks.at(-1) ?? 0),
+          /*
+           * The explainer's two counts, frozen with the terms.
+           *
+           * Computed here rather than at render time on purpose: the number a
+           * manager took a side on and the sentence explaining it have to agree
+           * forever, and `weekly_stakes_terms_immutable` is what makes that
+           * true. Recomputing at render would let a later week quietly restate
+           * the context of a bet already placed.
+           */
+          ...cleared({ own, lineCents }),
+        }),
+        /*
+         * The line, the stake and the payout — plus the two counts the
+         * explainer prints. Every one of them is a stored fact or a stored
+         * economy value, and the Slice's own validator refuses a sentence that
+         * reaches for anything else.
+         */
+        allowedNumbers: [
+          line,
+          String(economy.weeklyLineStakeTokens),
+          String(economy.weeklyLineStakeTokens * 2),
+          String(basis.season),
+          String(basis.week),
+          ...clearedNumbers({ own, lineCents }),
+        ],
+        /*
+         * A personal line names exactly one manager: the one it belongs to. The
+         * league-wide version named nobody, which was right when it was about
+         * everybody.
+         */
+        allowedNames: [seat.displayName!],
+        stakeTokens: economy.weeklyLineStakeTokens,
+        rewardTokens: economy.weeklyLineStakeTokens * 2,
+        expiresAfterWeek: null,
+        version: authorVersion(economy),
+      }),
+    );
+  }
+
+  /*
+   * Nobody had enough of their own history yet. Reported as `thin-basis` — the
+   * same word the league-wide version used for the same condition — so the
+   * Tuesday job's log reads the way it always did.
+   */
+  if (authored.length === 0) return { authored: [], refusal: 'thin-basis' };
+  return { authored, refusal: null };
+}
+
+/**
+ * The explainer's counts as fact refs, or nothing.
+ *
+ * Absent rather than zeroed when there is no window to speak of — the ruling is
+ * that a shorter truthful window is used and the sentence is **omitted** when
+ * even that is unavailable, never padded to six.
+ */
+function cleared(input: {
+  readonly own: readonly number[];
+  readonly lineCents: number;
+}): Record<string, string> {
+  const counts = clearedRecently({
+    recentFirstToLast: input.own,
+    lineCents: input.lineCents,
   });
+  return counts === null
+    ? {}
+    : { cleared: String(counts.cleared), clearedOf: String(counts.of) };
+}
+
+/** The two counts the explainer prints, as strings the validator can allow. */
+function clearedNumbers(input: {
+  readonly own: readonly number[];
+  readonly lineCents: number;
+}): readonly string[] {
+  return Object.values(cleared(input));
 }
 
 /**
@@ -265,26 +380,34 @@ export function authorBounty(
 }
 
 /**
- * The week's chalkboard prediction, or nothing.
+ * The week's chalkboard proposition, or nothing.
  *
- * ## Priority, not randomness
+ * **Rebuilt on the commissioner's ruling of 2026-08-12 (Rulings 5–9).** It used
+ * to try three claims in a fixed priority order, the loudest first, and the
+ * loudest was *"nobody touches the record"* — a call the season best makes
+ * almost certainly correct, asking the same question the weekly-high reward, the
+ * weekly-high Slice story and the bounty all already answer. Those three
+ * variants are retired; `propositions.ts` is the library that replaced them.
  *
- * The variants are tried in a fixed order and the first that can be built
- * honestly wins. That is deliberate: a seeded pick would be reproducible and
- * still unexplainable, and *"why did Tony say that"* should have an answer
- * shorter than a hash. The order is loudest-claim-first — a record standing is a
- * bigger call than the table holding.
+ * ## A rotation, and it is still explainable
  *
- * ## One rule beyond priority: he does not repeat himself
+ * The library is an ordered list and the week chooses where in it to start:
+ * `(week - 1) % length`. Deterministic, reproducible, and *"why did Tony say
+ * that"* has an answer shorter than a hash — **it is that week's turn**. The old
+ * header argued against a seeded pick for exactly this reason and the argument
+ * survives; what changed is that four comparable families make priority
+ * arbitrary where three unequal ones made it meaningful.
  *
- * `lastVariant` is the previous week's chalkboard, and the same variant two weeks
- * running is skipped when another is available. The Slice's desk applies the
- * same discipline to headlines, for the same reason: a board that says the same
- * kind of thing every week stops being read.
+ * From the starting point it walks the list and takes the first family that can
+ * be calibrated honestly. Weeks one and two have no history, so the two flat-margin
+ * families are the only ones that build — which is why Ruling 7 asks for them.
  *
- * It **reorders, it never silences** — if the repeat is the only variant that can
- * be built, it is built. That correction was made once already, in the Slice,
- * after novelty printed *"a quiet week"* above a fifty-one-point win.
+ * ## He still does not repeat himself, and it still never silences him
+ *
+ * `lastVariant` is moved to the back rather than removed. If the repeat is the
+ * only family that can be built, it is built. That correction was made once
+ * already, in the Slice, after novelty printed *"a quiet week"* above a
+ * fifty-one-point win.
  */
 export function authorChalkboard(
   basis: StakeBasis,
@@ -293,127 +416,52 @@ export function authorChalkboard(
 ): AuthoredStake | AuthorRefusal {
   if (basis.eligibleUserIds.length === 0) return 'nobody-eligible';
 
-  const attempts: { variant: Variant; build: () => AuthoredStake | AuthorRefusal }[] = [
-    {
-      variant: VARIANTS.nobodyClearsRecord,
-      build: () => {
-        if (basis.bestTeamScoreCents === null) return 'thin-basis';
-        const record = writePoints(basis.bestTeamScoreCents);
-        return draft({
-          basis,
-          variant: VARIANTS.nobodyClearsRecord,
-          factRefs: refs(basis, { record, throughWeek: String(basis.basisWeeks.at(-1) ?? 0) }),
-          allowedNumbers: [record, String(basis.season), String(basis.week)],
-          allowedNames: [],
-          stakeTokens: null,
-          rewardTokens: null,
-          expiresAfterWeek: null,
-          version: authorVersion(economy),
-        });
-      },
-    },
-    {
-      variant: VARIANTS.leaderHolds,
-      build: () => {
-        const leader = soleAt(basis, 'top');
-        if (leader === null) return 'no-clear-subject';
-        return draft({
-          basis,
-          variant: VARIANTS.leaderHolds,
-          factRefs: refs(basis, {
-            subject: leader.displayName,
-            rosterId: String(leader.rosterId),
-            wins: String(leader.wins),
-            losses: String(leader.losses),
-            throughWeek: String(basis.basisWeeks.at(-1) ?? 0),
-          }),
-          allowedNumbers: [
-            String(leader.wins),
-            String(leader.losses),
-            String(basis.season),
-            String(basis.week),
-          ],
-          allowedNames: [leader.displayName],
-          stakeTokens: null,
-          rewardTokens: null,
-          expiresAfterWeek: null,
-          version: authorVersion(economy),
-        });
-      },
-    },
-    {
-      variant: VARIANTS.bottomClubLoses,
-      build: () => {
-        const bottom = soleAt(basis, 'bottom');
-        if (bottom === null) return 'no-clear-subject';
-        return draft({
-          basis,
-          variant: VARIANTS.bottomClubLoses,
-          factRefs: refs(basis, {
-            subject: bottom.displayName,
-            rosterId: String(bottom.rosterId),
-            wins: String(bottom.wins),
-            losses: String(bottom.losses),
-            throughWeek: String(basis.basisWeeks.at(-1) ?? 0),
-          }),
-          allowedNumbers: [
-            String(bottom.wins),
-            String(bottom.losses),
-            String(basis.season),
-            String(basis.week),
-          ],
-          allowedNames: [bottom.displayName],
-          stakeTokens: null,
-          rewardTokens: null,
-          expiresAfterWeek: null,
-          version: authorVersion(economy),
-        });
-      },
-    },
-  ];
-
-  const ordered = [
-    ...attempts.filter((attempt) => attempt.variant !== lastVariant),
-    ...attempts.filter((attempt) => attempt.variant === lastVariant),
-  ];
-
-  let lastRefusal: AuthorRefusal = 'thin-basis';
-  for (const attempt of ordered) {
-    const built = attempt.build();
-    if (typeof built !== 'string') return built;
-    lastRefusal = built;
-  }
-  return lastRefusal;
-}
-
-/**
- * The manager alone at the top or the bottom of the table, if there is one.
- *
- * *Alone* is load-bearing. `standingsThrough` reports ties as the same rank
- * precisely so a claim can tell *"moved"* from *"was always level"*, and a
- * prediction about "the leader" when two managers are level is a prediction
- * about whichever one the sort happened to put first — a claim about the
- * database rather than about the season.
- */
-function soleAt(
-  basis: StakeBasis,
-  end: 'top' | 'bottom',
-): { displayName: string; rosterId: number; wins: number; losses: number } | null {
-  const table = basis.standings;
-  if (table.length < 2) return null;
-
-  const target = end === 'top' ? table[0] : table.at(-1);
-  if (target === undefined || target.displayName === null) return null;
-
-  const shared = table.filter((row) => row.rank === target.rank).length;
-  if (shared !== 1) return null;
-
-  return {
-    displayName: target.displayName,
-    rosterId: target.rosterId,
-    wins: target.wins,
-    losses: target.losses,
+  const propBasis = {
+    leagueScores: leagueScores(basis),
+    basisWeeks: basis.basisWeeks.length,
   };
+
+  const start = ((basis.week - 1) % LIBRARY.length + LIBRARY.length) % LIBRARY.length;
+  const rotated = [...LIBRARY.slice(start), ...LIBRARY.slice(0, start)];
+  const ordered = [
+    ...rotated.filter((proposition) => proposition.variant !== lastVariant),
+    ...rotated.filter((proposition) => proposition.variant === lastVariant),
+  ];
+
+  for (const proposition of ordered) {
+    const calibration = proposition.calibrate(propBasis);
+    if (calibration === null) continue;
+
+    return draft({
+      basis,
+      variant: proposition.variant,
+      factRefs: refs(basis, {
+        ...calibration.values,
+        throughWeek: String(basis.basisWeeks.at(-1) ?? 0),
+      }),
+      allowedNumbers: [...calibration.numbers, String(basis.season), String(basis.week)],
+      /*
+       * A proposition names nobody at authoring time, because it is about the
+       * league rather than about a manager. Whoever turns up in the *evidence*
+       * — the manager who broke the number, the two ends of a photo finish — is
+       * admitted from the resolution's own stored values, which is the same
+       * discipline the bounty's claimant goes through.
+       */
+      allowedNames: [],
+      stakeTokens: null,
+      rewardTokens: null,
+      expiresAfterWeek: null,
+      version: authorVersion(economy),
+    });
+  }
+
+  /*
+   * Nothing could be calibrated, which before week three means exactly one
+   * thing: the two history-free families are the only ones that build and both
+   * of them always do. So this is reachable only from a library with no
+   * history-free family left in it.
+   */
+  return 'thin-basis';
 }
 
 /**
@@ -440,7 +488,14 @@ export function authorWeek(input: {
   };
 
   if (input.lineOpen) {
-    take(VARIANTS.seasonMedian, authorTonysLine(input.basis, input.economy));
+    /*
+     * Up to ten, one per manager. A week that can price nobody reports the same
+     * single refusal the league-wide version reported, so the Tuesday job's log
+     * reads unchanged.
+     */
+    const lines = authorTonysLines(input.basis, input.economy);
+    if (lines.refusal !== null) refused.push({ variant: VARIANTS.seasonMedian, why: lines.refusal });
+    for (const line of lines.authored) authored.push(line);
   }
   if (!input.bountyRolling) {
     take(VARIANTS.weekScore, authorBounty(input.basis, input.economy));

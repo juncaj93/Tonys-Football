@@ -345,7 +345,8 @@ type StateName =
   | 'board-chalkboard-open'
   | 'board-chalkboard-hit'
   | 'board-chalkboard-missed'
-  | 'board-chalkboard-leader'
+  | 'board-chalkboard-cold'
+  | 'board-chalkboard-count'
   | 'board-line-pending'
   | 'board-line-incomplete'
   | 'board-line-won'
@@ -1036,10 +1037,25 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await dismissTony(page);
       await page.getByRole('button', { name: /2026/i }).click({ force: true });
       return;
+    /*
+     * Reached by `data-room-object`, not by its label.
+     *
+     * It matched `/prediction/i` until 2026-08-12, when the weekly prediction
+     * became **Tony's Chalkboard** and the label became *"Read the
+     * chalkboard"* — and three states aborted on a thirty-second timeout. That
+     * is the right failure and it is still the wrong coupling: the gate's job is
+     * to open the object, not to hold its copy still. `data-room-object` is the
+     * id `objects.ts` assigns and `roomObjectAttributes` writes onto every
+     * trigger in the room, and it does not move when a sentence does.
+     *
+     * The Back Hall's chain check paid for the other half of this lesson: it
+     * matched a Tailwind class, and restyling the chain would have made it match
+     * nothing — where *"no chain found"* is the **passing** answer.
+     */
     case 'prediction':
       await home(page);
       await dismissTony(page);
-      await page.getByRole('button', { name: /prediction/i }).click({ force: true });
+      await page.locator('[data-room-object="prediction"]').click({ force: true });
       return;
     case 'receipt':
       await home(page);
@@ -1989,7 +2005,8 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'board-chalkboard-open':
     case 'board-chalkboard-hit':
     case 'board-chalkboard-missed':
-    case 'board-chalkboard-leader':
+    case 'board-chalkboard-cold':
+    case 'board-chalkboard-count':
     case 'board-line-pending':
     case 'board-line-incomplete':
     case 'board-line-won':
@@ -2035,7 +2052,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
 
       await page.goto(`${BASE}/?board=${key}&open=tonysLine`, { waitUntil: 'networkidle' });
       await dismissTony(page);
-      await page.getByRole('button', { name: /prediction/i }).click({ force: true });
+      await page.locator('[data-room-object="prediction"]').click({ force: true });
       await page.waitForTimeout(500);
       return;
     }
@@ -2059,7 +2076,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
         waitUntil: 'networkidle',
       });
       await dismissTony(page);
-      await page.getByRole('button', { name: /prediction/i }).click({ force: true });
+      await page.locator('[data-room-object="prediction"]').click({ force: true });
       await page.waitForTimeout(400);
       await page.getByRole('button', { name: /Take the over/i }).click();
       await page.waitForTimeout(1200);
@@ -2241,7 +2258,8 @@ const ALL_STATES: readonly StateName[] = [
   'board-chalkboard-open',
   'board-chalkboard-hit',
   'board-chalkboard-missed',
-  'board-chalkboard-leader',
+  'board-chalkboard-cold',
+  'board-chalkboard-count',
   'board-line-pending',
   'board-line-incomplete',
   'board-line-won',
@@ -3625,7 +3643,8 @@ const BOARD_EXPECTATIONS: Readonly<
   'board-chalkboard-open': { stakes: 1, states: ['awaiting-week'], chalk: 'written' },
   'board-chalkboard-hit': { stakes: 1, states: ['resolved'], chalk: 'settled' },
   'board-chalkboard-missed': { stakes: 1, states: ['resolved'], chalk: 'settled' },
-  'board-chalkboard-leader': { stakes: 1, states: ['resolved'], chalk: 'settled' },
+  'board-chalkboard-cold': { stakes: 1, states: ['resolved'], chalk: 'settled' },
+  'board-chalkboard-count': { stakes: 1, states: ['resolved'], chalk: 'settled' },
   'board-line-pending': { stakes: 2, states: ['awaiting-week'], chalk: 'written' },
   'board-line-incomplete': { stakes: 2, states: ['awaiting-final'], chalk: 'written' },
   'board-line-won': { stakes: 2, states: ['resolved'], chalk: 'settled' },
@@ -3871,14 +3890,49 @@ async function checkPreseasonIssue(page: Page, width: number, state: string): Pr
     return;
   }
 
-  const grades = await page.locator('[data-preseason-grade]').count();
   const teams = await page.locator('[data-preseason-team]').count();
 
-  if (grades !== teams) {
+  /*
+   * Every row carries a grade, and **every grade is readable while collapsed**.
+   *
+   * This replaces a comparison that became tautological on 2026-08-11. The board
+   * and the ten team sections used to be two separate lists, so
+   * `grades !== teams` was a real question — *"does every manager on the board
+   * have a section"*. The restraint ruling merged them into one row per manager
+   * (`docs/SLICE_RESTRAINT_BOUNDARY.md §3`), which put both attributes on the
+   * **same element** and made the counts equal by construction. A check that
+   * cannot fail is worse than no check, because it reads as coverage.
+   *
+   * What is worth asserting instead is the merged board's whole claim: ten
+   * grades, none of them blank, and all ten legible **without opening
+   * anything**. `boundingBox()` is null for an element that is not rendered, so
+   * a grade that only appears inside the disclosure body fails here — which is
+   * precisely the regression a future tidy-up of the summary row would cause.
+   */
+  const rows = page.locator('[data-preseason-team]');
+  let visibleGrades = 0;
+
+  for (let index = 0; index < teams; index++) {
+    const row = rows.nth(index);
+    const grade = await row.getAttribute('data-preseason-grade');
+
+    if (grade === null || grade.trim() === '') {
+      fail('preseason', `@${String(width)} ${state}: row ${String(index + 1)} carries no grade`);
+      continue;
+    }
+
+    const printed = row.locator('summary').getByText(grade, { exact: true });
+    if ((await printed.count()) > 0 && (await printed.first().boundingBox()) !== null) {
+      visibleGrades++;
+    }
+  }
+
+  if (visibleGrades !== teams) {
     fail(
       'preseason',
-      `@${String(width)} ${state}: ${String(grades)} grades on the board and ${String(teams)} ` +
-        `team sections — every manager on the board must have a section`,
+      `@${String(width)} ${state}: ${String(visibleGrades)} of ${String(teams)} grades are ` +
+        `readable on the collapsed board — the board exists so nobody has to open a row to ` +
+        `find their own grade`,
     );
   }
 

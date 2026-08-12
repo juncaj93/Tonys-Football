@@ -56,17 +56,23 @@ export function PreseasonBody({ sections }: { sections: PreseasonSections }) {
       <PreseasonSection label="Tony’s draft board" weight="heavy" data-preseason-board="">
         <div className="mt-2.5">
           <Ledger>
-            {sections.board.map((row) => (
-              <LedgerRow
-                key={row.manager}
-                kind="name"
-                data-preseason-grade={row.grade}
-                label={row.manager}
-                value={<span className="font-display font-bold text-red-dark">{row.grade}</span>}
-              />
+            {sections.teams.map((team) => (
+              <TeamReview key={team.manager} team={team} />
             ))}
           </Ledger>
         </div>
+        {/*
+          * Sentence case, not the metadata role.
+          *
+          * `TYPE.metadata` is uppercase signage, which is right for a label and
+          * wrong for a sentence: set in caps it read as another section heading
+          * competing with the one above it, and `WRITE-UP` broke across two
+          * lines at every width because the hyphen is the only break opportunity
+          * in it. This is a caption, so it takes the caption's voice.
+          */}
+        <p className={`mt-2 ${TYPE.bodyCompact} text-ink-500`}>
+          {DRAFT_PHRASES.expandHint}
+        </p>
       </PreseasonSection>
 
       {sections.snapshot.length > 0 && (
@@ -95,13 +101,23 @@ export function PreseasonBody({ sections }: { sections: PreseasonSections }) {
         </PreseasonSection>
       )}
 
-      <PreseasonSection label="Team by team" data-preseason-teams="">
-        <div className="mt-3 space-y-6">
-          {sections.teams.map((team) => (
-            <TeamReview key={team.manager} team={team} />
-          ))}
-        </div>
-      </PreseasonSection>
+      {/*
+        * **There is no separate "Team by team" section.** Commissioner ruling,
+        * 2026-08-11: streamline the issue and let each owner open their own.
+        *
+        * It used to print the board — ten names and ten grades — and then ten
+        * full sections underneath it, which is the same ten managers twice and
+        * is most of why the issue measured **8,024 px at 390, about nine and a
+        * half phone screens** (`docs/SLICE_SIMULATION_LAB.md §7`). The board is
+        * now the only list, and a row opens into the detail that used to be the
+        * second pass.
+        *
+        * `sections.board` and `sections.teams` are the **same ten managers** —
+        * `renderPreseason` builds both from `packet.teams` — so nothing is lost
+        * by rendering the richer one. Both stay in `Edition`, untouched, for the
+        * same reason the weekly scoreboard does: this is a decision about what
+        * the paper prints, not about what it knows.
+        */}
 
       {sections.history.length > 0 && (
         <PreseasonSection label="For the record" data-preseason-history="">
@@ -151,112 +167,157 @@ export function PreseasonBody({ sections }: { sections: PreseasonSections }) {
 }
 
 /**
- * One manager's section.
+ * One manager's row on the board, and their whole review inside it.
  *
- * The grade leads, at display size, in red. Everything else hangs off it.
+ * ## Why `<details>` and not a route
+ *
+ * A page per manager would be ten routes reading a **published snapshot** — and
+ * the moment a grade is corrected after publication, the route and the printed
+ * issue disagree while claiming to be the same paper. Keeping it inside the
+ * issue means there is one document, and it is the one the commissioner
+ * approved. The browser's own disclosure needs no JavaScript, is in the DOM
+ * whether open or shut (so the gates still count ten takes), is keyboard
+ * operable, and is announced as expandable without any ARIA of ours.
+ *
+ * ## It has to read as a paper, not a widget
+ *
+ * So the summary is a **ledger row** — name left, grade right, the same rule
+ * between rows the board always had — and the marker is a printed `+` / `−` in
+ * the quiet ink rather than a disclosure triangle. `list-none` on both the
+ * element and the WebKit pseudo-element, because Safari draws its own marker
+ * from a *different* selector and leaving one of the two produces a triangle on
+ * iOS and nothing anywhere else.
  */
 function TeamReview({ team }: { team: PreseasonTeamSection }) {
   return (
-    <article data-preseason-team={team.manager}>
-      {/*
-        * Grade and name on one line, grade first.
-        *
-        * `items-baseline` so a two-character grade and a nine-character name sit
-        * on the same line of type rather than on two optical rows — the grade is
-        * `headline` and the name is `subhead`, and centring them by box would put
-        * the name a pixel or two above where a reader expects it.
-        */}
-      <div className="flex items-baseline gap-2.5">
-        <span className={`${TYPE.headline} text-red-dark`}>{team.grade}</span>
+    <details
+      data-preseason-team={team.manager}
+      data-preseason-grade={team.grade}
+      className="group border-b-2 border-ink-900/20 last:border-b-0"
+    >
+      <summary
+        className="grid cursor-pointer list-none grid-cols-[auto_minmax(0,1fr)_auto] items-baseline gap-x-2.5 px-3 py-2.5 [&::-webkit-details-marker]:hidden"
+      >
+        {/*
+          * The marker is type, and it is `aria-hidden` because the element
+          * already announces its own expanded state. A screen reader that read
+          * "plus" here would be reading the furniture.
+          */}
+        <span aria-hidden="true" className={`${TYPE.ledgerLabel} text-ink-500`}>
+          <span className="group-open:hidden">+</span>
+          <span className="hidden group-open:inline">&minus;</span>
+        </span>
         {/*
           * `break-words` as well as `min-w-0`, and the pair is the fix rather
           * than either half.
           *
           * `min-w-0` lets the box shrink; nothing in it breaks a **word**. A
           * display name is whatever somebody typed into Sleeper, so it can be
-          * one unbroken run of characters longer than any phone is wide — and
-          * this heading is set in the display face, which is half again as wide
-          * per character as the prose face. Found by the sparse fixture the day
-          * it grew a name longer than the chalkboard's longest: 22px of
-          * horizontal scroll at 375 and 38px at 360, which is the one thing
-          * this product's layout rule has no exceptions to.
+          * one unbroken run of characters longer than any phone is wide. Found
+          * by the sparse fixture the day it grew a name longer than the
+          * chalkboard's longest: 22px of horizontal scroll at 375 and 38px at
+          * 360, which is the one thing this product's layout rule has no
+          * exceptions to.
           */}
-        <h3 className={`min-w-0 break-words ${TYPE.subhead} text-ink-900`}>{team.manager}</h3>
-      </div>
+        {/*
+          * A `<span>`, and the element is load-bearing rather than a style
+          * choice.
+          *
+          * `<summary>`'s content model is **phrasing content, _or_ one element
+          * of heading content** — not a heading *among* phrasing siblings. This
+          * was an `<h3>` between the marker span and the grade span, which is
+          * invalid nesting, and an invalid nesting is one the parser is free to
+          * restructure. That is a React `#418` structural hydration mismatch by
+          * construction, and the visual sweep measured it: a baseline run of
+          * `main` in the same container logged **1** quarantined `#418` and
+          * passed, while two runs of this branch logged **3** and **5** and
+          * failed.
+          *
+          * The heading was inherited from the standalone team section this row
+          * replaced, where it really was a section heading. In a ledger row it
+          * is not one, so nothing about the document outline is lost.
+          */}
+        <span className={`min-w-0 break-words ${TYPE.bodyCompact} text-ink-900`}>{team.manager}</span>
+        <span className={`text-right whitespace-nowrap ${TYPE.ledgerValue} font-display font-bold text-red-dark`}>
+          {team.grade}
+        </span>
+      </summary>
 
-      {team.slot !== null && (
-        <p className={`mt-1 ${TYPE.metadata} text-ink-500`}>{team.slot}</p>
-      )}
+      <div className="px-3 pb-3.5">
+        {team.slot !== null && (
+          <p className={`${TYPE.metadata} text-ink-500`}>{team.slot}</p>
+        )}
 
-      {/*
-        * Tony's take: the only prose in the section, and it takes the dialogue
-        * role rather than body.
-        *
-        * It is somebody talking, and on a page whose other ninety per cent is
-        * ledgers and labels a voice should be the largest thing in its section
-        * after the grade. The same decision the weekly issue makes for Tony's
-        * column, for the same reason.
-        */}
-      <p className={`mt-2 ${TYPE.dialogue} text-ink-700`} data-preseason-take="">
-        {team.take}
-      </p>
-
-      {(team.picks.length > 0 || team.shape.length > 0 || team.positions !== null) && (
-        <div className="mt-3">
-          <Ledger>
-            {team.picks.map((pick) => (
-              <LedgerRow
-                key={pick.label}
-                kind="name"
-                label={
-                  <>
-                    <span className="text-ink-900">{pick.player}</span>
-                    {pick.position !== null && (
-                      <span className="text-ink-500"> {pick.position}</span>
-                    )}
-                  </>
-                }
-                value={pick.label}
-              />
-            ))}
-
-            {team.positions !== null && (
-              /*
-               * The counts go **under** the label, not beside it.
-               *
-               * A `LedgerRow` value is `whitespace-nowrap` — a number that
-               * breaks across two lines stops being a number — and this is not
-               * one number, it is a list of five. As a value it squeezed the
-               * label to nothing and then printed straight through it at 390.
-               * The note slot wraps, which is what a list needs.
-               */
-              <LedgerRow label="Taken">{team.positions}</LedgerRow>
-            )}
-          </Ledger>
-        </div>
-      )}
-
-      {team.shape.length > 0 && (
-        <p className={`mt-2 ${TYPE.body} text-ink-700`} data-preseason-shape="">
-          {team.shape.join(' ')}
+        {/*
+          * Tony's take: the only prose in the section, and it takes the dialogue
+          * role rather than body.
+          *
+          * It is somebody talking, and on a page whose other ninety per cent is
+          * ledgers and labels a voice should be the largest thing in its section
+          * after the grade. The same decision the weekly issue makes for Tony's
+          * column, for the same reason.
+          */}
+        <p className={`mt-2 ${TYPE.dialogue} text-ink-700`} data-preseason-take="">
+          {team.take}
         </p>
-      )}
 
-      {(team.bestPick !== null || team.concern !== null) && (
-        <div className="mt-3 space-y-2">
-          {team.bestPick !== null && (
-            <Aside label={DRAFT_PHRASES.bestPickLabel} tone="good">
-              {team.bestPick}
-            </Aside>
-          )}
-          {team.concern !== null && (
-            <Aside label={DRAFT_PHRASES.concernLabel} tone="doubt">
-              {team.concern}
-            </Aside>
-          )}
-        </div>
-      )}
-    </article>
+        {(team.picks.length > 0 || team.shape.length > 0 || team.positions !== null) && (
+          <div className="mt-3">
+            <Ledger>
+              {team.picks.map((pick) => (
+                <LedgerRow
+                  key={pick.label}
+                  kind="name"
+                  label={
+                    <>
+                      <span className="text-ink-900">{pick.player}</span>
+                      {pick.position !== null && (
+                        <span className="text-ink-500"> {pick.position}</span>
+                      )}
+                    </>
+                  }
+                  value={pick.label}
+                />
+              ))}
+
+              {team.positions !== null && (
+                /*
+                 * The counts go **under** the label, not beside it.
+                 *
+                 * A `LedgerRow` value is `whitespace-nowrap` — a number that
+                 * breaks across two lines stops being a number — and this is not
+                 * one number, it is a list of five. As a value it squeezed the
+                 * label to nothing and then printed straight through it at 390.
+                 * The note slot wraps, which is what a list needs.
+                 */
+                <LedgerRow label="Taken">{team.positions}</LedgerRow>
+              )}
+            </Ledger>
+          </div>
+        )}
+
+        {team.shape.length > 0 && (
+          <p className={`mt-2 ${TYPE.body} text-ink-700`} data-preseason-shape="">
+            {team.shape.join(' ')}
+          </p>
+        )}
+
+        {(team.bestPick !== null || team.concern !== null) && (
+          <div className="mt-3 space-y-2">
+            {team.bestPick !== null && (
+              <Aside label={DRAFT_PHRASES.bestPickLabel} tone="good">
+                {team.bestPick}
+              </Aside>
+            )}
+            {team.concern !== null && (
+              <Aside label={DRAFT_PHRASES.concernLabel} tone="doubt">
+                {team.concern}
+              </Aside>
+            )}
+          </div>
+        )}
+      </div>
+    </details>
   );
 }
 

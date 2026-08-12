@@ -194,11 +194,30 @@ export interface LifecycleState {
   readonly finalizations: readonly { readonly week: number; readonly games: number }[];
   readonly rewards: readonly ObservedReward[];
   readonly ledger: readonly ObservedLedgerRow[];
+  /**
+   * Every stake the season authored.
+   *
+   * Widened on 2026-08-12 from four fields to nine, so a scenario can observe
+   * *what was offered and to whom* rather than only that something was. Tony's
+   * Line became personal that day — up to ten rows a week, one manager each —
+   * and the Chalkboard became watch-only, and neither property is visible in a
+   * key and a status. Purely additive: nothing the harness does changed.
+   */
   readonly stakes: readonly {
     readonly stakeKey: string;
     readonly kind: string;
+    readonly variant: string;
     readonly week: number;
     readonly status: string;
+    /** The eligibility snapshot. Exactly one manager on a personal line. */
+    readonly eligibleUserIds: readonly string[];
+    /** Null on anything nobody stakes tokens on. */
+    readonly stakeTokens: number | null;
+    readonly rewardTokens: number | null;
+    /** Whom the claim may name. Empty on a league-wide question. */
+    readonly allowedNames: readonly string[];
+    /** The stake's own written numbers, as it froze them. */
+    readonly factRefs: { readonly values: Readonly<Record<string, string>> };
   }[];
   readonly resolutions: readonly { readonly stakeKey: string; readonly outcome: string }[];
   readonly versions: readonly ObservedVersion[];
@@ -486,8 +505,14 @@ export function createRehearsal(options: RehearsalOptions): Rehearsal {
           id: weeklyStakes.id,
           stakeKey: weeklyStakes.stakeKey,
           kind: weeklyStakes.kind,
+          variant: weeklyStakes.variant,
           week: weeklyStakes.week,
           status: weeklyStakes.status,
+          eligibleUserIds: weeklyStakes.eligibleUserIds,
+          stakeTokens: weeklyStakes.stakeTokens,
+          rewardTokens: weeklyStakes.rewardTokens,
+          allowedNames: weeklyStakes.allowedNames,
+          factRefs: weeklyStakes.factRefs,
         })
         .from(weeklyStakes)
         .where(eq(weeklyStakes.seasonId, season.id));
@@ -558,8 +583,14 @@ export function createRehearsal(options: RehearsalOptions): Rehearsal {
           .map((stake) => ({
             stakeKey: stake.stakeKey,
             kind: stake.kind,
+            variant: stake.variant,
             week: stake.week,
             status: stake.status,
+            eligibleUserIds: stake.eligibleUserIds,
+            stakeTokens: stake.stakeTokens,
+            rewardTokens: stake.rewardTokens,
+            allowedNames: stake.allowedNames,
+            factRefs: stake.factRefs as { values: Record<string, string> },
           }))
           .sort((a, b) => a.week - b.week || a.stakeKey.localeCompare(b.stakeKey)),
         resolutions: resolutions

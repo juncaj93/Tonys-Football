@@ -72,17 +72,76 @@ export const VARIANTS = {
    */
   weekScore: 'week-score',
 
-  /** Tony says nobody clears the season's best score this week. */
+  /**
+   * Does anybody put up the number this week?
+   *
+   * The **96th percentile of every publishable team-week played so far**,
+   * measured at a 47% YES rate over the league's real 2024 and 2025 seasons.
+   */
+  anybodyBreaks: 'anybody-breaks',
+
+  /**
+   * Does any game finish inside the number?
+   *
+   * A flat ten points, so it needs **no history at all** and runs in week one.
+   * 53%.
+   */
+  photoFinish: 'photo-finish',
+
+  /**
+   * Do half the teams clear the number?
+   *
+   * The median of every publishable team-week so far, against half the field.
+   * 53%. The count is derived rather than fixed — see `propositions.ts`.
+   */
+  halfOver: 'half-over',
+
+  /**
+   * Does anybody win by more than the number?
+   *
+   * A flat forty-five points. History-free, so it runs in week one. 53%.
+   */
+  aHiding: 'a-hiding',
+
+  /**
+   * **Retired from authoring, 2026-08-12.** Tony said nobody clears the season's
+   * best score this week.
+   *
+   * The commissioner's ruling replaced it: it asked the same question the
+   * weekly-high reward, the weekly-high Slice story and the bounty all already
+   * answer, and it was an easy call — a season best is by construction a number
+   * almost nobody clears.
+   *
+   * It stays in this table, keeps its resolver and keeps its copy, because a
+   * variant is **stored on the row** and a historical stake has to go on meaning
+   * what it meant. Nothing authors it.
+   */
   nobodyClearsRecord: 'nobody-clears-record',
-  /** Tony says whoever is top of the table wins this week. */
+  /** **Retired from authoring, 2026-08-12.** Tony said the table's leader wins. */
   leaderHolds: 'leader-holds',
-  /** Tony says whoever is bottom of the table loses this week. */
+  /** **Retired from authoring, 2026-08-12.** Tony said the bottom club loses. */
   bottomClubLoses: 'bottom-club-loses',
 } as const;
 
 export type Variant = (typeof VARIANTS)[keyof typeof VARIANTS];
 
+/**
+ * The chalkboard library, in rotation order.
+ *
+ * `16 §9` allows one prediction a week; this is the set it is drawn from and
+ * `propositions.ts` is where each one's number and settlement live. The three
+ * retired variants above are **deliberately absent** — they are resolvable, not
+ * authorable.
+ */
 export const CHALKBOARD_VARIANTS: readonly Variant[] = [
+  VARIANTS.anybodyBreaks,
+  VARIANTS.photoFinish,
+  VARIANTS.halfOver,
+  VARIANTS.aHiding,
+];
+
+/** Every variant the chalkboard has ever authored, live or retired. */
+export const RETIRED_CHALKBOARD_VARIANTS: readonly Variant[] = [
   VARIANTS.nobodyClearsRecord,
   VARIANTS.leaderHolds,
   VARIANTS.bottomClubLoses,
@@ -214,8 +273,23 @@ export function stakeKeyFor(input: {
   readonly season: number;
   readonly week: number;
   readonly variant: Variant;
+  /**
+   * The manager a stake belongs to, when it belongs to one.
+   *
+   * Tony's Line became **personal** on 2026-08-12: a week authors up to ten of
+   * them, one per eligible manager, each with its own number. The key is what
+   * makes re-authoring a no-op, and a week-level key would have collapsed all
+   * ten into the first one written — so the owner is part of it.
+   *
+   * A **roster id**, not a user id. Roster ids are seasonal, short, and already
+   * how this product names a seat within a season (`16 §5.1`); a uuid in the key
+   * would make it unreadable in a log for no gain. Absent on every league-wide
+   * stake, so no existing key moved.
+   */
+  readonly rosterId?: number;
 }): string {
-  return `${String(input.season)}-w${String(input.week).padStart(2, '0')}-${input.variant}`;
+  const head = `${String(input.season)}-w${String(input.week).padStart(2, '0')}-${input.variant}`;
+  return input.rosterId === undefined ? head : `${head}-r${String(input.rosterId)}`;
 }
 
 /**

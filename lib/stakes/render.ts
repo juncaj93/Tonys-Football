@@ -1,7 +1,14 @@
 import { type FactPacket } from '@/lib/slice/packet';
 import { validateProse } from '@/lib/slice/validate';
 
-import { CLAIMS, ENTRY_VERDICTS, VERDICTS, fill, houseTemplates } from './copy';
+import {
+  CLAIMS,
+  ENTRY_VERDICTS,
+  LINE_CONTEXT,
+  VERDICTS,
+  fill,
+  houseTemplates,
+} from './copy';
 import { type Entry, type Presentation, type Resolution, type Stake } from './model';
 
 /**
@@ -44,6 +51,15 @@ export interface ChalkCopy {
   readonly verdict: string | null;
   /** The recomputable sentence behind the verdict. Null while open. */
   readonly evidence: string | null;
+  /**
+   * One plain sentence of context, for a personal line.
+   *
+   * Null on every other stake and on a line with nothing to count. It is checked
+   * by the same validator as the claim, against the same declared sets — the
+   * counts were frozen into the stake's terms at authoring, so the sentence
+   * cannot introduce a number the offer did not carry.
+   */
+  readonly context: string | null;
 }
 
 /**
@@ -110,6 +126,13 @@ export function renderStake(input: {
   const evidence = resolution?.evidence.statement ?? null;
 
   /*
+   * The explainer, when the stake froze the counts to build it. `fill` returns
+   * null on a missing substitution, which is the honest outcome for a line
+   * authored before there was a window to speak of.
+   */
+  const context = fill(LINE_CONTEXT, stake.factRefs.values);
+
+  /*
    * The evidence sentence carries numbers the *stake* never declared — the
    * winning score, how many cleared the line — because it is a claim about the
    * week rather than about the offer. They are admitted from the resolution's own
@@ -139,7 +162,9 @@ export function renderStake(input: {
     ].sort(),
   };
 
-  const texts = [line, verdict ?? '', evidence ?? ''].filter((text) => text !== '');
+  const texts = [line, verdict ?? '', evidence ?? '', context ?? ''].filter(
+    (text) => text !== '',
+  );
 
   /*
    * Checked against the **whole** curated vocabulary, not the templates this
@@ -152,7 +177,7 @@ export function renderStake(input: {
    */
   if (!validateProse(texts, packet, houseTemplates()).publishable) return null;
 
-  return { line, verdict, evidence };
+  return { line, verdict, evidence, context };
 }
 
 /** What a manager's own pick says, once it has settled. Null while it is open. */

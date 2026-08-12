@@ -46,3 +46,4 @@ Thumbs.db
 
 # The local demo PIN. Generated per machine, never committed.
 .demo-pin.local
+.simulate-shots/
