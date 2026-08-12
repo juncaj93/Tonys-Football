@@ -42,7 +42,7 @@ Three things are worth carrying out of it:
   sentence on it — it has no palette contamination, no undersized type, no
   overlapping hit region and no missing tap target, so **every deterministic
   gate passes on it**. The sweep has been photographing a 500 and reporting
-  green. See §7.
+  green. See §8.
 
 The fix is the room's: a ring is not offered as something to put out, because it
 is granted rather than chosen and already has a place that is *about* having won
@@ -112,6 +112,13 @@ real manager.
 The parlor's 22 fewer round trips are worth roughly **65 ms at a 3 ms RTT and
 110 ms at 5 ms**, on the product's most-visited screen, before counting the
 database's own work.
+
+Wall-clock agreed, for what it is worth: the parlor's time-to-first-byte under
+the same modelled latency went **164 ms → 76 ms**. That number is quoted second
+rather than first because §1 is right about it — `/timeline` measured 53, 92 and
+66 ms on three runs of identical code, and a delta that size would be
+indistinguishable from noise. The parlor's is not, and it happens to point the
+same way as the wave count.
 
 ---
 
@@ -220,7 +227,22 @@ recently-landed area, and the honest alternative — resolving it once in the pa
 first — trades two queries for an extra wave, which is close to a wash. `/rooms`
 is 17 queries in **2** waves and is not a latency problem. Filed as `E8`.
 
-### 5.3 Web-font swap moves the layout after first paint
+### 5.3 The parlor still asks the same season question three times
+
+After the change, the only repeated read left on the parlor is
+`currentSeasonYear` — `select year from seasons order by year desc limit 1`,
+three times, down from six. Three different modules legitimately need it and
+none is wrong to ask.
+
+**Left alone deliberately.** Collapsing it means request-scoped memoization, and
+the primitive for that (React's `cache()`) keys on argument identity — so it
+would first need `getDb()` to return a stable handle, which is a change to how
+every service in the product receives its database. That is a general mechanism
+introduced for three of the cheapest queries in the set, which is the abstraction
+Phase 4 of this workstream's own brief warns against. It is recorded rather than
+filed: there is nothing here to fix until something makes the read expensive.
+
+### 5.4 Web-font swap moves the layout after first paint
 
 All three faces are `font-display: swap` (`@fontsource`'s default) against a
 `ui-monospace` fallback whose metrics are nothing like VT323's. When the font
@@ -249,7 +271,7 @@ protection and it is also the reason a font-pipeline change is not a low-risk
 performance edit. Filed as `E9` with the measurements, so whoever picks it up
 starts from numbers rather than from an impression.
 
-### 5.4 There is no `loading.tsx`, `error.tsx` or `not-found.tsx` anywhere
+### 5.5 There is no `loading.tsx`, `error.tsx` or `not-found.tsx` anywhere
 
 Three consequences, all measured:
 
@@ -335,7 +357,24 @@ behind it.
 
 ---
 
-## 9. What did not move
+## 9. One honest caveat about the local sweep
+
+`npm run visual:qa` was run locally against the production build and a freshly
+seeded `tonys_visual`, exactly as `visual-qa.yml` does — **except for the browser
+version.** The pinned Playwright wants Chromium 151 and the agent container ships
+151's predecessor; the matching build cannot be downloaded, because the proxy
+refuses `cdn.playwright.dev` with a 403. The installed build was aliased to the
+expected path rather than the driver being edited, so the gate ran unmodified.
+
+**The hosted run is the authority on pixels**, and this is recorded rather than
+glossed because a colour or a metric could in principle differ by one browser
+version. It does not affect anything in this document: every number in §1–§3 is a
+query count, a round-trip count or a byte count, and none of them comes from the
+sweep.
+
+---
+
+## 10. What did not move
 
 No art, asset, palette or registry row. No economy value, price, rarity, catalog
 size or token rule. No schema, migration, trigger or index. No cron. No feature

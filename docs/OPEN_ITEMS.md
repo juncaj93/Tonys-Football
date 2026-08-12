@@ -785,7 +785,7 @@ overrides — changes how the product's type is declared, and this repository ha
 typography module, a static size test and a runtime gate measuring the computed
 size of every rendered text node. The numbers are recorded so whoever picks it up
 starts from measurement rather than impression.
-`docs/MOBILE_PERFORMANCE_BOUNDARY.md §5.3`.
+`docs/MOBILE_PERFORMANCE_BOUNDARY.md §5.4`.
 
 ### E10 · There is no loading, error or not-found boundary anywhere in `app/`
 
@@ -801,7 +801,7 @@ screen in a product whose central rule is that the room is the interface, and an
 error boundary needs words in Tony's voice — `CLAUDE.md` limits his dialogue to
 curated content, so a session writing them would be authoring unapproved content
 on the surface the league reads as him. Both are commissioner-level decisions,
-not performance edits. `docs/MOBILE_PERFORMANCE_BOUNDARY.md §5.4`.
+not performance edits. `docs/MOBILE_PERFORMANCE_BOUNDARY.md §5.5`.
 
 ### E11 · The visual sweep passes on an HTTP 500
 
