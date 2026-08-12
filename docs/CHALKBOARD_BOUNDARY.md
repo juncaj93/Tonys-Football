@@ -360,7 +360,47 @@ not the round.
 
 ---
 
-## 5. What did not change
+## 5. The gate, and a baseline that had to be run
+
+Every gate is green at the head this shipped from: typecheck, lint, **2,043
+tests against a real Postgres**, a production build, and `npm run visual:qa` at
+**126 states × 3 widths**.
+
+It took four sweeps, and the third one is worth recording rather than quietly
+re-running. It failed on **3** quarantined React `#418` hydration errors against
+a ceiling of 2 — and the same commit then swept clean at **0**, with
+`origin/main` swept in the identical container in between at **1**.
+
+| Build | Sightings | Result |
+|---|---|---|
+| branch `3029bac` | 0 | passed |
+| **`origin/main` `1692a14`** | 1 | passed |
+| branch `130d37d`, run 1 | **3** | failed |
+| branch `130d37d`, run 2 | 0 | passed |
+
+**A deterministic mismatch cannot produce 3 and then 0**, and the two branch
+builds differ by two display strings and a test selector. `docs/VISUAL_DEBT.md`
+carries the table and the reasoning; the ceiling was **not** raised, which the
+ruling forbade explicitly.
+
+The baseline was run rather than argued about, because this branch already got
+that inference wrong once: `docs/SLICE_RESTRAINT_BOUNDARY.md §5` is a
+plausible-story failure on the same gate, where the distribution really was
+scattered and the cause really was mine.
+
+### One gate did break, and it was the right kind of break
+
+Renaming the parlor panel took three visual states down on a thirty-second
+timeout: the driver reached the object by matching its label, `/prediction/i`.
+Loud, immediate, and still the wrong coupling — a gate's job is to open the
+object, not to hold its copy still. It now uses `data-room-object`, the id
+`objects.ts` assigns and `roomObjectAttributes` writes onto every trigger in the
+room. The Back Hall's chain check paid for the other half of that lesson: it
+matched a Tailwind class, where *"no chain found"* is the **passing** answer.
+
+---
+
+## 6. What did not change
 
 - **The economy.** Stake, payout, settlement timing, `apply_token_delta`, every
   idempotency key and every constraint.

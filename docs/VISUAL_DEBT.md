@@ -204,6 +204,35 @@ run 4) was checked rather than assumed: that state alone, **18 captures across
 six runs, produced zero**. A state is not guilty because the background landed
 on it once.
 
+### 2026-08-12 — a baseline, and the same build at 3 and then 0
+
+The chalkboard branch failed one sweep at **3** and passed the next at **0** on
+**the same commit**, with `origin/main` swept in the identical container in
+between. Recorded because the pair is the cleanest single piece of evidence this
+entry has: a deterministic mismatch cannot produce 3 and then 0.
+
+| Build | Sightings | Result | Where |
+|---|---|---|---|
+| branch `3029bac` | **0** | passed | — |
+| **`origin/main` `1692a14`** | 1 | passed | `/door` @360 |
+| branch `130d37d`, run 1 | **3** | failed | `/` @390 · `/profile` @375 · `/profile` @360 |
+| branch `130d37d`, run 2 | **0** | passed | — |
+
+The two branch builds differ by **two display strings and one test selector** —
+`app/page.tsx`'s panel title, `objects.ts`'s accessible label, and the driver
+reaching that object by `data-room-object` instead of by its label. None of them
+can change a rendered tree's shape, and the same build then swept clean.
+
+`/profile` firing at 375 and 360 but **not** 390 is the near miss worth naming:
+two of three widths looks like a column and is not one. The discriminator is
+*every* width of one state, and this branch touches nothing that `/profile`
+renders.
+
+**The ceiling was not raised**, and the commissioner's ruling on this branch
+forbade it explicitly. The measurement that would change it is a dev-build
+census, which `§ Why one hydration census could not answer item 16` still
+describes as the open work.
+
 **Two of five runs failed, on a build whose every other gate was green.** That
 is the condition the quarantine header names as a gate that has stopped
 protecting anything — *"a failure with nothing to do with the change under
