@@ -34,6 +34,21 @@ Twenty-four items ship in the launch catalog. Twelve receive finished art at lau
 
 ## FAMILY
 
+> ⚠️ **Measured 2026-08-12: the block below asks for something the shipped art does
+> not have, and the block is deliberately left unchanged.**
+>
+> `OUTLINE: Fully enclosed 1-pixel outline in a warm near-black` — none of the
+> twelve shipped sprites carries one. They are form-shaded, 12–28 distinct colours
+> each, four to six value steps per material with visible dithering. A candidate
+> generated to this block alone comes out flatter than the set it has to join.
+>
+> It is **not rewritten here** because this block is pasted verbatim into every
+> prompt and editing it changes all future art on one session's authority. The
+> measurement, and the open question of which side is wrong, are in
+> [`docs/COLLECTIBLE_CATALOG_READINESS.md §4.1`](../../docs/COLLECTIBLE_CATALOG_READINESS.md).
+> Until that is settled, add a `SHADING:` line to the subject and attach the
+> shipped sprites as a reference sheet.
+
 ```
 SUBJECT TYPE: A single object, isolated, presented straight-on as if photographed for a
 catalogue. One object only. No scene, no setting, no hands holding it, no surface beneath it.

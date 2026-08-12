@@ -250,6 +250,17 @@ catalog change.
 **Nothing is blocked.** Every unpainted slug resolves today, the loop works, and
 a swap stays a registry row.
 
+**Production readiness was audited on 2026-08-12 and the catalog can be
+repurposed without a migration** — [`docs/COLLECTIBLE_CATALOG_READINESS.md`](COLLECTIBLE_CATALOG_READINESS.md).
+The finding that matters if a curation workstream returns with different
+*names* for the same twenty-four slots: `versionOf()` hashes **slug, rarity and
+weight only**, so renaming every item leaves the reward table byte-identical at
+`e768dadb9aec5443` and every stored opening still replays. Slugs and rarities
+are the load-bearing half and must not move. That document also carries the
+measured production contract, the four-slot placement matrix, the verdict that
+the 46 × 46 canvas should stay, and the three assertions a V1 freeze check still
+needs.
+
 ### A6 · The Back Hall was the only interior in the product that is not art — **CLOSED, 2026-08-11**
 
 **Briefed and delivered the same day.** The commissioner supplied
