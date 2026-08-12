@@ -117,14 +117,19 @@ export interface Calibration {
   readonly numbers: readonly string[];
 }
 
-/** How a proposition turned out, with the values its explanation needs. */
+/**
+ * How a proposition turned out, with the values its explanation needs.
+ *
+ * Names go in `values` beside the numbers rather than in a list of their own:
+ * `renderStake` admits every non-numeric value the resolution stored, which is
+ * the same route the bounty's claimant takes. A second channel for names would
+ * be a second thing to keep in step with the sentence.
+ */
 export interface Settlement {
   readonly happened: boolean;
   /** Which curated sentence in `copy.ts` explains it. */
   readonly statementKey: string;
   readonly values: Readonly<Record<string, string>>;
-  /** Names the explanation prints, which the renderer admits from the evidence. */
-  readonly names: readonly string[];
 }
 
 /** What a family needs to know about the season so far. */
@@ -227,7 +232,6 @@ export const LIBRARY: readonly Proposition[] = [
           best: writePoints(best.pointsCents),
           ...(happened ? { subject: best.displayName } : {}),
         },
-        names: happened ? [best.displayName] : [],
       };
     },
   },
@@ -244,10 +248,10 @@ export const LIBRARY: readonly Proposition[] = [
       if (threshold === null || closest === undefined) return null;
 
       /*
-       * *"Inside"* is **at or below**, which is the rule the investigation swept
-       * and it is stated here rather than left to the operator. A margin exactly
-       * on six points is a photo finish by any reading, and the alternative would
-       * make the number mean one thing in the sweep and another in a settlement.
+       * *"Inside"* is **at or below**, which is the rule the sweep used and it is
+       * stated here rather than left to the operator. A margin exactly on ten
+       * points is a photo finish by any reading, and the alternative would make
+       * the number mean one thing in the calibration and another in a settlement.
        */
       const happened = closest.marginCents <= threshold;
       return {
@@ -260,10 +264,6 @@ export const LIBRARY: readonly Proposition[] = [
             ? { winner: closest.winner.displayName, loser: closest.loser.displayName }
             : {}),
         },
-        names:
-          happened && closest.winner !== null && closest.loser !== null
-            ? [closest.winner.displayName, closest.loser.displayName]
-            : [],
       };
     },
   },
@@ -295,7 +295,6 @@ export const LIBRARY: readonly Proposition[] = [
           cleared: String(cleared),
           teams: String(needed),
         },
-        names: [],
       };
     },
   },
@@ -326,10 +325,6 @@ export const LIBRARY: readonly Proposition[] = [
             ? { winner: widest.winner.displayName, loser: widest.loser.displayName }
             : {}),
         },
-        names:
-          happened && widest.winner !== null && widest.loser !== null
-            ? [widest.winner.displayName, widest.loser.displayName]
-            : [],
       };
     },
   },
