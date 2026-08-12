@@ -83,9 +83,10 @@ export default async function CounterPage() {
    * where it belongs — in the return type the panel consumes — and the second
    * query is gone.
    */
-  const held = season === null ? { purse: null, seated: false } : await purseFor(db, user.id, season.id);
-  const purse = held.purse;
-  const seated = held.seated;
+  const { purse, seated } =
+    season === null
+      ? { purse: null, seated: false }
+      : await purseFor(db, user.id, season.id);
 
   return (
     <>

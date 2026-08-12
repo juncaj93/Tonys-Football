@@ -321,12 +321,45 @@ Three things worth carrying out of the investigation:
 **Nothing is blocked.** The stand-in resolves today at every width, the three
 Doors work, and the swap is a registry row plus deleting one component.
 
+### A7 · `/counter/showcase` answered 500 for every champion — **fixed, 2026-08-12**
+
+Found by the iPhone performance sweep, which records the status of every route it
+loads: this one came back **500 seven times out of seven** while everything
+around it was green.
+
+`item_championship_ring` is a real `collectibles` row and is deliberately outside
+the box catalog — `systemLayer`, earned rather than pulled — and all three readers
+in `lib/counter/showcase.ts` called `catalogItem`, which throws rather than
+returning a hole. So the Showcase failed to render for **any manager who has ever
+won the league**: on a freshly seeded production database that is two of the ten,
+one of them the commissioner.
+
+**Three things could have caught it and none did.**
+
+- `lib/rooms/service.ts` had already reached exactly this conclusion for exactly
+  this slug, with the reasoning written out. Nothing connected the two surfaces.
+- **The test suite could not.** Every showcase test builds its managers from
+  scratch and a manufactured manager holds no ring; the rings come from
+  `scripts/seed.ts` reading verified titles.
+- **The visual gate could not**, and that is now **E11**. The route is
+  photographed at three widths on every sweep, and a Next.js production error
+  page passes every deterministic check there is.
+
+The repair is the room's rule: a ring is not offered as something to put out —
+it is granted rather than chosen and already has a place that is *about* having
+won it — and a stored pick the catalog cannot name reads as *nothing out* rather
+than as an exception, because `showcaseFor` is on the parlor's own critical path.
+
+Three tests in `lib/counter/showcase.test.ts`, **all three failing on the pre-fix
+module**. No schema change, no migration, nothing in `docs/ACTIVATION.md` moves.
+`docs/MOBILE_PERFORMANCE_BOUNDARY.md §0`.
+
 **Nothing else is in category A.** Every other v1 system is built, tested and
 reachable; what remains below is polish, activation, or deferred scope. The two
 that remain — **A3** and **A5** — are both art dependencies and neither blocks
 anything: every unpainted slug resolves today. **A6 closed on 2026-08-11**, and
 with it every *room* in the product is painted; what is left unpainted is two
-basement themes and twelve collectibles.
+basement themes and twelve collectibles. **A7 closed on 2026-08-12.**
 
 ---
 
@@ -723,6 +756,66 @@ one-line change.
 **Not a launch blocker.** The disagreement is recorded either way, the finalized
 record stands, and nothing downstream reads the run status to decide what is
 true. If it is ever picked up, it is a hardening task with its own scope.
+
+### E8 · `/rooms` ensures the same room twice, and two of those queries are writes
+
+`roomFor` and `placeable` each call `ensureRoom`, and `app/rooms/page.tsx` calls
+both in parallel — so every render issues two `INSERT … ON CONFLICT DO NOTHING`
+and two selects where one of each would do. On Neon both writes go to the
+primary.
+
+**Measured and deliberately not fixed** (2026-08-12). The clean fix threads the
+resolved room through two service signatures in a recently-landed area, and the
+cheap alternative — resolving it once in the page first — trades two queries for
+an extra round trip, which is close to a wash. `/rooms` is 17 queries in **2**
+waves and is not a latency problem. `docs/MOBILE_PERFORMANCE_BOUNDARY.md §5.2`.
+
+### E9 · The web fonts swap after first paint, and the layout moves
+
+All three faces are `font-display: swap` — `@fontsource`'s default — against a
+`ui-monospace` fallback whose metrics are nothing like VT323's. Measured cold, at
+390: **`/profile/character` 0.109**, `/profile` 0.070, `/counter` 0.057,
+`/timeline` 0.044, the parlor 0.011, and **0.000** on the two routes that request
+no font. The shift lands at 87–151 ms, on text nodes. On a phone over cellular
+the font arrives later and the jump is larger.
+
+**Not a low-risk edit and that is why it is here.** Every route to it —
+`next/font/local`, hand-declared `@font-face` with preloads, or fallback metric
+overrides — changes how the product's type is declared, and this repository has a
+typography module, a static size test and a runtime gate measuring the computed
+size of every rendered text node. The numbers are recorded so whoever picks it up
+starts from measurement rather than impression.
+`docs/MOBILE_PERFORMANCE_BOUNDARY.md §5.3`.
+
+### E10 · There is no loading, error or not-found boundary anywhere in `app/`
+
+Three measured consequences: **nothing is prefetched** (zero RSC prefetch
+requests on an idle parlor over 2.5 s — every page is `force-dynamic` with no
+loading boundary, so Next correctly has no shell to prefetch); **a tap has no
+feedback until the next screen paints**, 137–188 ms locally and more in
+production; and **a thrown error renders Next's default page**, which is exactly
+what **A7** looked like to a manager.
+
+**Reported rather than built, on product grounds.** A loading state is a new
+screen in a product whose central rule is that the room is the interface, and an
+error boundary needs words in Tony's voice — `CLAUDE.md` limits his dialogue to
+curated content, so a session writing them would be authoring unapproved content
+on the surface the league reads as him. Both are commissioner-level decisions,
+not performance edits. `docs/MOBILE_PERFORMANCE_BOUNDARY.md §5.4`.
+
+### E11 · The visual sweep passes on an HTTP 500
+
+`/counter/showcase` is photographed at all three widths on every run and **has
+been photographing a 500 page** (**A7**). Every deterministic gate passed on it:
+a Next.js production error page has no palette contamination, no undersized type,
+no overlapping hit region and no missing tap target.
+
+The fix is one assertion — the driver should refuse a non-200 for a state that
+expects a page — and it belongs in `scripts/visual-qa.mts`, which the
+2026-08-12 performance claim did not take. Filed with the worked example
+attached, because a gate that reports green on a 500 is the class of thing this
+repository files rather than remembers.
+`docs/MOBILE_PERFORMANCE_BOUNDARY.md §8`.
 
 ---
 

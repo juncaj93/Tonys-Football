@@ -110,26 +110,47 @@ const KINDS: readonly FactType[] = ['largest-margin', 'closest-game'];
 
 export async function timeline(db: Queryable): Promise<readonly TimelineSeason[]> {
   /*
-   * Queried once and passed down.
+   * Three reads, none of which is an input to the others.
    *
-   * `seasonFacts` needs the whole finalized margin population to place a game in
-   * league history, and asking for it per season would be the same query three
-   * times — `facts.ts` says as much where it takes the parameter.
+   * The margins are **queried once and passed down**: `seasonFacts` needs the
+   * whole finalized margin population to place a game in league history, and
+   * asking for it per season would be the same query three times — `facts.ts`
+   * says as much where it takes the parameter.
+   *
+   * All three were then awaited one after the other, which is three database
+   * round trips where one would do. That is invisible against a local Postgres
+   * and it is not against Neon.
    */
-  const historicalMarginsCents = await finalizedMarginsCents(db);
+  const [historicalMarginsCents, banners, rows] = await Promise.all([
+    finalizedMarginsCents(db),
+    championBanners(db as Database),
+    db
+      .select({ year: seasons.year, finalizedAt: seasons.finalizedAt })
+      .from(seasons)
+      .orderBy(asc(seasons.year)),
+  ]);
 
-  const banners = await championBanners(db as Database);
   const champion = new Map(banners.map((b) => [b.year, b]));
 
-  const rows = await db
-    .select({ year: seasons.year, finalizedAt: seasons.finalizedAt })
-    .from(seasons)
-    .orderBy(asc(seasons.year));
+  /*
+   * Every season's facts derived at once, rather than one season at a time.
+   *
+   * The loop body had no cross-season dependency — the margin population and the
+   * banners are both already in hand — so awaiting inside it made the page cost
+   * **one round trip per season of league history, forever**. Three seasons is
+   * nine sequential reads today and it grows every January.
+   *
+   * `Promise.all` preserves input order, so the wall is in the same order it was:
+   * `rows` is already sorted ascending and the mapping is positional.
+   */
+  const derivedBySeason = await Promise.all(
+    rows.map((row) => seasonFacts(db, { year: row.year, historicalMarginsCents })),
+  );
 
   const out: TimelineSeason[] = [];
-  for (const row of rows) {
+  for (const [index, row] of rows.entries()) {
     const banner = champion.get(row.year);
-    const derived = await seasonFacts(db, { year: row.year, historicalMarginsCents });
+    const derived = derivedBySeason[index]!;
     const ranked = [...derived.facts];
 
     /*
