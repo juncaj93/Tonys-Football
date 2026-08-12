@@ -250,10 +250,83 @@ catalog change.
 **Nothing is blocked.** Every unpainted slug resolves today, the loop works, and
 a swap stays a registry row.
 
+### A6 · The Back Hall was the only interior in the product that is not art — **CLOSED, 2026-08-11**
+
+**Briefed and delivered the same day.** The commissioner supplied
+`zone_back_hall_shell` against the brief below; it was processed unmodified
+through `art:process` and `/back-hall` renders `data-room-shell="art"` at all
+three widths. The drawn stand-in is **deleted** — the hall has one shell, so a
+fallback branch would be one nothing can reach, and the honest signal for a lost
+registry path is a red gate rather than a diagram.
+
+Measured on the delivered file: **19** colours covering ≥0.5% of the frame each,
+against the stand-in's 9, the storeroom's 25 and the parlor's 52. That is six
+under the brief's own 25–48 target and it is recorded rather than rounded up —
+the room genuinely has a large plain floor, and the picture at phone size is the
+acceptance criterion.
+
+Three things came out of the delivery:
+
+- **The geometry moved to the art, once**, by luminance profile off the file:
+  `stairs [16,392,112,150] → [38,118,72,174]`, `curtain [204,104,88,276] →
+  [118,118,86,174]`, `return [122,122,70,258] → [266,116,50,176]`. Same call the
+  storeroom made on 2026-08-10, same reason, and these numbers are the master now.
+- **Visual debt 19 closed with it**, because the painted stairwell ends at
+  `y 292` instead of `y 542`. The rule survives the fix and `checkBackHall` now
+  **taps** each shut door, which is the only way that class of defect is visible
+  at all.
+- **A gate that was quietly rotting was fixed** — the chain check matched a
+  Tailwind class, and restyling the chain would have made it match nothing while
+  *"no chain found"* is the passing answer for the open state.
+
+`docs/BACK_HALL_BOUNDARY.md §10` is the canonical account. The original
+investigation follows, kept because it is the diagnosis.
+
+---
+
+**Reported by the commissioner and confirmed by measurement.** `/back-hall` draws
+`components/scene/back-hall.tsx` — flat rectangles in palette colours, the
+approved in-world stand-in the 2026-07-31 ruling asked for. It did its job:
+the hall stopped being a menu card (visual debt 5) a year before a painting
+existed.
+
+**What changed is the neighbourhood, not the room.** In July the hall sat between
+a painted parlor and nothing. `zone_room_shell_storeroom` landed on 2026-08-10,
+so it now sits **between two painted rooms** and is the only interior in the
+product that is not art. Measured on production captures at 390
+(`docs/evidence/back-hall/README.md`): the hall spends **9** colours on ≥0.5% of
+the screen each, against the storeroom's **25** and the parlor's **48**, and its
+two darkest fills alone cover **56.9%** of the frame.
+
+[`docs/art/BATCH_G_BACK_HALL_HANDOFF.md`](art/BATCH_G_BACK_HALL_HANDOFF.md) is
+the brief — **one asset**, `zone_back_hall_shell`, paste-ready, with the safe
+band, the three openings and the four rules their rectangles may not break.
+`docs/BACK_HALL_BOUNDARY.md §9` carries the reasoning that governs the room
+rather than the picture.
+
+Three things worth carrying out of the investigation:
+
+- **The staircase is now shared.** The storeroom paints its own top of these
+  stairs — a timber-framed flight rising away from the viewer with warm light at
+  the top — so the hall's stair is a framed stair head, not the hatch the
+  stand-in cuts in the floor. The two shells have to agree.
+- **The curtain is baked into the shell**, unlike the parlor's rear doorway,
+  because nothing is ever composited into this room's openings in v1. It costs
+  one Phase 10 overlay and saves an asset now (`BATCH_G §0`).
+- **One defect fell out and is filed rather than fixed** — a shut door's
+  in-world answer lands off the bottom of the screen at 390 (visual debt 19). It
+  is unreachable while `rooms` is open, and it becomes a hard constraint on the
+  new geometry instead of a patch to a rectangle that is about to move.
+
+**Nothing is blocked.** The stand-in resolves today at every width, the three
+Doors work, and the swap is a registry row plus deleting one component.
+
 **Nothing else is in category A.** Every other v1 system is built, tested and
 reachable; what remains below is polish, activation, or deferred scope. The two
 that remain — **A3** and **A5** — are both art dependencies and neither blocks
-anything: every unpainted slug resolves today.
+anything: every unpainted slug resolves today. **A6 closed on 2026-08-11**, and
+with it every *room* in the product is painted; what is left unpainted is two
+basement themes and twelve collectibles.
 
 ---
 

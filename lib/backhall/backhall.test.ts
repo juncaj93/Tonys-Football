@@ -26,9 +26,9 @@ describe('the back hall map', () => {
   });
 
   it('shares the parlor’s coordinate system', () => {
-    // `zone_back_hall_shell` is registered at 960x1707 — 320 x 569 at the
-    // pipeline's 3x authoring scale, identical to the parlor's shell. Walking
-    // through the rear doorway must not change the size of the world.
+    // `zone_back_hall_shell` is registered at 320 x 569, identical to the
+    // parlor's shell and to every room shell on disk. Walking through the rear
+    // doorway must not change the size of the world.
     expect(BACK_HALL).toEqual({ width: 320, height: 569 });
   });
 
@@ -59,6 +59,48 @@ describe('the back hall map', () => {
       expect(toCss(width), object.id).toBeGreaterThanOrEqual(44);
       // Height scales on the same factor: the container is aspect-locked.
       expect(toCss(height), object.id).toBeGreaterThanOrEqual(44);
+    }
+  });
+
+  it('keeps every object inside the band a phone actually shows', () => {
+    /*
+     * The room is anchored to the top of the viewport and aspect-locked, so a
+     * taller phone loses the bottom rather than the middle. At 390 — the widest
+     * supported and therefore the tallest render — the viewport shows
+     * `664 x 320 / 390 = 544.8` room units, so rows 545–568 are cropped.
+     *
+     * Measured on a production build, not derived: `docs/evidence/back-hall/`.
+     */
+    const VISIBLE_AT_390 = (664 * BACK_HALL.width) / 390;
+
+    for (const object of BACK_HALL_OBJECTS) {
+      const [, y, , height] = object.rect;
+      expect(y + height, object.id).toBeLessThanOrEqual(VISIBLE_AT_390);
+    }
+  });
+
+  it('leaves a shut door room to be heard', () => {
+    /*
+     * **Visual debt 19**, as a rule rather than a repair.
+     *
+     * `ShutDoor` renders its in-world answer 8 units below the door's own
+     * rectangle, and the answer is up to 68 CSS px tall. The stairs used to end
+     * at `y 542`, which put that line's top at 670px inside a 664px viewport at
+     * 390 — `18 §6.3` requires a locked door to answer in world, and an answer
+     * below the fold is no answer.
+     *
+     * 68 CSS px at 390 is `68 x 320 / 390 = 55.8` room units, plus the 8-unit
+     * offset, inside the 544.8 the phone shows. Anything lockable must end
+     * above that.
+     */
+    const LINE_UNITS = (68 * BACK_HALL.width) / 390;
+    const ceiling = (664 * BACK_HALL.width) / 390 - LINE_UNITS - 8;
+
+    expect(ceiling).toBeGreaterThan(460);
+
+    for (const id of LOCKABLE) {
+      const [, y, , height] = backHallObject(id).rect;
+      expect(y + height, id).toBeLessThanOrEqual(ceiling);
     }
   });
 

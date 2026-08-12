@@ -310,9 +310,13 @@
         "family": "zone",
         "canvas": "320x569",
         "batch": "B1",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "role": "scenery",
-        "alt": "The back hall behind Tony's"
+        "alt": "The back hall behind Tony's",
+        "path": "/assets/zone/zone_back_hall_shell.png",
+        "source": "ChatGPT image generation, approved shell candidate",
+        "prompt_ref": "docs/art/BATCH_G_BACK_HALL_HANDOFF.md",
+        "rights_status": "original"
       },
       "object_stairs_rooms": {
         "family": "zone",
