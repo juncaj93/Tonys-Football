@@ -16,8 +16,9 @@ import { type Tone, type ToneGrid } from './sprite';
  * a finished full-colour hairstyle is one hair colour and the other seven stop
  * existing.
  *
- * It is **not** a generic art framework. One vocabulary, eighteen entries, covering
- * exactly what a below-neck build contains.
+ * It is **not** a generic art framework. One vocabulary, twenty-three entries,
+ * covering exactly what a build, a head and a hairstyle contain — three plates, and
+ * a key names which of them it may appear on.
  *
  * ## Revision 2, 2026-08-11 — the encoding colour is not the render colour
  *
@@ -35,7 +36,9 @@ import { type Tone, type ToneGrid } from './sprite';
  *
  * 1. **Separability** — the conversion snaps each incoming pixel to its nearest
  *    key, and two keys close together make that snap a coin toss on exactly the
- *    pixels an artist was least careful about. Asserted at ≥ 20 in `mask.test.ts`.
+ *    pixels an artist was least careful about. Asserted at ≥ 20 **per plate** in
+ *    `mask.test.ts`, and at ≥ 100 between hair and skin, which are not merely
+ *    snapped apart but partitioned (see {@link extractHairChannel}).
  * 2. **Plausibility** — a painter working in these colours is painting a
  *    recognisable red-shirted manager rather than an abstract index map, so they
  *    can judge their own work by looking at it.
@@ -73,8 +76,23 @@ export type MaskChannel =
   | 'garment'
   /** The manager's skin. Recoloured per `skin` — hands, forearms, any bare neck. */
   | 'skin'
+  /**
+   * The manager's hair. Recoloured per `hairColour` — a hairstyle **and** a beard,
+   * because facial hair deliberately takes the head hair's colour rather than a
+   * control of its own (`composite.ts`).
+   */
+  | 'hair'
   /** Not the manager's to choose: trousers, boot uppers, soles. */
   | 'fixed';
+
+/**
+ * Which kind of layer a delivered file is.
+ *
+ * **The snap only ever offers the keys of one plate**, so a plate is not a label —
+ * it is the candidate set. A head contains no boots; a hairstyle contains no skin,
+ * no shirt and no eyes.
+ */
+export type MaskPlate = 'build' | 'head' | 'hair';
 
 /** The step of a material's ramp, lightest first. */
 export type MaskStep = 'light2' | 'light' | 'base' | 'shade' | 'shade2';
@@ -117,26 +135,34 @@ export interface MaskKey {
    * trousers and no shirt, so offering those as answers can only ever be wrong.
    * Restricting the candidates removes impossible answers rather than accepting
    * bad ones, which is why it cannot hide a malformed asset.
+   *
+   * **It is also what makes separability a per-plate question**, which is how
+   * `mask.test.ts` asks it. Two keys that no plate offers together cannot be
+   * confused however close they are, so measuring them is a check of a claim
+   * nothing depends on — and it would refuse a correct vocabulary for a collision
+   * that cannot occur. What catches a file submitted as the wrong *kind* is
+   * registration, not colour; see {@link HAIR_REGISTRATION}.
    */
-  readonly on: readonly ('build' | 'head')[];
+  readonly on: readonly MaskPlate[];
 }
 
-const BOTH = ['build', 'head'] as const;
 const BUILD_ONLY = ['build'] as const;
-const HEAD_ONLY = ['head'] as const;
+const HEAD_AND_HAIR = ['head', 'hair'] as const;
+const HAIR_ONLY = ['hair'] as const;
+const EVERY_PLATE = ['build', 'head', 'hair'] as const;
 
 const house = (colour: HouseColour): string => HOUSE[colour];
 
 /**
- * The vocabulary. **Eighteen entries, and the order is the encoding.**
+ * The vocabulary. **Twenty-three entries, and the order is the encoding.**
  *
  * A stored mask names these by index, so a row that moved would silently repaint
  * every delivered asset — the same rule, for the same reason, as
  * `lib/character/catalog.ts`'s. **Never reorder; only append.**
  */
 export const MASK_KEYS: readonly MaskKey[] = Object.freeze([
-  { index: 0, channel: 'none', step: 'none', name: 'Transparent', hex: house('ink-900'), tone: null, on: BOTH },
-  { index: 1, channel: 'none', step: 'outline', name: 'Outline', hex: house('ink-900'), tone: 'outline', on: BOTH },
+  { index: 0, channel: 'none', step: 'none', name: 'Transparent', hex: house('ink-900'), tone: null, on: EVERY_PLATE },
+  { index: 1, channel: 'none', step: 'outline', name: 'Outline', hex: house('ink-900'), tone: 'outline', on: EVERY_PLATE },
 
   /*
    * The garment, five steps. `light2` and `shade2` are the two the palette cannot
@@ -149,10 +175,17 @@ export const MASK_KEYS: readonly MaskKey[] = Object.freeze([
   { index: 5, channel: 'garment', step: 'shade', name: 'Shirt shade', hex: house('red-dark'), tone: 'shade', on: BUILD_ONLY },
   { index: 6, channel: 'garment', step: 'shade2', name: 'Shirt deep shadow', hex: '#5A1216', tone: 'shade', pending: true, on: BUILD_ONLY },
 
-  // Skin, three steps — which is what Tony's own arms and hands use.
-  { index: 7, channel: 'skin', step: 'light', name: 'Skin light', hex: house('skin-1'), tone: 'skin:light', on: BOTH },
-  { index: 8, channel: 'skin', step: 'base', name: 'Skin base', hex: house('skin-2'), tone: 'skin:base', on: BOTH },
-  { index: 9, channel: 'skin', step: 'shade', name: 'Skin shade', hex: house('skin-3'), tone: 'skin:shade', on: BOTH },
+  /*
+   * Skin, three steps — which is what Tony's own arms and hands use.
+   *
+   * **On the hair plate too, as context rather than as content.** A hairstyle is
+   * delivered drawn *on a head*, because that is the only way a generator can be
+   * told where to put it; the skin keys are what the head under it is painted in,
+   * and `extractHairChannel` discards every pixel of them. See {@link MaskPlate}.
+   */
+  { index: 7, channel: 'skin', step: 'light', name: 'Skin light', hex: house('skin-1'), tone: 'skin:light', on: EVERY_PLATE },
+  { index: 8, channel: 'skin', step: 'base', name: 'Skin base', hex: house('skin-2'), tone: 'skin:base', on: EVERY_PLATE },
+  { index: 9, channel: 'skin', step: 'shade', name: 'Skin shade', hex: house('skin-3'), tone: 'skin:shade', on: EVERY_PLATE },
 
   /*
    * Trousers. `light2` is the one genuinely missing colour rather than a nicety:
@@ -185,15 +218,63 @@ export const MASK_KEYS: readonly MaskKey[] = Object.freeze([
    * the drawn head was written; it simply never needed encoding, because no build
    * has eyes.
    */
-  { index: 18, channel: 'skin', step: 'light2', name: 'Skin highlight', hex: house('amber-glow'), tone: 'skin:light', pending: true, on: BOTH },
-  { index: 19, channel: 'fixed', step: 'base', name: 'Eye white', hex: house('paper-white'), tone: 'fixed:white@base', on: HEAD_ONLY },
+  { index: 18, channel: 'skin', step: 'light2', name: 'Skin highlight', hex: house('amber-glow'), tone: 'skin:light', pending: true, on: EVERY_PLATE },
+  { index: 19, channel: 'fixed', step: 'base', name: 'Eye white', hex: house('paper-white'), tone: 'fixed:white@base', on: HEAD_AND_HAIR },
+
+  /*
+   * Appended 2026-08-12 for the hair plate — six hairstyles and four facial-hair
+   * pieces, which are the ten layers the head was registered so carefully for.
+   *
+   * **Three steps, and the number is the ramp's rather than a choice.** Every one
+   * of `HAIR_COLOURS`' eight ramps is exactly three deep, so a fourth key would
+   * have nothing to decode to on any of them — the garment's and the skin's
+   * `pending` highlights collapse onto a step the ramp *has*, and there is no such
+   * step here. It is also what the reference art actually uses: sampled over the
+   * hair mass of the delivered contact sheet, 90% of it falls into two tone
+   * families around `rgb(126,73,37)` and `rgb(84,48,24)`, with the outline as the
+   * third. Recorded in `docs/art/MANAGER_HAIR_BRIEF.md`.
+   *
+   * ## Green, and it is the one place separability beat plausibility outright
+   *
+   * The module note above ranks the two and this is the key that tests the
+   * ranking. The obvious choice was the `Brown` ramp — `wood-light`/`wood-mid`/
+   * `wood-dark`, `HAIR_COLOURS[2]` — so that a painter is drawing a brown-haired
+   * manager and at `hairColour: 2` the render is the file. **It would not
+   * survive the extraction step.** Hair arrives painted on a head, and the mask
+   * is the *hair*: the pixels are separated by which key they snapped to, so
+   * brown hair against brown skin is exactly the collision that put 25% of round
+   * 2's head onto boot keys (`MaskKey.on`). Skin and hair browns are neighbours;
+   * the face would have come out as hair.
+   *
+   * A green ramp is nowhere near skin, ink, wood, paper or amber. It looks absurd
+   * on a head and that is the point — it is an **encoding**, the ingest's own
+   * preview immediately shows the hair in real brown, and a mask PNG never reaches
+   * `public/`.
+   *
+   * **The shade step is deliberately not `green-deep`.** The house green would
+   * have made two of the three keys real palette colours, which was tempting and
+   * wrong: at `#1E4A32` it sits 64 from `ink-900`, and a hair pixel that snaps to
+   * the outline key is not recoloured, it is **deleted** — `extractHairChannel`
+   * discards the delivered ink wholesale. The darkest pixels of a dark hairstyle
+   * are exactly where that would happen, and it would come back as holes in the
+   * hair rather than as anything a validator names. `#2A7D45` is 119 from ink and
+   * still 43 from the base step.
+   *
+   * **A tone here is plain**, not channelled. A hair layer's paint is
+   * `{ kind: 'hair' }` and carries one material, so `light`/`base`/`shade` resolve
+   * against `hairColours()` with no prefix to strip — the `skin:` case exists only
+   * because a *build* carries two of the manager's choices at once.
+   */
+  { index: 20, channel: 'hair', step: 'light', name: 'Hair light', hex: house('green-neon'), tone: 'light', on: HAIR_ONLY },
+  { index: 21, channel: 'hair', step: 'base', name: 'Hair base', hex: '#35A05C', tone: 'base', on: HAIR_ONLY },
+  { index: 22, channel: 'hair', step: 'shade', name: 'Hair shade', hex: '#2A7D45', tone: 'shade', on: HAIR_ONLY },
 ]);
 
 /** The transparent key. Index 0, and the only one with no tone. */
 export const TRANSPARENT_KEY = 0;
 
 /** Every key that may appear as an opaque pixel, optionally on one plate. */
-export function paintedKeys(plate?: 'build' | 'head'): readonly MaskKey[] {
+export function paintedKeys(plate?: MaskPlate): readonly MaskKey[] {
   return MASK_KEYS.filter(
     (key) => key.index !== TRANSPARENT_KEY && (plate === undefined || key.on.includes(plate)),
   );
@@ -217,13 +298,22 @@ export const MASK_CANVAS = Object.freeze({ width: 112, height: 168 });
  */
 export interface EncodedMask {
   readonly slug: string;
+  /**
+   * Which kind of layer this was snapped and validated as.
+   *
+   * Recorded rather than inferred. `composeCharacter` asks whether a *top* has a
+   * painted **build** in order to decide whether the drawn body stands down, and
+   * "there is a mask under this slug" stopped being the same question the moment a
+   * second kind of plate existed.
+   */
+  readonly plate: MaskPlate;
   readonly width: number;
   readonly height: number;
   readonly rle: string;
 }
 
 /** Run-length encode a grid of key indices. Row-major, canvas-wide. */
-export function encodeMask(slug: string, keys: readonly number[]): EncodedMask {
+export function encodeMask(slug: string, plate: MaskPlate, keys: readonly number[]): EncodedMask {
   const { width, height } = MASK_CANVAS;
   if (keys.length !== width * height) {
     throw new Error(`a mask is ${String(width * height)} cells; got ${String(keys.length)}`);
@@ -239,7 +329,7 @@ export function encodeMask(slug: string, keys: readonly number[]): EncodedMask {
     at = end + 1;
   }
 
-  return { slug, width, height, rle: runs.join(',') };
+  return { slug, plate, width, height, rle: runs.join(',') };
 }
 
 /** The key index at every cell. Throws on anything malformed — masks are generated. */
@@ -252,7 +342,17 @@ export function decodeKeys(mask: EncodedMask): readonly number[] {
     if (!Number.isInteger(key) || !Number.isInteger(count) || count < 1) {
       throw new Error(`${mask.slug}: malformed run "${run}"`);
     }
-    if (MASK_KEYS[key] === undefined) throw new Error(`${mask.slug}: unknown key ${String(key)}`);
+    const entry = MASK_KEYS[key];
+    if (entry === undefined) throw new Error(`${mask.slug}: unknown key ${String(key)}`);
+    /*
+     * A key a plate cannot contain is a module that was hand-edited, or one
+     * snapped under the wrong plate before this field existed. Both would render
+     * — as boot-coloured hair, or as a shirt on a face — so this throws rather
+     * than warns. Masks are generated; there is no legitimate way to get here.
+     */
+    if (!entry.on.includes(mask.plate)) {
+      throw new Error(`${mask.slug}: key ${String(key)} (${entry.name}) is not legal on a ${mask.plate} plate`);
+    }
     for (let i = 0; i < count; i++) cells.push(key);
   }
 
@@ -288,6 +388,58 @@ export function maskToneGrid(mask: EncodedMask): ToneGrid {
 /* --------------------------------------------------------- validation -- */
 
 export type MaskProblem = { readonly severity: 'fail' | 'warn'; readonly message: string };
+
+/** Read a key grid as a function, transparent outside the canvas. */
+function reader(keys: readonly number[]): {
+  at: (x: number, y: number) => number;
+  opaque: (x: number, y: number) => boolean;
+} {
+  const { width, height } = MASK_CANVAS;
+  const at = (x: number, y: number): number =>
+    x < 0 || y < 0 || x >= width || y >= height ? TRANSPARENT_KEY : keys[y * width + x]!;
+  return { at, opaque: (x, y) => at(x, y) !== TRANSPARENT_KEY };
+}
+
+/**
+ * Every edge against empty space is outline — `ART_SPEC §4`, on all three plates.
+ *
+ * Written out three times before the hair plate made it four, which is three
+ * chances for the plates to disagree about the one rule that makes a figure hold
+ * up against a dark basement wall. Checked against **transparency only**, never
+ * against the canvas edge: a build's soles sit on row 167 with nothing below them.
+ */
+function unoutlinedEdge(keys: readonly number[], budget: number, what: string): readonly MaskProblem[] {
+  const { width, height } = MASK_CANVAS;
+  const { at, opaque } = reader(keys);
+
+  let bare = 0;
+  let first = '';
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!opaque(x, y) || at(x, y) === 1) continue;
+      const exposed =
+        (x > 0 && !opaque(x - 1, y)) ||
+        (x < width - 1 && !opaque(x + 1, y)) ||
+        (y > 0 && !opaque(x, y - 1)) ||
+        (y < height - 1 && !opaque(x, y + 1));
+      if (exposed) {
+        bare++;
+        if (first === '') first = `(${String(x)}, ${String(y)})`;
+      }
+    }
+  }
+
+  if (bare <= budget) return [];
+  return [
+    {
+      severity: 'fail',
+      message:
+        `${String(bare)} pixels sit on the ${what}'s edge without an outline, first at ${first}` +
+        (budget > 0 ? `, over the ${String(budget)} a conversion leaves. Draw the outline thicker.` : '. ' +
+          'A silhouette that is not enclosed dissolves into the basement wall.'),
+    },
+  ];
+}
 
 /**
  * Where a delivered build has to agree with the rest of the figure.
@@ -397,36 +549,10 @@ export function validateBuildMask(keys: readonly number[]): readonly MaskProblem
     );
   }
 
-  /*
-   * Every edge against empty space is outline.
-   *
-   * `ART_SPEC §4` — characters carry a fully enclosed 1px `ink-900` outline — and
-   * it is the one rule that makes a figure hold up against a dark basement wall.
-   * Checked against **transparency only**, never against the canvas edge: the
-   * soles sit on row 167 and have nothing below them to be outlined against.
-   */
-  let bare = 0;
-  let firstBare = '';
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (!opaque(x, y) || at(x, y) === 1) continue;
-      const exposed =
-        (x > 0 && !opaque(x - 1, y)) ||
-        (x < width - 1 && !opaque(x + 1, y)) ||
-        (y > 0 && !opaque(x, y - 1)) ||
-        (y < height - 1 && !opaque(x, y + 1));
-      if (exposed) {
-        bare++;
-        if (firstBare === '') firstBare = `(${String(x)}, ${String(y)})`;
-      }
-    }
-  }
-  if (bare > 0) {
-    fail(
-      `${String(bare)} pixels sit on the figure's edge without an outline, first at ${firstBare}. ` +
-        'A silhouette that is not enclosed dissolves into the basement wall.',
-    );
-  }
+  // Every edge against empty space is outline. A build carries **no budget** —
+  // unlike the head and the hair plate, its silhouette has always converted
+  // cleanly, and the two that needed one earned it on a delivery.
+  problems.push(...unoutlinedEdge(keys, 0, 'figure'));
 
   // Coverage. A blank plate and a full-canvas background both pass every other
   // check on this list.
@@ -644,24 +770,8 @@ export function validateHeadPlate(
     fail(`the neck is missing at row ${String(HEAD_REGISTRATION.bottom)}, columns ${open.join(', ')}.`);
   }
 
-  let bare = 0;
-  let firstBare = '';
-  for (let y = 0; y < height; y++) {
-    for (let x = 0; x < width; x++) {
-      if (!opaque(x, y) || at(x, y) === 1) continue;
-      const exposed =
-        (x > 0 && !opaque(x - 1, y)) ||
-        (x < width - 1 && !opaque(x + 1, y)) ||
-        (y > 0 && !opaque(x, y - 1)) ||
-        (y < height - 1 && !opaque(x, y + 1));
-      if (exposed) {
-        bare++;
-        if (firstBare === '') firstBare = `(${String(x)}, ${String(y)})`;
-      }
-    }
-  }
   /*
-   * **A small budget, for the same mechanical reason the build has one.**
+   * **A small budget, and the build deliberately has none.**
    *
    * Where a curve meets the canvas at a shallow angle, the majority vote that
    * turns 1024 source pixels into 112 drops the outline on a pixel or two — always
@@ -670,12 +780,7 @@ export function validateHeadPlate(
    * noise. Eight is under a twentieth of a head's outline and above what a
    * correctly drawn delivery leaves.
    */
-  if (bare > OUTLINE_BUDGET) {
-    fail(
-      `${String(bare)} pixels sit on the head's edge without an outline, first at ${firstBare}, ` +
-        `over the ${String(OUTLINE_BUDGET)} a conversion leaves. Draw the outline thicker.`,
-    );
-  }
+  problems.push(...unoutlinedEdge(keys, OUTLINE_BUDGET, 'head'));
 
   void AXIS;
   return problems;
@@ -683,3 +788,377 @@ export function validateHeadPlate(
 
 /** How many unoutlined edge pixels the downscale may leave on a head. */
 export const OUTLINE_BUDGET = 8;
+
+/* ----------------------------------------------------- hair and beards -- */
+
+/**
+ * Where a hairstyle has to land, and where a beard has to land.
+ *
+ * **Two registrations, one plate.** They share a colour vocabulary — facial hair
+ * takes the head hair's colour by design, so there is one `hair` channel — and
+ * they share nothing else: a hairstyle is measured from the crown and a beard
+ * from the mouth. Checking a beard against a hairstyle's band would pass a
+ * moustache drawn on the forehead.
+ *
+ * **Every bound below is the drawn set's own measured extent, widened.** The six
+ * drawn hairstyles span rows 11–77 and the four beards rows 39–56, layer by layer
+ * in `docs/art/MANAGER_HAIR_BRIEF.md §5`. A band tighter than the styles
+ * the product already ships would refuse a correct repaint of a style that exists,
+ * which is the mistake `HEAD_REGISTRATION.eyeTolerance` cost two rounds to find.
+ *
+ * ## The eye rule is the one that earns its place
+ *
+ * Nothing on this plate may paint over an eye. All ten drawn layers clear both eye
+ * rectangles **exactly** — zero pixels, measured, not one of them nearly — because
+ * a hairstyle that covers an eye is not a fringe, it is a layer drawn at the wrong
+ * offset, and the head's whole registration exists so that cannot happen quietly.
+ *
+ * ## What catches a file submitted as the wrong kind
+ *
+ * Separability is a **per-plate** question ({@link MaskKey.on}), so colour distance
+ * says nothing about whether a file is the kind of thing it was submitted as.
+ * **Registration does, and overwhelmingly.** A build read as hair runs from the
+ * shoulders to row 167 and fails the floor, the crown band and the skull overlap
+ * at once; a hairstyle read as a build fails the contact row and the shoulder
+ * band. Neither is a near miss, and `hair.test.ts` asserts both rather than
+ * reasoning about them.
+ */
+export const HAIR_REGISTRATION = Object.freeze({
+  /**
+   * Where the topmost painted row may fall.
+   *
+   * Above the skull, because a curly style rises off it — the drawn one starts at
+   * row 11, thirteen above `HEAD.top`. Below it too, because a receding style
+   * starts at 28.
+   */
+  crown: Object.freeze({ from: HEAD.top - 15, to: HEAD.top + 6 }),
+  /**
+   * The lowest row hair may reach. Long hair and a ponytail fall past the collar
+   * onto the shoulders; the drawn Long style ends at 77. Hair does not reach a
+   * waistband.
+   */
+  floor: TORSO.top + 24,
+  /** How much of the skull box a style must actually cover, in pixels. */
+  minimumOnSkull: 60,
+  /** Coverage bounds. A blank plate and a full-canvas wash both fail everything else. */
+  coverage: Object.freeze({ minimum: 60, maximum: 2400 }),
+});
+
+/** Where facial hair has to land. Measured from the mouth, not from the crown. */
+export const FACIAL_HAIR_REGISTRATION = Object.freeze({
+  /** Nothing above this row: a beard that reaches the brow is a beard drawn as hair. */
+  top: FACE.browY + 2,
+  /** A beard may fall onto the neck. It may not reach the collar the shirt closes at. */
+  floor: NECK.bottom - 1,
+  /**
+   * The box a beard must actually occupy, around the mouth.
+   *
+   * **A box rather than a band of rows, and the first version was rows.** Rows
+   * alone are satisfied by a pair of sideburns at the temples, which sit at
+   * exactly the mouth's height and frame nothing — the case is in `hair.test.ts`
+   * and it passed until the columns were added. Sixteen columns centred on the
+   * axis is the moustache's own span; the four drawn pieces put 44, 50, 70 and
+   * 122 pixels inside it, so 24 is generous to a repaint and unreachable by
+   * anything that is not on the mouth.
+   */
+  mouthBox: Object.freeze({
+    from: FACE.mouthY - 4,
+    to: FACE.mouthY + 4,
+    left: AXIS - 8,
+    right: AXIS + 7,
+  }),
+  minimumInMouthBand: 24,
+  /** A beard stays on the face. The drawn set spans columns 43–68; the skull is 43–68. */
+  columns: Object.freeze({ from: HEAD.left - 3, to: HEAD.right + 3 }),
+  coverage: Object.freeze({ minimum: 24, maximum: 900 }),
+});
+
+/**
+ * Take the hair out of a delivery that also contains the head it was drawn on.
+ *
+ * ## Why the delivery contains a head at all
+ *
+ * A build has a contact row and a shoulder band; a head has a skull, a jaw and an
+ * eye line. **A hairstyle alone on a transparent canvas has no landmark of any
+ * kind** — there is nothing in a drawing of hair that says where the head it
+ * belongs to was. Two rounds of head deliveries established that placement is the
+ * thing a generator is worst at, so a contract that depends on it being right is a
+ * contract that fails. Drawn *on a head*, the head is the landmark: the same
+ * skull fit the head plate uses lands the whole delivery, and the hair comes with
+ * it.
+ *
+ * ## The separation is by key, which is why the hair keys are green
+ *
+ * Every pixel has already been snapped to exactly one role. Keeping the `hair`
+ * channel and dropping everything else is a **partition of the delivered pixels**,
+ * not an estimate of one — no threshold, no tolerance, nothing that could keep
+ * half a cheek. It is only sound because no skin colour is anywhere near the hair
+ * keys, which is the whole reason those keys are not brown.
+ *
+ * ## The outline goes to whichever object it belongs to
+ *
+ * The delivered ink is the one genuinely ambiguous colour: the jaw's outline and
+ * the fringe's are the same key, so the channel partition cannot place it. The
+ * criterion that can is **adjacency** — an ink pixel touching hair is the hair's
+ * own edge, because the hair is the layer on top, and an ink pixel touching no
+ * hair at all is the head's.
+ *
+ * **The first version simply threw all of it away** and re-derived a silhouette
+ * from what was left. That is one line shorter and it **erodes every hairstyle by
+ * a pixel all round** — measured on the Long style, 974 delivered pixels came back
+ * as 705 — which on a 112-wide canvas closes up a parting and deletes a lock of
+ * hair two pixels wide outright.
+ *
+ * What is still derived is the *enclosure*: after the partition, any kept pixel on
+ * the result's own silhouette is forced to outline, so `ART_SPEC §4` holds by
+ * construction rather than by asking the artist. A kept ink pixel that ends up in
+ * the interior is not a mistake — `compositeRuns` draws a non-silhouette outline in
+ * the layer's own shade, so it reads as a dark line in the hair, which is what it
+ * was drawn as.
+ *
+ * ## The one thing that cannot be recovered, and why it fails loudly
+ *
+ * A mark drawn **entirely in ink**, containing no hair-keyed pixel anywhere in it,
+ * is indistinguishable from the head's own outline and is dropped. Measured across
+ * the ten drawn layers re-expressed as a delivery, the round trip lands within
+ * `+6 / −4` pixels on eight of them and loses 14 of Stubble's 100 — because the
+ * shape rasteriser marks a one-pixel-thick mark as *all* outline, so there is
+ * nothing left to be adjacent to.
+ *
+ * The brief therefore asks for ink as a **stroke around a painted mass**, never as
+ * the mass, and a delivery that ignores it does not degrade quietly: it extracts to
+ * almost nothing and fails the coverage floor in {@link validateHairMask} by name.
+ *
+ * The check in {@link validateHairMask} is left in place even though this makes it
+ * pass by construction. It is no longer testing the artist; it is testing this
+ * function.
+ */
+export function extractHairChannel(keys: readonly number[]): readonly number[] {
+  const { width, height } = MASK_CANVAS;
+  const OUTLINE_KEY = 1;
+
+  const isHair = (x: number, y: number): boolean =>
+    x >= 0 &&
+    y >= 0 &&
+    x < width &&
+    y < height &&
+    MASK_KEYS[keys[y * width + x]!]?.channel === 'hair';
+
+  const kept = Array.from({ length: width * height }, () => TRANSPARENT_KEY);
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      const at = y * width + x;
+      if (isHair(x, y)) {
+        kept[at] = keys[at]!;
+        continue;
+      }
+      if (keys[at] !== OUTLINE_KEY) continue;
+      // Ink touching hair is the hair's edge; ink touching none of it is the head's.
+      for (let dy = -1; dy <= 1 && kept[at] === TRANSPARENT_KEY; dy++) {
+        for (let dx = -1; dx <= 1; dx++) {
+          if (dx === 0 && dy === 0) continue;
+          if (isHair(x + dx, y + dy)) {
+            kept[at] = OUTLINE_KEY;
+            break;
+          }
+        }
+      }
+    }
+  }
+
+  const solid = (x: number, y: number): boolean =>
+    x >= 0 && y >= 0 && x < width && y < height && kept[y * width + x] !== TRANSPARENT_KEY;
+
+  const out = [...kept];
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!solid(x, y)) continue;
+      if (!solid(x - 1, y) || !solid(x + 1, y) || !solid(x, y - 1) || !solid(x, y + 1)) {
+        out[y * width + x] = OUTLINE_KEY;
+      }
+    }
+  }
+  return out;
+}
+
+/** Both eye rectangles, which nothing on the hair plate may paint into. */
+function eyeCells(): readonly (readonly [number, number])[] {
+  const cells: [number, number][] = [];
+  for (const left of [FACE.eyeLeft, FACE.eyeRight]) {
+    for (let y = FACE.eyeY; y < FACE.eyeY + FACE.eyeHeight; y++) {
+      for (let x = left; x < left + FACE.eyeWidth; x++) cells.push([x, y]);
+    }
+  }
+  return cells;
+}
+
+/** What both hair validators check: the eyes, the outline, and something drawn. */
+function hairPlateProblems(
+  keys: readonly number[],
+  what: string,
+): { readonly problems: MaskProblem[]; readonly painted: number; readonly top: number; readonly bottom: number; readonly left: number; readonly right: number } {
+  const { width, height } = MASK_CANVAS;
+  const { opaque } = reader(keys);
+  const problems: MaskProblem[] = [];
+
+  let painted = 0;
+  let top: number = height;
+  let bottom = -1;
+  let left: number = width;
+  let right = -1;
+  for (let y = 0; y < height; y++) {
+    for (let x = 0; x < width; x++) {
+      if (!opaque(x, y)) continue;
+      painted++;
+      if (y < top) top = y;
+      if (y > bottom) bottom = y;
+      if (x < left) left = x;
+      if (x > right) right = x;
+    }
+  }
+
+  if (painted > 0) {
+    const overEyes = eyeCells().filter(([x, y]) => opaque(x, y));
+    if (overEyes.length > 0) {
+      const [x, y] = overEyes[0]!;
+      problems.push({
+        severity: 'fail',
+        message:
+          `${String(overEyes.length)} pixels are painted over an eye, first at (${String(x)}, ${String(y)}). ` +
+          `The eyes are at rows ${String(FACE.eyeY)}–${String(FACE.eyeY + FACE.eyeHeight - 1)}, columns ` +
+          `${String(FACE.eyeLeft)}–${String(FACE.eyeLeft + FACE.eyeWidth - 1)} and ` +
+          `${String(FACE.eyeRight)}–${String(FACE.eyeRight + FACE.eyeWidth - 1)}. Every one of the ten ` +
+          'layers this replaces clears them completely; a fringe stops at the brow.',
+      });
+    }
+    problems.push(...unoutlinedEdge(keys, OUTLINE_BUDGET, what));
+  }
+
+  return { problems, painted, top, bottom, left, right };
+}
+
+/**
+ * Check a hairstyle.
+ *
+ * Deliberately silent about **shape**: length, parting, volume, whether it covers
+ * an ear and whether it hangs on the left are the drawing's business, exactly as
+ * commissioner ruling R2 left a build's pose alone. What is checked is only what
+ * another layer or the head beneath depends on.
+ */
+export function validateHairMask(keys: readonly number[]): readonly MaskProblem[] {
+  const { width, height } = MASK_CANVAS;
+  if (keys.length !== width * height) {
+    return [{ severity: 'fail', message: `mask is ${String(keys.length)} cells, not ${String(width * height)}` }];
+  }
+
+  const { problems, painted, top, bottom } = hairPlateProblems(keys, 'hairstyle');
+  if (painted === 0) return [{ severity: 'fail', message: 'the hairstyle is empty' }];
+  const fail = (message: string): number => problems.push({ severity: 'fail', message });
+
+  const { crown } = HAIR_REGISTRATION;
+  if (top < crown.from || top > crown.to) {
+    fail(
+      `the hairstyle begins on row ${String(top)}, outside the crown band ${String(crown.from)}–` +
+        `${String(crown.to)}. The skull's top is row ${String(HEAD.top)}: a style may rise off it, ` +
+        'the way the curly one does, and it may start below it the way a receding one does — but a ' +
+        'layer outside this band is drawn at the wrong offset rather than styled differently.',
+    );
+  }
+
+  if (bottom > HAIR_REGISTRATION.floor) {
+    fail(
+      `the hairstyle reaches row ${String(bottom)}, below the floor at ${String(HAIR_REGISTRATION.floor)}. ` +
+        'Long hair and a ponytail fall onto the shoulders; neither reaches a waistband.',
+    );
+  }
+
+  const { opaque } = reader(keys);
+  let onSkull = 0;
+  for (let y = HEAD.top; y <= HEAD.bottom; y++) {
+    for (let x = HEAD.left; x <= HEAD.right; x++) if (opaque(x, y)) onSkull++;
+  }
+  if (onSkull < HAIR_REGISTRATION.minimumOnSkull) {
+    fail(
+      `only ${String(onSkull)} pixels sit on the skull, against ${String(HAIR_REGISTRATION.minimumOnSkull)}. ` +
+        'A hairstyle that floats beside the head is a hairstyle drawn to the wrong centre — the skull ' +
+        `is columns ${String(HEAD.left)}–${String(HEAD.right)}, rows ${String(HEAD.top)}–${String(HEAD.bottom)}.`,
+    );
+  }
+
+  const { minimum, maximum } = HAIR_REGISTRATION.coverage;
+  if (painted < minimum) fail(`only ${String(painted)} pixels are painted; the smallest drawn style is 112`);
+  if (painted > maximum) {
+    fail(
+      `${String(painted)} pixels are painted, over ${String(maximum)}. This is a whole figure, a ` +
+        'background, or a hairstyle drawn at the wrong scale.',
+    );
+  }
+
+  return problems;
+}
+
+/**
+ * Check a facial-hair piece.
+ *
+ * The mouth band is the check that distinguishes a beard from a hairstyle, and it
+ * is why this is a separate function rather than a parameter: every one of the four
+ * drawn pieces puts at least 50 pixels across the mouth, and nothing that does not
+ * is facial hair.
+ */
+export function validateFacialHairMask(keys: readonly number[]): readonly MaskProblem[] {
+  const { width, height } = MASK_CANVAS;
+  if (keys.length !== width * height) {
+    return [{ severity: 'fail', message: `mask is ${String(keys.length)} cells, not ${String(width * height)}` }];
+  }
+
+  const { problems, painted, top, bottom, left, right } = hairPlateProblems(keys, 'beard');
+  if (painted === 0) return [{ severity: 'fail', message: 'the facial hair is empty' }];
+  const fail = (message: string): number => problems.push({ severity: 'fail', message });
+
+  const reg = FACIAL_HAIR_REGISTRATION;
+
+  if (top < reg.top) {
+    fail(
+      `the facial hair begins on row ${String(top)}, above ${String(reg.top)}. A beard starts below the ` +
+        `brow at row ${String(FACE.browY)} — a layer that reaches it is a hairstyle submitted as facial hair.`,
+    );
+  }
+
+  if (bottom > reg.floor) {
+    fail(
+      `the facial hair reaches row ${String(bottom)}, below ${String(reg.floor)}. A long beard falls onto ` +
+        'the neck; the collar closes over the neck and would cut it off.',
+    );
+  }
+
+  if (left < reg.columns.from || right > reg.columns.to) {
+    fail(
+      `the facial hair spans columns ${String(left)}–${String(right)}, outside ` +
+        `${String(reg.columns.from)}–${String(reg.columns.to)}. It stays on the face.`,
+    );
+  }
+
+  const { opaque } = reader(keys);
+  let inBand = 0;
+  for (let y = reg.mouthBox.from; y <= reg.mouthBox.to; y++) {
+    for (let x = reg.mouthBox.left; x <= reg.mouthBox.right; x++) if (opaque(x, y)) inBand++;
+  }
+  if (inBand < reg.minimumInMouthBand) {
+    fail(
+      `only ${String(inBand)} pixels fall across the mouth, rows ${String(reg.mouthBox.from)}–` +
+        `${String(reg.mouthBox.to)} and columns ${String(reg.mouthBox.left)}–${String(reg.mouthBox.right)}, ` +
+        `against ${String(reg.minimumInMouthBand)}. Facial hair frames the mouth: a layer that does not ` +
+        'is a hairstyle, sideburns nobody asked for, or a piece drawn too high.',
+    );
+  }
+
+  if (painted < reg.coverage.minimum) fail(`only ${String(painted)} pixels are painted`);
+  if (painted > reg.coverage.maximum) {
+    fail(
+      `${String(painted)} pixels are painted, over ${String(reg.coverage.maximum)}. The largest drawn ` +
+        'piece is a full beard at 326.',
+    );
+  }
+
+  return problems;
+}

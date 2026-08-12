@@ -27,13 +27,14 @@ vi.mock('./art/masks', async () => {
   const { encodeMask } = await import('./mask');
   const { fixtureBuildMask, fixtureHeadMask } = await import('./mask.fixture');
   const masks: Record<string, unknown> = {
-    [TSHIRT]: encodeMask(TSHIRT, fixtureBuildMask()),
-    avatar_body_head: encodeMask('avatar_body_head', fixtureHeadMask()),
+    [TSHIRT]: encodeMask(TSHIRT, 'build', fixtureBuildMask()),
+    avatar_body_head: encodeMask('avatar_body_head', 'head', fixtureHeadMask()),
   };
   return {
-    BUILD_MASKS: masks,
-    buildMask: (slug: string) => masks[slug] ?? null,
-    hasBuildMask: (slug: string) => slug in masks,
+    PAINTED_MASKS: masks,
+    paintedMask: (slug: string) => masks[slug] ?? null,
+    hasBuildMask: (slug: string) =>
+      (masks[slug] as { plate?: string } | undefined)?.plate === 'build',
   };
 });
 

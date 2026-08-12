@@ -23,7 +23,12 @@ import {
   compositeRuns,
   type ColourRun,
 } from '../lib/character/composite';
-import { BUILD_REGISTRATION, paintedKeys } from '../lib/character/mask';
+import {
+  BUILD_REGISTRATION,
+  FACIAL_HAIR_REGISTRATION,
+  HAIR_REGISTRATION,
+  paintedKeys,
+} from '../lib/character/mask';
 import { HOUSE } from '../lib/character/palette';
 
 /**
@@ -507,6 +512,123 @@ async function headPlateCanvas(marks: readonly Landmark[]): Promise<Buffer> {
   return sharp(Buffer.from(svg)).png().toBuffer();
 }
 
+
+/**
+ * The plate a hairstyle or a beard is painted onto — **a whole manager, on purpose.**
+ *
+ * ## The delivery contains the head, and the ingest takes it back out
+ *
+ * A build has a contact row and a head has an eye line; **a hairstyle alone has no
+ * landmark at all**, so a file containing only hair cannot be placed by anything
+ * except trust. Painting it onto the accepted head makes the head the landmark:
+ * `snap` lands the delivery by the same skull fit a head plate uses, and
+ * `extractHairChannel` then keeps only the pixels painted in the three hair keys.
+ *
+ * That is why this canvas shows a finished manager rather than a hatched
+ * exclusion zone. The face is meant to be redrawn — it is thrown away — and what
+ * matters is that the hair sits on **a** head of the right size in the right place.
+ *
+ * ## The hair is painted in green, and that is not a mistake in the template
+ *
+ * The three swatches are an *encoding*, not a colour choice: the extraction
+ * separates hair from skin by which key each pixel snapped to, and brown-on-brown
+ * is the collision that put a quarter of an earlier head onto boot keys. The
+ * ingest's own preview shows the result in the eight real hair colours.
+ */
+async function hairPlateCanvas(kind: 'hair' | 'facialHair'): Promise<Buffer> {
+  const scale = 6;
+  const width = CANVAS.width * scale;
+  const height = CANVAS.height * scale;
+
+  // A complete accepted manager: painted head plate, painted T-shirt build.
+  const manager = composeCharacter({
+    ...DEFAULT_CONFIGURATION,
+    top: TSHIRT_INDEX,
+    skin: REFERENCE_SKIN,
+    hair: 1,
+    facialHair: 0,
+  });
+  const runs = compositeRuns({
+    ...manager,
+    layers: manager.layers.filter((layer) => layer.layer !== 'base-hair'),
+  });
+
+  const box = (
+    x: number, y: number, w: number, h: number, colour: string, dash = '4 4',
+  ): string =>
+    `<rect x="${String(x * scale)}" y="${String(y * scale)}" width="${String(w * scale)}" ` +
+    `height="${String(h * scale)}" fill="none" stroke="${colour}" stroke-width="2" ` +
+    `stroke-dasharray="${dash}" />`;
+
+  const row = (y: number, label: string, colour: string = GUIDE.binding): string =>
+    `<line x1="0" y1="${String(y * scale)}" x2="${String(width)}" y2="${String(y * scale)}" ` +
+    `stroke="${colour}" stroke-width="2" stroke-dasharray="10 8" opacity="0.85" />` +
+    `<text x="8" y="${String(y * scale - 6)}" font-family="monospace" font-size="15" ` +
+    `fill="${colour}">${label}</text>`;
+
+  const swatches = paintedKeys('hair')
+    .filter((key) => key.channel === 'hair')
+    .map(
+      (key, at) =>
+        `<rect x="${String(width - 210 + at * 66)}" y="${String(height - 78)}" width="60" height="46" ` +
+        `fill="${key.hex}" stroke="#1A1214" stroke-width="2" />` +
+        `<text x="${String(width - 210 + at * 66 + 30)}" y="${String(height - 84)}" text-anchor="middle" ` +
+        `font-family="monospace" font-size="12" fill="#B5A8A9">${key.step}</text>`,
+    )
+    .join('');
+
+  const bands =
+    kind === 'hair'
+      ? `
+    ${row(HAIR_REGISTRATION.crown.from, `crown band starts ${String(HAIR_REGISTRATION.crown.from)} — a tall style may rise to here`)}
+    ${row(HAIR_REGISTRATION.crown.to, `crown band ends ${String(HAIR_REGISTRATION.crown.to)} — a receding style may start here`)}
+    ${row(HAIR_REGISTRATION.floor, `floor ${String(HAIR_REGISTRATION.floor)} — long hair and a ponytail reach no lower`, GUIDE.advisory)}
+    ${box(HEAD.left, HEAD.top, HEAD.right - HEAD.left, HEAD.bottom - HEAD.top, GUIDE.advisory, '2 6')}
+    <text x="8" y="20" font-family="monospace" font-size="17" fill="#FFD98A">PAINT THE HAIRSTYLE ONLY, IN THE GREEN KEYS</text>
+    <text x="8" y="38" font-family="monospace" font-size="13" fill="#B5A8A9">leave the face and the shirt as they are · keep the eyes clear</text>`
+      : `
+    ${row(FACIAL_HAIR_REGISTRATION.top, `nothing above ${String(FACIAL_HAIR_REGISTRATION.top)} — that would be a hairstyle`)}
+    ${row(FACIAL_HAIR_REGISTRATION.floor, `nothing below ${String(FACIAL_HAIR_REGISTRATION.floor)} — the collar closes here`)}
+    ${box(
+      FACIAL_HAIR_REGISTRATION.mouthBox.left,
+      FACIAL_HAIR_REGISTRATION.mouthBox.from,
+      FACIAL_HAIR_REGISTRATION.mouthBox.right - FACIAL_HAIR_REGISTRATION.mouthBox.left + 1,
+      FACIAL_HAIR_REGISTRATION.mouthBox.to - FACIAL_HAIR_REGISTRATION.mouthBox.from + 1,
+      GUIDE.binding,
+      '2 2',
+    )}
+    <text x="${String((FACIAL_HAIR_REGISTRATION.mouthBox.right + 3) * scale)}" y="${String(FACE.mouthY * scale)}"
+      font-family="monospace" font-size="13" fill="${GUIDE.binding}">the piece must cross this box</text>
+    <text x="8" y="20" font-family="monospace" font-size="17" fill="#FFD98A">PAINT THE FACIAL HAIR ONLY, IN THE GREEN KEYS</text>
+    <text x="8" y="38" font-family="monospace" font-size="13" fill="#B5A8A9">leave the face and the shirt as they are · keep the eyes clear</text>`;
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${String(width)}" height="${String(height)}">
+    <rect width="${String(width)}" height="${String(height)}" fill="#2E2226" />
+
+    <g shape-rendering="crispEdges">
+      ${runs
+        .map(
+          (run) =>
+            `<rect x="${String(run.x * scale)}" y="${String(run.y * scale)}" ` +
+            `width="${String(run.w * scale)}" height="${String(run.h * scale)}" fill="${run.value}" />`,
+        )
+        .join('')}
+    </g>
+
+    <rect x="0" y="0" width="${String(width)}" height="46" fill="#1A1214" opacity="0.92" />
+    ${box(FACE.eyeLeft, FACE.eyeY, FACE.eyeWidth, FACE.eyeHeight, GUIDE.binding, '2 2')}
+    ${box(FACE.eyeRight, FACE.eyeY, FACE.eyeWidth, FACE.eyeHeight, GUIDE.binding, '2 2')}
+    ${row(FACE.eyeY, `EYE LINE ${String(FACE.eyeY)} — nothing may cover an eye`)}
+    ${bands}
+
+    ${swatches}
+    <rect x="0" y="${String(height - 46)}" width="${String(width - 216)}" height="26" fill="#1A1214" opacity="0.92" />
+    <text x="8" y="${String(height - 28)}" font-family="monospace" font-size="13" fill="#B5A8A9">green is an ENCODING — it renders in the manager's own hair colour</text>
+  </svg>`;
+
+  return sharp(Buffer.from(svg)).png().toBuffer();
+}
+
 /** The labelled plate a person takes into an image-generation session. */
 async function readablePlate(marks: readonly Landmark[]): Promise<Buffer> {
   const scale = 6;
@@ -610,6 +732,14 @@ async function main(): Promise<void> {
   writeFileSync(path.join(OUT, 'manager_reference_sheet.png'), await referenceSheet());
   writeFileSync(path.join(OUT, 'manager_head_paintover_672x1008.png'), await headPlateCanvas(marks));
   writeFileSync(
+    path.join(OUT, 'manager_hair_paintover_672x1008.png'),
+    await hairPlateCanvas('hair'),
+  );
+  writeFileSync(
+    path.join(OUT, 'manager_facial_hair_paintover_672x1008.png'),
+    await hairPlateCanvas('facialHair'),
+  );
+  writeFileSync(
     path.join(OUT, 'manager_registration_jig.json'),
     `${JSON.stringify(
       {
@@ -634,7 +764,7 @@ async function main(): Promise<void> {
     )}\n`,
   );
 
-  console.log(`Wrote six files to art/jigs/ — ${String(marks.length)} landmarks.`);
+  console.log(`Wrote eight files to art/jigs/ — ${String(marks.length)} landmarks.`);
 }
 
 main().catch((error: unknown) => {

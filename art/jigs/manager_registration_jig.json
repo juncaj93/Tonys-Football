@@ -297,6 +297,30 @@
       "name": "Eye white",
       "hex": "#F5EDDC",
       "pending": false
+    },
+    {
+      "index": 20,
+      "channel": "hair",
+      "step": "light",
+      "name": "Hair light",
+      "hex": "#5FD98A",
+      "pending": false
+    },
+    {
+      "index": 21,
+      "channel": "hair",
+      "step": "base",
+      "name": "Hair base",
+      "hex": "#35A05C",
+      "pending": false
+    },
+    {
+      "index": 22,
+      "channel": "hair",
+      "step": "shade",
+      "name": "Hair shade",
+      "hex": "#2A7D45",
+      "pending": false
     }
   ],
   "outline": "#1A1214"

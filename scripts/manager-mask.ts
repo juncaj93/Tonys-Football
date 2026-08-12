@@ -19,13 +19,17 @@ import {
   MASK_CANVAS,
   TRANSPARENT_KEY,
   encodeMask,
+  extractHairChannel,
   maskToneGrid,
   paintedKeys,
   validateBuildMask,
+  validateFacialHairMask,
+  validateHairMask,
   validateHeadPlate,
   type EncodedMask,
+  type MaskPlate,
 } from '../lib/character/mask';
-import { SKIN_TONES, TOP_COLOURS } from '../lib/character/palette';
+import { HAIR_COLOURS, SKIN_TONES, TOP_COLOURS } from '../lib/character/palette';
 
 /**
  * Turn delivered manager artwork into a validated role mask — `npm run art:mask`.
@@ -95,7 +99,7 @@ export function nearestKey(
   r: number,
   g: number,
   b: number,
-  plate: 'build' | 'head' = 'build',
+  plate: MaskPlate = 'build',
 ): { index: number; distance: number } {
   let best = TRANSPARENT_KEY;
   let bestDistance = Infinity;
@@ -317,7 +321,26 @@ function headWindow(
 /** How much narrower than the widest row a head has to get to be a neck. */
 const JAW_DROP = 0.6;
 
-export async function snap(file: string, fit = false, head = false): Promise<Snapped> {
+export async function snap(file: string, fit = false, plate: MaskPlate = 'build'): Promise<Snapped> {
+  /*
+   * **Only a head plate is fitted, and hair deliberately is not.**
+   *
+   * The first version fitted hair by the same skull search, on the reasoning that
+   * a hair delivery contains a head. Running it end to end is what showed the
+   * reasoning was wrong: `headWindow` finds the jaw by looking for the row where
+   * the silhouette narrows, and **hair changes the silhouette it is measuring** —
+   * the Long style hangs to row 77, so the "skull" it found ran from the crown to
+   * the shoulders and it rescaled a correct delivery by 0.66x, throwing two thirds
+   * of the hairstyle away. The mask came back at 300 pixels against 974.
+   *
+   * It is also unnecessary, which is the better half of the answer. A head is
+   * delivered as a standalone object on whatever canvas a generator chose, so
+   * something has to place it. **Hair is painted onto the supplied plate** —
+   * `art/jigs/manager_hair_paintover_672x1008.png`, a whole manager at the right
+   * size in the right place — so the frame *is* the registration, exactly as it is
+   * for an unfitted build. A delivery that moved is regenerated (`ART_SPEC §9`).
+   */
+  const onAHead = plate === 'head';
   const image = sharp(file).ensureAlpha();
   const { width, height } = await image.metadata();
   if (width === undefined || height === undefined) throw new Error(`${file}: unreadable`);
@@ -339,7 +362,7 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
    * felt like — square, most often — and its own proportions are measured
    * directly by `validateHeadPlate` rather than inferred from the file.
    */
-  if (!head && Math.abs(got - wanted) / wanted > ASPECT_TOLERANCE) {
+  if (plate !== 'head' && Math.abs(got - wanted) / wanted > ASPECT_TOLERANCE) {
     throw new Error(
       `${file} is ${String(width)} x ${String(height)}, an aspect of ${got.toFixed(3)} against the ` +
         `canvas's ${wanted.toFixed(3)}. Squeezing it to fit would stretch the figure, and a ` +
@@ -372,7 +395,7 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
     const rgb = (data[i]! << 16) | (data[i + 1]! << 8) | data[i + 2]!;
     let hit = seen.get(rgb);
     if (hit === undefined) {
-      hit = nearestKey(data[i]!, data[i + 1]!, data[i + 2]!, head ? 'head' : 'build');
+      hit = nearestKey(data[i]!, data[i + 1]!, data[i + 2]!, plate);
       seen.set(rgb, hit);
     }
     sourceKey[at] = hit.index;
@@ -400,7 +423,7 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
   // Pass 2 — the majority role of the source cell under each output pixel.
   const alphaAt = (x: number, y: number): number => data[(y * width + x) * 4 + 3]!;
   let neckRows = 0;
-  const fitted: { window: Window; scale: number; movedRows: number } | null = head
+  const fitted: { window: Window; scale: number; movedRows: number } | null = onAHead
     ? (() => {
           const plate = headWindow(alphaAt, width, height);
           neckRows = plate.neckRows;
@@ -418,7 +441,7 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
           };
         })()
       : null;
-  if (!head && fitted !== null && (fitted.scale < FIT_LIMIT.min || fitted.scale > FIT_LIMIT.max)) {
+  if (!onAHead && fitted !== null && (fitted.scale < FIT_LIMIT.min || fitted.scale > FIT_LIMIT.max)) {
     throw new Error(
       `fitting this file would rescale it by ${fitted.scale.toFixed(2)}x, outside the ` +
         `${String(FIT_LIMIT.min)}–${String(FIT_LIMIT.max)} a near-miss can be. A delivery this far ` +
@@ -475,7 +498,13 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
   }
 
   return {
-    keys,
+    /*
+     * The hair channel is separated **after** the downscale, never before it. The
+     * mode vote has to see the head: a fringe pixel whose source block is half
+     * hair and half brow is hair only if hair won, and stripping the skin first
+     * would leave that block voting against transparency alone.
+     */
+    keys: plate === 'hair' ? extractHairChannel(keys) : keys,
     drift,
     softAlpha,
     factor: width / MASK_CANVAS.width,
@@ -484,15 +513,37 @@ export async function snap(file: string, fit = false, head = false): Promise<Sna
   };
 }
 
-/** A picture of the mask as four real managers, so a person can judge it. */
+/**
+ * A picture of the mask as four real managers, so a person can judge it.
+ *
+ * **What varies across the four is chosen by what was delivered.** A build is
+ * shown in four skin tones and four garment colours; a hairstyle or a beard is
+ * shown in four *hair* colours on one painted body, because the question a hair
+ * preview has to answer is whether the green came back as hair — and four managers
+ * in four shirts would answer a question nobody asked.
+ */
 async function preview(slug: string, mask: EncodedMask): Promise<Buffer> {
   const topIndex = STYLE_TRAITS.top.findIndex((option) => option.slug === slug);
-  const shown: CharacterConfiguration[] = [
-    { skin: 0, hair: 0, hairColour: 2, facialHair: 0, top: topIndex, topColour: 1 },
-    { skin: 1, hair: 2, hairColour: 0, facialHair: 4, top: topIndex, topColour: 0 },
-    { skin: 2, hair: 4, hairColour: 6, facialHair: 1, top: topIndex, topColour: 4 },
-    { skin: 3, hair: 5, hairColour: 1, facialHair: 3, top: topIndex, topColour: 6 },
-  ];
+  const hairIndex = STYLE_TRAITS.hair.findIndex((option) => option.slug === slug);
+  const facialIndex = STYLE_TRAITS.facialHair.findIndex((option) => option.slug === slug);
+  const paintedTop = STYLE_TRAITS.top.findIndex((option) => option.name === 'T-shirt');
+
+  const shown: CharacterConfiguration[] =
+    mask.plate === 'hair'
+      ? [0, 2, 4, 6].map((hairColour, at) => ({
+          skin: at,
+          hair: hairIndex === -1 ? 1 : hairIndex,
+          hairColour,
+          facialHair: facialIndex === -1 ? 0 : facialIndex,
+          top: paintedTop,
+          topColour: 1,
+        }))
+      : [
+          { skin: 0, hair: 0, hairColour: 2, facialHair: 0, top: topIndex, topColour: 1 },
+          { skin: 1, hair: 2, hairColour: 0, facialHair: 4, top: topIndex, topColour: 0 },
+          { skin: 2, hair: 4, hairColour: 6, facialHair: 1, top: topIndex, topColour: 4 },
+          { skin: 3, hair: 5, hairColour: 1, facialHair: 3, top: topIndex, topColour: 6 },
+        ];
 
   const scale = 3;
   const { width, height } = CANVAS;
@@ -524,7 +575,6 @@ async function preview(slug: string, mask: EncodedMask): Promise<Buffer> {
     }),
   );
 
-  void mask;
   return sharp({
     create: {
       width: width * shown.length * scale,
@@ -561,12 +611,13 @@ function moduleSource(slug: string, mask: EncodedMask): string {
 /**
  * GENERATED by \`npm run art:mask\`. **Do not edit.**
  *
- * The painted build for \`${slug}\`, as role indices into \`MASK_KEYS\`. Regenerate
+ * The painted ${mask.plate} plate for \`${slug}\`, as role indices into \`MASK_KEYS\`. Regenerate
  * from the delivered PNG rather than touching a run: every entry here was checked
  * by the validator, and a hand-edited one has not been.
  */
 export const ${constant}: EncodedMask = {
   slug: '${slug}',
+  plate: '${mask.plate}',
   width: ${String(mask.width)},
   height: ${String(mask.height)},
   rle:
@@ -575,28 +626,52 @@ export const ${constant}: EncodedMask = {
 `;
 }
 
+/**
+ * Which kind of plate a slug is, decided by the catalog rather than by a flag.
+ *
+ * **The slug already knows.** `--head` was a flag whose only legal value was the
+ * one implied by the slug beside it, and a second and third such flag would be
+ * three chances to contradict the catalog. A slug that is not a top, the head, a
+ * hairstyle or a facial-hair piece has no plate and is refused here rather than
+ * snapped against a guess.
+ */
+function plateFor(slug: string): MaskPlate | null {
+  if (slug === BODY_HEAD_SLUG) return 'head';
+  if (STYLE_TRAITS.top.some((option) => option.slug === slug)) return 'build';
+  const hair = [...STYLE_TRAITS.hair, ...STYLE_TRAITS.facialHair];
+  if (hair.some((option) => option.slug === slug)) return 'hair';
+  return null;
+}
+
+/** Is this slug facial hair? The mouth band applies to it and not to a hairstyle. */
+function isFacialHair(slug: string): boolean {
+  return STYLE_TRAITS.facialHair.some((option) => option.slug === slug);
+}
+
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
   const fit = argv.includes('--fit');
-  const head = argv.includes('--head');
   const [file, slug] = argv.filter((arg) => !arg.startsWith('--'));
   if (file === undefined || slug === undefined) {
-    throw new Error('usage: npm run art:mask -- <file.png> <slug> [--fit] [--head]');
+    throw new Error('usage: npm run art:mask -- <file.png> <slug> [--fit]');
   }
-  if (head !== (slug === BODY_HEAD_SLUG)) {
+
+  const plate = plateFor(slug);
+  if (plate === null) {
     throw new Error(
-      `--head is for ${BODY_HEAD_SLUG} and nothing else. A head and a build are validated ` +
-        'against different landmarks and neither check makes sense on the other.',
+      `${slug} is not a slug a mask can take over. A build mask takes one of the six tops, a ` +
+        `head plate takes ${BODY_HEAD_SLUG}, and a hair mask takes one of the six hairstyles or ` +
+        'four facial-hair pieces — so that the stored integer keeps meaning what it meant.',
     );
   }
-  if (!head && !STYLE_TRAITS.top.some((option) => option.slug === slug)) {
+  if (fit && plate !== 'build') {
     throw new Error(
-      `${slug} is not one of the six tops. A build mask takes over a top's slug so that the ` +
-        'stored integer keeps meaning what it meant.',
+      '--fit is for a build. A head and a hair delivery are both landed by the skull that is in ' +
+        'them, always, and there is nothing to opt into.',
     );
   }
 
-  const { keys, drift, softAlpha, factor, fitted } = await snap(file, fit, head);
+  const { keys, drift, softAlpha, factor, fitted } = await snap(file, fit, plate);
 
   const painted = keys.filter((key) => key !== TRANSPARENT_KEY).length;
 
@@ -630,10 +705,15 @@ async function main(): Promise<void> {
    * A head is judged against what the shipped build actually draws over it, which
    * is the difference between a rule and a guess about one.
    */
-  const shirt = head ? buildCoverage() : null;
-  const problems = head
-    ? validateHeadPlate(keys, shirt === null ? undefined : (x, y) => shirt.has(y * MASK_CANVAS.width + x))
-    : validateBuildMask(keys);
+  const shirt = plate === 'head' ? buildCoverage() : null;
+  const problems =
+    plate === 'head'
+      ? validateHeadPlate(keys, shirt === null ? undefined : (x, y) => shirt.has(y * MASK_CANVAS.width + x))
+      : plate === 'hair'
+        ? isFacialHair(slug)
+          ? validateFacialHairMask(keys)
+          : validateHairMask(keys)
+        : validateBuildMask(keys);
   for (const problem of problems) {
     console.log(`  ${problem.severity === 'fail' ? '✗' : '⚠'} ${problem.message}`);
   }
@@ -646,7 +726,7 @@ async function main(): Promise<void> {
     );
   }
 
-  const mask = encodeMask(slug, keys);
+  const mask = encodeMask(slug, plate, keys);
   // Proves the encoding round-trips before it is committed, rather than at import.
   maskToneGrid(mask);
 
@@ -658,11 +738,15 @@ async function main(): Promise<void> {
 
   console.log(`\n  → lib/character/art/masks/${slug}.ts`);
   console.log(`  → docs/evidence/manager-build-prototype/${slug}-mask.png`);
+  const reach =
+    plate === 'hair'
+      ? `${String(HAIR_COLOURS.length)} hair colours all come from this one file.`
+      : `${String(SKIN_TONES.length)} skin tones x ${String(TOP_COLOURS.length)} top colours all ` +
+        'come from this one file.';
   console.log(
-    `\n  Register it: import it into lib/character/art/masks/index.ts and add it to BUILD_MASKS.` +
+    `\n  Register it: import it into lib/character/art/masks/index.ts and add it to PAINTED_MASKS.` +
       `\n  The preview above shows the drawn path until you do — that is the switch working.` +
-      `\n  ${String(SKIN_TONES.length)} skin tones x ${String(TOP_COLOURS.length)} top colours all ` +
-      'come from this one file.\n',
+      `\n  ${reach}\n`,
   );
 }
 

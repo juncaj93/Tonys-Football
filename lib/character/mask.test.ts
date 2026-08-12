@@ -13,10 +13,23 @@ import {
   paintedKeys,
   pendingKeys,
   validateBuildMask,
+  type MaskPlate,
 } from './mask';
 import { fixtureBuildMask } from './mask.fixture';
 import { HOUSE } from './palette';
 import { coverage, rasterise, shade } from './sprite';
+
+/** Every plate a delivery can be, so a vocabulary rule is checked on all of them. */
+const PLATES: readonly MaskPlate[] = ['build', 'head', 'hair'];
+
+/** Plain Euclidean sRGB, the metric `nearestKey` snaps with. */
+const apart = (one: string, other: string): number => {
+  const channels = (hex: string): readonly number[] =>
+    [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
+  const [r1, g1, b1] = channels(one) as [number, number, number];
+  const [r2, g2, b2] = channels(other) as [number, number, number];
+  return Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
+};
 
 /**
  * The role-mask contract, and the fixture that proves it end to end.
@@ -55,10 +68,21 @@ describe('the mask vocabulary', () => {
       expect(key.tone, `${key.name} must render as something`).not.toBeNull();
     }
 
-    // Every step the palette *does* have is encoded in the colour it renders as,
-    // so a mask stays a readable picture of a real manager.
+    /*
+     * Every step the palette *does* have is encoded in the colour it renders as,
+     * so a mask stays a readable picture of a real manager.
+     *
+     * **The hair channel is exempt, and the exemption is the decision rather than
+     * an oversight.** Those three keys are green. A hair delivery arrives painted
+     * on a head, and the mask is separated from that head by *which key each pixel
+     * snapped to* — so a brown hair key beside a brown skin key would put the face
+     * into the hairstyle. Legibility is the second of the two properties the
+     * module note ranks, and this is the one place it loses to the first. What
+     * replaces it as a guarantee is the distance assertion below, which is
+     * stronger than the ≥ 20 every other pair gets.
+     */
     for (const key of MASK_KEYS) {
-      if (key.pending === true || key.index === TRANSPARENT_KEY) continue;
+      if (key.pending === true || key.index === TRANSPARENT_KEY || key.channel === 'hair') continue;
       expect(legal.has(key.hex), `${key.name} (${key.hex})`).toBe(true);
     }
 
@@ -75,7 +99,7 @@ describe('the mask vocabulary', () => {
     }
   });
 
-  it('keeps every pair of keys apart', () => {
+  it('keeps every pair of keys apart, on each plate', () => {
     /*
      * The conversion step snaps each incoming pixel to its nearest key. Two keys
      * close together would make that snap a coin toss on exactly the pixels an
@@ -84,17 +108,74 @@ describe('the mask vocabulary', () => {
      *
      * `denim` and `sole` deliberately stop at two steps for this reason: their
      * third is `ink-900`, which is the outline.
+     *
+     * **Per plate, because that is what the snap actually offers.** `nearestKey`
+     * takes a plate and considers only that plate's keys, so two keys that never
+     * appear together cannot be confused whatever their distance. Comparing them
+     * anyway is not a stronger check, it is a check of a different claim — and it
+     * would refuse a correct vocabulary for a collision that cannot happen. The
+     * cross-plate pairs this stops comparing are covered instead by the
+     * wrong-plate test below, which is about registration rather than colour.
      */
-    const keys = paintedKeys();
-    for (const one of keys) {
-      for (const other of keys) {
-        if (one.index >= other.index) continue;
-        const channels = (hex: string): readonly number[] => [1, 3, 5].map((at) => parseInt(hex.slice(at, at + 2), 16));
-        const [r1, g1, b1] = channels(one.hex) as [number, number, number];
-        const [r2, g2, b2] = channels(other.hex) as [number, number, number];
-        const distance = Math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2);
-        expect(distance, `${one.name} and ${other.name} are ${distance.toFixed(1)} apart`).toBeGreaterThan(20);
+    for (const plate of PLATES) {
+      const keys = paintedKeys(plate);
+      for (const one of keys) {
+        for (const other of keys) {
+          if (one.index >= other.index) continue;
+          const distance = apart(one.hex, other.hex);
+          expect(
+            distance,
+            `on a ${plate} plate, ${one.name} and ${other.name} are ${distance.toFixed(1)} apart`,
+          ).toBeGreaterThan(20);
+        }
       }
+    }
+  });
+
+  it('keeps hair far enough from skin to be separated from it', () => {
+    /*
+     * **A much higher bar than ≥ 20, and the reason is that this pair is not
+     * merely snapped — it is *partitioned*.** A hairstyle is delivered drawn on a
+     * head and `extractHairChannel` keeps the hair pixels and drops the rest, so
+     * every ambiguous pixel between the two ramps is a piece of somebody's face
+     * moved into their fringe or a piece of their fringe deleted.
+     *
+     * Round 2's head is the measured precedent: `skin-2` and `wood-pale` are 45
+     * apart and a quarter of that head snapped onto boot keys. 45 is therefore
+     * known to be too close, and this asks for more than twice it.
+     */
+    const hair = paintedKeys('hair').filter((key) => key.channel === 'hair');
+    const kept = paintedKeys('hair').filter(
+      (key) => key.channel !== 'hair' && key.step !== 'outline',
+    );
+    expect(hair.length, 'the hair plate has a hair channel').toBe(3);
+    expect(kept.length, 'and a head under it to be separated from').toBeGreaterThan(3);
+
+    for (const one of hair) {
+      for (const other of kept) {
+        const distance = apart(one.hex, other.hex);
+        expect(distance, `${one.name} and ${other.name} are ${distance.toFixed(1)} apart`).toBeGreaterThan(100);
+      }
+    }
+  });
+
+  it('keeps hair away from ink, because a pixel that snaps to the outline is deleted', () => {
+    /*
+     * **The other half of the extraction, and the one that fails silently.**
+     * `extractHairChannel` discards the delivered outline whole and re-derives it,
+     * because the jaw's ink and the fringe's ink are the same colour and choosing
+     * between them would be a guess. So a hair pixel that snapped to the outline
+     * key is not recoloured — it is gone, and it comes back as a hole in the
+     * hairstyle rather than as anything a registration check can name.
+     *
+     * A dark hairstyle's shade step is where that happens. The house `green-deep`
+     * was the obvious encoding for it and sits 64 from `ink-900`; this is why it
+     * is not used.
+     */
+    const outline = MASK_KEYS[1]!;
+    for (const key of paintedKeys('hair').filter((one) => one.channel === 'hair')) {
+      const distance = apart(key.hex, outline.hex);
+      expect(distance, `${key.name} is ${distance.toFixed(1)} from the outline`).toBeGreaterThan(100);
     }
   });
 
@@ -119,29 +200,29 @@ describe('the mask vocabulary', () => {
 describe('encoding', () => {
   it('round-trips a real mask exactly', () => {
     const keys = fixtureBuildMask();
-    expect([...decodeKeys(encodeMask('avatar_body_starter_04', keys))]).toEqual([...keys]);
+    expect([...decodeKeys(encodeMask('avatar_body_starter_04', 'build', keys))]).toEqual([...keys]);
   });
 
   it('refuses a run list that decodes to the wrong number of cells', () => {
     expect(() =>
-      decodeKeys({ slug: 'x', width: MASK_CANVAS.width, height: MASK_CANVAS.height, rle: '0.10' }),
+      decodeKeys({ slug: 'x', plate: 'build', width: MASK_CANVAS.width, height: MASK_CANVAS.height, rle: '0.10' }),
     ).toThrow(/cells/);
   });
 
   it('refuses a key the vocabulary does not have', () => {
     expect(() =>
-      decodeKeys({ slug: 'x', width: MASK_CANVAS.width, height: MASK_CANVAS.height, rle: '99.4' }),
+      decodeKeys({ slug: 'x', plate: 'build', width: MASK_CANVAS.width, height: MASK_CANVAS.height, rle: '99.4' }),
     ).toThrow(/unknown key/);
   });
 
   it('refuses a malformed run', () => {
     expect(() =>
-      decodeKeys({ slug: 'x', width: MASK_CANVAS.width, height: MASK_CANVAS.height, rle: '1.zz' }),
+      decodeKeys({ slug: 'x', plate: 'build', width: MASK_CANVAS.width, height: MASK_CANVAS.height, rle: '1.zz' }),
     ).toThrow(/malformed/);
   });
 
   it('turns keys into the tones the compositor already understands', () => {
-    const grid = maskToneGrid(encodeMask('x', fixtureBuildMask()));
+    const grid = maskToneGrid(encodeMask('x', 'build', fixtureBuildMask()));
     const seen = new Set<string>();
     for (const row of grid) for (const tone of row) if (tone !== null) seen.add(tone);
 

@@ -1,5 +1,6 @@
 import { BODY_BELOW } from './art/body';
 import { CANVAS } from './art/geometry';
+import { LAYER_SHAPES } from './art';
 import { TRANSPARENT_KEY } from './mask';
 import { rasterise, shade } from './sprite';
 
@@ -118,4 +119,36 @@ export function fixtureHeadMask(): readonly number[] {
     }
   }
   return enclosed;
+}
+
+/**
+ * A hair *delivery* — a head with a hairstyle drawn on it, the way one arrives.
+ *
+ * **The delivery is not the layer**, which is the whole reason this exists.
+ * `extractHairChannel` has to be given something with a head in it, because a
+ * hairstyle alone carries no landmark and a generator has to be told where to put
+ * one (see the note on that function). So this composites the drawn hairstyle,
+ * expressed in the three hair keys, over {@link fixtureHeadMask} — and a test of
+ * the extraction is a test that the head comes back out again.
+ *
+ * Test-only, like the other two, and it renders nothing anybody sees.
+ */
+export function fixtureHairDelivery(slug: string): readonly number[] {
+  const shapes = LAYER_SHAPES[slug];
+  if (shapes === undefined) throw new Error(`${slug} has no drawn shapes to build a fixture from`);
+
+  const keys = [...fixtureHeadMask()];
+  const grid = shade(rasterise(shapes, CANVAS.width, CANVAS.height));
+
+  for (let y = 0; y < CANVAS.height; y++) {
+    for (let x = 0; x < CANVAS.width; x++) {
+      const tone = grid[y]?.[x] ?? null;
+      if (tone === null) continue;
+      // Outline included: a delivery's ink is one colour whoever drew it, which is
+      // exactly the ambiguity the extraction resolves by throwing it all away.
+      const key = tone === 'outline' || tone === 'ink' ? 1 : tone === 'light' ? 20 : tone === 'shade' ? 22 : 21;
+      keys[y * CANVAS.width + x] = key;
+    }
+  }
+  return keys;
 }

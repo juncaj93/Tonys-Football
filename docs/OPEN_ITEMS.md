@@ -398,11 +398,26 @@ remaining sixteen assets are commissioned.
 
 The infrastructure is built and **nothing a manager sees has changed**: with no
 mask registered every top still renders the drawn sprite, pixel for pixel.
-`docs/MANAGER_BUILD_PROTOTYPE.md` is the canonical account and
-`docs/art/MANAGER_BUILD_TSHIRT_BRIEF.md` is the art brief. **Still open, and the
-next step is not code:** the real T-shirt has to come back, be validated,
-photographed at 390 / 375 / 360, seen on a phone and compared against Tony. Only
-the commissioner can close it.
+`docs/MANAGER_BUILD_PROTOTYPE.md` is the canonical account.
+
+**Two of the seventeen assets are now painted and registered** — the T-shirt build
+and the head plate — and a manager on the T-shirt is painted from the crown to the
+soles, in four skin tones and eight shirt colours, from two files. The other five
+tops are still drawn and a manager wearing one cannot tell any of this happened.
+
+**The three plate contracts are complete**, so no further pipeline work stands
+between a delivery and a registered layer: `docs/art/MANAGER_BUILD_TSHIRT_BRIEF.md`
+(builds), `MANAGER_HEAD_BRIEF.md` (the head, done), `MANAGER_HAIR_BRIEF.md` (the
+six hairstyles and four facial-hair pieces, added 2026-08-12 on the commissioner's
+authorisation of the contract only — **no hair art has been requested, generated or
+registered**, and the ten drawn layers are untouched).
+
+**Still open, and the next step is a product decision rather than code.** Fifteen
+assets remain: five builds, six hairstyles, four facial-hair pieces. Against the
+painted head the drawn hair is now the most visible thing wrong, and merging the
+prototype as it stands would make five tops look worse by comparison — so *when* to
+land it is a judgement call the commissioner has to make. Only the commissioner can
+close this.
 
 The four things this entry has always said stay true remain true: the canvas must
 not regress, colour stays a runtime parameter, the six traits and their stored

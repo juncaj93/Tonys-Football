@@ -32,7 +32,7 @@ import { AVATAR_BODY_STARTER_04 } from './avatar_body_starter_04';
  * one side of that and not the other, and the preview would quietly stop being
  * the truth.
  */
-export const BUILD_MASKS: Readonly<Record<string, EncodedMask>> = Object.freeze({
+export const PAINTED_MASKS: Readonly<Record<string, EncodedMask>> = Object.freeze({
   /**
    * The T-shirt, round 3, 2026-08-11. **The prototype, and the only painted build.**
    *
@@ -61,11 +61,20 @@ export const BUILD_MASKS: Readonly<Record<string, EncodedMask>> = Object.freeze(
   [AVATAR_BODY_HEAD.slug]: AVATAR_BODY_HEAD,
 });
 
-export function buildMask(slug: string): EncodedMask | null {
-  return BUILD_MASKS[slug] ?? null;
+/** The painted mask under a slug, whatever kind of plate it is. */
+export function paintedMask(slug: string): EncodedMask | null {
+  return PAINTED_MASKS[slug] ?? null;
 }
 
-/** Is this top painted? Decides whether the figure below the neck is drawn or painted. */
+/**
+ * Is this top painted? Decides whether the figure below the neck is drawn or painted.
+ *
+ * **Asks the plate, not the map.** Before hair existed, "there is a mask under this
+ * slug" and "this top brings its own body" were the same question; a hairstyle
+ * registered under `avatar_hair_03` would have answered the second one yes if this
+ * had stayed a membership test, and `composeCharacter` would have stood the drawn
+ * body down for a manager whose top is still drawn.
+ */
 export function hasBuildMask(slug: string): boolean {
-  return slug in BUILD_MASKS;
+  return PAINTED_MASKS[slug]?.plate === 'build';
 }

@@ -470,3 +470,119 @@ simply had nothing to encode, because no build has eyes.
 **Placement normalisation is deliberately not offered for a head.** A build may be
 a few rows out because only its own silhouette depends on that; ten other layers
 are drawn to the head's landmarks, so a head that misses them is regenerated.
+
+---
+
+## 12. The hair plate — the third and last kind of delivery
+
+Built 2026-08-12, on the commissioner's authorisation to *"build the hair /
+facial-hair plate contract and the paint-over template, so ChatGPT has something
+exact to draw onto."* **No hair art was requested, generated or registered.** The
+ten drawn layers are untouched and every manager renders exactly as before.
+
+`docs/art/MANAGER_HAIR_BRIEF.md` is the packet.
+
+### 12.1 The delivery contains a head, and that is forced
+
+A build registers on a contact row. A head registers on an eye line and a jaw.
+**A hairstyle alone has no landmark of any kind** — nothing inside a drawing of
+hair says where the head it belongs to was — so a contract that takes hair on its
+own is a contract that depends on placement being right, and two head rounds
+established that placement is the thing a generator is worst at.
+
+So hair is painted **onto the supplied plate**: a whole accepted manager, painted
+head and painted T-shirt, at the right size in the right place. The frame is the
+registration and the head is something for the hair to sit on. `extractHairChannel`
+then separates the hair back out and throws the head away.
+
+### 12.2 The hair keys are green, and it is the one place separability beat legibility
+
+The module note ranks the two properties a key is chosen for — separability first,
+plausibility second — and this is the key that tested the ranking. `wood-light` /
+`wood-mid` / `wood-dark` was the obvious choice: it is `HAIR_COLOURS[2]` exactly,
+so a painter would have been drawing a brown-haired manager and at that setting
+the render would be the file.
+
+**It cannot survive the extraction.** The hair is separated from the head by which
+key each pixel snapped to, and skin browns and wood browns are neighbours — 45
+apart, which is the distance that already put 25% of a head onto boot keys. The
+face would have come out as hair. A green ramp is nowhere near skin, ink, wood,
+paper or amber; it looks absurd on a head, and it is an encoding that never reaches
+`public/`.
+
+`mask.test.ts` now asserts **≥ 100** between every hair key and every non-ink key
+on the plate, and separately ≥ 100 from ink — because a hair pixel that snaps to
+the outline key is not recoloured, it is deleted, and it comes back as a hole. That
+second bound is why the shade step is `#2A7D45` and not the house `green-deep`,
+which sits 64 from ink.
+
+### 12.3 Separability is now a per-plate question
+
+The old test compared every pair of keys in the vocabulary. `nearestKey` takes a
+plate and offers only that plate's keys, so two keys that never appear together
+cannot be confused however close they are — comparing them is a check of a claim
+nothing depends on, and it would refuse a correct vocabulary for a collision that
+cannot happen.
+
+**What replaces it is not nothing.** A file submitted as the wrong kind is caught
+by *registration*, overwhelmingly and by name: a build read as hair fails the floor,
+the crown band and the skull overlap at once; a hairstyle read as a build fails the
+contact row. Both are asserted in `hair.test.ts` rather than reasoned about.
+
+### 12.4 Three things the end-to-end run found that reading could not
+
+The pipeline was exercised with a synthetic delivery through the real
+`npm run art:mask` before any art was asked for. Nothing synthetic was committed.
+
+1. **Fitting a hair delivery by the skull is wrong.** `headWindow` finds the jaw
+   by looking for the row where the silhouette narrows, and hair *changes the
+   silhouette it is measuring* — the Long style hangs to row 77, so the "skull" ran
+   to the shoulders and a correct delivery was rescaled by `0.66×`, returning 300
+   pixels against 974. Hair is now never fitted, and does not need to be: it is
+   painted on a plate that already places it.
+2. **Discarding the delivered outline erodes every style by a pixel all round.**
+   The first extraction threw all the ink away and re-derived a silhouette, which is
+   one line shorter and cost Long 269 pixels — enough to close a parting and delete
+   a two-pixel lock. Ink is now assigned by **adjacency**: an ink pixel touching
+   hair is the hair's edge, one touching none is the head's. The round trip holds
+   inside ±6 pixels on all six styles.
+3. **A mark drawn entirely in ink is unrecoverable**, because there is nothing for
+   it to be adjacent to. Measured at 14 of Stubble's 100 pixels. It is in the brief
+   as a rule — ink is a stroke around a painted mass, never the mass — and it fails
+   *loudly* rather than quietly: such a delivery extracts to almost nothing and is
+   refused by the coverage floor.
+
+### 12.5 What was added, and what deliberately was not
+
+**Added:** a `hair` channel and three keys; `MaskPlate` with `EncodedMask.plate`
+recorded rather than inferred; `HAIR_REGISTRATION` and `FACIAL_HAIR_REGISTRATION`
+with a validator each; `extractHairChannel`; two paint-over plates; `hair.test.ts`
+at forty cases.
+
+**Not added:** a fourth hair step. Every one of the eight `HAIR_COLOURS` ramps is
+exactly three deep, so a fourth key would have nothing to decode to on any of them
+— unlike the garment's and the skin's `pending` highlights, which collapse onto a
+step the ramp has. The reference sheet's own hair mass is two tone families plus
+the outline.
+
+**Not added:** any rule about shape. Length, parting, volume, whether a style
+covers an ear and which side a ponytail hangs on are unconstrained, for the same
+reason ruling R2 left a build's pose alone.
+
+**One field became stricter rather than looser.** `hasBuildMask` used to ask whether
+*any* mask existed under a slug; a registered hairstyle would have answered yes and
+stood the drawn body down for a manager whose top is still drawn. It asks the plate
+now.
+
+### 12.6 The bands are the drawn set's own extents, widened
+
+Every bound was measured off the ten shipped layers rather than chosen, and the
+first suite in `hair.test.ts` asserts that **all ten still pass** — because a band
+tighter than the product's own art would refuse a correct repaint of a style that
+exists, and nobody would find out until the art came back. That is the mistake
+`HEAD_REGISTRATION.eyeTolerance` cost two rounds to find, made cheap.
+
+One rule was tightened during the work rather than loosened: the facial-hair mouth
+check was a band of rows, which a pair of sideburns at the temples satisfies. It is
+a box now — the moustache's own sixteen columns — and the case that exposed it is
+in the suite.

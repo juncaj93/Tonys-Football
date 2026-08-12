@@ -4,11 +4,11 @@ import { bounds, rasterise, shade, type Bounds, type Op, type ToneGrid } from '.
 import { BODY, BODY_HEAD } from './body';
 import { CANVAS } from './geometry';
 import { FACIAL_HAIR, HAIR_STYLES } from './hair';
-import { buildMask } from './masks';
+import { paintedMask } from './masks';
 import { TOPS } from './tops';
 import { WEARABLE_ART } from './wearables';
 
-export { buildMask, hasBuildMask } from './masks';
+export { paintedMask, hasBuildMask } from './masks';
 
 /**
  * Every drawable layer, by slug.
@@ -65,7 +65,7 @@ export function toneGrid(slug: string): ToneGrid | null {
    * compositor, the bounds, the contact shadows, the run-length pass — can tell a
    * painted layer from a drawn one.
    */
-  const mask = buildMask(slug);
+  const mask = paintedMask(slug);
   if (mask !== null) {
     const grid = maskToneGrid(mask);
     CACHE.set(slug, grid);
