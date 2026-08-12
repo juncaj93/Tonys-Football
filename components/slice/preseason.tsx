@@ -219,7 +219,25 @@ function TeamReview({ team }: { team: PreseasonTeamSection }) {
           * 360, which is the one thing this product's layout rule has no
           * exceptions to.
           */}
-        <h3 className={`min-w-0 break-words ${TYPE.bodyCompact} text-ink-900`}>{team.manager}</h3>
+        {/*
+          * A `<span>`, and the element is load-bearing rather than a style
+          * choice.
+          *
+          * `<summary>`'s content model is **phrasing content, _or_ one element
+          * of heading content** — not a heading *among* phrasing siblings. This
+          * was an `<h3>` between the marker span and the grade span, which is
+          * invalid nesting, and an invalid nesting is one the parser is free to
+          * restructure. That is a React `#418` structural hydration mismatch by
+          * construction, and the visual sweep measured it: a baseline run of
+          * `main` in the same container logged **1** quarantined `#418` and
+          * passed, while two runs of this branch logged **3** and **5** and
+          * failed.
+          *
+          * The heading was inherited from the standalone team section this row
+          * replaced, where it really was a section heading. In a ledger row it
+          * is not one, so nothing about the document outline is lost.
+          */}
+        <span className={`min-w-0 break-words ${TYPE.bodyCompact} text-ink-900`}>{team.manager}</span>
         <span className={`text-right whitespace-nowrap ${TYPE.ledgerValue} font-display font-bold text-red-dark`}>
           {team.grade}
         </span>
