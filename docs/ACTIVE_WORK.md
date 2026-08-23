@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Final collectible art batch | codex/final-collectible-art | Seven remaining catalog collectible sprites, their asset-registry records, art-slot coverage, and visual QA evidence | Sleeper import/finality, token ledger core, wearables, casino mechanics, catalog size and reward odds | 2026-08-23 |
+*(none)*
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
