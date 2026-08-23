@@ -433,6 +433,12 @@ function Revealed({
                 : `${String(reveal.distinct)} of ${String(reveal.total)} on your shelf.`}
         </p>
 
+        {reveal.unlockedWearable !== null && (
+          <p className={`mt-1.5 border-t border-wood/30 pt-1.5 ${TYPE.bodyCompact} text-ink-900`}>
+            Wardrobe unlocked: {reveal.unlockedWearable.name}.
+          </p>
+        )}
+
         {/*
           * Tony, offering another one.
           *

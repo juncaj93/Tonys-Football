@@ -171,7 +171,11 @@ export type LiveTokenReason =
   /** Posted the week's best score in a finalized week (`lib/rewards/`). */
   | 'WEEKLY_HIGH_SCORE'
   /** A spare from an exhausted tier, converted at the opening (`lib/counter/boxes.ts`). */
-  | 'DUPLICATE_SALVAGE';
+  | 'DUPLICATE_SALVAGE'
+  /** An Underground game accepted this fictional-token wager. */
+  | 'CASINO_WAGER'
+  /** An Underground game returned this fictional-token payout. */
+  | 'CASINO_PAYOUT';
 
 export interface TokenDelta {
   readonly userId: string;

@@ -2,7 +2,7 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 115,
+  "totalSlugs": 116,
   "statusValues": [
     "placeholder",
     "generated",
@@ -129,7 +129,9 @@
         "alt": "The Bapple Tree",
         "anchor": "bottom-center",
         "$comment": "Concept revised 2026-08-03: Busch Light Apple-style cans hanging as fruit, not the half-apple/half-banana concept. docs/art/BRAND_EXCEPTIONS.md item 4.",
-        "path": "/assets/collectible/collectible_bapple_tree.png"
+        "path": "/assets/collectible/collectible_bapple_tree.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "surface_poster_blank": {
         "family": "surface",
@@ -356,6 +358,20 @@
         "alt": "Back to the parlor"
       }
     },
+    "_underground_B5": {
+      "$comment": "The playable Underground is its own illustrated backroom. It uses the same portrait-shell grammar as the Parlor and Back Hall while live casino controls remain runtime HTML.",
+      "zone_underground_shell": {
+        "family": "zone",
+        "canvas": "320x569",
+        "batch": "B5+",
+        "art_status": "generated",
+        "role": "scenery",
+        "alt": "Tony's underground pizza-parlor casino backroom",
+        "path": "/assets/zone/zone_underground_shell.png",
+        "source": "OpenAI image generation, Underground visual rebuild 2026-08-23",
+        "rights_status": "original"
+      }
+    },
     "_basement_B1": {
       "$comment": "The manager's basement, reached down the stairs from the Back Hall. One portrait shell per theme plus transparent hit regions -- the same grammar as the parlor and the hall, and NOT a grid of hotspots. Authored at 320x569, the LOGICAL size, exactly as the shipped zone_parlor_shell is: the pipeline resizes to this canvas and the device scales up with image-rendering: pixelated. Each shell is drawn EMPTY where runtime content goes -- the frame, the shelf plank, the desktop and the pennant rail carry a manager's own things, and the rug carries the manager. Geometry is fixed by lib/rooms/objects.ts. See docs/art/BATCH_E_BASEMENT_HANDOFF.md.",
       "zone_room_shell_storeroom": {
@@ -557,7 +573,7 @@
       }
     },
     "_wearables_B2": {
-      "$comment": "12 earned wearables for the modular character system (M3). COMMISSIONER RULING 2026-07-31: these are NOT part of the 24-item pizza-box collectible catalog. Collectibles and wearables are separate product families — a pizza box awards collectible_*, character equipment uses wear_*. This comment previously claimed the opposite; that claim was wrong and contradicted the seeded reward table. Crossover rewards are not approved and must not be implemented without a later explicit ruling. Canvas raised to 112x168 alongside the free starter layers.",
+      "$comment": "12 earned wearables for the modular character system (M3). COMMISSIONER RULINGS 2026-07-31 and 2026-08-23: these are NOT part of the 24-item pizza-box collectible catalog. Collectibles and wearables are separate product families — a pizza box rolls collectible_* only, then selected inside-joke pulls grant a separate idempotent wardrobe bonus via lib/character/unlocks.ts. This preserves the fixed 24-item reward table. Canvas raised to 112x168 alongside the free starter layers.",
       "wear_head_pizza_visor": {
         "family": "avatar",
         "canvas": "112x168",
@@ -718,7 +734,9 @@
         "alt": "Portable sauna",
         "anchor": "bottom-center",
         "$comment": "Concept revised 2026-08-03: barrel sauna, not a fabric tent. docs/art/BRAND_EXCEPTIONS.md item 6.",
-        "path": "/assets/collectible/collectible_portable_sauna.png"
+        "path": "/assets/collectible/collectible_portable_sauna.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_burn_barrel": {
         "family": "collectible",
@@ -729,7 +747,9 @@
         "priority": true,
         "alt": "Burn barrel",
         "anchor": "bottom-center",
-        "path": "/assets/collectible/collectible_burn_barrel.png"
+        "path": "/assets/collectible/collectible_burn_barrel.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_neon_tony_sign": {
         "family": "collectible",
@@ -764,7 +784,9 @@
         "alt": "McDonald’s cookie bag",
         "anchor": "bottom-center",
         "$comment": "Concept revised 2026-08-03: a McDonald’s paper cookie bag, not a canvas tote. docs/art/BRAND_EXCEPTIONS.md item 7. The SLUG IS DELIBERATELY UNCHANGED — it is the identity in collectibles.slug, box_openings.collectible_slug and the seeded reward table, so renaming it would orphan recorded openings for a cosmetic gain. The display name carries the change.",
-        "path": "/assets/collectible/collectible_cookie_tote.png"
+        "path": "/assets/collectible/collectible_cookie_tote.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_reddiwip": {
         "family": "collectible",
@@ -775,17 +797,22 @@
         "alt": "Can of whipped cream",
         "anchor": "bottom-center",
         "$comment": "Reddi-wip-inspired trade dress approved 2026-08-03, no longer required to be a generic unbranded can. docs/art/BRAND_EXCEPTIONS.md item 3.",
-        "path": "/assets/collectible/collectible_reddiwip.png"
+        "path": "/assets/collectible/collectible_reddiwip.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_lava_lamp": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "interactive": true,
         "alt": "Lava lamp",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_lava_lamp.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_singing_fish": {
         "family": "collectible",
@@ -822,29 +849,38 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "priority": true,
         "alt": "Join the revolution poster",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_revolution_poster.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_freddy_bowl": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "alt": "Dog bowl",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_freddy_bowl.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_pizza_cutter": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Pizza cutter",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_pizza_cutter.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_parmesan_shaker": {
         "family": "collectible",
@@ -868,10 +904,13 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Squeeze bottle",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_ketchup_bottle.png",
+        "source": "OpenAI image generation, visual rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_paper_menu": {
         "family": "collectible",

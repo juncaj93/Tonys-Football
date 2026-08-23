@@ -50,6 +50,8 @@ export interface PreviewReveal {
   readonly replayed: boolean;
   /** Synthetic salvage, for `?preview_stage=spare`. Null in every other stage. */
   readonly salvageTokens: number | null;
+  /** The preview never claims a real wardrobe grant. */
+  readonly unlockedWearable: null;
   readonly asset: AssetResolution;
   /** Synthetic, like the rest of it — see the note on `previewReveal`. */
   readonly distinct: number;
@@ -210,6 +212,7 @@ export function previewReveal(
     // Read through `salvageValue` rather than typed, so the preview cannot show
     // a number the economy no longer pays — the same rule as `PRICE` above.
     salvageTokens: stage.salvage === true ? salvageValue(PROVISIONAL_ECONOMY, item.rarity) : null,
+    unlockedWearable: null,
     asset: resolveAsset(item.slug),
     distinct: stage.distinct,
     total: CATALOG_SIZE,

@@ -1,7 +1,7 @@
 import { and, eq } from 'drizzle-orm';
 
 import { assetRegistry } from '@/lib/assets/registry';
-import { type Database } from '@/lib/db';
+import { type Database, type Queryable } from '@/lib/db';
 import { characterConfigurations, collectibles, wearableEquips } from '@/lib/db/schema';
 
 import { WEARABLES, optionName, wearable } from './catalog';
@@ -185,15 +185,14 @@ export async function ownedWearables(
  *
  * **The contract a future award system uses**, written now so that system does
  * not have to reach into `collectibles` and reinvent the rules. Nothing in the
- * product calls it on a schedule: `16` approves no wearable source, the pizza box
- * awards `collectible_*` only (commissioner ruling, 2026-07-31), and inventing
- * one here would be absorbing scope from a milestone that has not been written.
+ * product calls it through the approved lore-unlock map. The pizza box still
+ * awards `collectible_*` only; this persists the separate wardrobe bonus.
  *
  * **Idempotent by natural key.** `collectibles_one_wearable_each` makes a second
  * grant of the same item to the same manager a no-op rather than a second row.
  */
 export async function grantWearable(
-  db: Database,
+  db: Queryable,
   userId: string,
   slug: string,
   acquiredAt: Date,

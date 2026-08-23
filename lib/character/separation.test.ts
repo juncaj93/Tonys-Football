@@ -10,8 +10,8 @@ import { standardRewardTable } from '@/lib/counter/rewards';
 import { WEARABLES, WEARABLE_COUNT, characterSlugs } from './catalog';
 
 /**
- * **Commissioner ruling, 2026-07-31: collectibles and wearables are separate
- * systems.**
+ * **Commissioner rulings, 2026-07-31 and 2026-08-23: collectibles and wearables
+ * are separate systems.**
  *
  * The 24 `collectible_*` items are the pizza-box economy. The 12 `wear_*` assets
  * belong to the modular character and equipment system. They are two product
@@ -20,10 +20,11 @@ import { WEARABLES, WEARABLE_COUNT, characterSlugs } from './catalog';
  * - a pizza box awards `collectible_*`;
  * - character equipment uses `wear_*`.
  *
- * A future explicit ruling *may* allow a box to award a wearable or a mixed
- * reward. **That is not approved now**, and the absence of a crossover is a
- * product decision rather than an unimplemented feature — which is exactly the
- * kind of thing that gets "fixed" by somebody who reads the gap as an omission.
+ * A pizza box never rolls a wearable or a mixed reward. The 2026-08-23 ruling
+ * does approve a **separate, idempotent wardrobe bonus** after selected lore
+ * pulls; `unlocks.ts` guards that deliberately narrow crossover. The absence of
+ * a wearable in the reward table is still a product decision rather than an
+ * unimplemented feature.
  *
  * ## Why this file exists rather than one more `it`
  *

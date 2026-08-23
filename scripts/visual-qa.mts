@@ -272,6 +272,7 @@ type StateName =
   | 'prediction'
   | 'receipt'
   | 'counter'
+  | 'underground'
   | 'back-hall'
   /*
    * The hall with everything shut — **what a revert produces**, not what a
@@ -1275,6 +1276,12 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(1500);
       return;
+    case 'underground':
+      // The curtained room is a full product route, not merely a hidden doorway.
+      // Capture its illustrated token tables at every supported width.
+      await page.goto(`${BASE}/underground`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(800);
+      return;
     /*
      * The shelf, after a pull.
      *
@@ -2129,6 +2136,7 @@ const ALL_STATES: readonly StateName[] = [
   'prediction',
   'receipt',
   'counter',
+  'underground',
   'back-hall',
   'back-hall-shut',
   'keyboard-focus',
@@ -3585,9 +3593,9 @@ const PARTITIONED = new Set(['banners']);
  */
 const BACK_HALL_STATES: Readonly<Record<string, { rooms: boolean; underground: boolean }>> = {
   // What every manager sees since the basement shipped: the stairs open, the
-  // curtain shut, and the whole locked-door mechanism still exercised by the
-  // curtain rather than becoming untested when the stairs opened.
-  'back-hall': { rooms: true, underground: false },
+  // Underground curtain open, and the whole locked-door mechanism still
+  // exercised by the explicit `back-hall-shut` fixture below.
+  'back-hall': { rooms: true, underground: true },
   // What setting `rooms` back to `false` produces.
   'back-hall-shut': { rooms: false, underground: false },
 };
@@ -5773,6 +5781,8 @@ async function run(): Promise<void> {
             await checkTargets(page, width);
             await checkBackHall(page, width, state);
           }
+
+          if (state === 'underground') await checkTargets(page, width);
 
           // Every reveal state must actually contain a reveal. See the note on
           // `checkRevealPresent` — this gate exists because nine of them did not.

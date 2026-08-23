@@ -222,33 +222,23 @@ The commissioner subsequently reported that the sprites still look visually bad.
 That is a product-acceptance question this entry does not answer and must not be
 read as having answered — it is **C3**, and it is open.
 
-### A5 · Twelve of the twenty-four collectibles have no art, and they are 59.5% of every box opened — **art dependency**
+### A5 · Seven of the twenty-four collectibles remain in their pizza boxes — **art dependency, reduced 2026-08-23**
 
-**Measured, 2026-08-10, and it is not the twelve you would guess.** Every epic
-and every legendary is already painted, so the unpainted twelve are exactly the
-**most frequently pulled** twelve: seven commons carrying **42.0%** of all box
-openings and five rares carrying a further **17.5%**. Three boxes in five
-produce the same picture of a closed pizza box, and a median manager's
-season-one collection is **40% real objects and 60% placeholder**.
+The inside-joke art pass rebuilt the Bapple Tree (with six red Bapple cans),
+portable sauna, burn barrel, McDonald's cookie bag, Reddi-wip can, Freddy's
+bowl, and the Revolution poster. It also supplied the lava lamp, pizza cutter,
+and ketchup bottle. **Seventeen of twenty-four** box rewards now have final
+pixel art, validated at the real 46 × 46 reveal size.
 
-**This is not a defect and nothing is broken.** `art/ASSET_PIPELINE.md §5`
-deliberately commits to 12-of-24 at launch and `placeholder_pizza_box` is a
-designed in-world stand-in — an item still in its box. What was missing was the
-*number*: nobody had measured what the deferral costs at the surface a manager
-actually looks at. It is here so the commissioner can decide with it rather than
-around it.
+The remaining seven are deliberately generic props: five commons (**30.0%** of
+openings) and two rares (**7.0%**), or **37.0%** of openings total. The
+placeholder is still a designed in-world stand-in rather than a broken state;
+the now-visible count is asserted in `lib/assets/art-slots.test.ts` so it cannot
+quietly drift.
 
-**It is the highest-return art in the product per sprite.** One common sprite is
-seen 1.7× as often as a rare one and 6× as often as a legendary one, so the
-order inside the batch matters as much as the batch: commons first, always.
-[`docs/art/BATCH_F_COLLECTIBLE_HANDOFF.md`](art/BATCH_F_COLLECTIBLE_HANDOFF.md)
-briefs all twelve, ready to paste, with one free product win folded in —
-`collectible_paper_menu` rebriefed as a menu board that **hangs**, which gives
-the room's picture frame its first common-tier occupant at no extra art and no
-catalog change.
-
-**Nothing is blocked.** Every unpainted slug resolves today, the loop works, and
-a swap stays a registry row.
+The remaining batch is still worthwhile because common items are the most often
+seen, but no league-specific prize is waiting behind it. Every unpainted slug
+resolves today and a future swap remains a registry row.
 
 ### A6 · The Back Hall was the only interior in the product that is not art — **CLOSED, 2026-08-11**
 
@@ -790,7 +780,8 @@ pennant respectively — and none has new evidence.
 ## G — Deferred, do not execute
 
 `league_events` (commissioner ruling, 2026-08-06 — deferred, with the revisit
-condition written down) · the casino (P10) · ~~manager basements (P6, v1.1)~~
+condition written down) · ~~the casino (P10) — implementation checkpoint built
+2026-08-23; awaiting database migration verification~~ · ~~manager basements (P6, v1.1)~~
 **built and open, 2026-08-09 — see G0 below** · silent auction · seasonal events
 (P8) · draft night · Season Story · vending machine (P7) · the championship ring
 ceremony · roulette, never · Underground content · real-money anything ·
@@ -815,9 +806,37 @@ a blanket re-opening.
 | **Championship ring ceremony** | **LATER — and it has a date** | `16` scopes it as *"Closing Night at Tony's — v1.1 — rings + wheel + portrait + season name, **one ceremony**"*. Three of those four do not exist, and it happens in **January**. The entitlement existing is not a reason to move it ahead of anything — the mission says so explicitly |
 | **Basement spotlight** (`08 §17`) | **LATER — newly unblocked** | It links a Slice story directly to a manager's room, and until 2026-08-09 there was no room to link to. It is now possible. It is a *Slice* change — a new candidate, a fact packet and a validator pass — not a room change, and it needs a season to have anything to spotlight |
 
-### G1 · The Underground — the decision that is actually wanted
+### G1 · The Underground — **reopened by commissioner ruling, 2026-08-23**
 
-**Nothing was built and nothing should be until this is answered.** The
+> **TECH LEAD RULING · 2026-08-23.** The commissioner explicitly directed the
+> finished product to include an interactive Underground with **blackjack and
+> slots**, paid only in the existing fictional seasonal tokens. This latest
+> explicit ruling resolves the earlier reopening brief's contradiction: Phase
+> 10's two named games stand; roulette remains permanently prohibited. The
+> Underground may open as a leisure token sink and must not depend on a live
+> football wager, because its tokens are already earned through the finalized
+> Sleeper reward loop. It still inherits every ledger, idempotency, demoability,
+> simulation, and server-authority requirement below.
+
+**Implementation checkpoint, 2026-08-23.** The branch `codex/underground-casino`
+now holds ledger-backed blackjack and slots, a durable `casino_rounds` audit
+record, an exact slot return guard (85.2125%), default-open navigation, and the
+illustrated Underground shell. The branch is intentionally not merged while the
+local Postgres harness cannot apply `0015_underground_casino.sql` and exercise
+the end-to-end ledger path. This is an environment verification gap, not a new
+product decision.
+
+**Implementation guardrails:** casino play is never real-money, never credit,
+never a client-side balance change, never a replacement for the Tuesday Slice's
+football stakes, and never an unbounded source of tokens. Each round is
+recorded, server-resolved, auditable, and uses `apply_token_delta` for both the
+wager and any payout. Configurable stakes and payouts are simulation-gated;
+the server may ship only after the payout model is tested against the existing
+seasonal token economy.
+
+reconciliation:
+**Historical reconciliation, retained for provenance.** Before the ruling, the
+repository correctly refused to choose between two commissioner-level sources:
 reconciliation:
 
 - **`/underground` is deliberately not a route** (`18 §5`, `BACK_HALL_BOUNDARY
@@ -843,19 +862,11 @@ itself twice over: `MIN_BASIS_TEAM_WEEKS = 12` returns `thin-basis` structurally
 and the `tonysLine` flag is shut. Neither should be relaxed — the 2026 season has
 no games at all.
 
-**So the Underground has no honest content until football exists**, whatever the
-games turn out to be. What would be needed to open it:
-
-1. a ruling on whether the Phase 10 games stand (blackjack + slots) or are
-   replaced by league-native ones — and if replaced, **what they are**, because
-   `16 §9` already owns every league-native wager this product has;
-2. a season, or at least twelve team-weeks, for anything settled from football;
-3. an economy simulation for whatever wagering is added, on the same footing as
-   the box's price (`16 §8`).
-
-**Building it early costs the reveal.** An Underground that opens onto an empty
-room spends `18 §5`'s joke for nothing, and `18 §6` says a locked door opens for
-everyone at once as an announced event — so it can only be spent once.
+**That conclusion is superseded.** The ruling above selects blackjack and slots,
+and explicitly defines the Underground as a token-only leisure loop rather than
+a second football wager. What still must happen before opening it is the
+economy simulation and the complete audited round loop; the staged door remains
+shut until those are present, so the reveal is spent only on a real room.
 
 Twelve of twenty-four collectibles stay `placeholder_pizza_box` **by design** —
 that is the number `art/ASSET_PIPELINE.md §5` commits to at launch, not a gap.

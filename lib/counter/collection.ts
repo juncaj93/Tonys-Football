@@ -1,4 +1,4 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, like } from 'drizzle-orm';
 
 import { type Queryable } from '@/lib/db';
 import { collectibles } from '@/lib/db/schema';
@@ -52,7 +52,9 @@ export async function collectionFor(db: Queryable, userId: string): Promise<Coll
   const owned = await db
     .select({ slug: collectibles.slug, acquiredAt: collectibles.acquiredAt })
     .from(collectibles)
-    .where(eq(collectibles.userId, userId))
+    // Wearables share the append-only ownership ledger, but they are not pizza
+    // box pulls. The collection counter must stay a count of the 24-item set.
+    .where(and(eq(collectibles.userId, userId), like(collectibles.slug, 'collectible_%')))
     .orderBy(asc(collectibles.acquiredAt));
 
   // One pass to counts and first-acquired. `orderBy` above makes the first row

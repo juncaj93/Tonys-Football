@@ -1,4 +1,4 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, like, sql } from 'drizzle-orm';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
@@ -415,7 +415,10 @@ describe.skipIf(!hasDatabase)('the economy ruling', () => {
       expect((await wallet(db!, { userId, seasonId: season.id }))!.balance).toBe(before + 120);
 
       // And nothing new was added to the shelf.
-      const owned = await db!.select().from(collectibles).where(eq(collectibles.userId, userId));
+      const owned = await db!
+        .select()
+        .from(collectibles)
+        .where(and(eq(collectibles.userId, userId), like(collectibles.slug, 'collectible_%')));
       expect(owned).toHaveLength(2);
     });
 
@@ -545,7 +548,10 @@ describe.skipIf(!hasDatabase)('the economy ruling', () => {
         await pull(userId, season.id, commons[0]!, `many:${String(n)}`);
       }
 
-      const owned = await db!.select().from(collectibles).where(eq(collectibles.userId, userId));
+      const owned = await db!
+        .select()
+        .from(collectibles)
+        .where(and(eq(collectibles.userId, userId), like(collectibles.slug, 'collectible_%')));
       expect(owned).toHaveLength(commons.length);
       expect(new Set(owned.map((row) => row.slug)).size).toBe(commons.length);
 
@@ -582,7 +588,10 @@ describe.skipIf(!hasDatabase)('the economy ruling', () => {
       );
       clearRandomSource();
 
-      const owned = await db!.select().from(collectibles).where(eq(collectibles.userId, userId));
+      const owned = await db!
+        .select()
+        .from(collectibles)
+        .where(and(eq(collectibles.userId, userId), like(collectibles.slug, 'collectible_%')));
       expect(owned).toHaveLength(2);
       expect(new Set(owned.map((row) => row.slug)).size).toBe(2);
     });

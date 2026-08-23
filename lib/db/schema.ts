@@ -777,7 +777,17 @@ export const tokenReason = pgEnum('token_reason', [
    * squeeze bottle comes up.
    */
   'DUPLICATE_SALVAGE',
+  /** An Underground table or machine accepted a fictional-token wager. */
+  'CASINO_WAGER',
+  /** An Underground round returned a resolved fictional-token payout. */
+  'CASINO_PAYOUT',
 ]);
+
+/** The two commissioner-approved Underground games. Roulette has no enum value. */
+export const casinoGame = pgEnum('casino_game', ['BLACKJACK', 'SLOTS']);
+
+/** Blackjack may be open between a deal and a stand; slots settle immediately. */
+export const casinoRoundStatus = pgEnum('casino_round_status', ['OPEN', 'SETTLED']);
 
 /**
  * What a box actually produced.
@@ -866,6 +876,44 @@ export const tokenTransactions = pgTable(
      * same key would be silently swallowed.
      */
     check('token_transactions_amount_non_zero', sql`${table.amount} <> 0`),
+  ],
+);
+
+/**
+ * A durable Underground round.
+ *
+ * The browser never owns the deck, reels, or payout calculation. `state` holds
+ * the server-dealt sequence so an interrupted blackjack hand resumes exactly
+ * where it stopped, and `requestKey` makes an initial-click retry one wager.
+ */
+export const casinoRounds = pgTable(
+  'casino_rounds',
+  {
+    id: uuid('id').primaryKey().defaultRandom(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'restrict' }),
+    seasonId: uuid('season_id')
+      .notNull()
+      .references(() => seasons.id, { onDelete: 'restrict' }),
+    game: casinoGame('game').notNull(),
+    status: casinoRoundStatus('status').notNull().default('OPEN'),
+    wager: integer('wager').notNull(),
+    state: jsonb('state').notNull(),
+    payout: integer('payout'),
+    requestKey: text('request_key').notNull().unique(),
+    createdAt: timestamp('created_at', { withTimezone: true }).notNull(),
+    resolvedAt: timestamp('resolved_at', { withTimezone: true }),
+  },
+  (table) => [
+    index('casino_rounds_user_season_created_idx').on(table.userId, table.seasonId, table.createdAt),
+    check('casino_rounds_wager_positive', sql`${table.wager} > 0`),
+    check('casino_rounds_payout_nonnegative', sql`${table.payout} is null or ${table.payout} >= 0`),
+    check(
+      'casino_rounds_terminal_shape',
+      sql`(${table.status} = 'OPEN' and ${table.payout} is null and ${table.resolvedAt} is null)
+        or (${table.status} = 'SETTLED' and ${table.payout} is not null and ${table.resolvedAt} is not null)`,
+    ),
   ],
 );
 
