@@ -77,8 +77,8 @@ describe('the collectible art slot', () => {
 
   it('says honestly how much of the catalog is real', () => {
     /*
-     * **Twelve of the twenty-four have art**, as of 2026-08-03 — the number
-     * `ASSET_PIPELINE.md §5` commits to at launch.
+     * **Seventeen of the twenty-four have art**, as of 2026-08-23. The visual
+     * rebuild deliberately landed the league-specific objects first.
      *
      * This assertion is deliberately a hard-coded pair rather than a derived
      * count. Deriving it would make it tautological — it would pass whatever the
@@ -88,15 +88,15 @@ describe('the collectible art slot', () => {
      *
      * Landed: the arcade token, framed jersey, Bapple Tree, whipped-cream can,
      * arcade cabinet, burn barrel, barrel sauna, diner mug, singing fish, neon
-     * sign, checkered tablecloth and McDonald's cookie bag. The remaining twelve
-     * draw `placeholder_pizza_box` — an item still in its box, which is
-     * thematically right rather than obviously unfinished.
+     * sign, checkered tablecloth, McDonald's cookie bag, Freddy's bowl, the
+     * Revolution poster, lava lamp, pizza cutter, and ketchup bottle. Seven
+     * generic props remain in `placeholder_pizza_box` until their art batch.
      */
     const byStatus = (status: string): number =>
       items.filter((item) => assetRegistry.get(item.slug)?.artStatus === status).length;
 
-    expect(byStatus('placeholder')).toBe(12);
-    expect(byStatus('generated')).toBe(12);
+    expect(byStatus('placeholder')).toBe(7);
+    expect(byStatus('generated')).toBe(17);
     expect(byStatus('placeholder') + byStatus('generated')).toBe(CATALOG_SIZE);
   });
 
