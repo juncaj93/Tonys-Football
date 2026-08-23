@@ -8,6 +8,7 @@ import {
   dealBlackjack,
   handValue,
   hit,
+  expectedSlotMultiplier,
   isBlackjack,
   settleBlackjack,
   slotMultiplier,
@@ -47,10 +48,17 @@ describe('Underground game rules', () => {
 
   it('keeps the slot reel outcome and multiplier separate', () => {
     expect(slotMultiplier({ reels: ['BAPPLE', 'BAPPLE', 'BAPPLE'] })).toBe(12);
-    expect(slotMultiplier({ reels: ['PIZZA', 'PIZZA', 'TONY'] })).toBe(2);
+    expect(slotMultiplier({ reels: ['PIZZA', 'PIZZA', 'TONY'] })).toBe(1);
     expect(slotMultiplier({ reels: ['PIZZA', 'FREDDY', 'TONY'] })).toBe(0);
 
     setRandomSource(() => 0);
     expect(spinSlots().reels).toEqual(['BAPPLE', 'BAPPLE', 'BAPPLE']);
+  });
+
+  it('keeps slots a bounded sink rather than a token source', () => {
+    // Exact expectation from the published reel weights, not a flaky Monte Carlo
+    // estimate. A returned pair makes the game lively without minting tokens.
+    expect(expectedSlotMultiplier()).toBeCloseTo(0.852125, 8);
+    expect(expectedSlotMultiplier()).toBeLessThan(0.9);
   });
 });

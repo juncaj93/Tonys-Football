@@ -28,6 +28,20 @@ function isWager(value: number): value is UndergroundWager {
   return (UNDERGROUND_WAGERS as readonly number[]).includes(value);
 }
 
+function isBalanceViolation(error: unknown): boolean {
+  if (typeof error === 'object' && error !== null) {
+    const postgres = error as { code?: unknown; constraint?: unknown; message?: unknown };
+    if (
+      postgres.code === '23514' &&
+      postgres.constraint === 'season_memberships_token_balance_non_negative'
+    ) {
+      return true;
+    }
+    if (typeof postgres.message === 'string' && postgres.message.includes('token_balance')) return true;
+  }
+  return String(error).includes('insufficient token balance');
+}
+
 function blackjackView(
   row: { id: string; wager: number; status: 'OPEN' | 'SETTLED'; payout: number | null; state: unknown },
 ): CasinoView {
@@ -158,7 +172,7 @@ export async function playSlots(
       return { ok: true as const, round: slotsView(settled) };
     });
   } catch (error) {
-    if (String(error).includes('insufficient token balance')) return { ok: false, reason: 'insufficient' };
+    if (isBalanceViolation(error)) return { ok: false, reason: 'insufficient' };
     throw error;
   }
 }
@@ -212,7 +226,7 @@ export async function startBlackjack(
       return { ok: true as const, round: await settle(tx, { ...round, userId: input.userId, seasonId: input.seasonId, state, outcome }) };
     });
   } catch (error) {
-    if (String(error).includes('insufficient token balance')) return { ok: false, reason: 'insufficient' };
+    if (isBalanceViolation(error)) return { ok: false, reason: 'insufficient' };
     throw error;
   }
 }

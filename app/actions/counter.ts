@@ -57,6 +57,8 @@ export interface RevealPayload {
    * happened to it, because "your box contained nothing" would be false.
    */
   readonly salvageTokens: number | null;
+  /** Separate wardrobe bonus attached to a lore pull, never a second box roll. */
+  readonly unlockedWearable: { readonly slug: string; readonly name: string } | null;
 
   /*
    * What the pull *means*, which is not the same as what it is.
@@ -234,6 +236,7 @@ export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {
       asset: resolveAsset(reveal.slug),
       replayed: reveal.replayed,
       salvageTokens: reveal.salvageTokens,
+      unlockedWearable: reveal.unlockedWearable,
       distinct: collection.distinct,
       total: collection.total,
       offer,

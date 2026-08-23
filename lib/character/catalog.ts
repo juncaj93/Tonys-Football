@@ -18,15 +18,16 @@ import { type BaseTrait, type WearableSlot } from './layers';
  *
  * ## Collectibles and wearables are separate systems
  *
- * **Commissioner ruling, 2026-07-31.**
+ * **Commissioner rulings, 2026-07-31 and 2026-08-23.**
  *
  * | | Family | Slugs | How you get one |
  * |---|---|---|---|
  * | Pizza-box collectibles | `collectible` | 24 × `collectible_*` | the loot box |
- * | Character equipment | `avatar` | 12 × `wear_*` | the character system |
+ * | Character equipment | `avatar` | 12 × `wear_*` | matching lore-pull bonus |
  *
- * A pizza box awards a `collectible_*` and nothing else. **Crossover is explicitly
- * not approved** and needs a later ruling. It is not merely a convention: the
+ * A pizza box awards a `collectible_*` and nothing else. A later, explicit ruling
+ * approved an idempotent **separate** wardrobe bonus for selected lore pulls;
+ * `unlocks.ts` is its single mapping. It is not merely a convention: the
  * collectible catalog is `assetRegistry.byFamily('collectible')` and every
  * wearable is registered `family: "avatar"`, so a wearable cannot reach the reward
  * table without somebody changing a registry family. `separation.test.ts` fails

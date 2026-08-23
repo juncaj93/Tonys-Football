@@ -13,12 +13,11 @@ import { ARM, AXIS, FACE, HAT_BRIM, HEAD, HELD, TORSO } from './geometry';
  * recolouring it per character would quietly make every copy different.
  * `lib/character/catalog.ts` carries the ramp beside the slug.
  *
- * ## Nothing awards one of these, and that is not an omission
+ * ## Lore unlocks earn these, without changing the box table
  *
- * `16` approves no wearable source, the pizza box awards `collectible_*` only
- * (commissioner ruling, 2026-07-31), and inventing a source here would be
- * absorbing scope from a milestone nobody has written. Every manager's wardrobe
- * is empty today; the customiser says so in one line rather than four.
+ * The commissioner approved a one-time wardrobe bonus for selected inside-joke
+ * pulls on 2026-08-23. `unlocks.ts` holds the mapping; the box continues to
+ * roll only its canonical `collectible_*` table.
  *
  * They are drawn anyway because the **preview fixtures** are the geometry cases
  * that could clip — the tallest hat over the tallest hair, the widest held object

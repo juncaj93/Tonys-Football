@@ -23,6 +23,20 @@ export interface SlotsState {
   readonly reels: readonly [SlotSymbol, SlotSymbol, SlotSymbol];
 }
 
+/**
+ * One twenty-stop reel. Keeping the weights as counts makes the odds auditable
+ * without reconstructing them from the RNG branches below.
+ */
+export const SLOT_WEIGHTS: Readonly<Record<SlotSymbol, number>> = Object.freeze({
+  BAPPLE: 1,
+  SAUNA: 2,
+  FREDDY: 4,
+  PIZZA: 6,
+  TONY: 7,
+});
+
+export const SLOT_REEL_STOPS = Object.values(SLOT_WEIGHTS).reduce((total, count) => total + count, 0);
+
 export type BlackjackOutcome = 'BLACKJACK' | 'WIN' | 'LOSS' | 'PUSH';
 
 export function cardLabel(card: Card): string {
@@ -109,7 +123,7 @@ export function blackjackPayout(stake: number, outcome: BlackjackOutcome): numbe
 function slotSymbol(): SlotSymbol {
   // Weights are intentionally readable and stable: Bapple is scarce, Tony is
   // common. The actual multiplier lives below, where simulations can inspect it.
-  const roll = rollBelow(20);
+  const roll = rollBelow(SLOT_REEL_STOPS);
   if (roll === 0) return 'BAPPLE';
   if (roll < 3) return 'SAUNA';
   if (roll < 7) return 'FREDDY';
@@ -126,6 +140,32 @@ export function slotMultiplier(state: SlotsState): number {
   if (first === second && second === third) {
     return { BAPPLE: 12, SAUNA: 8, FREDDY: 6, PIZZA: 4, TONY: 3 }[first];
   }
-  if (first === second || first === third || second === third) return 2;
+  // A pair returns the chip rather than doubling it. At 2× this table had a
+  // 141% return rate — an unbounded token printer disguised as a game.
+  if (first === second || first === third || second === third) return 1;
   return 0;
+}
+
+/**
+ * Exact return-to-player multiplier for the configured three-reel table.
+ *
+ * This is a product guard, not a marketing percentage: an edit to weights or
+ * payouts must prove it does not turn a fictional-token side room into the
+ * league's primary source of currency.
+ */
+export function expectedSlotMultiplier(): number {
+  const triplePayout: Readonly<Record<SlotSymbol, number>> = {
+    BAPPLE: 12,
+    SAUNA: 8,
+    FREDDY: 6,
+    PIZZA: 4,
+    TONY: 3,
+  };
+  return SLOT_SYMBOLS.reduce((total, symbol) => {
+    const probability = SLOT_WEIGHTS[symbol] / SLOT_REEL_STOPS;
+    const triple = probability ** 3 * triplePayout[symbol];
+    // Three positions can hold the matching pair; triples are excluded here.
+    const pair = 3 * probability ** 2 * (1 - probability);
+    return total + triple + pair;
+  }, 0);
 }

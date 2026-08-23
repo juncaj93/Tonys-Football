@@ -1,6 +1,8 @@
 import { and, asc, count, eq, sql } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
+import { grantWearable } from '@/lib/character/service';
+import { wearableUnlockedBy } from '@/lib/character/unlocks';
 import { type Database, type Queryable } from '@/lib/db';
 import { boxOpenings, collectibles, lootBoxes, rewardTables } from '@/lib/db/schema';
 
@@ -49,6 +51,8 @@ export interface Reveal {
    * having been empty.
    */
   readonly salvageTokens: number | null;
+  /** A separate wardrobe bonus earned by this lore pull, if the item has one. */
+  readonly unlockedWearable: { readonly slug: string; readonly name: string } | null;
 }
 
 export type OpenResult =
@@ -405,6 +409,13 @@ export async function openBox(
           // not what would happen if it happened now — and what a spare was
           // worth is a property of the prices that were live at the time.
           salvageTokens: opening.salvageTokens,
+          unlockedWearable:
+            opening.salvageTokens === null
+              ? (() => {
+                  const item = wearableUnlockedBy(opening.slug);
+                  return item === null ? null : { slug: item.slug, name: item.name };
+                })()
+              : null,
         },
       };
     }
@@ -513,6 +524,8 @@ export async function openBox(
         acquiredAt: openedAt,
         sourceOpeningId: opening.id,
       });
+      const unlocked = wearableUnlockedBy(award.slug);
+      if (unlocked !== null) await grantWearable(tx, input.userId, unlocked.slug, openedAt);
     }
 
     await tx
@@ -528,6 +541,13 @@ export async function openBox(
         rarity: award.rarity,
         replayed: false,
         salvageTokens: salvage?.tokens ?? null,
+        unlockedWearable:
+          award.kind === 'item'
+            ? (() => {
+                const item = wearableUnlockedBy(award.slug);
+                return item === null ? null : { slug: item.slug, name: item.name };
+              })()
+            : null,
       },
     };
   });
