@@ -3593,9 +3593,9 @@ const PARTITIONED = new Set(['banners']);
  */
 const BACK_HALL_STATES: Readonly<Record<string, { rooms: boolean; underground: boolean }>> = {
   // What every manager sees since the basement shipped: the stairs open, the
-  // curtain shut, and the whole locked-door mechanism still exercised by the
-  // curtain rather than becoming untested when the stairs opened.
-  'back-hall': { rooms: true, underground: false },
+  // Underground curtain open, and the whole locked-door mechanism still
+  // exercised by the explicit `back-hall-shut` fixture below.
+  'back-hall': { rooms: true, underground: true },
   // What setting `rooms` back to `false` produces.
   'back-hall-shut': { rooms: false, underground: false },
 };
