@@ -712,7 +712,7 @@
       }
     },
     "_collectibles_B3": {
-      "$comment": "24-item launch catalog. 12 receive finished art at launch (the 2 legendary, 4 epic, and 6 marked priority); the rest ship as placeholder_pizza_box and upgrade on any Tuesday.",
+      "$comment": "24-item launch catalog. Every current reward has final art as of 2026-08-23; placeholder_pizza_box remains the registry fallback for future catalog growth.",
       "collectible_signed_jersey_legend": {
         "family": "collectible",
         "canvas": "46x46",
@@ -829,21 +829,27 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "interactive": true,
         "priority": true,
         "alt": "CRT television",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_crt_tv.png",
+        "source": "OpenAI image generation, final collectible art batch 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_pinball_machine": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "rare",
         "alt": "Pinball machine",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_pinball_machine.png",
+        "source": "OpenAI image generation, final collectible art batch 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_revolution_poster": {
         "family": "collectible",
@@ -886,19 +892,25 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Parmesan shaker",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_parmesan_shaker.png",
+        "source": "OpenAI image generation, final collectible art batch 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_napkin_dispenser": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Napkin dispenser",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_napkin_dispenser.png",
+        "source": "OpenAI image generation, final collectible art batch 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_ketchup_bottle": {
         "family": "collectible",
@@ -916,19 +928,25 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Paper menu",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_paper_menu.png",
+        "source": "OpenAI image generation, final collectible art batch 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_booth_cushion": {
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Red vinyl booth cushion",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_booth_cushion.png",
+        "source": "OpenAI image generation, final collectible art batch 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_arcade_token": {
         "family": "collectible",
@@ -945,10 +963,13 @@
         "family": "collectible",
         "canvas": "46x46",
         "batch": "B3",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "rarity": "common",
         "alt": "Receipt spike",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/collectible/collectible_receipt_spike.png",
+        "source": "OpenAI image generation, final collectible art batch 2026-08-23",
+        "rights_status": "original"
       },
       "collectible_coffee_mug": {
         "family": "collectible",
