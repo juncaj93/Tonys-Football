@@ -159,20 +159,20 @@ describe('the two shut doors', () => {
 });
 
 describe('feature flags', () => {
-  it('ships with the rooms open and the underground shut', () => {
+  it('ships with the rooms and the commissioner-approved Underground open', () => {
     /*
      * `rooms` was opened on 2026-08-09 when the basement was built
      * (`docs/ROOMS_BOUNDARY.md`). `18 §6`: a door opens for everyone at once,
      * which is what a deploy-time flag does.
      *
-     * The casino is still Phase 10 and `/underground` is still not a route, so
-     * the curtain stays shut — and the whole locked-door mechanism stays
-     * exercised by it rather than becoming untested when the stairs opened.
+     * The 2026-08-23 commissioner ruling opened the completed Blackjack and
+     * Slots route for everyone. A deployment is still the only way to change
+     * that real-world state; preview parameters merely photograph reversions.
      */
     const flags = featureFlags({});
 
     expect(flags.rooms).toBe(true);
-    expect(flags.underground).toBe(false);
+    expect(flags.underground).toBe(true);
   });
 
   it('shuts everything again for `none`, which is what a revert looks like', () => {
@@ -241,21 +241,21 @@ describe('feature flags', () => {
     expect(everything.roulette).toBe(false);
   });
 
-  it('refuses the override in production', () => {
+  it('refuses an Underground reversion from a production query', () => {
     const flags = featureFlags({
       NODE_ENV: 'production',
       VERCEL_ENV: 'production',
       DEMO_FIXTURES: '1',
-      OPEN_FEATURES: 'underground',
+      OPEN_FEATURES: 'none',
     });
 
-    expect(flags.underground).toBe(false);
+    expect(flags.underground).toBe(true);
   });
 
-  it('refuses the override without the demo opt-in', () => {
-    const flags = featureFlags({ OPEN_FEATURES: 'underground' });
+  it('refuses a reversion without the demo opt-in', () => {
+    const flags = featureFlags({ OPEN_FEATURES: 'none' });
 
-    expect(flags.underground).toBe(false);
+    expect(flags.underground).toBe(true);
   });
 
   it('opens one destination without opening the other', () => {
@@ -274,7 +274,7 @@ describe('feature flags', () => {
 
     expect(featureFlags(demo, 'rooms')).toEqual({
       rooms: true,
-      underground: false,
+      underground: true,
       roulette: false,
       tonysLine: false,
     });
@@ -293,10 +293,10 @@ describe('feature flags', () => {
     });
   });
 
-  it('refuses the query parameter in production', () => {
-    const flags = featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'underground');
+  it('refuses the reversion query parameter in production', () => {
+    const flags = featureFlags({ VERCEL_ENV: 'production', DEMO_FIXTURES: '1' }, 'none');
 
-    expect(flags.underground).toBe(false);
+    expect(flags.underground).toBe(true);
   });
 
   it('ignores a key it does not recognise rather than throwing', () => {

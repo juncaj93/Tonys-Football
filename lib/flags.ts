@@ -71,8 +71,8 @@ const V1: Readonly<Record<FeatureKey, boolean>> = {
    * commissioner's, not a deploy's, and it is recorded as such.
    */
   rooms: true,
-  // The casino is P10 and is not in v1 (`16`).
-  underground: false,
+  // Commissioner reopened blackjack + slots on 2026-08-23. Roulette remains shut forever.
+  underground: true,
   // Never. `16`: "Roulette is never built. A reserved feature-flag key is the
   // entire required scaffolding."
   roulette: false,

@@ -132,6 +132,7 @@ export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
     kind: 'door',
     label: 'The curtained doorway',
     destination: 'somewhere',
+    href: '/underground',
     rect: [118, 118, 86, 174],
   },
 
