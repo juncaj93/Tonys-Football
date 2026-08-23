@@ -1,4 +1,4 @@
-import { and, eq } from 'drizzle-orm';
+import { and, eq, like } from 'drizzle-orm';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
@@ -345,10 +345,15 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
       const outcome = await applyDemoState(db!, key, ALLOWED);
       expect(outcome.evidence['rarity']).toBe(rarity);
 
-      const [item] = await db!
-        .select()
-        .from(collectibles)
-        .where(eq(collectibles.userId, outcome.seat.userId));
+    const [item] = await db!
+      .select()
+      .from(collectibles)
+      .where(
+        and(
+          eq(collectibles.userId, outcome.seat.userId),
+          like(collectibles.slug, 'collectible_%'),
+        ),
+      );
       expect(item?.rarity).toBe(rarity);
     }
   });
@@ -367,7 +372,12 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
     const [opening] = await db!
       .select()
       .from(collectibles)
-      .where(eq(collectibles.userId, outcome.seat.userId));
+      .where(
+        and(
+          eq(collectibles.userId, outcome.seat.userId),
+          like(collectibles.slug, 'collectible_%'),
+        ),
+      );
 
     expect(opening?.slug).toBe(outcome.evidence['slug']);
     expect(outcome.evidence['rewardTable']).toBe(standardRewardTable().version);
@@ -400,7 +410,12 @@ describe.skipIf(!hasDatabase)('applying a demo state', () => {
     const items = await db!
       .select()
       .from(collectibles)
-      .where(eq(collectibles.userId, outcome.seat.userId));
+      .where(
+        and(
+          eq(collectibles.userId, outcome.seat.userId),
+          like(collectibles.slug, 'collectible_%'),
+        ),
+      );
     expect(items).toHaveLength(1);
   });
 

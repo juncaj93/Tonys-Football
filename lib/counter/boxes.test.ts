@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { and, eq, like } from 'drizzle-orm';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
@@ -225,7 +225,10 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       // The second look is flagged, so the UI can skip the anticipation beat.
       expect(second.reveal.replayed).toBe(true);
 
-      const owned = await db!.select().from(collectibles).where(eq(collectibles.userId, alex.id));
+      const owned = await db!
+        .select()
+        .from(collectibles)
+        .where(and(eq(collectibles.userId, alex.id), like(collectibles.slug, 'collectible_%')));
       expect(owned).toHaveLength(1);
 
       const openings = await db!.select().from(boxOpenings).where(eq(boxOpenings.boxId, box.id));
@@ -248,7 +251,10 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       );
       expect(slugs.size).toBe(1);
 
-      const owned = await db!.select().from(collectibles).where(eq(collectibles.userId, alex.id));
+      const owned = await db!
+        .select()
+        .from(collectibles)
+        .where(and(eq(collectibles.userId, alex.id), like(collectibles.slug, 'collectible_%')));
       expect(owned).toHaveLength(1);
     });
 
@@ -462,7 +468,10 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const two = await ownedBox(db!, alex.id);
       await openBox(db!, { userId: alex.id, boxId: two!.id, seasonId });
 
-      const owned = await db!.select().from(collectibles).where(eq(collectibles.userId, alex.id));
+      const owned = await db!
+        .select()
+        .from(collectibles)
+        .where(and(eq(collectibles.userId, alex.id), like(collectibles.slug, 'collectible_%')));
       expect(owned).toHaveLength(2);
       expect(owned[0]!.slug).not.toBe(owned[1]!.slug);
       // Same tier, though: the roll decided the rarity and nothing moved it.
@@ -493,7 +502,7 @@ describe.skipIf(!hasDatabase)('opening a box', () => {
       const owned = await db!
         .select()
         .from(collectibles)
-        .where(eq(collectibles.userId, departed.id));
+        .where(and(eq(collectibles.userId, departed.id), like(collectibles.slug, 'collectible_%')));
       expect(owned).toHaveLength(1);
     });
 

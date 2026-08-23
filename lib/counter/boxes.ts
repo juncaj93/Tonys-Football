@@ -1,4 +1,4 @@
-import { and, asc, count, eq, sql } from 'drizzle-orm';
+import { and, asc, count, eq, like, sql } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { grantWearable } from '@/lib/character/service';
@@ -255,7 +255,10 @@ export async function counterState(
       .select({ n: count() })
       .from(lootBoxes)
       .where(and(eq(lootBoxes.userId, userId), eq(lootBoxes.state, 'UNOPENED'))),
-    db.select({ n: count() }).from(collectibles).where(eq(collectibles.userId, userId)),
+    db
+      .select({ n: count() })
+      .from(collectibles)
+      .where(and(eq(collectibles.userId, userId), like(collectibles.slug, 'collectible_%'))),
   ]);
 
   return {
@@ -452,7 +455,12 @@ export async function openBox(
     const held = await tx
       .selectDistinct({ slug: collectibles.slug })
       .from(collectibles)
-      .where(eq(collectibles.userId, input.userId));
+      .where(
+        and(
+          eq(collectibles.userId, input.userId),
+          like(collectibles.slug, 'collectible_%'),
+        ),
+      );
 
     const award = selectAward(table, roll, new Set(held.map((row) => row.slug)));
 
