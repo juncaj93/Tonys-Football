@@ -1,6 +1,8 @@
 # Batch F — finishing the collectible catalog
 
-**Status:** briefed 2026-08-10, from the sizing study in [`docs/CATALOG_SIZING.md`](../CATALOG_SIZING.md). **Nothing here has been generated and nothing is blocked on it** — every unpainted slug already resolves to `placeholder_pizza_box`.
+**Status:** P0 completed 2026-08-23. The seven remaining approved catalog slugs
+now have final art; the future P1/P2 catalog-growth briefs below remain deferred
+until their separately recorded season gates.
 **Purpose:** paint the twelve catalog items that have no art, then add the eight the season-one simulation says are missing.
 
 This file is meant to be **pasted into an image-generation session as-is**. Every slug, tier and dimension is read off the running product.

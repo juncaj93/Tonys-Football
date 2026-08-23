@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Cozy-world visual rebuild + Underground casino | codex/underground-casino | Prize art, wearable character presentation, casino route/game loop, back-hall access, casino art/assets, demo states, and canonical scope records | Sleeper import/finality and token ledger core | 2026-08-23 |
+| Final collectible art batch | codex/final-collectible-art | Seven remaining catalog collectible sprites, their asset-registry records, art-slot coverage, and visual QA evidence | Sleeper import/finality, token ledger core, wearables, casino mechanics, catalog size and reward odds | 2026-08-23 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of

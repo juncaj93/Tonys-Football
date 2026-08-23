@@ -20,7 +20,9 @@ One source serves three surfaces, at sizes measured off the running product:
 
 **Readability at 23px is the binding constraint** — design for the smallest, not the largest.
 
-Twenty-four items ship in the launch catalog. Twelve receive finished art at launch; the rest ship as `placeholder_pizza_box` — an item still in its box, which is thematically perfect rather than obviously unfinished — and upgrade on any Tuesday without a code change.
+Twenty-four items ship in the launch catalog, and all twenty-four now have final
+art. `placeholder_pizza_box` remains the deliberate fallback for future catalog
+growth rather than a current loot reward.
 
 ---
 

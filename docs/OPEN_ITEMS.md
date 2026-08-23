@@ -222,23 +222,18 @@ The commissioner subsequently reported that the sprites still look visually bad.
 That is a product-acceptance question this entry does not answer and must not be
 read as having answered — it is **C3**, and it is open.
 
-### A5 · Seven of the twenty-four collectibles remain in their pizza boxes — **art dependency, reduced 2026-08-23**
+### A5 · The final seven pizza-box rewards are now illustrated — **CLOSED, 2026-08-23**
 
-The inside-joke art pass rebuilt the Bapple Tree (with six red Bapple cans),
-portable sauna, burn barrel, McDonald's cookie bag, Reddi-wip can, Freddy's
-bowl, and the Revolution poster. It also supplied the lava lamp, pizza cutter,
-and ketchup bottle. **Seventeen of twenty-four** box rewards now have final
-pixel art, validated at the real 46 × 46 reveal size.
+Every one of the twenty-four rewards now has final 46 × 46 pixel art. The last
+batch adds the Parmesan shaker, napkin dispenser, hanging paper menu, red vinyl
+booth cushion, receipt spike, CRT television, and pinball head. The Bapple Tree
+was also regenerated through the production pipeline so its six red Bapple cans
+remain a valid PNG rather than a malformed asset.
 
-The remaining seven are deliberately generic props: five commons (**30.0%** of
-openings) and two rares (**7.0%**), or **37.0%** of openings total. The
-placeholder is still a designed in-world stand-in rather than a broken state;
-the now-visible count is asserted in `lib/assets/art-slots.test.ts` so it cannot
-quietly drift.
-
-The remaining batch is still worthwhile because common items are the most often
-seen, but no league-specific prize is waiting behind it. Every unpainted slug
-resolves today and a future swap remains a registry row.
+`lib/assets/art-slots.test.ts` pins the honest count at **24 generated / 0
+placeholder**, and `npm run art:validate` verifies every sprite at its real
+reveal slot. The pizza-box fallback remains for future catalog growth, but no
+current loot reward resolves to it.
 
 ### A6 · The Back Hall was the only interior in the product that is not art — **CLOSED, 2026-08-11**
 
@@ -312,11 +307,11 @@ Three things worth carrying out of the investigation:
 Doors work, and the swap is a registry row plus deleting one component.
 
 **Nothing else is in category A.** Every other v1 system is built, tested and
-reachable; what remains below is polish, activation, or deferred scope. The two
-that remain — **A3** and **A5** — are both art dependencies and neither blocks
-anything: every unpainted slug resolves today. **A6 closed on 2026-08-11**, and
-with it every *room* in the product is painted; what is left unpainted is two
-basement themes and twelve collectibles.
+reachable; what remains below is polish, activation, or deferred scope. **A3**
+is the sole remaining art dependency, and it does not block anything: both
+unpainted basement themes resolve today. **A5 closed on 2026-08-23** with every
+current loot collectible painted, and **A6 closed on 2026-08-11** with every
+room interior painted.
 
 ---
 
@@ -868,9 +863,9 @@ a second football wager. What still must happen before opening it is the
 economy simulation and the complete audited round loop; the staged door remains
 shut until those are present, so the reveal is spent only on a real room.
 
-Twelve of twenty-four collectibles stay `placeholder_pizza_box` **by design** —
-that is the number `art/ASSET_PIPELINE.md §5` commits to at launch, not a gap.
-**What that costs is now measured** rather than assumed: see **A5**.
+Every current collectible has final art. `placeholder_pizza_box` remains a
+deliberate registry fallback for the separately deferred catalog-growth items;
+it is not a current reward. **A5** records the completed art batch.
 
 Group B greeting lines await commissioner approval; seed Group A only.
 
@@ -902,8 +897,8 @@ catalog first hands somebody tokens instead of an object in **week 12 of season
 one** for the median manager who gets there at all, and only 5.0% of openings at
 season end. Season *two* is where 24 gives way — 25.9% of openings paying tokens
 and 82% of managers hitting the wall. So the deadline for the eight new items is
-**week 12**, not kickoff, and the whole thing sits behind **A5**, which is the
-twelve items that already exist and have no art.
+**week 12**, not kickoff; it is independent of the now-complete current-catalog
+art batch in **A5**.
 
 **Adding an item is cheap and additive**: a registry row, that constant, and a
 new content-hashed reward-table version. Every opening already recorded keeps
