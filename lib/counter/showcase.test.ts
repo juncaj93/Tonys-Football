@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { afterAll, afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { clearClock, setFixedClock } from '@/lib/clock';
+import { grantWearable } from '@/lib/character/service';
 import { closePool, getDb } from '@/lib/db';
 import { collectibles, seasonMemberships, seasons, users } from '@/lib/db/schema';
 import { PG_ERROR, expectPgError, resetDatabase } from '@/lib/db/test-helpers';
@@ -189,6 +190,27 @@ describe.skipIf(!hasDatabase)('the showcase', () => {
     it('offers nothing before anything is pulled', async () => {
       const alex = await manager('Alex');
       expect(await showcaseChoices(db!, alex.id)).toEqual([]);
+    });
+
+    it('keeps wardrobe bonuses out of the collectible showcase', async () => {
+      const alex = await manager('Alex');
+      await grantWearable(db!, alex.id, 'wear_hand_trophy_mini', new Date('2026-08-01T00:00:00Z'));
+      const [wearable] = await db!
+        .select()
+        .from(collectibles)
+        .where(eq(collectibles.userId, alex.id));
+
+      expect(await showcaseChoices(db!, alex.id)).toEqual([]);
+      expect(await setShowcase(db!, { userId: alex.id, collectibleId: wearable!.id })).toEqual({
+        status: 'not_yours',
+      });
+      await expectPgError(
+        db!
+          .update(users)
+          .set({ showcaseCollectibleId: wearable!.id })
+          .where(eq(users.id, alex.id)),
+        { code: PG_ERROR.checkViolation },
+      );
     });
 
     /*

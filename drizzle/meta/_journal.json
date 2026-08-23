@@ -148,6 +148,13 @@
       "when": 1786100600000,
       "tag": "0020_lore_wardrobe_unlocks",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1786100700000,
+      "tag": "0021_showcase_collectibles_only",
+      "breakpoints": true
     }
   ]
 }

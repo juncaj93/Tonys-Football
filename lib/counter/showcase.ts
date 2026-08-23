@@ -1,4 +1,4 @@
-import { and, asc, eq, isNotNull } from 'drizzle-orm';
+import { and, asc, eq, isNotNull, like } from 'drizzle-orm';
 
 import { now } from '@/lib/clock';
 import { type Queryable } from '@/lib/db';
@@ -64,7 +64,7 @@ export async function showcaseFor(
     .limit(1);
 
   const row = rows[0];
-  if (row === undefined) return null;
+  if (row === undefined || !row.slug.startsWith('collectible_')) return null;
 
   return {
     collectibleId: row.collectibleId,
@@ -127,7 +127,10 @@ export async function leagueShowcase(db: Queryable): Promise<LeagueShowcase[]> {
     userId: row.userId,
     displayName: row.displayName,
     item:
-      row.collectibleId === null || row.slug === null || row.rarity === null
+      row.collectibleId === null ||
+      row.slug === null ||
+      row.rarity === null ||
+      !row.slug.startsWith('collectible_')
         ? null
         : {
             collectibleId: row.collectibleId,
@@ -159,7 +162,7 @@ export async function showcaseChoices(
       acquiredAt: collectibles.acquiredAt,
     })
     .from(collectibles)
-    .where(eq(collectibles.userId, userId))
+    .where(and(eq(collectibles.userId, userId), like(collectibles.slug, 'collectible_%')))
     .orderBy(asc(collectibles.acquiredAt));
 
   const bySlug = new Map<string, ShowcasedItem>();
@@ -209,7 +212,11 @@ export async function setShowcase(
     .select({ id: collectibles.id })
     .from(collectibles)
     .where(
-      and(eq(collectibles.id, input.collectibleId), eq(collectibles.userId, input.userId)),
+      and(
+        eq(collectibles.id, input.collectibleId),
+        eq(collectibles.userId, input.userId),
+        like(collectibles.slug, 'collectible_%'),
+      ),
     )
     .limit(1);
 
