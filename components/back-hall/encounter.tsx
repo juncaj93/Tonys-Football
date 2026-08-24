@@ -55,7 +55,7 @@ export function BackHallEncounter({
         aria-label={`Talk to ${name}`}
         data-back-hall-encounter={name}
         className="absolute z-20 flex items-end justify-center outline-none focus-visible:ring-4 focus-visible:ring-sun-300"
-        style={place([94, 300, 132, 192])}
+        style={place([108, 300, 118, 192])}
       >
         {/* The sprite's own feet meet the rug. A detached oval made every
             visitor look as though they were hovering above the room. */}
