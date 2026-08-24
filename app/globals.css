@@ -1519,15 +1519,64 @@ body[data-parlor-focus] .tony-line * {
 }
 
 .casino-slot-cabinet {
-  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.07) 50%, transparent 50%);
+  background-image: linear-gradient(90deg, var(--color-red-light) 50%, transparent 50%);
   background-size: 4px 4px;
 }
 
-.casino-felt {
+.casino-game-room {
+  background-color: var(--color-wood-dark);
+  background-image:
+    linear-gradient(90deg, var(--color-wood-mid) 0 3px, transparent 3px 18px),
+    linear-gradient(0deg, var(--color-wood-dark) 0 3px, transparent 3px 16px);
+}
+
+.casino-slot-bulb {
+  position: absolute;
+  top: 46%;
+  height: 8px;
+  width: 8px;
+  background: var(--color-amber-glow);
+  box-shadow: 0 0 0 2px var(--color-red-dark), 0 0 0 4px var(--color-ink-900);
+  animation: casino-bulb-ticks 720ms steps(1, end) infinite;
+}
+
+.casino-slot-bulb--left {
+  left: -8px;
+}
+
+.casino-slot-bulb--right {
+  right: -8px;
+  animation-delay: 360ms;
+}
+
+@keyframes casino-bulb-ticks {
+  0%,
+  45% { opacity: 0.45; }
+  46%,
+  100% { opacity: 1; }
+}
+
+.casino-blackjack-table {
   background-color: var(--color-green-deep);
-  background-image: radial-gradient(rgba(245, 237, 220, 0.1) 1px, transparent 1px);
+  background-image:
+    linear-gradient(90deg, var(--color-green-deep) 0 7px, var(--color-green-neon) 7px 8px, var(--color-green-deep) 8px 15px),
+    linear-gradient(0deg, var(--color-green-deep) 0 7px, var(--color-green-neon) 7px 8px, var(--color-green-deep) 8px 15px);
   background-size: 5px 5px;
-  box-shadow: inset 0 0 0 2px rgba(245, 237, 220, 0.25);
+  box-shadow: inset 0 0 0 2px var(--color-paper-mid);
+}
+
+.casino-table-card-zone {
+  filter: drop-shadow(0 2px 0 var(--color-wood-dark));
+}
+
+.casino-dealer-plaque {
+  border: 2px solid var(--color-ink-900);
+  background: var(--color-paper-mid);
+  color: var(--color-ink-900);
+  padding: 1px 4px;
+  font-family: var(--font-display);
+  font-size: 9px;
+  line-height: 1.1;
 }
 
 /*
@@ -1689,17 +1738,8 @@ body[data-parlor-focus] .tony-line * {
   }
 }
 
-.hearth-flame {
+.hearth-ember {
   animation: hearth-flickers 1.35s steps(1, end) infinite;
-}
-
-.hearth-flame--outer {
-  clip-path: polygon(33% 0, 66% 23%, 100% 53%, 100% 100%, 0 100%, 0 53%);
-}
-
-.hearth-flame--inner {
-  animation-delay: 0.34s;
-  clip-path: polygon(50% 0, 100% 47%, 100% 100%, 0 100%, 0 47%);
 }
 
 .hearth-spark {
@@ -1717,15 +1757,71 @@ body[data-parlor-focus] .tony-line * {
     transform: none;
   }
 
-  .hearth-flame,
+  .hearth-ember,
   .hearth-spark,
   .ambient-tick,
   .slot-reel-spinning,
   .casino-dealer img,
   .casino-room-tony img,
   .casino-game-dealer img,
-  .casino-card-dealt {
+  .casino-card-dealt,
+  .champion-pennant-medallion,
+  .champion-pennant-spark,
+  .casino-slot-bulb {
     animation: none;
     transform: none;
   }
+}
+/* Championship rail detail — a bright trophy pennant, never a generic dark card. */
+@keyframes champion-medallion-glint {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes champion-spark-twinkle {
+  0%,
+  100% {
+    opacity: 0.45;
+    transform: scale(0.75);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.champion-pennant {
+  background-color: var(--color-red-mid);
+  background-image:
+    linear-gradient(90deg, var(--color-red-light) 0 2px, transparent 2px 8px),
+    linear-gradient(0deg, var(--color-red-dark) 0 2px, transparent 2px 9px);
+}
+
+.champion-pennant-thread {
+  background: repeating-linear-gradient(90deg, var(--color-amber-glow) 0 5px, var(--color-amber-deep) 5px 8px);
+  box-shadow: 0 2px 0 var(--color-wood-dark);
+}
+
+.champion-pennant-medallion {
+  animation: champion-medallion-glint 1.3s steps(2, end) infinite;
+}
+
+.champion-pennant-spark {
+  background: var(--color-amber-glow);
+  box-shadow: 2px 0 0 var(--color-amber-glow), 0 2px 0 var(--color-amber-glow);
+  animation: champion-spark-twinkle 900ms steps(2, end) infinite;
+}
+
+.champion-pennant-spark-right {
+  animation-delay: 350ms;
+}
+
+.champion-pennant-fringe {
+  background: repeating-linear-gradient(90deg, var(--color-amber-glow) 0 8px, var(--color-amber-deep) 8px 12px);
+  border-top: 2px solid var(--color-amber-deep);
 }

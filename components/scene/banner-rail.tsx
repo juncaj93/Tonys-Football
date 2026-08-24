@@ -193,33 +193,58 @@ export function BannerRail({ banners }: { banners: readonly Banner[] }) {
  *
  * So the geometry, the scrim, the focus and the dismissal are `RoomPanel`'s, and
  * what stays here is the only part that was ever about champions: the words, and
- * the link to the season. `material="enamel"` is the dark surface the rail hangs
- * on, which is why this panel is not made of the same cream paper the receipt is.
+ * the link to the season. The room's tiny rail is only an invitation: once a
+ * manager takes a banner down, it fills the paper panel like a real trophy
+ * pennant. This makes the actual year and winner comfortably readable instead
+ * of asking a 15-unit room prop to carry copy it was never large enough for.
+ *
+ * The textile is deliberately bright. Red fabric, gold braid and cream type
+ * read as a celebration in a daytime pizza parlor; the room behind it can still
+ * become night outside without turning a championship into a spooky dark card.
  */
 function ChampionPanel({ banner, onClose }: { banner: Banner; onClose: () => void }) {
+  const status = banner.champion === null ? 'SEASON IN PLAY' : 'LEAGUE CHAMPION';
+
   return (
     <RoomPanel
-      title={`${String(banner.year)} season`}
-      material="enamel"
+      title="Championship banner"
+      material="paper"
       onClose={onClose}
       actions={
         <Link
           href={`/timeline#${String(banner.year)}`}
-          className={`pixel-edge flex min-h-[44px] items-center border-2 border-amber-mid/60 px-3.5 ${TYPE.action} text-amber-glow active:translate-y-px`}
+          className={`pixel-edge flex min-h-[44px] items-center border-2 border-red-dark bg-red-mid px-3.5 ${TYPE.action} text-paper-white shadow-[2px_2px_0_var(--color-wood-dark)] active:translate-y-px active:shadow-none`}
         >
           View season
         </Link>
       }
     >
-      <p className={`${TYPE.subhead}`}>{banner.champion ?? 'TBD'}</p>
+      <section className="champion-pennant relative isolate overflow-hidden border-2 border-red-dark px-4 pt-5 pb-8 text-center shadow-[3px_3px_0_var(--color-wood-dark)]">
+        <span aria-hidden="true" className="champion-pennant-thread absolute inset-x-3 top-2 h-[3px]" />
+        <span aria-hidden="true" className="champion-pennant-spark champion-pennant-spark-left absolute top-8 left-4 h-2 w-2" />
+        <span aria-hidden="true" className="champion-pennant-spark champion-pennant-spark-right absolute top-12 right-5 h-2 w-2" />
 
-      {banner.champion === null && (
-        <p className={`mt-2 ${TYPE.bodyCompact} text-paper-mid/70`}>
-          {banner.current
-            ? 'Still being played. Nobody has won it yet.'
-            : 'Not finalized, so there is no champion on record.'}
+        <p className={`${TYPE.eyebrow} relative text-amber-glow`}>{status}</p>
+        <p className={`${TYPE.masthead} relative mt-2 text-paper-white`}>{banner.year}</p>
+
+        <div aria-hidden="true" className="champion-pennant-medallion relative mx-auto my-3 grid h-12 w-12 place-items-center border-2 border-amber-glow bg-red-dark shadow-[2px_2px_0_var(--color-wood-dark)]">
+          <span className="font-display text-[1.35rem] leading-none text-amber-glow">★</span>
+        </div>
+
+        <p className={`${TYPE.headline} relative break-words text-paper-white [text-wrap:balance]`}>
+          {banner.champion ?? 'TBD'}
         </p>
-      )}
+
+        <p className={`relative mt-3 ${TYPE.bodyCompact} text-paper-white/85`}>
+          {banner.champion === null
+            ? banner.current
+              ? 'The pennant stays empty until the final whistle.'
+              : 'No champion is recorded for this season.'
+            : 'Forever hung in Tony’s Pizza Hall of Fame.'}
+        </p>
+
+        <span aria-hidden="true" className="champion-pennant-fringe absolute right-0 bottom-0 left-0 h-3" />
+      </section>
     </RoomPanel>
   );
 }
