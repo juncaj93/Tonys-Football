@@ -1,6 +1,7 @@
 import Link from 'next/link';
 
 import { TYPE } from '@/lib/design/type';
+import { PocketNav } from '@/components/shell/pocket-nav';
 
 /**
  * The page shell.
@@ -15,20 +16,13 @@ import { TYPE } from '@/lib/design/type';
  *     indicator
  *   - nothing depends on hover; every affordance is visible at rest
  *
- * ## There is no tab bar
+ * ## A pocket menu, not a browser tab bar
  *
- * There was one, briefly — Parlor · Slice · Collection · Rooms, screwed along
- * the bottom of the shop. It was removed on purpose. A restaurant with a
- * navigation bar bolted across it is an application with a restaurant painted
- * behind it, and the whole point of `16 §7.1`'s six zones is that the *room* is
- * the interface: you reach the Slice through the poster frame by the window and
- * your collection through the case on the counter.
- *
- * What replaces the guarantee the tab bar provided — that nothing depends on
- * spotting an object — is threefold: every hotspot is a labelled control in the
- * tab order, the room introduces them once on arrival, and a small control in
- * the utility bar brings them back on request. `lib/parlor/hotspots.test.ts`
- * asserts that every screen the shop has is reachable from something in it.
+ * Room hotspots remain the most fun way to travel, but Safari's expanding URL
+ * controls can cover document-flow exits. Normal pages therefore carry a small
+ * in-world menu rail: five one-tap destinations, fixed above the safe area.
+ * One-screen rooms keep their clean cinematic composition and their own
+ * labelled hotspots.
  */
 
 /** The minimum comfortable tap target. Used as a class, never as a guess. */
@@ -81,10 +75,14 @@ export function Page({
       className="relative mx-auto flex min-h-dvh w-full max-w-3xl flex-col"
       style={{
         paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'calc(env(safe-area-inset-bottom) + 1.5rem)',
+        // Clears the fixed pocket menu even while iOS Safari has its bottom
+        // toolbar expanded. `dvh` tracks that visual viewport; the rail itself
+        // is fixed against it, so neither it nor a page's last control is lost.
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 10rem)',
       }}
     >
       {children}
+      <PocketNav />
     </div>
   );
 }

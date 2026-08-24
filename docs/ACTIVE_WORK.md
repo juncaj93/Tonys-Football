@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Cozy rec-room basement rebuild | codex/cozy-rec-room | Bright integrated rec-room shell, built-in hearth/firelight, and runtime-safe manager-room composition | Other room themes, parlor/back-hall shell geometry, casino economics, Sleeper data, collectible ownership, and character layers | 2026-08-24 |
+| iOS Safari pocket navigation | codex/ios-pocket-nav | Safe-area pocket menu, normal-page clearance, and Casino return usability on iPhone Safari and standalone installs | One-screen room art, casino odds/economics, Sleeper facts, collectible ownership, and character layers | 2026-08-24 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
