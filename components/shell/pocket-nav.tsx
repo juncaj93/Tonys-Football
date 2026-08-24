@@ -25,7 +25,7 @@ export function PocketNav() {
   // Staff and draft-review surfaces already have their own dense, task-specific
   // controls. The pocket rail is for the public clubhouse; rendering it over a
   // commissioner worksheet would make both surfaces worse.
-  if (pathname.startsWith('/admin') || pathname.startsWith('/door') || pathname.startsWith('/dev')) {
+  if (pathname.startsWith('/admin') || pathname.startsWith('/door') || pathname.startsWith('/dev') || pathname.startsWith('/underground')) {
     return null;
   }
 
