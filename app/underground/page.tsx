@@ -23,7 +23,7 @@ export default async function UndergroundPage() {
 
         <Link
           href="/back-hall"
-          className={`pixel-edge mt-5 flex min-h-[52px] items-center justify-center border-2 border-ink-500 bg-paper-mid px-4 ${TYPE.action} text-ink-900 active:translate-y-px`}
+          className={`pixel-edge mt-5 mb-28 flex min-h-[52px] items-center justify-center border-2 border-ink-500 bg-paper-mid px-4 ${TYPE.action} text-ink-900 active:translate-y-px`}
         >
           Back through the curtain
         </Link>
