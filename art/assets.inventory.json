@@ -1198,3 +1198,111 @@
         "alt": "Boarded-up back door"
       },
       "dressing_door_basement": {
+        "family": "zone",
+        "canvas": "64x96",
+        "batch": "B1",
+        "art_status": "retired",
+        "$supersededBy": "object_stairs_rooms, inside the Back Hall — there is no basement door on the homepage",
+        "alt": "Closed basement door"
+      },
+      "dressing_receipts_stapled": {
+        "family": "zone",
+        "canvas": "32x32",
+        "batch": "B5+",
+        "art_status": "placeholder",
+        "alt": "Two receipts stapled together"
+      }
+    },
+    "_ui_B4": {
+      "ui_icon_parlor": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Parlor"
+      },
+      "ui_icon_slice": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Slice"
+      },
+      "ui_icon_collection": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Collection"
+      },
+      "ui_icon_rooms": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Rooms"
+      },
+      "ui_icon_token": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Tony Token"
+      },
+      "ui_icon_new": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "New"
+      },
+      "ui_icon_locked": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Locked"
+      },
+      "ui_icon_skip": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Skip"
+      },
+      "ui_icon_sound": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Sound"
+      },
+      "ui_icon_admin": {
+        "family": "ui",
+        "canvas": "16x16",
+        "batch": "B4",
+        "art_status": "placeholder",
+        "alt": "Admin"
+      }
+    }
+  },
+  "notGenerated": {
+    "$comment": "Fourteen visual effects require zero assets. Listed here so nobody adds them to a generation batch by mistake. See ART_SPEC.md §8.",
+    "effects": [
+      "auras (all four tiers)",
+      "punishment flies",
+      "stink lines",
+      "ring sparkle",
+      "legendary reveal rays",
+      "rarity frame glow",
+      "snow in the window",
+      "steam",
+      "CRT scanlines",
+      "screen shake",
+      "box wobble",
+      "confetti",
+      "newspaper landing motion",
+      "playoff/night/offseason lighting"
+    ]
+  }
+}
