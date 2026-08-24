@@ -53,7 +53,7 @@ export function ManagerRoomScene({ theme }: { theme: Theme }) {
       >
         <AssetView resolution={shell} />
         <RoomWindow />
-        {theme === 'rec_room' && <RecRoomHearth />}
+        {theme === 'rec_room' && <RecRoomFirelight />}
       </div>
     );
   }
@@ -76,30 +76,27 @@ function RoomWindow() {
 }
 
 /**
- * A little working hearth in the rec room.
+ * A little living fire in the rec room.
  *
- * It is scenery, not a ninth room object: it has no panel, prize, score, or
- * affordance. The rec room already reads as the one place someone deliberately
- * made comfortable, and a low flame gives it a living-room warmth without
- * dimming the daylight parlor or putting a glowing treatment on every theme.
+ * The fireplace is painted into the rebuilt room shell; it belongs to the wall,
+ * tile, rug and mantle rather than floating above them as a second illustration.
+ * These two tiny cells merely animate its already-painted fire. It remains
+ * scenery, not a room object: no panel, prize, score or affordance.
  *
- * It is a real room prop rather than a stack of CSS rectangles. The empty frame
- * in the painted shell is deliberately where it belongs, so it makes the rec
- * room feel furnished without drawing over a window or the manager's own
- * collection. A tiny two-frame ember on top supplies the life; the fireplace
- * itself never wobbles like a floating sticker.
+ * The cells sit within the baked firebox, not the empty frame, shelf, desk or
+ * rug where collectible layers live. A two-frame rhythm adds life without
+ * making the architecture wobble.
  */
-function RecRoomHearth() {
+function RecRoomFirelight() {
   return (
     <div
       aria-hidden="true"
-      data-room-hearth="rec-room"
+      data-room-firelight="rec-room"
       className="pointer-events-none absolute z-10"
-      style={{ left: '49%', top: '27.2%', width: '37%', height: '20.8%' }}
+      style={{ left: '46.9%', top: '48.4%', width: '10.6%', height: '8.2%' }}
     >
-      <AssetView resolution={resolveAsset('object_rec_room_hearth')} className="absolute inset-0 h-full w-full object-contain" />
-      <span className="hearth-ember absolute left-[48%] top-[57%] h-[11%] w-[8%] bg-amber-glow" />
-      <span className="hearth-spark absolute left-[55%] top-[43%] h-[4%] w-[4%] bg-amber-mid" />
+      <span className="hearth-ember absolute left-[37%] top-[38%] h-[32%] w-[25%] bg-amber-glow" />
+      <span className="hearth-spark absolute left-[58%] top-[16%] h-[15%] w-[13%] bg-amber-mid" />
     </div>
   );
 }
