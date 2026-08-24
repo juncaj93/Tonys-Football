@@ -207,12 +207,12 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
 
   return (
     <GameScreen balance={balance} practiceMode={practiceMode} message={message} onBack={() => setScene('room')} title="Tony’s Blackjack" subtitle="Pull up a chair. Tony deals.">
-      <div className="casino-blackjack-table pixel-edge relative mx-auto min-h-[332px] w-full max-w-[390px] overflow-hidden border-4 border-wood-dark p-3 pt-24 shadow-[5px_5px_0_var(--color-wood-dark)]">
-        <div className="casino-game-dealer pointer-events-none absolute top-1 left-1/2 z-10 h-28 w-28 -translate-x-1/2" aria-hidden="true">
+      <div className="casino-blackjack-table pixel-edge relative mx-auto min-h-[360px] w-full max-w-[390px] overflow-hidden border-4 border-wood-dark p-3 pt-36 shadow-[5px_5px_0_var(--color-wood-dark)]">
+        <div className="casino-game-dealer pointer-events-none absolute top-1 left-1/2 z-10 h-36 w-36 -translate-x-1/2" aria-hidden="true">
           <AssetView resolution={resolveAsset('character_tony_dealer')} className="h-full w-full object-contain object-bottom" />
         </div>
-        <span aria-hidden="true" className="casino-dealer-plaque absolute top-[89px] left-1/2 z-10 -translate-x-1/2">TONY DEALS</span>
-        <div className="casino-table-card-zone relative z-20 pt-2">
+        <span aria-hidden="true" className="casino-dealer-plaque absolute top-[132px] left-1/2 z-10 -translate-x-1/2">TONY DEALS</span>
+        <div className="casino-table-card-zone relative z-20 pt-4">
           <CardRow roundId={blackjack?.id ?? 'new'} label="TONY" cards={blackjack?.dealer ?? []} value={blackjack?.dealerValue ?? null} dealing={tableDealing} dealBeat={dealBeat} hidden={blackjack?.dealerValue === null} />
           <div className="my-7 border-t-2 border-dashed border-paper-mid/60" />
           <CardRow roundId={blackjack?.id ?? 'new'} label="YOU" cards={blackjack?.player ?? []} value={blackjack?.playerValue ?? null} dealing={tableDealing} dealBeat={dealBeat} />
@@ -243,7 +243,10 @@ function UndergroundRoom({ balance, practiceMode, onPracticeMode, onEnter }: { b
       <button type="button" onClick={() => onPracticeMode(!practiceMode)} className="absolute top-[5%] left-[7%] border-2 border-ink-900 bg-paper-mid px-2 py-1 text-ink-900 shadow-[2px_2px_0_var(--color-wood-dark)]">
         <span className={TYPE.eyebrow}>{practiceMode ? 'PRACTICE ∞' : `TOKENS ${balance === null ? '—' : String(balance)}`}</span>
       </button>
-      <div className="casino-room-tony pointer-events-none absolute left-[33%] top-[37%] h-[35%] w-[34%]" aria-hidden="true">
+      {/* Tony stays canonical: this is the established dealer sprite, cropped
+          at the far table edge so he is working behind it, never pasted on the
+          felt between the players. */}
+      <div className="casino-room-tony casino-room-tony--behind pointer-events-none absolute left-[27%] top-[20%] h-[45%] w-[46%]" aria-hidden="true">
         <AssetView resolution={resolveAsset('character_tony_blackjack_room')} className="h-full w-full object-contain object-bottom" />
       </div>
       <button type="button" onClick={() => onEnter('slots')} className="casino-room-hotspot absolute left-[1%] top-[29%] h-[31%] w-[29%]" aria-label="Play Bapple Slots">

@@ -1571,6 +1571,13 @@ body[data-parlor-focus] .tony-line * {
   transform-origin: center bottom;
 }
 
+/* The room shell already contains the table's far rail. Tony belongs behind
+ * that rail, not as a free-standing sticker in the player area. Keeping the
+ * crop on the sprite means the artwork and hit regions remain one stable scene. */
+.casino-room-tony--behind {
+  clip-path: polygon(0 0, 100% 0, 100% 58%, 0 58%);
+}
+
 .casino-room-hotspot:focus-visible {
   outline: 3px solid var(--color-amber-glow);
   outline-offset: -3px;

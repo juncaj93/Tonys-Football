@@ -103,7 +103,10 @@ export const BACK_HALL_OBJECTS: readonly RoomObjectSpec[] = [
     label: 'Down the stairs',
     destination: 'the rooms',
     href: '/rooms',
-    rect: [38, 118, 72, 174],
+    // The painted stairs run from the lower-left corner right down to the
+    // near floor. The previous stand-in coordinates covered the framed wall
+    // above them, forcing a manager to hunt for a very small tap target.
+    rect: [0, 260, 106, 220],
   },
 
   /**
