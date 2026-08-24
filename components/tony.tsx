@@ -35,12 +35,9 @@ export function TonyAtTheCounter({ slug, mood }: { slug: string; mood: TonyMood 
 /**
  * Which sprite to actually draw.
  *
- * The greeting picks a mood and the mood picks a slug, but the moods arrive in
- * batches: `character_tony_neutral` landed in B0 and the other two follow in
- * B1. Until they do, falling all the way back to the CSS stand-in would mean a
- * manager who happens to draw a pleased line sees a drawn silhouette while the
- * manager beside him sees the real sprite — the same shop rendered two
- * different ways depending on the sentence.
+ * The greeting picks a mood and the mood picks a sprite. Every current mood has
+ * production art; the fallback remains defensive so a future unpublished mood
+ * cannot make Tony disappear from the counter.
  *
  * So an unavailable mood degrades to Tony's real neutral sprite rather than to
  * the placeholder tier. His expression is momentarily wrong; he is still Tony.

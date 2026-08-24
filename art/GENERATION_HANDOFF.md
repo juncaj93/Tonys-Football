@@ -35,8 +35,8 @@ What the page looks like today: every fixture is drawn in CSS — the counter, T
 |---|---|---|---|---|---|---|---|
 | 1 | `zone_front_counter` | **Required now** | The CSS counter band + back bar | Opaque environment tile | 320 × 200 | No | Top third, directly under the window header |
 | 2 | `character_tony_neutral` | **Required now** | The CSS silhouette figure | Sprite | 32 × 48 | **Yes** | Standing behind the counter, left side |
-| 3 | `character_tony_pleased` | **Required now** | — same figure, warm rim | Sprite | 32 × 48 | **Yes** | Same anchor |
-| 4 | `character_tony_unimpressed` | **Required now** | — same figure, cool rim | Sprite | 32 × 48 | **Yes** | Same anchor |
+| 3 | `character_tony_pleased` | **Delivered 2026-08-23** | — same figure, warm rim | Sprite | 88 × 240 | **Yes** | Same anchor |
+| 4 | `character_tony_unimpressed` | **Delivered 2026-08-23** | — same figure, cool rim | Sprite | 88 × 240 | **Yes** | Same anchor |
 | 5 | `zone_tonight_board` | Useful now | The CSS corkboard | Opaque tile | 320 × 200 | No | Second screen, full width |
 | 6 | `zone_newspaper_rack` | Useful now | `RackArt` | Opaque tile | 320 × 200 | No | Paired card, left |
 | 7 | `zone_display_case` | Useful now | `CaseArt` | Opaque tile | 320 × 200 | No | Paired card, right |
