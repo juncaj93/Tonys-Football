@@ -1,10 +1,17 @@
 import { BackHallScene } from '@/components/scene/back-hall';
+import { BackHallEncounter } from '@/components/back-hall/encounter';
 import { RoomDoor } from '@/components/scene/room-object';
 import { ShutDoor } from '@/components/scene/shut-door';
 import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
+import { characterFor } from '@/lib/character/service';
+import { getDb } from '@/lib/db';
+import { fantasyMatchups, seasons } from '@/lib/db/schema';
 import { BACK_HALL, LOCKED_LINES, backHallObject, openTo } from '@/lib/backhall/objects';
 import { featureFlags } from '@/lib/flags';
+import { activeLeagueManagers, currentSeasonYear } from '@/lib/league/membership';
+import { now } from '@/lib/clock';
+import { and, desc, eq } from 'drizzle-orm';
 
 /**
  * The staff hallway behind the dining room.
@@ -61,12 +68,33 @@ import { featureFlags } from '@/lib/flags';
 
 export const dynamic = 'force-dynamic';
 
+/** Pick one of the real league members deterministically for the current day. */
+function dailyVisitorIndex(userId: string, count: number): number {
+  const key = `${now().toISOString().slice(0, 10)}:${userId}`;
+  let value = 0;
+  for (const character of key) value = (value * 31 + character.charCodeAt(0)) >>> 0;
+  return value % count;
+}
+
+/** The world follows Detroit evening, not the server's deployment region. */
+function isDetroitNight(instant: Date): boolean {
+  const hour = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Detroit',
+      hour: 'numeric',
+      hourCycle: 'h23',
+    }).format(instant),
+  );
+  return hour < 7 || hour >= 20;
+}
+
 export default async function BackHallPage({
   searchParams,
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireUser();
+  const { user } = await requireUser();
+  const db = getDb();
 
   /*
    * `?open=rooms,underground` — review only, resolved here on the server behind
@@ -76,8 +104,69 @@ export default async function BackHallPage({
    */
   const query = await searchParams;
   const flags = featureFlags(process.env, query['open']);
+  const night = isDetroitNight(now());
   const stairs = backHallObject('stairs');
   const curtain = backHallObject('curtain');
+
+  /*
+   * A different active manager is in the hall each day. The character comes
+   * from their real saved configuration, not a generic NPC costume. When the
+   * current Sleeper record includes a matchup between this visitor and the
+   * signed-in manager, their line names that verified week and score; otherwise
+   * it stays an intentionally non-factual, game-day-flavoured greeting.
+   */
+  const managers = await activeLeagueManagers(db);
+  const otherManagers = managers.filter((manager) => manager.id !== user.id);
+  const player = managers.find((manager) => manager.id === user.id) ?? null;
+  const visitor =
+    otherManagers.length === 0 ? null : otherManagers.at(dailyVisitorIndex(user.id, otherManagers.length)) ?? null;
+
+  const encounter =
+    visitor === null
+      ? null
+      : await (async () => {
+          const [character, year] = await Promise.all([characterFor(db, visitor.id), currentSeasonYear(db)]);
+          let line = `${visitor.displayName} is watching the Lions pregame chatter. “No score predictions in the hallway. That’s bad luck.”`;
+
+          if (year !== null) {
+            const [season] = await db.select({ id: seasons.id }).from(seasons).where(eq(seasons.year, year)).limit(1);
+            if (season !== undefined) {
+              const latest = await db
+                .select({
+                  week: fantasyMatchups.week,
+                  rosterAId: fantasyMatchups.rosterAId,
+                  rosterBId: fantasyMatchups.rosterBId,
+                  pointsACents: fantasyMatchups.pointsACents,
+                  pointsBCents: fantasyMatchups.pointsBCents,
+                })
+                .from(fantasyMatchups)
+                .where(
+                  and(
+                    eq(fantasyMatchups.seasonId, season.id),
+                    eq(fantasyMatchups.disputed, false),
+                  ),
+                )
+                .orderBy(desc(fantasyMatchups.week))
+                .limit(80);
+
+              const shared = latest.find(
+                (matchup) =>
+                  (matchup.rosterAId === visitor.rosterId && matchup.rosterBId === player?.rosterId) ||
+                  (matchup.rosterBId === visitor.rosterId && matchup.rosterAId === player?.rosterId),
+              );
+
+              if (shared !== undefined) {
+                const visitorPoints = shared.rosterAId === visitor.rosterId ? shared.pointsACents : shared.pointsBCents;
+                const playerPoints = shared.rosterAId === visitor.rosterId ? shared.pointsBCents : shared.pointsACents;
+                line = `${visitor.displayName} taps the matchup board. “Week ${String(shared.week)} is still on the record: ${
+                  (visitorPoints / 100).toFixed(2)
+                } to ${(playerPoints / 100).toFixed(2)}. I’m not starting the trash talk… unless you are.”`;
+              }
+            }
+          }
+
+          return { name: visitor.displayName, composite: character.composite, line };
+        })();
 
   return (
     <Page oneScreen>
@@ -85,13 +174,14 @@ export default async function BackHallPage({
         className="relative flex min-h-0 flex-1 justify-center overflow-hidden"
         // The floor's own colour, so a viewport taller than the hall reads as
         // more corridor rather than as a letterbox. Same treatment as the parlor.
-        style={{ backgroundColor: '#1a1214' }}
+        style={{ backgroundColor: '#b45d27' }}
       >
         <div
           className="relative w-full max-w-[430px] self-start"
           style={{ aspectRatio: `${String(BACK_HALL.width)} / ${String(BACK_HALL.height)}` }}
         >
-          <BackHallScene chained={!flags.rooms} />
+          <BackHallScene chained={!flags.rooms} night={night} />
+          {encounter === null ? null : <BackHallEncounter {...encounter} />}
 
           {/*
             * The stairs down to the rooms.
