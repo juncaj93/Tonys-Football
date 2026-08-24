@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { SeasonRecord } from '@/components/league/season-record';
@@ -57,6 +59,13 @@ export default async function TimelinePage() {
             * the glyphs it has; the fix is the word.
             */}
           <SignPlate>Champions and history</SignPlate>
+
+          <Link
+            href="/fraud-check"
+            className={`mt-4 inline-flex min-h-[44px] items-center border-2 border-paper-dark bg-paper-mid px-3 ${TYPE.eyebrow} text-ink-900 shadow-[2px_2px_0_rgba(0,0,0,0.4)] active:translate-y-px`}
+          >
+            Open Tony&rsquo;s Fraud Check &rarr;
+          </Link>
 
           <div className="mt-6 space-y-4">
             {seasons.length === 0 ? (

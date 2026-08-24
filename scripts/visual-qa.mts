@@ -197,6 +197,13 @@ type StateName =
    */
   | 'timeline'
   /**
+   * The all-play ledger, reached from the history wall.
+   *
+   * It has its own capture because the FRAUD ALERT stamp, three-column record
+   * row, and explanatory disclaimer all have to remain readable on a phone.
+   */
+  | 'fraud-check'
+  /**
    * The three v1 routes the gate had never looked at, added together because
    * the gap was one gap.
    *
@@ -1259,6 +1266,10 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.goto(`${BASE}/timeline`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
       return;
+    case 'fraud-check':
+      await page.goto(`${BASE}/fraud-check`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(400);
+      return;
     /*
      * `/counter`, reached directly rather than by tapping the tray.
      *
@@ -2129,6 +2140,7 @@ const ALL_STATES: readonly StateName[] = [
   'banner-current-tbd',
   'rack',
   'timeline',
+  'fraud-check',
   'profile',
   // Directly after, and that order is load-bearing: this one leaves a second
   // session behind, and `profile` is the state that must not have one.
