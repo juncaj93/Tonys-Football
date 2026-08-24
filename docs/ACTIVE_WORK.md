@@ -62,7 +62,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
 | Cozy rec-room basement rebuild | codex/cozy-rec-room | Bright integrated rec-room shell, built-in hearth/firelight, and runtime-safe manager-room composition | Other room themes, parlor/back-hall shell geometry, casino economics, Sleeper data, collectible ownership, and character layers | 2026-08-24 |
-| Hall and casino composition polish | codex/hall-composition-polish | Manager encounter scale/grounding/dialogue, back-hall route affordances, and Dealer Tony depth/scale at the casino table | Basement room theme work, reward economics, Sleeper persistence contracts, collectible ownership, and character-layer catalog | 2026-08-24 |
+| Sleeper-aware Tony dialogue depth | codex/sleeper-dialogue-depth | League-facing team-name context, verified Sleeper-fact dialogue variables, and expanded non-repeating Tony conversation deck | Basement room theme work, casino economics, collectible ownership, character-layer artwork, and freeform NPC art | 2026-08-24 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of

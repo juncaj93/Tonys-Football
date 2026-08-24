@@ -158,6 +158,32 @@ deck keeps a longer cooldown whenever it has alternatives.
 **T43** · `inherited_slot` · *neutral*
 > {name}. That seat has history. You get to decide whether it gets better.
 
+## Team identity — Tony knows the name on the fantasy door
+
+**T62** · `team_named` · *pleased*
+> {team} checked in. {name} can take credit later; Tony keeps the receipts either way.
+
+**T63** · `team_named` · *neutral*
+> Tony has {team} on the board. The name is official. The excuses are still provisional.
+
+**T64** · `team_named` + `time_morning` · *neutral*
+> Morning, {team}. {name} got here before the first bad waiver idea. Promising.
+
+**T65** · `team_named` + `time_evening` · *pleased*
+> {team} has the evening booth. {name}, keep the group-chat scouting report off the napkins.
+
+**T66** · `team_named` + `nfl_sunday` · *unimpressed*
+> Sunday puts {team} on the clock. {name}, Tony has seen calmer people wait on a pizza.
+
+**T67** · `team_named` + `nfl_tuesday` · *neutral*
+> Tuesday receipt for {team}: {name} gets the headline; the scoreboard gets the last word.
+
+**T68** · `team_named` + `season_offseason` · *pleased*
+> {team} is already making offseason noise. {name}, Tony respects an early entrance.
+
+**T69** · `team_named` + `season_in_season` · *neutral*
+> {team} is in the book this week. {name}, every booth has a different forecast.
+
 **T44** · `never_champion` + `two_plus_seasons` · *unimpressed*
 > {name}. Tony believes in long arcs. The banner wall believes in proof.
 
@@ -215,4 +241,3 @@ deck keeps a longer cooldown whenever it has alternatives.
 
 **T61** · `stats_champion` · *neutral*
 > {champion}, {season}. Tony has the result in ink and the banner in frame.
-

@@ -52,6 +52,7 @@ export async function anotherLineAction(): Promise<{ text: string | null }> {
   const response = await conversationFor(db, {
     userId: user.id,
     displayName: user.displayName,
+    teamName: managers.find((manager) => manager.id === user.id)?.teamName ?? null,
     tags: tags.get(user.id) ?? new Set<string>(),
     leagueTags: managers.map((manager) => tags.get(manager.id) ?? new Set<string>()),
     daysUntilKickoff: seasonClock().daysUntilKickoff,

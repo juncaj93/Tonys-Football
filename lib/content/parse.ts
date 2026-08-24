@@ -109,7 +109,7 @@ export const TONY_CONVERSATIONS: LineSyntax = {
   file: 'content/tony-conversations.md',
   startsAt: '# Approved',
   endsAt: null,
-  variables: ['name', 'days', 'winner', 'loser', 'margin', 'points', 'champion', 'season'],
+  variables: ['name', 'team', 'days', 'winner', 'loser', 'margin', 'points', 'champion', 'season'],
 };
 
 export interface ParsedLine {

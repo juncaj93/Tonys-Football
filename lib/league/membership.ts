@@ -83,6 +83,8 @@ export const CAMEO_ONLY_NAMES: readonly string[] = ['Armen', 'Shant', 'Berardo']
 export interface ActiveManager {
   readonly id: string;
   readonly displayName: string;
+  /** The current Sleeper team name, when the manager has set one. */
+  readonly teamName: string | null;
   /** Their seat this season. Seasonal, and meaningless across seasons. */
   readonly rosterId: number;
   /** Has set a PIN. */
@@ -179,6 +181,7 @@ async function seatedManagers(
     .select({
       id: users.id,
       displayName: users.displayName,
+      teamName: seasonMemberships.teamName,
       rosterId: seasonMemberships.rosterId,
       pinUpdatedAt: users.pinUpdatedAt,
     })
@@ -191,6 +194,7 @@ async function seatedManagers(
   return rows.map((row) => ({
     id: row.id,
     displayName: row.displayName,
+    teamName: row.teamName,
     rosterId: row.rosterId,
     claimed: row.pinUpdatedAt !== null,
   }));
