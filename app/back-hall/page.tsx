@@ -1,5 +1,5 @@
 import { BackHallScene } from '@/components/scene/back-hall';
-import { BackHallEncounter } from '@/components/scene/back-hall-encounter';
+import { BackHallEncounter } from '@/components/back-hall/encounter';
 import { RoomDoor } from '@/components/scene/room-object';
 import { ShutDoor } from '@/components/scene/shut-door';
 import { Page } from '@/components/shell';
