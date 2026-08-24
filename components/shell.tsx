@@ -78,7 +78,7 @@ export function Page({
         // Clears the fixed pocket menu even while iOS Safari has its bottom
         // toolbar expanded. `dvh` tracks that visual viewport; the rail itself
         // is fixed against it, so neither it nor a page's last control is lost.
-        paddingBottom: 'calc(env(safe-area-inset-bottom) + 7rem)',
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 10rem)',
       }}
     >
       {children}
