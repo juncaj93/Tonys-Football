@@ -50,7 +50,7 @@ const CHAIN_DROP = 0.34;
 /** How many links span the opening. Enough to read as a chain, few enough to stay flat. */
 const LINKS = 11;
 
-export function BackHallScene({ chained = true }: { chained?: boolean }) {
+export function BackHallScene({ chained = true, night = false }: { chained?: boolean; night?: boolean }) {
   const [x, y, width, height] = backHallObject('stairs').rect;
   const chainY = Math.round(y + height * CHAIN_DROP);
 
@@ -72,7 +72,7 @@ export function BackHallScene({ chained = true }: { chained?: boolean }) {
 
   return (
     <div aria-hidden="true" data-room-shell="art" className="absolute inset-0 overflow-hidden">
-      <AssetView resolution={resolveAsset('zone_back_hall_shell')} />
+      <AssetView resolution={resolveAsset(night ? 'zone_back_hall_shell_night' : 'zone_back_hall_shell')} />
 
       {chained && (
         <span data-stairs-chained="true">
