@@ -474,7 +474,10 @@ button {
   gap: 3px;
   border-right: 1px solid rgba(26, 18, 20, 0.75);
   color: var(--color-paper-white);
-  font-size: 9px;
+  /* The site-wide legibility gate protects every visible word, including the
+   * rail. The previous 9px labels passed hand review and failed on a phone.
+   */
+  font-size: 12px;
   line-height: 1;
   letter-spacing: 0;
   text-align: center;
