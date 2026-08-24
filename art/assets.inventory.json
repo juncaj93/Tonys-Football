@@ -2,7 +2,7 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 117,
+  "totalSlugs": 118,
   "statusValues": [
     "placeholder",
     "generated",
@@ -435,6 +435,16 @@
         "alt": "Tony dealing blackjack",
         "path": "/assets/character/character_tony_dealer.png",
         "source": "OpenAI image generation, Tony dealer outfit 2026-08-23",
+        "rights_status": "original"
+      },
+      "character_tony_blackjack_room": {
+        "family": "character",
+        "canvas": "88x112",
+        "batch": "B1",
+        "art_status": "generated",
+        "alt": "Tony dealing blackjack behind the table",
+        "path": "/assets/character/character_tony_blackjack_room.png",
+        "source": "OpenAI image generation, casino scene dealer 2026-08-23",
         "rights_status": "original"
       }
     },
