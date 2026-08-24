@@ -254,6 +254,10 @@ async function main(): Promise<void> {
   if (!existsSync(file)) throw new Error(`${SHELL_PATH} does not exist — run art:process first.`);
 
   const { data, info } = await sharp(file).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  if (info.width !== 320) {
+    console.log(`${SHELL_PATH}\n  source-fidelity shell detected; no legacy board shift is applied.`);
+    return;
+  }
   const pixels = Buffer.from(data);
   const action = shiftBoard(pixels, info.width);
 
