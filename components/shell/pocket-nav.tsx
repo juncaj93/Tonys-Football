@@ -22,6 +22,13 @@ const destinations = [
 export function PocketNav() {
   const pathname = usePathname();
 
+  // Staff and draft-review surfaces already have their own dense, task-specific
+  // controls. The pocket rail is for the public clubhouse; rendering it over a
+  // commissioner worksheet would make both surfaces worse.
+  if (pathname.startsWith('/admin') || pathname.startsWith('/door') || pathname.startsWith('/dev')) {
+    return null;
+  }
+
   return (
     <nav aria-label="Pocket menu" className="pocket-nav">
       <div className="pocket-nav__rail pixel-edge">
