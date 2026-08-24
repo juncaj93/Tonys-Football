@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { describe, expect, it } from 'vitest';
 
-import { ContentParseError, parseCounterGreetings } from './parse';
+import { ContentParseError, parseCounterGreetings, parseTonyConversations } from './parse';
 
 /**
  * The markdown file is the source of truth for the lines, so the parser is
@@ -183,5 +183,23 @@ describe('malformed content fails loudly', () => {
 
   it('refuses a file with no Group A section at all', () => {
     expect(() => parseCounterGreetings('# Something else\n')).toThrow(/no "# Group A"/);
+  });
+});
+
+describe("Tony's committed conversation deck", () => {
+  const deck = parseTonyConversations(
+    readFileSync(path.join(process.cwd(), 'content', 'tony-conversations.md'), 'utf8'),
+  );
+
+  it('has a deep enough approved pool to keep a return visit fresh', () => {
+    expect(deck.length).toBeGreaterThanOrEqual(60);
+    expect(new Set(deck.map((entry) => entry.key)).size).toBe(deck.length);
+  });
+
+  it('only names data through whitelisted template variables', () => {
+    for (const entry of deck) {
+      expect(entry.templateText.length, `${entry.key} is long`).toBeLessThan(180);
+      expect(['neutral', 'pleased', 'unimpressed'], entry.key).toContain(entry.expression);
+    }
   });
 });

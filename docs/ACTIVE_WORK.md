@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Bright Back Hall + Underground presentation rebuild | codex/bright-back-hall | Back Hall shell replacement, warm environmental overlays, in-world wayfinding, casino scene staging, card faces, and dedicated slot symbols | Parlor shell geometry, casino economics and odds, persistent token balance, Sleeper facts, collectible ownership, and character layers | 2026-08-24 |
+| Bright Back Hall + Underground presentation rebuild + Tony conversation deck | codex/bright-back-hall | Back Hall shell replacement, warm environmental overlays, in-world wayfinding, casino scene staging, card faces, dedicated slot symbols, and no-repeat Tony dialogue driven by approved lore, time, and verified Sleeper facts | Parlor shell geometry, casino economics and odds, persistent token balance, Sleeper imports/facts, collectible ownership, and character layers | 2026-08-24 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of

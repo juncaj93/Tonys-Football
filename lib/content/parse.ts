@@ -98,6 +98,20 @@ export const STATS_ASIDES: LineSyntax = {
   variables: ['winner', 'loser', 'margin', 'points', 'champion', 'season'],
 };
 
+/**
+ * The optional lines Tony gives when a manager returns to him in the same day.
+ *
+ * This is deliberately its own authored deck rather than a random second draw
+ * from the welcome greeting. A greeting is stable for the day; a conversation
+ * needs enough room to remember what it already said and move on.
+ */
+export const TONY_CONVERSATIONS: LineSyntax = {
+  file: 'content/tony-conversations.md',
+  startsAt: '# Approved',
+  endsAt: null,
+  variables: ['name', 'days', 'winner', 'loser', 'margin', 'points', 'champion', 'season'],
+};
+
 export interface ParsedLine {
   /** The authoring key, e.g. `A1`. Unique across every surface. */
   readonly key: string;
@@ -186,6 +200,10 @@ export function parseStatsAsides(markdown: string): readonly ParsedLine[] {
 
 export function parseBoxOffers(markdown: string): readonly ParsedLine[] {
   return parseLines(markdown, BOX_OFFERS);
+}
+
+export function parseTonyConversations(markdown: string): readonly ParsedLine[] {
+  return parseLines(markdown, TONY_CONVERSATIONS);
 }
 
 function parseFields(
