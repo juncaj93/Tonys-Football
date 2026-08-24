@@ -31,14 +31,14 @@ export function BackHallEncounter({
         <section
           aria-live="polite"
           data-back-hall-dialogue="true"
-          className="absolute left-[7%] top-[39%] z-30 w-[86%] border-[3px] border-ink-900 bg-paper px-3 py-2 text-ink-900 shadow-[4px_4px_0_#5b2b1b]"
+          className="pixel-edge absolute bottom-[7%] left-[6%] z-40 w-[88%] border-[3px] border-ink-900 bg-paper-mid px-3 py-2 text-ink-900 shadow-[4px_4px_0_#5b2b1b]"
         >
           <div className="mb-1 flex items-center justify-between border-b-2 border-ink-300 pb-1">
             <span className="font-display text-role-label text-ink-700">{name}</span>
             <button
               type="button"
               onClick={() => setOpen(false)}
-              className="font-display text-role-label text-ink-500"
+              className="font-display text-role-label text-ink-700"
               aria-label={`Close ${name}'s dialogue`}
             >
               ×
@@ -55,15 +55,16 @@ export function BackHallEncounter({
         aria-label={`Talk to ${name}`}
         data-back-hall-encounter={name}
         className="absolute z-20 flex items-end justify-center outline-none focus-visible:ring-4 focus-visible:ring-sun-300"
-        style={place([125, 326, 70, 142])}
+        style={place([94, 300, 132, 192])}
       >
-        <span aria-hidden="true" className="absolute bottom-[4%] h-[11%] w-[68%] rounded-[50%] bg-ink-900/35" />
-        <span className="absolute inset-x-[15%] bottom-[8%] top-0">
+        {/* The sprite's own feet meet the rug. A detached oval made every
+            visitor look as though they were hovering above the room. */}
+        <span className="absolute inset-x-[3%] bottom-[-2%] top-0">
           <CharacterView composite={composite} fit="container" label={name} />
         </span>
         <span
           aria-hidden="true"
-          className="absolute right-[3%] top-[4%] grid h-7 w-7 place-items-center border-2 border-ink-900 bg-paper font-display text-role-label text-ink-900 shadow-[2px_2px_0_#5b2b1b]"
+          className="absolute right-[3%] top-[4%] grid h-7 w-7 place-items-center border-2 border-ink-900 bg-paper-mid font-display text-role-label text-ink-900 shadow-[2px_2px_0_#5b2b1b]"
         >
           !
         </span>

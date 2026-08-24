@@ -47,6 +47,10 @@ const SPEAKS_FOR_MS = 4200;
 export function ShutDoor({ spec, line }: { spec: RoomObjectSpec; line: string }) {
   const [saying, setSaying] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Most answers sit just below their door. A generous scene-edge target (the
+  // back-hall stairs) may run to the floor, so clamp its answer inside the room
+  // rather than making a manager scroll or miss the response completely.
+  const answerTop = Math.min(spec.rect[1] + spec.rect[3] + 8, 490);
 
   useEffect(
     () => () => {
@@ -87,7 +91,7 @@ export function ShutDoor({ spec, line }: { spec: RoomObjectSpec; line: string })
         className={`pointer-events-none absolute inset-x-3 z-40 flex justify-center transition-opacity duration-200 ${
           saying ? 'opacity-100' : 'opacity-0'
         }`}
-        style={{ top: `${(((spec.rect[1] + spec.rect[3] + 8) / 569) * 100).toFixed(3)}%` }}
+        style={{ top: `${((answerTop / 569) * 100).toFixed(3)}%` }}
       >
         <span className={`pixel-edge border-2 border-wood-dark bg-paper-mid px-3 py-2 ${TYPE.bodyCompact} text-ink-900`}>
           {saying ? line : ''}
