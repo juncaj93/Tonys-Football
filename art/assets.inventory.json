@@ -391,7 +391,7 @@
         "role": "scenery",
         "alt": "A manager's basement, fitted out as a rec room",
         "path": "/assets/zone/zone_room_shell_rec_room.png",
-        "source": "OpenAI image generation, basement shell rebuild 2026-08-23",
+        "source": "OpenAI image generation, integrated rec-room hearth rebuild 2026-08-24",
         "rights_status": "original"
       },
       "object_rec_room_hearth": {
