@@ -477,7 +477,7 @@ button {
   /* The site-wide legibility gate protects every visible word, including the
    * rail. The previous 9px labels passed hand review and failed on a phone.
    */
-  font-size: 12px;
+  font-size: 13px;
   line-height: 1;
   letter-spacing: 0;
   text-align: center;
