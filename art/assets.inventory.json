@@ -387,17 +387,23 @@
         "family": "zone",
         "canvas": "320x569",
         "batch": "B1",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "role": "scenery",
-        "alt": "A manager's basement, fitted out as a rec room"
+        "alt": "A manager's basement, fitted out as a rec room",
+        "path": "/assets/zone/zone_room_shell_rec_room.png",
+        "source": "OpenAI image generation, basement shell rebuild 2026-08-23",
+        "rights_status": "original"
       },
       "zone_room_shell_cold_store": {
         "family": "zone",
         "canvas": "320x569",
         "batch": "B1",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "role": "scenery",
-        "alt": "A manager's basement, fitted out as a cold store"
+        "alt": "A manager's basement, fitted out as a cold store",
+        "path": "/assets/zone/zone_room_shell_cold_store.png",
+        "source": "OpenAI image generation, basement shell rebuild 2026-08-23",
+        "rights_status": "original"
       }
     },
     "_tony_B1": {

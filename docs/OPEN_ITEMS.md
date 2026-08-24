@@ -156,7 +156,7 @@ visual state that **presses the Save button** rather than photographing the form
 That last row is the exact user path that originally failed, on the real
 deployment. `docs/CHARACTER_CUSTOMISATION_BOUNDARY.md` is the canonical account.
 
-### A3 · Two of the basement's three shells are still unpainted — **art dependency**
+### A3 · Basement shell art is complete — **CLOSED, 2026-08-23**
 
 **The storeroom is delivered and live** (2026-08-10). The commissioner supplied
 the approved shell, it was processed through `art:process` unmodified, and
@@ -175,10 +175,10 @@ geometry moved to the art **once**, and the storeroom is now **the master** —
 `BATCH_E_BASEMENT_HANDOFF.md` briefs the remaining two to *its* measurements, so
 a shell drawn to it lands with no code change at all.
 
-`rec_room` and `cold_store` are still `art_status: placeholder` and still draw
-the stand-in, per theme and independently. Nothing is gated on them: a manager
-who picks one gets the same room with the same hit regions in flat colour, and
-the gate reads which half rendered rather than demanding either.
+The rec room and cold store were rebuilt on 2026-08-23 and processed through the
+same zone pipeline. All three themes now have opaque 320 × 569 production shells
+with the shared runtime geometry: stairs, frame, shelf, pennant rail, desk,
+noticeboard, and clear manager rug remain in their fixed positions.
 
 **Also missed by the old canvas.** All four room shells — the three basements
 and `zone_back_hall_shell` — were registered at **960 × 1707**, copied from an
@@ -308,8 +308,8 @@ Doors work, and the swap is a registry row plus deleting one component.
 
 **Nothing else is in category A.** Every other v1 system is built, tested and
 reachable; what remains below is polish, activation, or deferred scope. **A3**
-is the sole remaining art dependency, and it does not block anything: both
-unpainted basement themes resolve today. **A5 closed on 2026-08-23** with every
+closed on 2026-08-23 with all three basement themes painted. **A5 closed on
+2026-08-23** with every
 current loot collectible painted, and **A6 closed on 2026-08-11** with every
 room interior painted.
 
@@ -792,7 +792,7 @@ a blanket re-opening.
 
 | Area | | Why |
 |---|---|---|
-| **Rooms / basements** | **NOW — built; the default room is painted** | Fully specified by `04 §10`, `06 §6.2`, `14 §5` and `16`'s P6 row, and shipped. The commissioner's art direction of 2026-08-09 made the room **shell-first**, and the approved storeroom shell landed on 2026-08-10. Two themes still draw the stand-in: see **A3** |
+| **Rooms / basements** | **NOW — built and painted** | Fully specified by `04 §10`, `06 §6.2`, `14 §5` and `16`'s P6 row, and shipped. The commissioner's art direction of 2026-08-09 made the room **shell-first**; the storeroom landed on 2026-08-10 and the rec-room and cold-store variants followed on 2026-08-23. |
 | **Underground / casino** | **LATER — and it wants a decision, not a session** | See G1. Two commissioner-level sources disagree about what the games are, and no wager can settle before September |
 | **Silent auction** | **LATER** | `16` puts it in a **November** window, and it is a *spend-down* mechanism: it exists to give end-of-season tokens somewhere to go. There are no season tokens yet. Its inventory authority is also genuinely undecided — an auction of collectibles competes with the box for the same 24-item catalog the P3 simulation was just balanced around |
 | **Seasonal events** | **DO NOT BUILD** *(as an engine)* | The mission's own test — *"if a simple seasonal visual state can be expressed through existing architecture without a new abstraction, that is different"* — is already met. `16 §7.2`'s dressing resolver is built and the offseason dressing ships today. A generalized event engine is the speculative framework both the mission and `16 §4.1`'s deferral refuse |
