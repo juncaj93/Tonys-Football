@@ -1004,6 +1004,58 @@ body[data-parlor-focus] .tony-line * {
   animation: reveal-bursts 520ms cubic-bezier(0.16, 0.84, 0.3, 1) both;
 }
 
+/*
+ * The sharp little fragments at the centre of a pull.
+ *
+ * This deliberately uses eight ordinary square spans instead of a canvas,
+ * filter, or smooth particle library. Each path is an integer translation and
+ * advances on `steps(1)`, keeping both the movement and the final scatter in
+ * the same pixel language as the box and collectible.
+ */
+.reveal-pixels {
+  overflow: visible;
+}
+
+.reveal-pixel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 3px;
+  height: 3px;
+  margin: -1px 0 0 -1px;
+  background: var(--rarity);
+  box-shadow: 1px 1px 0 rgba(31, 27, 24, 0.55);
+  animation: reveal-pixel-pop 460ms steps(1, end) both;
+}
+
+.reveal-pixel:nth-child(1) { --pixel-x: -17px; --pixel-y: -14px; animation-delay: 0ms; }
+.reveal-pixel:nth-child(2) { --pixel-x: -6px; --pixel-y: -20px; animation-delay: 35ms; }
+.reveal-pixel:nth-child(3) { --pixel-x: 11px; --pixel-y: -16px; animation-delay: 15ms; }
+.reveal-pixel:nth-child(4) { --pixel-x: 20px; --pixel-y: -4px; animation-delay: 45ms; }
+.reveal-pixel:nth-child(5) { --pixel-x: 15px; --pixel-y: 14px; animation-delay: 20ms; }
+.reveal-pixel:nth-child(6) { --pixel-x: -3px; --pixel-y: 19px; animation-delay: 55ms; }
+.reveal-pixel:nth-child(7) { --pixel-x: -18px; --pixel-y: 12px; animation-delay: 25ms; }
+.reveal-pixel:nth-child(8) { --pixel-x: -22px; --pixel-y: -2px; animation-delay: 60ms; }
+
+@keyframes reveal-pixel-pop {
+  0% {
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+  }
+  18% {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+  74% {
+    opacity: 1;
+    transform: translate3d(var(--pixel-x), var(--pixel-y), 0);
+  }
+  100% {
+    opacity: 0;
+    transform: translate3d(var(--pixel-x), var(--pixel-y), 0);
+  }
+}
+
 @keyframes reveal-bursts {
   0% {
     opacity: 0;
@@ -1053,6 +1105,10 @@ body[data-parlor-focus] .tony-line * {
    * not happen. The stagger goes too: with nothing animating, a 300ms delay
    * would be 300ms of the plate not being there for no reason at all. */
   .reveal-burst {
+    display: none;
+  }
+
+  .reveal-pixels {
     display: none;
   }
 

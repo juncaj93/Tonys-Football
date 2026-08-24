@@ -351,6 +351,21 @@ function Revealed({
         style={place(TRAY_REVEAL)}
       />
 
+      {/*
+        * Eight square fragments make the burst read as a tiny pixel-art pop
+        * rather than a generic soft web flash. Their paths live in CSS as whole
+        * room-unit translations, so every frame lands on the sprite grid.
+        */}
+      <div
+        aria-hidden="true"
+        className={`reveal-pixels pointer-events-none absolute z-[23] rarity-${reveal.rarity}`}
+        style={place(TRAY_REVEAL)}
+      >
+        {Array.from({ length: 8 }, (_, index) => (
+          <span key={index} className="reveal-pixel" />
+        ))}
+      </div>
+
       {/* The collectible, risen out of the box, at the tray. */}
       <div
         aria-hidden="true"
