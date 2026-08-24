@@ -61,6 +61,15 @@ import './globals.css';
 export const metadata: Metadata = {
   title: "Tony's Pizza Fantasy",
   description: 'A private clubhouse that remembers.',
+  icons: {
+    icon: [{ url: '/icon.png', type: 'image/png', sizes: '512x512' }],
+    apple: [{ url: '/apple-icon.png', type: 'image/png', sizes: '180x180' }],
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: "Tony's Football",
+  },
   // The site is private. Nothing here should ever be indexed.
   robots: { index: false, follow: false, nocache: true },
 };
