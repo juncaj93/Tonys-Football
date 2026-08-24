@@ -373,7 +373,7 @@
       }
     },
     "_basement_B1": {
-      "$comment": "The manager's basement, reached down the stairs from the Back Hall. One portrait shell per theme plus transparent hit regions -- the same grammar as the parlor and the hall, and NOT a grid of hotspots. Authored at 320x569, the LOGICAL size, exactly as the shipped zone_parlor_shell is: the pipeline resizes to this canvas and the device scales up with image-rendering: pixelated. Each shell is drawn EMPTY where runtime content goes -- the frame, the shelf plank, the desktop and the pennant rail carry a manager's own things, and the rug carries the manager. Geometry is fixed by lib/rooms/objects.ts. See docs/art/BATCH_E_BASEMENT_HANDOFF.md.",
+      "$comment": "The manager's basement, reached down the stairs from the Back Hall. One portrait shell per theme plus transparent hit regions -- the same grammar as the parlor and the hall, and NOT a grid of hotspots. 320x569 is the LOGICAL geometry for layout and hit maps; approved room art ships as a 3x source-fidelity raster and uses normal browser interpolation, never pixelated upscaling. Each shell is drawn EMPTY where runtime content goes -- the frame, the shelf plank, the desktop and the pennant rail carry a manager's own things, and the rug carries the manager. Geometry is fixed by lib/rooms/objects.ts. See docs/art/BATCH_E_BASEMENT_HANDOFF.md.",
       "zone_room_shell_storeroom": {
         "family": "zone",
         "canvas": "320x569",

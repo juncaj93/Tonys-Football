@@ -58,9 +58,10 @@ interface Field {
 
 async function field(x0: number, y0: number, x1: number, y1: number): Promise<Field> {
   const { data, info } = await sharp(SHELL).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const scale = info.width / 320;
   const luma: number[] = [];
-  for (let y = y0; y <= y1; y += 1) {
-    for (let x = x0; x <= x1; x += 1) {
+  for (let y = Math.round(y0 * scale); y <= Math.round(y1 * scale); y += 1) {
+    for (let x = Math.round(x0 * scale); x <= Math.round(x1 * scale); x += 1) {
       const p = (y * info.width + x) * 4;
       luma.push(0.2126 * data[p]! + 0.7152 * data[p + 1]! + 0.0722 * data[p + 2]!);
     }
@@ -82,9 +83,10 @@ async function distinct(
   y1: number,
 ): Promise<readonly (readonly number[])[]> {
   const { data, info } = await sharp(SHELL).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+  const scale = info.width / 320;
   const seen = new Map<number, readonly number[]>();
-  for (let y = y0; y <= y1; y += 1) {
-    for (let x = x0; x <= x1; x += 1) {
+  for (let y = Math.round(y0 * scale); y <= Math.round(y1 * scale); y += 1) {
+    for (let x = Math.round(x0 * scale); x <= Math.round(x1 * scale); x += 1) {
       const p = (y * info.width + x) * 4;
       if (data[p + 3]! < 128) continue;
       seen.set((data[p]! << 16) | (data[p + 1]! << 8) | data[p + 2]!, [
@@ -183,6 +185,22 @@ describe('the parlor shell as a surface the product writes on', () => {
       ),
     );
     const { data, info } = await sharp(SHELL).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    // A retained source-fidelity room is intentionally not palette-closed: its
+    // material texture is the visual information the old 32-colour pass threw
+    // away. Keep the legacy closure assertion for legacy sprites, but protect
+    // high-fidelity shells by checking their native resolution and real colour
+    // variation instead.
+    if (info.width > 320) {
+      const colours = new Set<string>();
+      for (let i = 0; i < info.width * info.height; i += 1) {
+        const p = i * 4;
+        if (data[p + 3]! >= 128) colours.add(`${data[p]},${data[p + 1]},${data[p + 2]}`);
+      }
+      expect(info.width).toBe(960);
+      expect(info.height).toBe(1707);
+      expect(colours.size, 'the room is not a repainted sprite').toBeGreaterThanOrEqual(200);
+      return;
+    }
     const strays = new Set<string>();
     for (let i = 0; i < info.width * info.height; i += 1) {
       const p = i * 4;

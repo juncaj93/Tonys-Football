@@ -3360,7 +3360,11 @@ async function checkColourFidelity(page: Page, width: number): Promise<void> {
             out.push(`img has filter: ${s.filter}`);
           }
           if (s.mixBlendMode !== 'normal') out.push(`img has mix-blend-mode: ${s.mixBlendMode}`);
-          if (s.imageRendering !== 'pixelated') {
+          // Small sprites must stay nearest-neighbour crisp. A registered
+          // `source` shell is the deliberate exception: it retains the
+          // approved 3× room painting and must not be enlarged as 320px tiles.
+          const sourceFidelity = el.dataset.assetFidelity === 'source';
+          if (!sourceFidelity && s.imageRendering !== 'pixelated') {
             out.push(`img image-rendering is "${s.imageRendering}", not pixelated`);
           }
         }
