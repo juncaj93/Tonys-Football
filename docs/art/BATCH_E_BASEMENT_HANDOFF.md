@@ -131,7 +131,7 @@ MOOD: A real hidden personal room under an old pizza place. Warm, nostalgic, sli
 lived in. Cozy clutter around the edges and a clear middle.
 ```
 
-### 4.2 `zone_room_shell_rec_room` — outstanding
+### 4.2 `zone_room_shell_rec_room` — delivered 2026-08-23
 
 ```
 SUBJECT: The same basement room as the storeroom shell, with identical architecture, identical
@@ -152,7 +152,7 @@ the clear desk, the empty cork noticeboard, the clear rug, the window — is in 
 at the same size, drawn just as empty.
 ```
 
-### 4.3 `zone_room_shell_cold_store` — outstanding
+### 4.3 `zone_room_shell_cold_store` — delivered 2026-08-23
 
 ```
 SUBJECT: The same basement room as the storeroom shell, with identical architecture, identical
