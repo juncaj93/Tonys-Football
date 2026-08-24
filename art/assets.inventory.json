@@ -409,17 +409,23 @@
     "_tony_B1": {
       "character_tony_pleased": {
         "family": "character",
-        "canvas": "32x48",
+        "canvas": "88x240",
         "batch": "B1",
-        "art_status": "placeholder",
-        "alt": "Tony, pleased"
+        "art_status": "generated",
+        "alt": "Tony, pleased",
+        "path": "/assets/character/character_tony_pleased.png",
+        "source": "OpenAI image generation, Tony expression refresh 2026-08-23",
+        "rights_status": "original"
       },
       "character_tony_unimpressed": {
         "family": "character",
-        "canvas": "32x48",
+        "canvas": "88x240",
         "batch": "B1",
-        "art_status": "placeholder",
-        "alt": "Tony, unimpressed"
+        "art_status": "generated",
+        "alt": "Tony, unimpressed",
+        "path": "/assets/character/character_tony_unimpressed.png",
+        "source": "OpenAI image generation, Tony expression refresh 2026-08-23",
+        "rights_status": "original"
       }
     },
     "_avatarLayers_B2": {

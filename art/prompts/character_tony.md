@@ -1,6 +1,6 @@
 # Prompt Template — Tony
 
-**Family:** `character` · **Canvas:** 32 × 48 · **Height:** 46px (the master unit)
+**Family:** `character` · **Canvas:** 88 × 240 · **Height:** 240px (the production master unit)
 **Slugs:** `character_tony_neutral` · `character_tony_pleased` · `character_tony_unimpressed`
 
 Tony is the single most important asset in the project. He defines the master height unit that every other character scales from, and he is the brand. **He never ships as a placeholder.**
