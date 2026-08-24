@@ -65,7 +65,20 @@ Every asset carries this metadata, per `06 §16`:
 
 ## 4. Processing pipeline
 
-Run on every batch, without exception.
+Run on every batch, without exception — with one deliberately different path for
+portrait room shells.
+
+### Portrait room-shell fidelity rule
+
+`zone_*` scenery is a composed room painting, not a small sprite. It ships at
+**3× its logical canvas** with normal browser interpolation; the registry canvas
+still owns layout and hit-map coordinates. Do not downscale it to its logical
+size, force `image-rendering: pixelated`, or quantize it to the collectible
+palette. Any of those steps discards the approved lamp gradients, material
+texture and clean edges, and Safari then magnifies the damage.
+
+Small props — including the `zone`-family rack, banner and box — remain sprites
+and follow the normal hard-edge, palette-closed route below.
 
 ### Step 1 — Downscale, nearest-neighbor
 

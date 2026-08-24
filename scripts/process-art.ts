@@ -200,6 +200,23 @@ async function processOne(filename: string, palette: readonly [number, number, n
 
   const { width, height } = parseCanvas(record.canvas);
 
+  /*
+   * Portrait room shells are not sprites.
+   *
+   * Their approved sources are already composed at roughly 3× a phone's CSS
+   * canvas. Reducing one to 320 × 569 and asking Safari to magnify it back to a
+   * Retina viewport throws away the brush detail that made the source approved
+   * in the first place. Quantizing it afterwards turns the remaining shading
+   * into the orange, blocky version the commissioner rejected.
+   *
+   * Keep the logical canvas for layout and hit maps, but ship three physical
+   * pixels per logical unit for scenery. Small zone-family objects (pizza box,
+   * rack, banner) remain sprites and continue through the regular palette path.
+   */
+  const isRoomShell = record.family === 'zone' && slug.startsWith('zone_');
+  const outputWidth = isRoomShell ? width * 3 : width;
+  const outputHeight = isRoomShell ? height * 3 : height;
+
   // --- 1. Downscale --------------------------------------------------------
   //
   // `ASSET_PIPELINE.md §4` says nearest-neighbor, and at modest ratios that is
@@ -218,7 +235,21 @@ async function processOne(filename: string, palette: readonly [number, number, n
   // aspect ratio should be visibly squashed rather than quietly cropped.
   const scaled = sharp(path.join(INCOMING, filename))
     .ensureAlpha()
-    .resize(width, height, { kernel: 'lanczos3', fit: 'fill' });
+    .resize(outputWidth, outputHeight, { kernel: 'lanczos3', fit: 'fill' });
+
+  const outputDir = path.join(OUTPUT_ROOT, record.family);
+  mkdirSync(outputDir, { recursive: true });
+  const outputPath = path.join(outputDir, `${slug}.png`);
+
+  if (isRoomShell) {
+    await scaled.png({ compressionLevel: 9 }).toFile(outputPath);
+    console.log(
+      `${slug.padEnd(28)} ${record.canvas.padEnd(9)} ` +
+        `source-fidelity · ${String(outputWidth)}x${String(outputHeight)} display raster`,
+    );
+    console.log(`  → public/assets/${record.family}/${slug}.png`);
+    return;
+  }
 
   const { data, info } = await scaled.raw().toBuffer({ resolveWithObject: true });
 
@@ -250,10 +281,6 @@ async function processOne(filename: string, palette: readonly [number, number, n
   }
 
   // --- 4 & 5. Emit --------------------------------------------------------
-  const outputDir = path.join(OUTPUT_ROOT, record.family);
-  mkdirSync(outputDir, { recursive: true });
-  const outputPath = path.join(outputDir, `${slug}.png`);
-
   await sharp(pixels, {
     raw: { width: info.width, height: info.height, channels: info.channels },
   })

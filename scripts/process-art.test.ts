@@ -126,9 +126,6 @@ describe('nearest()', () => {
  */
 describe('the processed batch', () => {
   const OUTPUTS = [
-    'public/assets/zone/zone_parlor_shell.png',
-    'public/assets/zone/zone_front_counter.png',
-    'public/assets/zone/zone_counter_front.png',
     'public/assets/zone/object_newspaper_rack.png',
     'public/assets/zone/object_champion_banner.png',
     'public/assets/character/character_tony_neutral.png',
@@ -267,10 +264,19 @@ describe('the shell ramp share', () => {
     const extensionPct = (extension / total) * 100;
     console.log(`shell zone-extension share: ${extensionPct.toFixed(2)}%`);
 
-    const warm =
+    const paletteWarm =
       (pct['wood'] ?? 0) + (pct['red'] ?? 0) + (pct['skin'] ?? 0) + (pct['amber'] ?? 0) +
       extensionPct;
-    expect(warm, 'a pizza parlor is mostly wood, red and warm light').toBeGreaterThan(60);
+    const sourceWarm = (() => {
+      let warmPixels = 0;
+      for (let i = 0; i < data.length; i += info.channels) {
+        const r = data[i]!, g = data[i + 1]!, b = data[i + 2]!;
+        if (r > b * 1.15 && r > g * 0.85) warmPixels++;
+      }
+      return (warmPixels / total) * 100;
+    })();
+    console.log(`shell native warm share: ${sourceWarm.toFixed(2)}% (palette-only: ${paletteWarm.toFixed(2)}%)`);
+    expect(sourceWarm, 'a pizza parlor is mostly wood, red and warm light').toBeGreaterThan(60);
     expect(pct['violet'] ?? 0, 'violet').toBe(0);
 
     /*
@@ -289,7 +295,7 @@ describe('the shell ramp share', () => {
      * on a room that has collapsed back onto a handful of values without
      * pinning a distribution that any future art revision would move.
      */
-    const busiest = Math.max(...colour.values()) / total * 100;
+    const busiest = [...colour.values()].reduce((largest, count) => Math.max(largest, count), 0) / total * 100;
     console.log(`shell busiest single colour: ${busiest.toFixed(2)}%`);
     expect(busiest, 'no single colour has eaten the room').toBeLessThan(10);
   });
@@ -417,16 +423,19 @@ describe('the zone palette extension', () => {
     expect(zone).toBeLessThan(shared * 0.75);
   });
 
-  it('leaves the shell closed over the zone palette', async () => {
-    // Including after both one-time corrections have run over it, which is the
-    // state that actually ships.
-    const zone = new Set(loadPalette('zone').map((c) => hex(c)));
+  it('ships the shell at three physical pixels per logical unit', async () => {
+    const meta = await sharp(shellPath).metadata();
+    expect(meta.width).toBe(960);
+    expect(meta.height).toBe(1707);
+
     const { data, info } = await sharp(shellPath).raw().toBuffer({ resolveWithObject: true });
-    const strays = new Set<string>();
+    const colours = new Set<string>();
     for (let i = 0; i < data.length; i += info.channels) {
-      const colour = hex([data[i]!, data[i + 1]!, data[i + 2]!]);
-      if (!zone.has(colour)) strays.add(colour);
+      colours.add(hex([data[i]!, data[i + 1]!, data[i + 2]!]));
     }
-    expect([...strays], 'every pixel is a palette colour').toEqual([]);
+    // A room source has subtle paint, lamp falloff and material texture. A 96
+    // colour ceiling here would prove it was sent back through sprite palette
+    // quantization and would recreate the degraded deployed result.
+    expect(colours.size, 'room source detail must survive processing').toBeGreaterThan(1_000);
   });
 });

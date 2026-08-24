@@ -206,15 +206,17 @@ export function AssetView({
 
   // Real art.
   //
-  // `image-rendering: pixelated` is not decoration — it is the whole contract.
-  // Every file here is authored at its display size in CSS pixels and then
-  // rendered two or three times larger by the device's own pixel ratio, so the
-  // browser's default smoothing would blur exactly the hard edges the pipeline
-  // spent its quantization step guaranteeing.
+  // Sprites use `image-rendering: pixelated`: they are authored at logical size
+  // and must keep hard individual pixels. Portrait `zone_*` room shells are the
+  // opposite: each ships as a 3× approved painting and Safari should render its
+  // real source detail, not magnify a 320px intermediate into blocky tiles.
   //
   // A plain `<img>` rather than `next/image`: the assets are static, tiny, and
   // already at their final dimensions, so there is nothing to optimize and a
   // resizing proxy would only reintroduce interpolation.
+  const isHighFidelityRoomShell =
+    resolution.record.family === 'zone' && resolution.slug.startsWith('zone_');
+
   return (
     // eslint-disable-next-line @next/next/no-img-element -- see above
     <img
@@ -223,7 +225,7 @@ export function AssetView({
       width={pixelWidth(resolution.record.canvas)}
       height={pixelHeight(resolution.record.canvas)}
       className={`block h-auto w-full ${className}`}
-      style={{ imageRendering: 'pixelated' }}
+      style={{ imageRendering: isHighFidelityRoomShell ? 'auto' : 'pixelated' }}
       draggable={false}
     />
   );
