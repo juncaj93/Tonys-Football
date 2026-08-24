@@ -438,8 +438,9 @@ button {
 
 /* --------------------------------------------------------------------------
  * Pocket navigation — a small inventory rail that is always clear of iOS
- * Safari's changing bottom chrome. It belongs to sheets and minigames only;
- * cinematic room screens retain their full-bleed art and in-world doors.
+ * Safari's changing bottom chrome. It belongs to every playable public screen;
+ * cinematic rooms retain their full-bleed art and their in-world doors, while
+ * the rail prevents a player ever being stranded in browser chrome.
  * -------------------------------------------------------------------------- */
 .pocket-nav {
   position: fixed;
@@ -501,9 +502,18 @@ button {
 }
 
 .pocket-nav__glyph {
-  font-family: var(--font-display);
-  font-size: 13px;
-  line-height: 1;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  line-height: 0;
+}
+
+.pocket-nav__glyph svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  shape-rendering: crispEdges;
 }
 
 @media (min-width: 640px) {
