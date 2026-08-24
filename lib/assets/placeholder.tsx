@@ -226,6 +226,7 @@ export function AssetView({
       height={pixelHeight(resolution.record.canvas)}
       className={`block h-auto w-full ${className}`}
       style={{ imageRendering: isHighFidelityRoomShell ? 'auto' : 'pixelated' }}
+      data-asset-fidelity={isHighFidelityRoomShell ? 'source' : 'pixel'}
       draggable={false}
     />
   );
