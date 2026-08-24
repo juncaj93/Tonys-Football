@@ -166,6 +166,7 @@ export default async function CounterPage() {
                 <BuyBox
                   price={purse.economy.values.standardBoxPriceTokens}
                   balance={purse.balance}
+                  practice={user.isAdmin}
                 />
               )}
             </PixelPanel>
