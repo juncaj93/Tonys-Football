@@ -1479,6 +1479,57 @@ body[data-parlor-focus] .tony-line * {
   animation: casino-card-deal 180ms steps(1, end) both;
 }
 
+/* The Underground is a playable room first; menus arrive as a whole scene. */
+@keyframes casino-scene-arrives {
+  0% { opacity: 0; transform: translateY(3px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.casino-scene-enter {
+  animation: casino-scene-arrives 120ms steps(1, end) both;
+}
+
+.casino-room-tony img,
+.casino-game-dealer img {
+  animation: casino-dealer-tick 2.8s steps(1, end) infinite;
+  transform-origin: center bottom;
+}
+
+.casino-room-hotspot:focus-visible {
+  outline: 3px solid var(--color-amber-glow);
+  outline-offset: -3px;
+}
+
+.casino-room-label {
+  position: absolute;
+  left: 50%;
+  bottom: -2px;
+  transform: translate(-50%, 100%);
+  white-space: nowrap;
+  border: 2px solid var(--color-ink-900);
+  background: var(--color-paper-mid);
+  color: var(--color-ink-900);
+  padding: 2px 4px;
+  opacity: 0;
+}
+
+.casino-room-hotspot:hover .casino-room-label,
+.casino-room-hotspot:focus-visible .casino-room-label {
+  opacity: 1;
+}
+
+.casino-slot-cabinet {
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.07) 50%, transparent 50%);
+  background-size: 4px 4px;
+}
+
+.casino-felt {
+  background-color: var(--color-green-deep);
+  background-image: radial-gradient(rgba(245, 237, 220, 0.1) 1px, transparent 1px);
+  background-size: 5px 5px;
+  box-shadow: inset 0 0 0 2px rgba(245, 237, 220, 0.25);
+}
+
 /*
  * Time outside the parlor. The shell stays the same welcoming place; only the
  * glass changes. It is deliberately four calm colour states, keyed from the
@@ -1671,6 +1722,8 @@ body[data-parlor-focus] .tony-line * {
   .ambient-tick,
   .slot-reel-spinning,
   .casino-dealer img,
+  .casino-room-tony img,
+  .casino-game-dealer img,
   .casino-card-dealt {
     animation: none;
     transform: none;
