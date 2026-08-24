@@ -1519,9 +1519,42 @@ body[data-parlor-focus] .tony-line * {
 }
 
 .casino-slot-cabinet {
+  min-height: 222px;
   background-image: linear-gradient(90deg, var(--color-red-light) 50%, transparent 50%);
   background-size: 4px 4px;
 }
+
+.casino-slot-face {
+  display: grid;
+  height: 62px;
+  width: 62px;
+  place-items: center;
+  border: 2px solid var(--color-ink-900);
+  background: var(--color-paper-white);
+  box-shadow: inset 2px 2px 0 var(--color-paper-dark), inset -2px -2px 0 var(--color-paper-mid);
+  color: var(--color-ink-900);
+  font-family: var(--font-display);
+  line-height: 1;
+}
+
+.casino-slot-face-mark {
+  grid-area: 1 / 1;
+  font-size: 26px;
+  text-shadow: 1px 1px 0 var(--color-paper-dark);
+}
+
+.casino-slot-face-tag {
+  grid-area: 1 / 1;
+  align-self: end;
+  margin-bottom: 4px;
+  font-size: 13px;
+}
+
+.casino-slot-face--red { color: var(--color-red-dark); }
+.casino-slot-face--amber { color: var(--color-amber-deep); }
+.casino-slot-face--blue { color: var(--color-blue-deep); }
+.casino-slot-face--green { color: var(--color-green-deep); }
+.casino-slot-face--paper { color: var(--color-ink-900); }
 
 .casino-game-room {
   background-color: var(--color-wood-dark);
@@ -1575,8 +1608,17 @@ body[data-parlor-focus] .tony-line * {
   color: var(--color-ink-900);
   padding: 1px 4px;
   font-family: var(--font-display);
-  font-size: 9px;
+  font-size: 13px;
   line-height: 1.1;
+}
+
+.casino-card-back {
+  border: 2px solid var(--color-red-dark);
+  background:
+    linear-gradient(45deg, var(--color-red-dark) 25%, transparent 25% 75%, var(--color-red-dark) 75%),
+    linear-gradient(-45deg, var(--color-red-dark) 25%, transparent 25% 75%, var(--color-red-dark) 75%),
+    var(--color-paper-mid);
+  background-size: 6px 6px;
 }
 
 /*

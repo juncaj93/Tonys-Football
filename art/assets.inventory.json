@@ -227,7 +227,7 @@
         "role": "scenery",
         "alt": "Tony's Pizza Parlor",
         "path": "/assets/zone/zone_parlor_shell.png",
-        "source": "ChatGPT image generation, approved shell candidate",
+        "source": "OpenAI image generation, bright Back Hall rebuild 2026-08-24",
         "rights_status": "original"
       },
       "zone_parlor_counter_front": {
