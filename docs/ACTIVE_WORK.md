@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Underground game-scene redesign | codex/casino-game-scenes | Underground room navigation, casino scene presentation, game overlays, interaction motion, and casino-specific art direction | Casino odds/token settlement, Sleeper data, Slice, collectible catalog, character layers, and manager-room geometry | 2026-08-23 |
+| Championship banners + Underground game polish | codex/champion-banner-celebration | Banner rail celebration; casino room staging; Dealer Tony placement; animated blackjack and slots presentation; a no-ledger practice mode; rec-room hearth art | Sleeper/champion facts, persistent token balance and odds, Slice content, character layers, and parlor shell geometry | 2026-08-24 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
