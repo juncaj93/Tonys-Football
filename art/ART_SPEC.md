@@ -249,9 +249,43 @@ Fourteen effects require **zero generated assets**. They are CSS, SVG, or a few 
 | Newspaper landing | CSS transform + easing |
 | Playoff / night / offseason lighting | Single CSS filter over the scene |
 
-**Only three sequences need frame-based sprite animation in v1:** the box-open reveal, the legendary flourish (~3s, the only sequence over three seconds), and the newspaper landing.
+**Every playable room needs one or two purposeful ambient motions.** They are
+environmental, not decorative UI: a window can carry a small leaf sway in
+daylight; a pendant can breathe one value; a neon sign can hum; a CRT can tick;
+a plant can move slightly; a fireplace can cycle between two or three matched,
+hand-audited flame frames. Choose only motions that the room's objects and
+lighting make believable. A room does not receive generic drifting particles or
+movement merely because it is otherwise still.
+
+**Frame motion is a narrow exception, not a generator lottery.** The box-open
+reveal, legendary flourish (~3s, the only sequence over three seconds),
+newspaper landing, and a deliberately matched environmental loop such as the
+fireplace may use discrete frames. Their frames must be planned as one set,
+share the exact composition/palette/anchor, and be reviewed in the assembled
+room; do not substitute unrelated AI variants that make an object jump, warp or
+change its construction between frames.
 
 **Every animation is skippable after first view.** `prefers-reduced-motion` disables all of the above and substitutes an instant state change.
+
+### 8.1 Whole-scene art review is a publishing gate
+
+No art asset is approved in isolation. Before a room, character, prop or
+animation ships, inspect the assembled browser scene at actual iPhone scale in
+its day and night variants and answer all of these:
+
+- Does every object have a believable place, scale, layer and shadow in this
+  room?
+- Does the composition remain clear with characters, dialogue and the Pocket
+  Menu present?
+- Does the new work match the warm, bright, playful Tony's pixel-world style
+  without burnt texture, muddy values, accidental blur or creepy darkness?
+- Does its motion feel caused by the world, stay subtle, and preserve the same
+  physical layout from frame to frame?
+- Does it fit approved canon and the room's time-of-day version?
+
+A mechanical pass, an attractive isolated render, or a successful build is not
+enough. If any answer is no, revise the source and repeat the visual audit before
+opening the release gate.
 
 ---
 
