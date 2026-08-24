@@ -177,7 +177,7 @@ function UndergroundRoom({ balance, onEnter }: { balance: number | null; onEnter
       <button type="button" onClick={() => onEnter('slots')} className="casino-room-hotspot absolute left-[1%] top-[29%] h-[31%] w-[29%]" aria-label="Play Bapple Slots">
         <span className={`casino-room-label ${TYPE.eyebrow}`}>BAPPLE SLOTS</span>
       </button>
-      <button type="button" onClick={() => onEnter('blackjack')} className="casino-room-hotspot absolute left-[12%] top-[48%] h-[31%] w-[77%]" aria-label="Sit at Tony’s blackjack table">
+      <button type="button" onClick={() => onEnter('blackjack')} className="casino-room-hotspot absolute left-[30%] top-[48%] h-[31%] w-[59%]" aria-label="Sit at Tony’s blackjack table">
         <span className={`casino-room-label ${TYPE.eyebrow}`}>SIT AT TABLE</span>
       </button>
       <div className="absolute bottom-[5%] left-1/2 w-[92%] -translate-x-1/2 border-2 border-ink-900 bg-ink-900/90 px-2 py-1 text-center text-paper-mid">
