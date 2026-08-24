@@ -50,11 +50,50 @@ export function ManagerRoomScene({ theme }: { theme: Theme }) {
         className="absolute inset-0 overflow-hidden"
       >
         <AssetView resolution={shell} />
+        {theme === 'rec_room' && <RecRoomHearth />}
       </div>
     );
   }
 
   return <DrawnBasement theme={theme} />;
+}
+
+/**
+ * A little working hearth in the rec room.
+ *
+ * It is scenery, not a ninth room object: it has no panel, prize, score, or
+ * affordance. The rec room already reads as the one place someone deliberately
+ * made comfortable, and a low flame gives it a living-room warmth without
+ * dimming the daylight parlor or putting a glowing treatment on every theme.
+ *
+ * The parts are hard-edged room units, not an SVG or a blurred shadow, so the
+ * same 320-unit coordinate system that holds the shell holds the flame. CSS
+ * only moves those pixels between two integer positions; `prefers-reduced-
+ * motion` leaves a perfectly legible, still hearth behind.
+ */
+function RecRoomHearth() {
+  return (
+    <div
+      aria-hidden="true"
+      data-room-hearth="rec-room"
+      className="pointer-events-none absolute z-10"
+      style={{ left: '2.5%', top: '47.45%', width: '11.875%', height: '11.6%' }}
+    >
+      {/* Brick surround and black firebox. */}
+      <span className="absolute inset-0 bg-wood-dark" />
+      <span className="absolute left-[8%] top-[7%] h-[84%] w-[84%] bg-red-dark" />
+      <span className="absolute left-[17%] top-[17%] h-[65%] w-[66%] bg-ink-900" />
+
+      {/* A pair of logs keeps the room's red-and-wood palette in the fire. */}
+      <span className="absolute bottom-[23%] left-[23%] h-[10%] w-[48%] bg-wood-mid" />
+      <span className="absolute bottom-[29%] left-[32%] h-[9%] w-[40%] -rotate-[12deg] bg-wood-light" />
+
+      {/* Deliberately blocky flame clusters — a calm two-step flicker, never a glow. */}
+      <span className="hearth-flame hearth-flame--outer absolute bottom-[28%] left-[34%] h-[38%] w-[30%] bg-amber-deep" />
+      <span className="hearth-flame hearth-flame--inner absolute bottom-[29%] left-[43%] h-[25%] w-[18%] bg-amber-glow" />
+      <span className="hearth-spark absolute left-[59%] top-[19%] h-[8%] w-[9%] bg-paper-mid" />
+    </div>
+  );
 }
 
 /**
