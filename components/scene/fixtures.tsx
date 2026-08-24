@@ -1,6 +1,7 @@
 import { AssetView } from '@/lib/assets/placeholder';
 import { TYPE } from '@/lib/design/type';
 import { resolveAsset } from '@/lib/assets/registry';
+import { exteriorLight } from '@/lib/world/light';
 
 /**
  * What is left of the drawn shop.
@@ -60,10 +61,12 @@ export function SceneSurface({
  * gold leaf that has been on that window since the shop opened.
  */
 export function ShopWindow() {
+  const light = exteriorLight();
+
   return (
-    <div aria-hidden="true" className="relative h-full w-full overflow-hidden">
+    <div aria-hidden="true" className={`shop-window world-light world-light--${light} relative h-full w-full overflow-hidden`}>
       {/* Evening, and a street light two doors down. */}
-      <div className="absolute inset-0 bg-gradient-to-b from-blue-deep via-[#101724] to-ink-900" />
+      <div className="shop-window-sky absolute inset-0 bg-gradient-to-b from-blue-deep via-[#101724] to-ink-900" />
 
       {/* Rain-flecked glass. */}
       <div

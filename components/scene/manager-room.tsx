@@ -3,6 +3,7 @@ import { resolveAsset } from '@/lib/assets/registry';
 import { place, type RoomObjectSpec } from '@/lib/parlor/objects';
 import { CEILING, HORIZON, MANAGER_ROOM, roomObject } from '@/lib/rooms/objects';
 import { themeSpec, type Theme, type ThemeSpec } from '@/lib/rooms/themes';
+import { exteriorLight } from '@/lib/world/light';
 
 /**
  * A manager's basement.
@@ -40,6 +41,7 @@ import { themeSpec, type Theme, type ThemeSpec } from '@/lib/rooms/themes';
  */
 export function ManagerRoomScene({ theme }: { theme: Theme }) {
   const shell = resolveAsset(themeSpec(theme).shell);
+  const light = exteriorLight();
 
   if (shell.kind === 'art') {
     return (
@@ -47,15 +49,30 @@ export function ManagerRoomScene({ theme }: { theme: Theme }) {
         aria-hidden="true"
         data-room-theme={theme}
         data-room-shell="art"
-        className="absolute inset-0 overflow-hidden"
+        className={`world-light world-light--${light} absolute inset-0 overflow-hidden`}
       >
         <AssetView resolution={shell} />
+        <RoomWindow />
         {theme === 'rec_room' && <RecRoomHearth />}
       </div>
     );
   }
 
   return <DrawnBasement theme={theme} />;
+}
+
+/** A small high basement window, lit from the same Michigan clock as the parlor. */
+function RoomWindow() {
+  return (
+    <span
+      aria-hidden="true"
+      className="world-window room-window pointer-events-none absolute z-[5]"
+      style={{ left: '57.5%', top: '17.22%', width: '11.875%', height: '4.57%' }}
+    >
+      <span className="world-star world-star--a" />
+      <span className="world-star world-star--d" />
+    </span>
+  );
 }
 
 /**

@@ -36,6 +36,7 @@ import { momentTags } from '@/lib/parlor/moment';
 import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
 import { previewReveal } from '@/lib/demo/preview';
 import { featureFlags } from '@/lib/flags';
+import { exteriorLight } from '@/lib/world/light';
 import { BoardPanel, ChalkSlate } from '@/components/scene/chalkboard';
 import { chalkboardFor } from '@/lib/stakes/chalkboard';
 import { previewBoard } from '@/lib/stakes/boards';
@@ -278,6 +279,7 @@ export default async function ParlorPage({
       ? boardFace({ daysUntilKickoff: clock.daysUntilKickoff })
       : await inSeasonFace(db, boardYear, featured);
   const shell = resolveAsset('zone_parlor_shell');
+  const light = exteriorLight();
 
   return (
     <Page oneScreen>
@@ -347,7 +349,7 @@ export default async function ParlorPage({
           style={{ backgroundColor: '#4A2E1C' }}
         >
           <div
-            className="relative w-full max-w-[430px] self-start"
+            className={`world-light world-light--${light} relative w-full max-w-[430px] self-start`}
             style={{ aspectRatio: `${String(ROOM.width)} / ${String(ROOM.height)}` }}
           >
             {/* 1. The room behind Tony — the shell's rows 0-291. */}
@@ -363,6 +365,7 @@ export default async function ParlorPage({
               <AssetView resolution={resolveAsset('object_newspaper_rack')} />
             </div>
 
+            <ParlorWindows />
             <AmbientLife />
 
             {/* 2. Tony, standing in the room. */}
@@ -692,7 +695,7 @@ function AmbientLife() {
     <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[5]">
       {/* The ceiling fixture on the left, which has never warmed up properly. */}
       <span
-        className="anim-flicker absolute rounded-full"
+        className="ambient-tick ambient-tick--quiet absolute rounded-full"
         style={{
           ...place([53, 12, 19, 11]),
           background: 'radial-gradient(closest-side, rgba(255,217,138,0.55), transparent)',
@@ -701,7 +704,7 @@ function AmbientLife() {
 
       {/* Its twin on the right, steady. */}
       <span
-        className="anim-fountain absolute rounded-full"
+        className="ambient-tick ambient-tick--warm absolute rounded-full"
         style={{
           ...place([178, 12, 17, 11]),
           background: 'radial-gradient(closest-side, rgba(255,217,138,0.4), transparent)',
@@ -710,12 +713,28 @@ function AmbientLife() {
 
       {/* The pendant lamp hanging over the booths. */}
       <span
-        className="anim-sheen absolute rounded-full"
+        className="ambient-tick ambient-tick--pendant absolute rounded-full"
         style={{
           ...place([270, 147, 18, 18]),
           background: 'radial-gradient(closest-side, rgba(255,217,138,0.42), transparent)',
         }}
       />
+    </div>
+  );
+}
+
+/** The two painted booth windows: glass changes, never the room behind it. */
+function ParlorWindows() {
+  return (
+    <div aria-hidden="true" className="pointer-events-none absolute inset-0 z-[4]">
+      <span className="world-window parlor-window" style={place([264, 148, 16, 59])}>
+        <span className="world-star world-star--a" />
+        <span className="world-star world-star--b" />
+      </span>
+      <span className="world-window parlor-window" style={place([300, 148, 16, 59])}>
+        <span className="world-star world-star--c" />
+        <span className="world-star world-star--d" />
+      </span>
     </div>
   );
 }
