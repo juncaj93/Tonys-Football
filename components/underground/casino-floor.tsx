@@ -1,9 +1,11 @@
 /* eslint-disable @next/next/no-img-element -- registered pixel sprites must bypass optimizer resampling */
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 import { blackjackAction, dealBlackjackAction, spinSlotsAction } from '@/app/actions/underground';
+import { AssetView } from '@/lib/assets/placeholder';
+import { resolveAsset } from '@/lib/assets/registry';
 import { TYPE } from '@/lib/design/type';
 import { UNDERGROUND_WAGERS, type CasinoView } from '@/lib/underground/model';
 
@@ -17,12 +19,36 @@ const REEL_ART = {
   TONY: '/assets/collectible/collectible_neon_tony_sign.png',
 } as const;
 
+const SPIN_SYMBOLS = Object.keys(REEL_ART) as (keyof typeof REEL_ART)[];
+const SLOT_SETTLE_MS = 880;
+const DEAL_SETTLE_MS = 460;
+
+function pause(ms: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function cardKey(roundId: string, card: string, index: number): string {
+  return `${roundId}-${card}-${String(index)}`;
+}
+
 export function CasinoFloor({ balance }: { balance: number | null }) {
   const [wager, setWager] = useState<(typeof UNDERGROUND_WAGERS)[number]>(UNDERGROUND_WAGERS[0]);
   const [slots, setSlots] = useState<Extract<CasinoView, { game: 'SLOTS' }> | null>(null);
   const [blackjack, setBlackjack] = useState<Extract<CasinoView, { game: 'BLACKJACK' }> | null>(null);
   const [message, setMessage] = useState('Pick a table. Tony keeps the books.');
+  const [slotSpinning, setSlotSpinning] = useState(false);
+  const [tableDealing, setTableDealing] = useState(false);
+  const [reelTick, setReelTick] = useState(0);
   const [pending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (!slotSpinning) {
+      setReelTick(0);
+      return;
+    }
+    const ticker = window.setInterval(() => setReelTick((tick) => tick + 1), 92);
+    return () => window.clearInterval(ticker);
+  }, [slotSpinning]);
 
   const resolve = (result: Awaited<ReturnType<typeof spinSlotsAction>>): void => {
     if (!result.ok) {
@@ -43,19 +69,46 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
   };
 
   const spin = (): void => {
-    startTransition(async () => resolve(await spinSlotsAction(wager, crypto.randomUUID())));
+    setSlotSpinning(true);
+    startTransition(async () => {
+      try {
+        const [result] = await Promise.all([spinSlotsAction(wager, crypto.randomUUID()), pause(SLOT_SETTLE_MS)]);
+        resolve(result);
+      } finally {
+        setSlotSpinning(false);
+      }
+    });
   };
 
   const deal = (): void => {
-    startTransition(async () => resolve(await dealBlackjackAction(wager, crypto.randomUUID())));
+    setTableDealing(true);
+    startTransition(async () => {
+      try {
+        const [result] = await Promise.all([dealBlackjackAction(wager, crypto.randomUUID()), pause(DEAL_SETTLE_MS)]);
+        resolve(result);
+      } finally {
+        setTableDealing(false);
+      }
+    });
   };
 
   const move = (action: 'HIT' | 'STAND'): void => {
     if (blackjack === null || blackjack.settled) return;
-    startTransition(async () => resolve(await blackjackAction(blackjack.id, action)));
+    setTableDealing(true);
+    startTransition(async () => {
+      try {
+        const [result] = await Promise.all([blackjackAction(blackjack.id, action), pause(DEAL_SETTLE_MS)]);
+        resolve(result);
+      } finally {
+        setTableDealing(false);
+      }
+    });
   };
 
   const canPlay = balance !== null && !pending;
+  const reelSymbols = slotSpinning
+    ? ([0, 1, 2].map((offset) => SPIN_SYMBOLS[(reelTick * 2 + offset * 3) % SPIN_SYMBOLS.length]!) as readonly (keyof typeof REEL_ART)[])
+    : (slots?.reels ?? ['TONY', 'TONY', 'TONY']);
 
   return (
     <section data-casino-floor="" className="mt-4 space-y-4">
@@ -85,9 +138,13 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
       <div className="grid gap-4 sm:grid-cols-2">
         <article className="pixel-edge border-2 border-ink-700 bg-paper-mid p-4">
           <p className={TYPE.eyebrow}>Bapple slots</p>
-          <div className="mt-3 flex justify-center gap-1 border-2 border-ink-900 bg-ink-900 p-2 text-center text-paper-mid">
-            {(slots?.reels ?? ['TONY', 'TONY', 'TONY']).map((symbol, index) => (
-              <span key={index} className={`flex h-12 w-12 items-center justify-center border border-ink-500 bg-paper-mid ${TYPE.eyebrow} text-ink-900`}>
+          <div className={`mt-3 flex justify-center gap-1 border-2 border-ink-900 bg-ink-900 p-2 text-center text-paper-mid ${slotSpinning ? 'slot-machine-running' : ''}`}>
+            {reelSymbols.map((symbol, index) => (
+              <span
+                key={index}
+                className={`flex h-12 w-12 items-center justify-center border border-ink-500 bg-paper-mid ${TYPE.eyebrow} text-ink-900 ${slotSpinning ? 'slot-reel-spinning' : ''}`}
+                style={slotSpinning ? { animationDelay: `${String(index * 46)}ms` } : undefined}
+              >
                 {/* Static registered paths only — no optimizer, no resampling. */}
                 <img src={REEL_ART[symbol]} alt="" className="h-[42px] w-[42px] object-contain" style={{ imageRendering: 'pixelated' }} />
               </span>
@@ -99,14 +156,21 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
         </article>
 
         <article className="pixel-edge border-2 border-ink-700 bg-paper-mid p-4">
-          <p className={TYPE.eyebrow}>Blackjack</p>
-          <div className={`mt-3 min-h-[82px] border-2 border-ink-900 bg-green-deep p-2 ${TYPE.bodyCompact} text-paper-mid`}>
+          <div className="flex items-end justify-between gap-2">
+            <p className={TYPE.eyebrow}>Blackjack</p>
+            <div aria-hidden="true" className="casino-dealer flex items-end gap-1">
+              {/* Tony is the dealer, not a label on a generic table. */}
+              <AssetView resolution={resolveAsset('character_tony_dealer')} className="h-16 w-auto object-contain" />
+              <span className={`${TYPE.eyebrow} mb-1 text-ink-700`}>TONY DEALS</span>
+            </div>
+          </div>
+          <div className={`casino-table mt-3 min-h-[118px] border-2 border-ink-900 bg-green-deep p-2 ${TYPE.bodyCompact} text-paper-mid`}>
             {blackjack === null ? (
-              <p className="text-paper-mid/80">Dealer waits.</p>
+              <p className="text-paper-mid/80">Tony shuffles, waiting on a chip.</p>
             ) : (
               <>
-                <p>DEALER: {blackjack.dealer.join(' · ')} {blackjack.dealerValue === null ? '' : `(${String(blackjack.dealerValue)})`}</p>
-                <p className="mt-2">YOU: {blackjack.player.join(' · ')} ({String(blackjack.playerValue)})</p>
+                <CardRow roundId={blackjack.id} label="TONY" cards={blackjack.dealer} value={blackjack.dealerValue} dealing={tableDealing} hidden={blackjack.dealerValue === null} />
+                <CardRow roundId={blackjack.id} label="YOU" cards={blackjack.player} value={blackjack.playerValue} dealing={tableDealing} />
                 {blackjack.outcome !== null && <p className="mt-2 text-amber-glow">{blackjack.outcome}</p>}
               </>
             )}
@@ -124,5 +188,42 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
         </article>
       </div>
     </section>
+  );
+}
+
+function CardRow({
+  roundId,
+  label,
+  cards,
+  value,
+  dealing,
+  hidden = false,
+}: {
+  roundId: string;
+  label: string;
+  cards: readonly string[];
+  value: number | null;
+  dealing: boolean;
+  hidden?: boolean;
+}) {
+  const visible = hidden ? [cards[0] ?? '?', '??'] : cards;
+
+  return (
+    <div className="mt-1.5 first:mt-0">
+      <div className="flex items-center justify-between gap-2">
+        <span className={TYPE.eyebrow}>{label}{value === null ? '' : ` · ${String(value)}`}</span>
+        <div className="flex min-h-9 justify-end gap-1">
+          {visible.map((card, index) => (
+            <span
+              key={cardKey(roundId, card, index)}
+              className={`casino-card flex h-8 min-w-7 items-center justify-center border border-ink-900 bg-paper-white px-1 ${TYPE.eyebrow} text-ink-900 ${dealing ? 'casino-card-dealt' : ''}`}
+              style={dealing ? { animationDelay: `${String(index * 72)}ms` } : undefined}
+            >
+              {card}
+            </span>
+          ))}
+        </div>
+      </div>
+    </div>
   );
 }

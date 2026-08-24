@@ -1373,6 +1373,173 @@ body[data-parlor-focus] .tony-line * {
   animation: ceiling-flicker 17s linear infinite;
 }
 
+/*
+ * Three already-painted parlor lights, alive at different intervals. Each has
+ * only a resting and a bright frame; `steps(1)` makes the change a pixel-game
+ * tick instead of a web fade. The lamps stay quiet most of the time so the
+ * bright daytime room never turns into a blinking arcade.
+ */
+@keyframes ambient-light-ticks {
+  0%,
+  72%,
+  100% {
+    opacity: 0.34;
+  }
+  73%,
+  90% {
+    opacity: 0.82;
+  }
+}
+
+.ambient-tick {
+  animation: ambient-light-ticks 7.8s steps(1, end) infinite;
+}
+
+.ambient-tick--quiet {
+  animation-duration: 11.6s;
+}
+
+.ambient-tick--warm {
+  animation-delay: -3.1s;
+}
+
+.ambient-tick--pendant {
+  animation-delay: -5.4s;
+  animation-duration: 9.4s;
+}
+
+/*
+ * The Bapple reel advances between two whole-pixel positions while the real
+ * server-authoritative spin is pending. It is a little mechanical tick rather
+ * than a blur or fake random result; the settled sprites still come solely from
+ * the round the server returns.
+ */
+@keyframes slot-reel-ticks {
+  0%,
+  49% {
+    transform: translate3d(0, 0, 0);
+  }
+  50%,
+  100% {
+    transform: translate3d(0, -2px, 0);
+  }
+}
+
+.slot-reel-spinning {
+  animation: slot-reel-ticks 92ms steps(1, end) infinite;
+}
+
+.slot-machine-running {
+  box-shadow: inset 0 0 0 2px var(--color-amber-glow);
+}
+
+/*
+ * The casino has motion only at the meaningful moments: Tony ticks upward once
+ * while holding the deck, a card travels in two deliberate pixel positions,
+ * and the felt frame gains a warm lamp edge while the slots are resolving.
+ */
+@keyframes casino-dealer-tick {
+  0%,
+  67%,
+  100% {
+    transform: translateY(0);
+  }
+  68%,
+  89% {
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes casino-card-deal {
+  0% {
+    opacity: 0;
+    transform: translate(-10px, -2px);
+  }
+  49% {
+    opacity: 1;
+    transform: translate(2px, 0);
+  }
+  50%,
+  100% {
+    opacity: 1;
+    transform: translate(0, 0);
+  }
+}
+
+.casino-dealer img {
+  animation: casino-dealer-tick 2.8s steps(1, end) infinite;
+  transform-origin: center bottom;
+}
+
+.casino-table {
+  box-shadow: inset 0 0 0 2px rgba(20, 35, 61, 0.26);
+}
+
+.casino-card-dealt {
+  animation: casino-card-deal 180ms steps(1, end) both;
+}
+
+/*
+ * Time outside the parlor. The shell stays the same welcoming place; only the
+ * glass changes. It is deliberately four calm colour states, keyed from the
+ * league's Michigan clock, not a full-screen dark-mode filter.
+ */
+.world-window {
+  overflow: hidden;
+  background: rgba(127, 212, 240, 0.08);
+  box-shadow: inset 0 0 0 1px rgba(245, 237, 220, 0.12);
+}
+
+.world-light--morning .world-window {
+  background: linear-gradient(180deg, rgba(255, 240, 170, 0.48), rgba(127, 212, 240, 0.2));
+}
+
+.world-light--day .world-window {
+  background: rgba(127, 212, 240, 0.22);
+}
+
+.world-light--dusk .world-window {
+  background: linear-gradient(180deg, rgba(224, 96, 176, 0.27), rgba(242, 169, 75, 0.32));
+}
+
+.world-light--night .world-window {
+  background: rgba(20, 35, 61, 0.78);
+  box-shadow: inset 0 0 0 1px rgba(127, 212, 240, 0.3);
+}
+
+.world-star {
+  display: none;
+  position: absolute;
+  width: 12%;
+  height: 8%;
+  background: var(--color-paper-white);
+}
+
+.world-light--night .world-star {
+  display: block;
+}
+
+.world-star--a { top: 20%; left: 24%; }
+.world-star--b { top: 42%; right: 18%; }
+.world-star--c { top: 68%; left: 38%; }
+.world-star--d { top: 28%; right: 34%; }
+
+.shop-window.world-light--morning > .shop-window-sky {
+  background: linear-gradient(180deg, #8bc9e8, #f2d98a);
+}
+
+.shop-window.world-light--day > .shop-window-sky {
+  background: linear-gradient(180deg, #6eb9e1, #d7edf0);
+}
+
+.shop-window.world-light--dusk > .shop-window-sky {
+  background: linear-gradient(180deg, #a35469, #e3a05c 68%, #2c5a8c);
+}
+
+.shop-window.world-light--night > .shop-window-sky {
+  background: linear-gradient(180deg, #14233d, #2c5a8c 60%, #1a1214);
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -1431,6 +1598,63 @@ body[data-parlor-focus] .tony-line * {
   animation: character-breathes 3.6s steps(1, end) infinite;
 }
 
+/*
+ * The rec room's hearth flickers in a two-frame rhythm. The movement is an
+ * integer pixel nudge expressed in percentages of its tiny room-unit sprite;
+ * paired with `steps(1)` it stays crisp at every phone scale instead of turning
+ * into a soft CSS flame. It is intentionally local to the rec room — daylight
+ * and the parlor's warm ceiling lamps are already cozy without extra motion.
+ */
+@keyframes hearth-flickers {
+  0%,
+  46% {
+    transform: translate(0, 0);
+  }
+  47%,
+  91% {
+    transform: translate(-8%, -8%);
+  }
+  92%,
+  100% {
+    transform: translate(0, 0);
+  }
+}
+
+@keyframes hearth-spark {
+  0%,
+  58% {
+    opacity: 0;
+    transform: translateY(0);
+  }
+  59%,
+  80% {
+    opacity: 1;
+    transform: translateY(-120%);
+  }
+  81%,
+  100% {
+    opacity: 0;
+    transform: translateY(-120%);
+  }
+}
+
+.hearth-flame {
+  animation: hearth-flickers 1.35s steps(1, end) infinite;
+}
+
+.hearth-flame--outer {
+  clip-path: polygon(33% 0, 66% 23%, 100% 53%, 100% 100%, 0 100%, 0 53%);
+}
+
+.hearth-flame--inner {
+  animation-delay: 0.34s;
+  clip-path: polygon(50% 0, 100% 47%, 100% 100%, 0 100%, 0 47%);
+}
+
+.hearth-spark {
+  animation: hearth-spark 2.7s steps(1, end) infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   /*
    * Standing still is the resting state, not a frozen frame of the cycle: the
@@ -1438,6 +1662,16 @@ body[data-parlor-focus] .tony-line * {
    * the first keyframe put it.
    */
   .character-idle {
+    animation: none;
+    transform: none;
+  }
+
+  .hearth-flame,
+  .hearth-spark,
+  .ambient-tick,
+  .slot-reel-spinning,
+  .casino-dealer img,
+  .casino-card-dealt {
     animation: none;
     transform: none;
   }
