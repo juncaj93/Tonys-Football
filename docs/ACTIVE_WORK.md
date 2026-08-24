@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Loot-box reveal impact | codex/loot-reveal-impact | Stepped pixel-particle arrival treatment, reveal timing, reduced-motion parity, and visual QA evidence | Reward odds, token balance, counter purchase rules, collectible art, rooms, and casino mechanics | 2026-08-23 |
+*(none)*
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
