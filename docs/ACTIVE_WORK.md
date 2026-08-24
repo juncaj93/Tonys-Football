@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Parlor and Tuesday Slice art direction | codex/parlor-slice-art-direction | Reference-led parlor shell refresh, printed Tuesday Slice surfaces, pixel-art visual QA, and art provenance | Room geometry, content facts/copy, Sleeper import, reward odds, casino mechanics, and character layers | 2026-08-23 |
+*(none)*
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
