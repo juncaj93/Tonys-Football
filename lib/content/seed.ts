@@ -10,8 +10,15 @@ import { contentEntries } from '@/lib/db/schema';
 import { BOX_OFFER_COOLDOWN_DAYS, BOX_OFFER_SURFACE } from '@/lib/counter/offer';
 import { ASIDE_COOLDOWN_DAYS, ASIDE_SURFACE } from '@/lib/parlor/aside';
 
+import { TONY_CONVERSATION_COOLDOWN_DAYS, TONY_CONVERSATION_SURFACE } from './conversation';
 import { GREETING_COOLDOWN_DAYS, GREETING_SURFACE } from './greeting';
-import { parseBoxOffers, parseCounterGreetings, parseStatsAsides, type ParsedLine } from './parse';
+import {
+  parseBoxOffers,
+  parseCounterGreetings,
+  parseStatsAsides,
+  parseTonyConversations,
+  type ParsedLine,
+} from './parse';
 
 /**
  * Seeding the content engine from the authored markdown.
@@ -28,6 +35,7 @@ import { parseBoxOffers, parseCounterGreetings, parseStatsAsides, type ParsedLin
 export const COUNTER_GREETINGS_PATH = path.join('content', 'counter-greetings.md');
 export const BOX_OFFERS_PATH = path.join('content', 'box-offer.md');
 export const STATS_ASIDES_PATH = path.join('content', 'counter-stats.md');
+export const TONY_CONVERSATIONS_PATH = path.join('content', 'tony-conversations.md');
 
 export interface SeedSummary {
   readonly inserted: number;
@@ -46,6 +54,10 @@ export function readBoxOffers(root = process.cwd()): readonly ParsedLine[] {
 
 export function readStatsAsides(root = process.cwd()): readonly ParsedLine[] {
   return parseStatsAsides(readFileSync(path.join(root, STATS_ASIDES_PATH), 'utf8'));
+}
+
+export function readTonyConversations(root = process.cwd()): readonly ParsedLine[] {
+  return parseTonyConversations(readFileSync(path.join(root, TONY_CONVERSATIONS_PATH), 'utf8'));
 }
 
 export async function seedCounterGreetings(
@@ -93,6 +105,18 @@ export async function seedStatsAsides(
     surface: ASIDE_SURFACE,
     path: STATS_ASIDES_PATH,
     cooldownDays: ASIDE_COOLDOWN_DAYS,
+  });
+}
+
+/** Lines for returning to Tony: one deck with a long no-repeat window. */
+export async function seedTonyConversations(
+  db: Database,
+  entries: readonly ParsedLine[],
+): Promise<SeedSummary> {
+  return seedSurface(db, entries, {
+    surface: TONY_CONVERSATION_SURFACE,
+    path: TONY_CONVERSATIONS_PATH,
+    cooldownDays: TONY_CONVERSATION_COOLDOWN_DAYS,
   });
 }
 

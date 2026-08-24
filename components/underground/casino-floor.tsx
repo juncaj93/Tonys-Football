@@ -1,4 +1,3 @@
-/* eslint-disable @next/next/no-img-element -- registered pixel sprites must bypass optimizer resampling */
 'use client';
 
 import { useEffect, useState, useTransition, type ReactNode } from 'react';
@@ -12,14 +11,21 @@ import { UNDERGROUND_WAGERS, type CasinoView } from '@/lib/underground/model';
 type Scene = 'room' | 'slots' | 'blackjack';
 
 const CHIP = 'pixel-edge min-h-[44px] border-2 px-3 active:translate-y-px';
-const REEL_ART = {
-  BAPPLE: '/assets/collectible/collectible_bapple_tree.png',
-  FREDDY: '/assets/collectible/collectible_freddy_bowl.png',
-  SAUNA: '/assets/collectible/collectible_portable_sauna.png',
-  PIZZA: '/assets/collectible/collectible_pizza_cutter.png',
-  TONY: '/assets/collectible/collectible_neon_tony_sign.png',
-} as const;
-const SPIN_SYMBOLS = Object.keys(REEL_ART) as (keyof typeof REEL_ART)[];
+/*
+ * Casino symbols are their own tiny sign system, not collectible sprites
+ * squeezed into reel windows. A reel can celebrate Bapple, Tony and the shop
+ * without pretending a manager won a shelf item — casino outcomes only move
+ * tokens, per the economy rules.
+ */
+const SPIN_SYMBOLS = ['BAPPLE', 'PIZZA', 'FREDDY', 'SAUNA', 'TONY'] as const;
+type SlotSymbol = (typeof SPIN_SYMBOLS)[number];
+const SLOT_MARK: Readonly<Record<SlotSymbol, { readonly mark: string; readonly tag: string; readonly tone: string }>> = {
+  BAPPLE: { mark: 'B', tag: 'BAPPLE', tone: 'red' },
+  PIZZA: { mark: '▲', tag: 'SLICE', tone: 'amber' },
+  FREDDY: { mark: 'T', tag: 'TOKEN', tone: 'blue' },
+  SAUNA: { mark: '16', tag: 'LUCKY', tone: 'green' },
+  TONY: { mark: '★', tag: 'TONY’S', tone: 'paper' },
+};
 const SLOT_SETTLE_MS = 880;
 const DEAL_BEAT_MS = 180;
 
@@ -39,7 +45,7 @@ function cardKey(roundId: string, card: string, index: number): string {
  * Nothing from this table reaches the ledger or the casino-round audit trail.
  */
 function practiceSlots(sequence: number): Extract<CasinoView, { game: 'SLOTS' }> {
-  const reels = [0, 1, 2].map((index) => SPIN_SYMBOLS[(sequence * 2 + index) % SPIN_SYMBOLS.length]!) as [keyof typeof REEL_ART, keyof typeof REEL_ART, keyof typeof REEL_ART];
+  const reels = [0, 1, 2].map((index) => SPIN_SYMBOLS[(sequence * 2 + index) % SPIN_SYMBOLS.length]!) as [SlotSymbol, SlotSymbol, SlotSymbol];
   return { id: crypto.randomUUID(), game: 'SLOTS', wager: 0, settled: true, payout: 0, reels };
 }
 
@@ -165,7 +171,7 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
 
   const canPlay = (practiceMode || balance !== null) && !pending;
   const reelSymbols = slotSpinning
-    ? ([0, 1, 2].map((offset) => SPIN_SYMBOLS[(reelTick * 2 + offset * 3) % SPIN_SYMBOLS.length]!) as readonly (keyof typeof REEL_ART)[])
+    ? ([0, 1, 2].map((offset) => SPIN_SYMBOLS[(reelTick * 2 + offset * 3) % SPIN_SYMBOLS.length]!) as readonly SlotSymbol[])
     : (slots?.reels ?? ['TONY', 'TONY', 'TONY']);
 
   if (scene === 'room') {
@@ -182,7 +188,7 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
             <div className={`flex justify-center gap-2 ${slotSpinning ? 'slot-machine-running' : ''}`} aria-label="Slot reels">
               {reelSymbols.map((symbol, index) => (
                 <span key={index} className={`flex h-20 w-20 items-center justify-center border-4 border-wood-dark bg-paper-mid ${slotSpinning ? 'slot-reel-spinning' : ''}`} style={slotSpinning ? { animationDelay: `${String(index * 46)}ms` } : undefined}>
-                  <img src={REEL_ART[symbol]} alt="" className="h-16 w-16 object-contain" style={{ imageRendering: 'pixelated' }} />
+                  <SlotFace symbol={symbol} />
                 </span>
               ))}
             </div>
@@ -234,10 +240,10 @@ function UndergroundRoom({ balance, practiceMode, onPracticeMode, onEnter }: { b
   return (
     <section className="casino-scene-enter pixel-edge relative isolate aspect-[320/569] w-full overflow-hidden border-2 border-wood-dark bg-ink-900" data-casino-floor="">
       <AssetView resolution={resolveAsset('zone_underground_shell')} className="absolute inset-0 h-full w-full object-cover" />
-      <div className="absolute left-[7%] top-[5%] border-2 border-ink-900 bg-paper-mid px-2 py-1 text-ink-900 shadow-[2px_2px_0_#281414]">
-        <p className={TYPE.eyebrow}>{practiceMode ? 'PRACTICE' : 'TOKENS'}</p><p className={`${TYPE.action} text-amber-deep`}>{practiceMode ? '∞' : balance === null ? '—' : String(balance)}</p>
-      </div>
-      <div className="casino-room-tony pointer-events-none absolute left-[38%] top-[43%] h-[25%] w-[25%]" aria-hidden="true">
+      <button type="button" onClick={() => onPracticeMode(!practiceMode)} className="absolute top-[5%] left-[7%] border-2 border-ink-900 bg-paper-mid px-2 py-1 text-ink-900 shadow-[2px_2px_0_var(--color-wood-dark)]">
+        <span className={TYPE.eyebrow}>{practiceMode ? 'PRACTICE ∞' : `TOKENS ${balance === null ? '—' : String(balance)}`}</span>
+      </button>
+      <div className="casino-room-tony pointer-events-none absolute left-[33%] top-[37%] h-[35%] w-[34%]" aria-hidden="true">
         <AssetView resolution={resolveAsset('character_tony_blackjack_room')} className="h-full w-full object-contain object-bottom" />
       </div>
       <button type="button" onClick={() => onEnter('slots')} className="casino-room-hotspot absolute left-[1%] top-[29%] h-[31%] w-[29%]" aria-label="Play Bapple Slots">
@@ -249,9 +255,6 @@ function UndergroundRoom({ balance, practiceMode, onPracticeMode, onEnter }: { b
       <div className="absolute bottom-[5%] left-1/2 w-[92%] -translate-x-1/2 border-2 border-ink-900 bg-ink-900/90 px-2 py-1 text-center text-paper-mid">
         <p className={TYPE.eyebrow}>TAP THE SLOT MACHINE OR BLACKJACK TABLE</p>
       </div>
-      <button type="button" onClick={() => onPracticeMode(!practiceMode)} className={`absolute top-[5%] right-[5%] border-2 border-ink-900 bg-paper-mid px-2 py-1 ${TYPE.eyebrow} text-ink-900 shadow-[2px_2px_0_var(--color-wood-dark)]`}>
-        PRACTICE {practiceMode ? 'ON' : 'OFF'}
-      </button>
     </section>
   );
 }
@@ -274,9 +277,30 @@ function WagerTray({ wager, pending, onWager }: { wager: (typeof UNDERGROUND_WAG
   return <div className="mt-5 flex justify-center gap-2" aria-label="Choose wager">{UNDERGROUND_WAGERS.map((chip) => <button key={chip} type="button" disabled={pending} aria-pressed={wager === chip} onClick={() => onWager(chip)} className={`${CHIP} ${TYPE.action} ${wager === chip ? 'border-amber-glow bg-amber-mid text-ink-900' : 'border-ink-900 bg-paper-mid text-ink-900'}`}>{String(chip)}</button>)}</div>;
 }
 
+function SlotFace({ symbol }: { symbol: SlotSymbol }) {
+  const mark = SLOT_MARK[symbol];
+  return (
+    <span aria-label={mark.tag} className={`casino-slot-face casino-slot-face--${mark.tone}`}>
+      <span aria-hidden="true" className="casino-slot-face-mark">{mark.mark}</span>
+      <span aria-hidden="true" className="casino-slot-face-tag">{mark.tag}</span>
+    </span>
+  );
+}
+
 function CardRow({ roundId, label, cards, value, dealing, dealBeat, hidden = false }: { roundId: string; label: string; cards: readonly string[]; value: number | null; dealing: boolean; dealBeat: number; hidden?: boolean }) {
   const requiredBeat = label === 'TONY' ? 1 : 2;
   const preview = dealing && dealBeat >= requiredBeat;
   const visible = cards.length === 0 ? preview ? ['?', '?'] : [] : hidden ? [cards[0] ?? '?', '??'] : cards;
-  return <div><div className="flex min-h-14 items-center justify-between gap-2"><span className={`${TYPE.eyebrow} text-paper-mid`}>{label}{value === null ? '' : ` · ${String(value)}`}</span><div className="flex min-h-12 justify-end gap-1">{visible.map((card, index) => <span key={cardKey(roundId, card, index)} className={`casino-card flex h-11 min-w-9 items-center justify-center border-2 border-ink-900 bg-paper-white px-1 ${TYPE.eyebrow} text-ink-900 ${dealing ? 'casino-card-dealt' : ''}`} style={dealing ? { animationDelay: `${String(index * 90)}ms` } : undefined}>{card}</span>)}</div></div></div>;
+  return <div><div className="flex min-h-16 items-center justify-between gap-2"><span className={`${TYPE.eyebrow} text-paper-mid`}>{label}{value === null ? '' : ` · ${String(value)}`}</span><div className="flex min-h-14 justify-end gap-1">{visible.map((card, index) => <PlayingCard key={cardKey(roundId, card, index)} rank={card} index={index} dealing={dealing} />)}</div></div></div>;
+}
+
+function PlayingCard({ rank, index, dealing }: { rank: string; index: number; dealing: boolean }) {
+  const suits = ['♠', '♥', '♣', '♦'] as const;
+  const suit = rank === '??' ? null : suits[(rank.charCodeAt(0) + index) % suits.length]!;
+  const red = suit === '♥' || suit === '♦';
+  return (
+    <span className={`casino-card ${TYPE.eyebrow} relative flex h-14 w-10 shrink-0 flex-col justify-between border-2 border-ink-900 bg-paper-white px-1 py-0.5 leading-none ${red ? 'text-red-dark' : 'text-ink-900'} ${dealing ? 'casino-card-dealt' : ''}`} style={dealing ? { animationDelay: `${String(index * 90)}ms` } : undefined}>
+      {suit === null ? <span className="casino-card-back absolute inset-1" /> : <><span>{rank}{suit}</span><span className="self-center text-[1rem]">{suit}</span><span className="rotate-180 self-end">{rank}</span></>}
+    </span>
+  );
 }

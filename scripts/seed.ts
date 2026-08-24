@@ -34,9 +34,11 @@ import {
   readBoxOffers,
   readCounterGreetings,
   readStatsAsides,
+  readTonyConversations,
   seedBoxOffers,
   seedCounterGreetings,
   seedStatsAsides,
+  seedTonyConversations,
 } from '@/lib/content/seed';
 import { closePool, getDb } from '@/lib/db';
 import { seasonMemberships, users } from '@/lib/db/schema';
@@ -187,6 +189,15 @@ async function main(): Promise<void> {
       `Content  ${String(asides.keys.length)} stats asides · ` +
         `${String(asides.inserted)} new · ${String(asides.updated)} updated · ` +
         `${String(asides.deactivated)} retired`,
+    );
+
+    // Returning to Tony is deliberately a different deck from the greeting:
+    // it rotates within the day and uses verified context where it exists.
+    const conversations = await seedTonyConversations(db, readTonyConversations());
+    console.log(
+      `Content  ${String(conversations.keys.length)} Tony conversations · ` +
+        `${String(conversations.inserted)} new · ${String(conversations.updated)} updated · ` +
+        `${String(conversations.deactivated)} retired`,
     );
 
     await assertOnlyApprovedGroups(db);
