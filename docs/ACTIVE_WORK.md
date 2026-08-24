@@ -61,7 +61,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
-| Final basement shell art | codex/basement-shell-art | Rec-room and cold-store shell art, their registry records, art validation, and visual QA evidence | Room geometry, Sleeper import/finality, token ledger, wearables, casino mechanics, catalog size and reward odds | 2026-08-23 |
+*(none)*
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
