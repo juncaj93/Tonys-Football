@@ -72,6 +72,7 @@ describe.skipIf(!hasDatabase)('Tony conversation rotation', () => {
       const line = await conversationFor(db!, {
         userId: manager.id,
         displayName: manager.displayName,
+        teamName: manager.teamName,
         tags: tags.get(manager.id) ?? new Set<string>(),
         leagueTags,
         daysUntilKickoff: seasonClock().daysUntilKickoff,

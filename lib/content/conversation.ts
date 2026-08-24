@@ -27,6 +27,8 @@ interface ConversationEntry extends SelectableEntry {
 export interface TonyConversationRequest {
   readonly userId: string;
   readonly displayName: string;
+  /** Current league-facing Sleeper team name, never fabricated when absent. */
+  readonly teamName: string | null;
   readonly tags: ReadonlySet<string>;
   readonly leagueTags: readonly ReadonlySet<string>[];
   readonly daysUntilKickoff: number | null;
@@ -99,8 +101,12 @@ export async function conversationFor(
       ),
     );
 
+  const teamName = request.teamName?.trim() ?? null;
+  if (teamName !== null && teamName !== '') contextTags.add('team_named');
+
   const variables = {
     name: request.displayName,
+    team: teamName === '' ? null : teamName,
     days: request.daysUntilKickoff === null ? null : String(request.daysUntilKickoff),
     winner: request.fact?.variables['winner'] ?? null,
     loser: request.fact?.variables['loser'] ?? null,

@@ -45,6 +45,7 @@ import {
 export interface DoorManager {
   readonly id: string;
   readonly displayName: string;
+  readonly teamName: string | null;
   readonly rosterId: number;
   /** Has set a PIN. Unclaimed managers are the ones the door is for. */
   readonly claimed: boolean;
@@ -104,6 +105,7 @@ export async function listDoorManagers(db: Database): Promise<readonly DoorManag
   return managers.map((manager) => ({
     id: manager.id,
     displayName: manager.displayName,
+    teamName: manager.teamName,
     rosterId: manager.rosterId,
     claimed: manager.claimed,
   }));
