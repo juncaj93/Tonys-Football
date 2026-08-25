@@ -1950,6 +1950,17 @@ body[data-parlor-focus] .tony-line * {
     linear-gradient(0deg, var(--color-wood-dark) 0 3px, transparent 3px 16px);
 }
 
+.casino-game-header {
+  background: linear-gradient(90deg, var(--color-wood-mid), var(--color-wood-dark));
+  box-shadow: inset 0 2px 0 rgba(245, 237, 220, 0.15);
+}
+
+.casino-game-announcer {
+  min-height: 43px;
+  background: rgba(25, 15, 16, 0.92);
+  box-shadow: inset 0 2px 0 rgba(245, 237, 220, 0.08);
+}
+
 .casino-slot-bulb {
   position: absolute;
   top: 46%;
@@ -1984,6 +1995,19 @@ body[data-parlor-focus] .tony-line * {
     linear-gradient(0deg, rgba(104, 163, 87, 0.18) 0 2px, transparent 2px 12px);
   background-size: 100% 100%, 12px 12px, 12px 12px;
   box-shadow: inset 0 0 0 2px var(--color-paper-mid), inset 0 0 0 7px var(--color-green-mid), inset 0 0 0 10px var(--color-wood-dark);
+}
+
+.casino-blackjack-table::after {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 12px;
+  height: 33%;
+  border: 2px solid rgba(245, 237, 220, 0.32);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 32% 32% 0 0;
+  pointer-events: none;
 }
 
 .casino-blackjack-topline {
