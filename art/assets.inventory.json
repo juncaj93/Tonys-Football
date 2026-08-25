@@ -382,6 +382,17 @@
         "path": "/assets/zone/zone_underground_shell.png",
         "source": "OpenAI image generation, Underground visual rebuild 2026-08-23",
         "rights_status": "original"
+      },
+      "object_casino_roulette_table": {
+        "family": "zone",
+        "canvas": "160x240",
+        "batch": "B5+",
+        "art_status": "generated",
+        "role": "interactive_game_fixture",
+        "alt": "A walnut roulette table with a green felt betting layout, brass lamp, and token chips",
+        "path": "/assets/zone/object_casino_roulette_table.png",
+        "source": "OpenAI image generation, roulette fixture 2026-08-25",
+        "rights_status": "original"
       }
     },
     "_basement_B1": {
