@@ -2,13 +2,14 @@
 
 import { useEffect, useState, useTransition, type CSSProperties, type ReactNode } from 'react';
 
-import { blackjackAction, dealBlackjackAction, spinSlotsAction } from '@/app/actions/underground';
+import { blackjackAction, dealBlackjackAction, spinRouletteAction, spinSlotsAction } from '@/app/actions/underground';
 import { AssetView } from '@/lib/assets/placeholder';
 import { resolveAsset } from '@/lib/assets/registry';
 import { TYPE } from '@/lib/design/type';
+import { type RouletteBet } from '@/lib/underground/game';
 import { UNDERGROUND_WAGERS, type CasinoView } from '@/lib/underground/model';
 
-type Scene = 'room' | 'slots' | 'blackjack';
+type Scene = 'room' | 'slots' | 'blackjack' | 'roulette';
 
 const CHIP = 'pixel-edge min-h-[44px] border-2 px-3 active:translate-y-px';
 /*
@@ -44,6 +45,12 @@ const PRACTICE_SLOT_ROUNDS: readonly Pick<Extract<CasinoView, { game: 'SLOTS' }>
   { reels: ['SAUNA', 'FREDDY', 'TONY'], payout: 0 },
   { reels: ['PIZZA', 'PIZZA', 'PIZZA'], payout: 40 },
 ];
+const PRACTICE_ROULETTE_ROUNDS: readonly Pick<Extract<CasinoView, { game: 'ROULETTE' }>, 'pocket' | 'color'>[] = [
+  { pocket: 1, color: 'RED' },
+  { pocket: 0, color: 'GREEN' },
+  { pocket: 32, color: 'RED' },
+  { pocket: 2, color: 'BLACK' },
+];
 
 function pause(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -72,11 +79,21 @@ function practiceHand(): Extract<CasinoView, { game: 'BLACKJACK' }> {
   };
 }
 
+function practiceRoulette(sequence: number, bet: RouletteBet, wager: number): Extract<CasinoView, { game: 'ROULETTE' }> {
+  const round = PRACTICE_ROULETTE_ROUNDS[sequence % PRACTICE_ROULETTE_ROUNDS.length]!;
+  const payout = bet.kind === 'COLOR'
+    ? round.color === bet.color ? wager * 2 : 0
+    : round.pocket === bet.number ? wager * 36 : 0;
+  return { id: crypto.randomUUID(), game: 'ROULETTE', wager: 0, settled: true, payout, pocket: round.pocket, color: round.color, bet };
+}
+
 export function CasinoFloor({ balance }: { balance: number | null }) {
   const [scene, setScene] = useState<Scene>('room');
   const [wager, setWager] = useState<(typeof UNDERGROUND_WAGERS)[number]>(UNDERGROUND_WAGERS[0]);
   const [slots, setSlots] = useState<Extract<CasinoView, { game: 'SLOTS' }> | null>(null);
   const [blackjack, setBlackjack] = useState<Extract<CasinoView, { game: 'BLACKJACK' }> | null>(null);
+  const [roulette, setRoulette] = useState<Extract<CasinoView, { game: 'ROULETTE' }> | null>(null);
+  const [rouletteBet, setRouletteBet] = useState<RouletteBet>({ kind: 'COLOR', color: 'RED' });
   const [message, setMessage] = useState('Pick a game in the room. Tony keeps the books.');
   const [slotSpinning, setSlotSpinning] = useState(false);
   const [tableDealing, setTableDealing] = useState(false);
@@ -84,6 +101,7 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
   const [practiceMode, setPracticeMode] = useState(true);
   const [practiceRound, setPracticeRound] = useState(0);
   const [reelTick, setReelTick] = useState(0);
+  const [wheelSpinning, setWheelSpinning] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -103,9 +121,12 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
     if (result.round.game === 'SLOTS') {
       setSlots(result.round);
       setMessage(result.round.payout > 0 ? `The machine pays ${String(result.round.payout)} tokens.` : 'Nothing this time.');
-    } else {
+    } else if (result.round.game === 'BLACKJACK') {
       setBlackjack(result.round);
       setMessage(result.round.settled ? result.round.outcome === 'PUSH' ? 'Push. Your chip comes back.' : 'Hand settled.' : 'Your move.');
+    } else {
+      setRoulette(result.round);
+      setMessage(result.round.payout > 0 ? `The wheel pays ${String(result.round.payout)} tokens.` : `${String(result.round.pocket)} ${result.round.color.toLowerCase()}. Not this spin.`);
     }
   };
 
@@ -190,6 +211,26 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
     });
   };
 
+  const spinRoulette = (): void => {
+    setWheelSpinning(true);
+    startTransition(async () => {
+      try {
+        if (practiceMode) {
+          await pause(1250);
+          const round = practiceRoulette(practiceRound, rouletteBet, wager);
+          setRoulette(round);
+          setPracticeRound((roundNumber) => roundNumber + 1);
+          setMessage(round.payout > 0 ? `THE WHEEL PAYS ${String(round.payout)} TEST TOKENS!` : `${String(round.pocket)} ${round.color.toLowerCase()}. Practice spin complete.`);
+        } else {
+          const [result] = await Promise.all([spinRouletteAction(wager, rouletteBet, crypto.randomUUID()), pause(1250)]);
+          resolve(result);
+        }
+      } finally {
+        setWheelSpinning(false);
+      }
+    });
+  };
+
   const canPlay = (practiceMode || balance !== null) && !pending;
   const reelSymbols = slotSpinning
     ? ([0, 1, 2].map((offset) => SPIN_SYMBOLS[(reelTick * 2 + offset * 3) % SPIN_SYMBOLS.length]!) as readonly SlotSymbol[])
@@ -239,6 +280,26 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
         <WagerTray wager={wager} pending={pending} onWager={setWager} />
         <button type="button" disabled={!canPlay} onClick={spin} className={`pixel-edge mx-auto mt-3 flex min-h-14 w-full max-w-[360px] items-center justify-center border-4 border-ink-900 bg-red-mid px-4 ${TYPE.action} text-paper-mid shadow-[4px_4px_0_var(--color-wood-dark)] disabled:opacity-50`}>
           {pending ? 'REELS SPINNING…' : practiceMode ? 'PRACTICE SPIN · ∞' : `SPIN · ${String(wager)} TOKENS`}
+        </button>
+      </GameScreen>
+    );
+  }
+
+  if (scene === 'roulette') {
+    return (
+      <GameScreen balance={balance} practiceMode={practiceMode} message={message} onBack={() => setScene('room')} title="Tony’s Roulette" subtitle="Single-zero wheel. Pick a colour or a number.">
+        <div className="casino-roulette-table pixel-edge relative mx-auto w-full max-w-[390px] overflow-hidden border-4 border-wood-dark p-4 shadow-[5px_5px_0_var(--color-wood-dark)]">
+          <div className="casino-roulette-fixture mx-auto" aria-label={roulette === null ? 'Roulette wheel waiting' : `Roulette landed on ${String(roulette.pocket)} ${roulette.color.toLowerCase()}`}>
+            <AssetView resolution={resolveAsset('object_casino_roulette_table')} className="h-full w-full object-contain" />
+            <span aria-hidden="true" className={`casino-roulette-ball ${wheelSpinning ? 'casino-roulette-ball--spinning' : ''}`} />
+            {!wheelSpinning && roulette !== null && <span className={`casino-roulette-result casino-roulette-result--${roulette.color.toLowerCase()}`}>{String(roulette.pocket)}</span>}
+          </div>
+          <p className={`mt-3 text-center ${TYPE.eyebrow} text-paper-mid`}>{wheelSpinning ? 'BALL IS RUNNING…' : roulette === null ? 'PLACE YOUR CHIP' : `${String(roulette.pocket)} · ${roulette.color}`}</p>
+          <RouletteBoard bet={rouletteBet} disabled={pending || wheelSpinning} onBet={setRouletteBet} />
+        </div>
+        <WagerTray wager={wager} pending={pending || wheelSpinning} onWager={setWager} />
+        <button type="button" disabled={!canPlay || wheelSpinning} onClick={spinRoulette} className={`pixel-edge mx-auto mt-3 flex min-h-14 w-full max-w-[390px] items-center justify-center border-4 border-ink-900 bg-red-mid px-4 ${TYPE.action} text-paper-mid shadow-[4px_4px_0_var(--color-wood-dark)] disabled:opacity-50`}>
+          {pending || wheelSpinning ? 'WHEEL SPINNING…' : practiceMode ? 'PRACTICE SPIN · ∞' : `SPIN · ${String(wager)} TOKENS`}
         </button>
       </GameScreen>
     );
@@ -302,8 +363,11 @@ function UndergroundRoom({ balance, practiceMode, onPracticeMode, onEnter }: { b
       <button type="button" onClick={() => onEnter('blackjack')} className="casino-room-hotspot absolute left-[30%] top-[48%] h-[31%] w-[59%]" aria-label="Sit at Tony’s blackjack table">
         <span className={`casino-room-label ${TYPE.eyebrow}`}>SIT AT TABLE</span>
       </button>
+      <button type="button" onClick={() => onEnter('roulette')} className="casino-room-hotspot casino-room-hotspot--roulette absolute right-[2%] top-[25%] h-[22%] w-[20%]" aria-label="Play roulette">
+        <span className={`casino-room-label ${TYPE.eyebrow}`}>ROULETTE</span>
+      </button>
       <div className="absolute bottom-[5%] left-1/2 w-[92%] -translate-x-1/2 border-2 border-ink-900 bg-ink-900/90 px-2 py-1 text-center text-paper-mid">
-        <p className={TYPE.eyebrow}>TAP THE SLOT MACHINE OR BLACKJACK TABLE</p>
+        <p className={TYPE.eyebrow}>TAP A TABLE OR MACHINE</p>
       </div>
     </section>
   );
@@ -325,6 +389,24 @@ function GameScreen({ balance, practiceMode, message, onBack, title, subtitle, c
 
 function WagerTray({ wager, pending, onWager }: { wager: (typeof UNDERGROUND_WAGERS)[number]; pending: boolean; onWager: (wager: (typeof UNDERGROUND_WAGERS)[number]) => void }) {
   return <div className="mt-5 flex justify-center gap-2" aria-label="Choose wager">{UNDERGROUND_WAGERS.map((chip) => <button key={chip} type="button" disabled={pending} aria-pressed={wager === chip} onClick={() => onWager(chip)} className={`${CHIP} ${TYPE.action} ${wager === chip ? 'border-amber-glow bg-amber-mid text-ink-900' : 'border-ink-900 bg-paper-mid text-ink-900'}`}>{String(chip)}</button>)}</div>;
+}
+
+function RouletteBoard({ bet, disabled, onBet }: { bet: RouletteBet; disabled: boolean; onBet: (bet: RouletteBet) => void }) {
+  const isNumber = (number: number): boolean => bet.kind === 'NUMBER' && bet.number === number;
+  return <div className="casino-roulette-board mt-4" aria-label="Roulette betting board">
+    <div className="casino-roulette-numbers">
+      <button type="button" disabled={disabled} onClick={() => onBet({ kind: 'NUMBER', number: 0 })} aria-pressed={isNumber(0)} className={`casino-roulette-number casino-roulette-number--green ${isNumber(0) ? 'is-selected' : ''}`}>0</button>
+      {Array.from({ length: 36 }, (_, index) => {
+        const number = index + 1;
+        const red = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36].includes(number);
+        return <button key={number} type="button" disabled={disabled} onClick={() => onBet({ kind: 'NUMBER', number })} aria-pressed={isNumber(number)} className={`casino-roulette-number ${red ? 'casino-roulette-number--red' : 'casino-roulette-number--black'} ${isNumber(number) ? 'is-selected' : ''}`}>{String(number)}</button>;
+      })}
+    </div>
+    <div className="mt-2 grid grid-cols-2 gap-2">
+      {(['RED', 'BLACK'] as const).map((color) => <button key={color} type="button" disabled={disabled} onClick={() => onBet({ kind: 'COLOR', color })} aria-pressed={bet.kind === 'COLOR' && bet.color === color} className={`casino-roulette-colour casino-roulette-colour--${color.toLowerCase()} ${bet.kind === 'COLOR' && bet.color === color ? 'is-selected' : ''}`}>{color}</button>)}
+    </div>
+    <p className={`mt-2 text-center ${TYPE.metadata} text-paper-mid/80`}>{bet.kind === 'NUMBER' ? `STRAIGHT UP ${String(bet.number)} · 35:1` : `${bet.color} · EVEN MONEY`}</p>
+  </div>;
 }
 
 function SlotFace({ symbol }: { symbol: SlotSymbol }) {
