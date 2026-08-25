@@ -15,8 +15,12 @@ import {
   settleBlackjack,
   slotMultiplier,
   spinSlots,
+  rouletteMultiplier,
+  spinRoulette,
   type BlackjackOutcome,
   type BlackjackState,
+  type RouletteBet,
+  type RouletteState,
   type SlotsState,
 } from './game';
 import { UNDERGROUND_WAGERS, type CasinoView, type UndergroundWager } from './model';
@@ -71,6 +75,20 @@ function slotsView(row: { id: string; wager: number; payout: number | null; stat
     settled: true,
     payout: row.payout ?? 0,
     reels: state.reels,
+  };
+}
+
+function rouletteView(row: { id: string; wager: number; payout: number | null; state: unknown }): CasinoView {
+  const state = row.state as RouletteState;
+  return {
+    id: row.id,
+    game: 'ROULETTE',
+    wager: row.wager,
+    settled: true,
+    payout: row.payout ?? 0,
+    pocket: state.pocket,
+    color: state.color,
+    bet: state.bet,
   };
 }
 
@@ -177,6 +195,82 @@ export async function playSlots(
   }
 }
 
+/** Spin one fully resolved, single-zero roulette round. */
+export async function playRoulette(
+  db: Database,
+  input: {
+    readonly userId: string;
+    readonly seasonId: string;
+    readonly wager: number;
+    readonly bet: RouletteBet;
+    readonly requestKey: string;
+  },
+): Promise<{ readonly ok: true; readonly round: CasinoView } | { readonly ok: false; readonly reason: 'invalid' | 'insufficient' }> {
+  if (!isWager(input.wager)) return { ok: false, reason: 'invalid' };
+
+  try {
+    return await db.transaction(async (tx) => {
+      const replay = await tx
+        .select()
+        .from(casinoRounds)
+        .where(and(eq(casinoRounds.requestKey, input.requestKey), eq(casinoRounds.userId, input.userId)))
+        .limit(1);
+      if (replay[0] !== undefined) return { ok: true as const, round: rouletteView(replay[0]) };
+
+      const state = spinRoulette(input.bet);
+      const payout = input.wager * rouletteMultiplier(state);
+      const [round] = await tx
+        .insert(casinoRounds)
+        .values({
+          userId: input.userId,
+          seasonId: input.seasonId,
+          game: 'ROULETTE',
+          status: 'OPEN',
+          wager: input.wager,
+          state,
+          requestKey: input.requestKey,
+          createdAt: now(),
+        })
+        .returning();
+      if (round === undefined) throw new Error('roulette round was not created');
+
+      await applyTokenDelta(tx, {
+        userId: input.userId,
+        seasonId: input.seasonId,
+        amount: -input.wager,
+        reason: 'CASINO_WAGER',
+        description: 'Roulette wager',
+        idempotencyKey: `casino:wager:${round.id}`,
+        sourceRef: round.id,
+      });
+
+      const [settled] = await tx
+        .update(casinoRounds)
+        .set({ status: 'SETTLED', payout, resolvedAt: now() })
+        .where(eq(casinoRounds.id, round.id))
+        .returning();
+      if (settled === undefined) throw new Error('roulette round was not settled');
+
+      if (payout > 0) {
+        await applyTokenDelta(tx, {
+          userId: input.userId,
+          seasonId: input.seasonId,
+          amount: payout,
+          reason: 'CASINO_PAYOUT',
+          description: state.bet.kind === 'NUMBER' ? 'Roulette straight-up payout' : 'Roulette colour payout',
+          idempotencyKey: `casino:payout:${round.id}`,
+          sourceRef: round.id,
+        });
+      }
+      return { ok: true as const, round: rouletteView(settled) };
+    });
+  } catch (error) {
+    if (isBalanceViolation(error)) return { ok: false, reason: 'insufficient' };
+    if (String(error).includes('invalid roulette bet')) return { ok: false, reason: 'invalid' };
+    throw error;
+  }
+}
+
 /** Deal a blackjack hand. A natural resolves immediately; otherwise it persists open. */
 export async function startBlackjack(
   db: Database,
@@ -246,7 +340,7 @@ export async function playBlackjack(
       id: string;
       user_id: string;
       season_id: string;
-      game: 'BLACKJACK' | 'SLOTS';
+      game: 'BLACKJACK' | 'SLOTS' | 'ROULETTE';
       status: 'OPEN' | 'SETTLED';
       wager: number;
       state: unknown;
@@ -261,7 +355,7 @@ export async function playBlackjack(
       id: string;
       user_id: string;
       season_id: string;
-      game: 'BLACKJACK' | 'SLOTS';
+      game: 'BLACKJACK' | 'SLOTS' | 'ROULETTE';
       status: 'OPEN' | 'SETTLED';
       wager: number;
       state: unknown;

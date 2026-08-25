@@ -24,6 +24,48 @@ export interface SlotsState {
 }
 
 /**
+ * European roulette: one green zero and numbers 1–36.  Keeping the bet beside
+ * the resolved pocket makes a round independently auditable after the board
+ * animation has gone away.
+ */
+export type RouletteBet =
+  | { readonly kind: 'COLOR'; readonly color: 'RED' | 'BLACK' }
+  | { readonly kind: 'NUMBER'; readonly number: number };
+
+export type RouletteColor = 'RED' | 'BLACK' | 'GREEN';
+
+export interface RouletteState {
+  readonly pocket: number;
+  readonly color: RouletteColor;
+  readonly bet: RouletteBet;
+}
+
+/** The normal red/black layout for a single-zero wheel. */
+const RED_POCKETS = new Set([1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]);
+
+export function rouletteColor(pocket: number): RouletteColor {
+  if (!Number.isInteger(pocket) || pocket < 0 || pocket > 36) throw new Error('roulette pocket must be 0–36');
+  if (pocket === 0) return 'GREEN';
+  return RED_POCKETS.has(pocket) ? 'RED' : 'BLACK';
+}
+
+export function validRouletteBet(bet: RouletteBet): boolean {
+  return bet.kind === 'COLOR' || (Number.isInteger(bet.number) && bet.number >= 0 && bet.number <= 36);
+}
+
+export function spinRoulette(bet: RouletteBet): RouletteState {
+  if (!validRouletteBet(bet)) throw new Error('invalid roulette bet');
+  const pocket = rollBelow(37);
+  return { pocket, color: rouletteColor(pocket), bet };
+}
+
+/** Returns stake plus profit, matching the blackjack/slots accounting contract. */
+export function rouletteMultiplier(state: RouletteState): number {
+  if (state.bet.kind === 'COLOR') return state.color === state.bet.color ? 2 : 0;
+  return state.pocket === state.bet.number ? 36 : 0;
+}
+
+/**
  * One twenty-stop reel. Keeping the weights as counts makes the odds auditable
  * without reconstructing them from the RNG branches below.
  */
