@@ -56,7 +56,7 @@ const CANON_LINES: Readonly<Record<string, readonly string[]>> = {
   ],
   Cheese: [
     'Cheese turns a token over once. “No action yet. Just appreciating the table.”',
-    'Cheese watches the casino curtain. “A heater is a state of mind. Tony says that is not financial advice.”',
+    'Cheese watches the red curtain. “A heater is a state of mind. Tony says that is not financial advice.”',
     'Cheese shrugs at the token machine. “The odds are the odds. The confidence is separate.”',
   ],
   Joe: [
@@ -98,7 +98,7 @@ const CANON_LINES: Readonly<Record<string, readonly string[]>> = {
 
 function fallbackLine(visitor: HallManager, isNight: boolean): string {
   return isNight
-    ? `${visitor.displayName} watches the warm light under the casino curtain. “No score predictions in the hallway.”`
+    ? `${visitor.displayName} watches the warm light under the red curtain. “No score predictions in the hallway.”`
     : `${visitor.displayName} is watching the Lions pregame chatter. “No score predictions in the hallway. That is bad luck.”`;
 }
 
