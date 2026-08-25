@@ -1425,10 +1425,17 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'keyboard-focus':
       await home(page);
       await dismissTony(page);
-      // The persistent pocket rail comes before the room in tab order. Focus a
-      // room affordance directly so this state checks the room focus ring, not
-      // an accidental count of page-chrome tabs.
-      await page.locator('.room-shape').first().focus();
+      // The persistent pocket rail comes before the room in tab order. Walk the
+      // real keyboard path until an in-room target receives focus: programmatic
+      // focus does not necessarily satisfy `:focus-visible` in Chromium, so it
+      // cannot prove the ring a keyboard player actually sees.
+      for (let i = 0; i < 12; i += 1) {
+        await page.keyboard.press('Tab');
+        const inRoom = await page.evaluate(() =>
+          document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('room-shape'),
+        );
+        if (inRoom) break;
+      }
       await page.waitForTimeout(250);
       return;
 
@@ -1496,6 +1503,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       const before = await page
         .locator('[data-unopened-boxes]')
         .first()
+
         .getAttribute('data-unopened-boxes');
 
       await page.getByRole('button', { name: /Buy a standard pizza box/i }).click();
@@ -1503,7 +1511,6 @@ async function reach(page: Page, state: StateName): Promise<void> {
         `document.querySelector("[data-unopened-boxes]")?.getAttribute("data-unopened-boxes") !== ${JSON.stringify(before)}`,
         undefined,
         { timeout: 15_000 },
-
       );
 
       await home(page);
@@ -1747,6 +1754,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'slice-preseason-sparse': {
       const key = state.slice('slice-'.length);
       await page.goto(`${BASE}/slice?edition=${key}`, { waitUntil: 'networkidle' });
+
       await page.waitForSelector('[data-slice-edition]', { state: 'attached' });
       return;
     }
@@ -1754,7 +1762,6 @@ async function reach(page: Page, state: StateName): Promise<void> {
     /*
      * The body of the paper, which no capture had ever contained.
      *
-
      * `scrollIntoViewIfNeeded` on the tenth section rather than a pixel offset:
      * the sections are different heights at every width, so a number would be
      * three different places on three phones and would silently stop pointing
@@ -1998,6 +2005,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
             ? 'complete'
             : state === 'reveal-spare'
               ? 'spare'
+
               : 'broke';
       await page.goto(`${BASE}/?preview_reveal=rare&preview_stage=${stage}`, {
         waitUntil: 'networkidle',
@@ -2005,7 +2013,6 @@ async function reach(page: Page, state: StateName): Promise<void> {
       // Pad left up on purpose — see the note on the four rarity states above.
       await page.waitForTimeout(1600);
       return;
-
     }
 
     /*
@@ -2249,6 +2256,7 @@ const ALL_STATES: readonly StateName[] = [
   'slice-close-finish',
   'slice-record-score',
   'slice-weak-news',
+
   'slice-incomplete-week',
   'slice-standings-shakeup',
   'slice-playoff-week',
@@ -2256,7 +2264,6 @@ const ALL_STATES: readonly StateName[] = [
   'slice-historical-recap',
   'slice-no-stories',
   'slice-one-story',
-
   'slice-competing-stories',
   'slice-monday-comeback',
   'slice-preseason-draft-review',
@@ -2500,6 +2507,7 @@ interface TonyFrame {
  * an inner named const handed to `page.evaluate` throws `__name is not defined`
  * inside the browser.
  *
+
  * **Invoked in the expression**, because Playwright sets `isFunction` from
  * `typeof pageFunction === 'function'` — which is `false` for a string — and
  * then returns the evaluated expression *without calling it*. A string arrow
@@ -2507,7 +2515,6 @@ interface TonyFrame {
  * as `undefined`. The first run of this gate crashed on exactly that. So the
  * duration is interpolated in and the expression evaluates to the promise.
  */
-
 function tonySampler(ms: number): string {
   return `(() => { const ms = ${String(ms)}; return new Promise((resolve) => {
   const mark = document.querySelector('.tony-mark');
@@ -2751,6 +2758,7 @@ async function checkGlowLeavesTonyAlone(page: Page, width: number): Promise<void
    * message about the harness, printed where a reader is looking for a message
    * about the room.
    *
+
    * Two halves: stop collecting once detached, so a late frame cannot change the
    * measurement, and swallow the ack's rejection, because a frame nobody is
    * going to read does not need to be acknowledged.
@@ -2758,7 +2766,6 @@ async function checkGlowLeavesTonyAlone(page: Page, width: number): Promise<void
   let listening = true;
   cdp.on('Page.screencastFrame', (frame) => {
     if (!listening) return;
-
     frames.push(Buffer.from(frame.data, 'base64'));
     cdp.send('Page.screencastFrameAck', { sessionId: frame.sessionId }).catch(() => {
       // The session is closing. Ack was best-effort from the start.
@@ -3002,6 +3009,7 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
    * has no still frames before the reveal turns on — pass B exists for those.
    * What A must cover is the reveal *standing* and the reveal *gone*.
    */
+
   const litA = revealOnset(undisturbed);
   if (!covers(quietA, litA + 1400, litA + REVEAL_FOR - 100)) {
     fail('tony-steady', `@${String(width)} pass A never sampled a still frame while lit`);
@@ -3009,7 +3017,6 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
   if (!covers(quietA, litA + REVEAL_FOR + RAMP + 200, litA + REVEAL_FOR + 1500)) {
     fail('tony-steady', `@${String(width)} pass A never sampled a still frame after the reveal`);
   }
-
 
   /* --- B. The same window, with his line put away --------------------- */
 
@@ -3253,6 +3260,7 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
 
   await page.goto(BASE, { waitUntil: 'networkidle' });
   await dismissTony(page);
+
 }
 
 /**
@@ -3260,7 +3268,6 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
  *
  * ## What it counts, and why it counts pixels rather than elements
  *
-
  * Visual debt 4 was not two overlapping panels. Tony's order pad sat *behind*
  * the panel's scrim, dimmed, so nothing overlapped and nothing was unreadable —
  * and it was still a second transient surface up at the same time as the first.
@@ -3504,6 +3511,7 @@ async function checkTypeFloor(page: Page, width: number, state: string): Promise
   }
 
   // The opt-out is one thing, by decision. A second kind means somebody used it
+
   // to get small copy past the floor rather than to paint on the artwork.
   for (const kind of exempt) {
     if (kind !== ENVIRONMENTAL_TYPE) {
@@ -3511,7 +3519,6 @@ async function checkTypeFloor(page: Page, width: number, state: string): Promise
         'type-floor',
         `@${String(width)} ${state}: undeclared environmental type "${kind}" — ` +
           `only "${ENVIRONMENTAL_TYPE}" is exempt from the ${String(TYPE_FLOOR_PX)}px floor`,
-
       );
     }
   }
@@ -3755,6 +3762,7 @@ const DESK_EXPECTATIONS: Record<
 /**
  * What each draft-board state must actually contain.
  *
+
  * The progress count is the whole screen, so it is the whole assertion. An
  * **exact** count rather than an at-least, unlike the press desk's: a review
  * belongs to a `(season, manager)` pair and `writeDemoReviews` clears the rest,
@@ -3762,7 +3770,6 @@ const DESK_EXPECTATIONS: Record<
  * ten under a name claiming four would be the exact false green this file has
  * been bitten by twice.
  */
-
 const DRAFT_BOARD_EXPECTATIONS: Record<
   string,
   {
@@ -4007,13 +4014,13 @@ async function checkDeckWrap(page: Page, width: number, state: string): Promise<
       // sentence and wraps as prose, deliberately.
       if (!text.includes(' \u2014 ')) continue;
 
+
       /*
        * How many lines the deck occupies, from its own client rects rather than
        * from a height division — a `Range` reports one rect per line box, which
        * is the browser's own answer to "did this wrap".
        */
       const range = document.createRange();
-
       range.selectNodeContents(deck);
       const lines = new Set(
         [...range.getClientRects()].map((rect) => Math.round(rect.top)),
@@ -4257,6 +4264,7 @@ async function checkReviewDesk(page: Page, width: number, state: string): Promis
 
   if (expected.hold !== undefined && found.hold !== expected.hold) {
     fail('review-desk', `${at} expected the hold ${expected.hold}, found ${String(found.hold)}`);
+
   }
 
   for (const [section, minimum] of Object.entries(expected.atLeast ?? {})) {
@@ -4264,7 +4272,6 @@ async function checkReviewDesk(page: Page, width: number, state: string): Promis
     if (actual < minimum) {
       fail(
         'review-desk',
-
         `${at} expected at least ${String(minimum)} in "${section}", found ${String(actual)}`,
       );
     }
@@ -4508,6 +4515,7 @@ async function checkManagerBelongsInTheRoom(page: Page, at: string): Promise<voi
         feet: figureBox.bottom,
         shadowBottom: shadow?.getBoundingClientRect().bottom ?? 0,
       };
+
     },
     { canvasWidth: CHARACTER_CANVAS.width, canvasHeight: CHARACTER_CANVAS.height },
   );
@@ -4515,7 +4523,6 @@ async function checkManagerBelongsInTheRoom(page: Page, at: string): Promise<voi
   if (seen === null) {
     fail('room', `${at} draws no manager in the room at all`);
     return;
-
   }
 
   const drift = Math.abs(seen.spriteScaleX - seen.roomScale) / seen.roomScale;
@@ -4759,6 +4766,7 @@ async function checkObjectMap(page: Page, width: number): Promise<void> {
     }
   }
 
+
   // The headline numbers, stated so a failure names the grammar and not just a row.
   const tally = (kind: string): number =>
     [...byId.values()].filter((group) => group[0]!.kind === kind).length;
@@ -4766,7 +4774,6 @@ async function checkObjectMap(page: Page, width: number): Promise<void> {
   if (tally('door') !== 3 || tally('display') !== 4 || tally('toy') !== 1) {
     fail(
       'object-map',
-
       `${at} expected 3 Doors · 4 Displays · 1 Toy, found ${String(tally('door'))} · ${String(tally('display'))} · ${String(tally('toy'))}`,
     );
   }
@@ -5010,6 +5017,7 @@ async function checkDevices(page: Page, width: number, state: string): Promise<v
     const labels = [...document.querySelectorAll('[data-device-label]')].map((el) =>
       (el.textContent ?? '').trim(),
     );
+
     const button = document.querySelector('[data-sign-out-everywhere]');
     let ground = '';
     let node: Element | null = button;
@@ -5017,7 +5025,6 @@ async function checkDevices(page: Page, width: number, state: string): Promise<v
       const bg = getComputedStyle(node).backgroundColor;
       if (bg !== '' && !bg.includes('rgba(0, 0, 0, 0)')) {
         ground = bg;
-
         break;
       }
       node = node.parentElement;
@@ -5261,6 +5268,7 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
         `(computed ${seen.computedShapeRendering}). Anything but crispEdges antialiases a scaled ` +
         'rectangle into a grey seam.',
     );
+
   }
 
   if (seen.rendering !== 'pixelated') {
@@ -5268,7 +5276,6 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
       'character',
       `@${String(width)} ${state} sets image-rendering: ${seen.rendering} on the character.`,
     );
-
   }
 
   // Fully on screen, horizontally. A clipped character is the one thing this
@@ -5512,6 +5519,7 @@ const HYDRATION_REPORTER = `(() => {
    * MutationObserver catches the first node the parser appends, readystatechange
    * catches a document that was already complete, and the animation frame is the
    * backstop for a browser that fires neither in time.
+
    */
   let earliest = { bodyChildren: '', headChildren: '', atMs: -1 };
   // On \`document\`, not \`document.documentElement\` — this script runs before any
@@ -5519,7 +5527,6 @@ const HYDRATION_REPORTER = `(() => {
   // on null. \`document\` is always a Node and subtree covers everything under it.
   const watcher = new MutationObserver(() => { takeEarliest(); });
   const takeEarliest = () => {
-
     if (earliest.bodyChildren !== '') return;
     const { bodyChildren, headChildren } = census();
     if (bodyChildren === '') return;
@@ -5763,6 +5770,7 @@ async function run(): Promise<void> {
          * Everywhere, not only on `slice-*`. The Slice's paper is also rendered
          * on the review desk's "as it will print" preview, and that is a
          * different route with the same defect available to it.
+
          */
         await checkDeckWrap(page, width, state);
         if (state === 'keyboard-focus') await checkFocusVisible(page, width);
@@ -5770,7 +5778,6 @@ async function run(): Promise<void> {
         {
 
           /*
-
            * Overlap is only meaningful between targets that are reachable at
            * the same time. Every open panel sits above a scrim that makes the
            * room inert, so a panel's Close button "overlapping" a Door behind
@@ -6014,6 +6021,7 @@ try {
 } catch (error: unknown) {
   /*
    * A refusal is a message to a person, not a crash. Printing a stack above it
+
    * buries the one line that says what to do — and these two refusals exist
    * precisely because the previous failures were hard to read.
    */
@@ -6021,6 +6029,5 @@ try {
     console.error(`\nVisual QA refused to start.\n\n  ${error.message}\n`);
     process.exit(1);
   }
-
   throw error;
 }
