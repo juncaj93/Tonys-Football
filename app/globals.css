@@ -1056,6 +1056,10 @@ body[data-parlor-focus] .tony-line * {
 .room-shape:focus-visible {
   outline: 2px solid var(--color-amber-glow) !important;
   outline-offset: -2px;
+  /* `outline-none` is carried by the hit regions so it cannot leak a browser
+   * ring at rest. A hard inset rail is the durable focus cue when utility
+   * styles own the outline longhand. */
+  box-shadow: inset 0 0 0 3px var(--color-amber-glow) !important;
 }
 
 /* --- The box on the tray ------------------------------------------------- *
