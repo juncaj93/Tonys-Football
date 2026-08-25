@@ -307,12 +307,12 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
 
   return (
     <GameScreen balance={balance} practiceMode={practiceMode} message={message} onBack={() => setScene('room')} title="Tony’s Blackjack" subtitle="Pull up a chair. Tony deals.">
-      <div className="casino-blackjack-table pixel-edge relative mx-auto min-h-[410px] w-full max-w-[390px] overflow-hidden border-4 border-wood-dark p-3 pt-[142px] shadow-[5px_5px_0_var(--color-wood-dark)]">
+      <div className="casino-blackjack-table pixel-edge relative mx-auto min-h-[408px] w-full max-w-[390px] overflow-hidden border-4 border-wood-dark p-3 pt-[146px] shadow-[5px_5px_0_var(--color-wood-dark)]">
         <div aria-hidden="true" className="casino-blackjack-topline"><span>TONY’S TABLE</span><i /><span>BLACKJACK</span></div>
-        <div className="casino-game-dealer pointer-events-none absolute left-1/2 top-6 z-10 h-[112px] w-[88px] -translate-x-1/2" aria-hidden="true">
+        <div className="casino-game-dealer pointer-events-none absolute left-1/2 top-5 z-10 h-[128px] w-[104px] -translate-x-1/2" aria-hidden="true">
           <AssetView resolution={resolveAsset('character_tony_blackjack_room')} className="h-full w-full object-contain object-bottom" />
         </div>
-        <span aria-hidden="true" className="casino-dealer-plaque absolute top-[122px] left-1/2 z-10 -translate-x-1/2">DEALER TONY</span>
+        <span aria-hidden="true" className="casino-dealer-plaque absolute top-[132px] left-1/2 z-10 -translate-x-1/2">DEALER TONY</span>
         <div aria-hidden="true" className="casino-chip-rack absolute right-3 top-[70px] z-10"><i /><i /><i /><i /><i /></div>
         <div className="casino-table-card-zone relative z-20 px-2 pt-4">
           <CardRow roundId={blackjack?.id ?? 'new'} label="TONY" cards={blackjack?.dealer ?? []} value={blackjack?.dealerValue ?? null} dealing={tableDealing} dealBeat={dealBeat} hidden={blackjack?.dealerValue === null} />
@@ -375,14 +375,14 @@ function UndergroundRoom({ balance, practiceMode, onPracticeMode, onEnter }: { b
 
 function GameScreen({ balance, practiceMode, message, onBack, title, subtitle, children }: { balance: number | null; practiceMode: boolean; message: string; onBack: () => void; title: string; subtitle: string; children: ReactNode }) {
   return (
-    <section className="casino-game-room casino-scene-enter pixel-edge min-h-[569px] overflow-hidden border-2 border-wood-dark p-3 text-paper-mid" data-casino-floor="">
-      <div className="flex items-start justify-between gap-3">
-        <button type="button" onClick={onBack} className={`pixel-edge min-h-10 border-2 border-ink-900 bg-paper-mid px-2 ${TYPE.eyebrow} text-ink-900 active:translate-y-px`}>← ROOM</button>
-        <div className="min-w-0 text-right"><p className={TYPE.boardHero}>{title}</p><p className={`${TYPE.bodyCompact} text-paper-mid/85`}>{subtitle}</p></div>
+    <section className="casino-game-room casino-scene-enter pixel-edge min-h-[569px] overflow-hidden border-2 border-wood-dark p-2 text-paper-mid" data-casino-floor="">
+      <div className="casino-game-header flex items-center justify-between gap-2 border-2 border-ink-900 px-2 py-1">
+        <button type="button" onClick={onBack} aria-label="Leave the table" className={`pixel-edge grid h-9 w-10 place-items-center border-2 border-ink-900 bg-paper-mid ${TYPE.eyebrow} text-ink-900 active:translate-y-px`}>←</button>
+        <div className="min-w-0 text-right"><p className={TYPE.eyebrow}>{title}</p><p className={`${TYPE.metadata} text-paper-mid/85`}>{subtitle}</p></div>
       </div>
-      <p className={`mt-3 border-2 border-ink-900 bg-ink-900/90 px-3 py-2 ${TYPE.bodyCompact} text-paper-mid`} aria-live="polite">{message}</p>
-      <div className="mt-5">{children}</div>
-      <p className={`mt-5 text-center ${TYPE.eyebrow} text-paper-mid/80`}>{practiceMode ? 'PRACTICE TABLE · UNLIMITED TEST TOKENS · NOT SAVED' : balance === null ? 'TOKEN TAB CLOSED' : `${String(balance)} TOKENS ON HAND`}</p>
+      <p className={`casino-game-announcer mt-2 border-2 border-ink-900 px-3 py-1.5 ${TYPE.bodyCompact} text-paper-mid`} aria-live="polite">{message}</p>
+      <div className="mt-3">{children}</div>
+      <p className={`mt-3 text-center ${TYPE.metadata} text-paper-mid/80`}>{practiceMode ? 'PRACTICE TABLE · UNLIMITED TEST TOKENS · NOT SAVED' : balance === null ? 'TOKEN TAB CLOSED' : `${String(balance)} TOKENS ON HAND`}</p>
     </section>
   );
 }
@@ -430,7 +430,10 @@ function SlotGlyph({ symbol }: { symbol: SlotSymbol }) {
 function CardRow({ roundId, label, cards, value, dealing, dealBeat, hidden = false }: { roundId: string; label: string; cards: readonly string[]; value: number | null; dealing: boolean; dealBeat: number; hidden?: boolean }) {
   const requiredBeat = label === 'TONY' ? 1 : 2;
   const preview = dealing && dealBeat >= requiredBeat;
-  const visible = cards.length === 0 ? preview ? ['?', '?'] : [] : hidden ? [cards[0] ?? '?', '??'] : cards;
+  // An empty dealt state still looks like a felt table ready for a hand—not a
+  // blank dashboard.  Face-down cards are visual table dressing until the first
+  // deal; the server remains the only source of an actual hand.
+  const visible = cards.length === 0 ? preview ? ['?', '?'] : ['??', '??'] : hidden ? [cards[0] ?? '?', '??'] : cards;
   return <div><div className="flex min-h-16 items-center justify-between gap-2"><span className={`${TYPE.eyebrow} text-paper-mid`}>{label}{value === null ? '' : ` · ${String(value)}`}</span><div className="flex min-h-14 justify-end gap-1">{visible.map((card, index) => <PlayingCard key={cardKey(roundId, card, index)} rank={card} index={index} dealing={dealing} />)}</div></div></div>;
 }
 
