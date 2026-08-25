@@ -1,5 +1,3 @@
-import Link from 'next/link';
-
 import { CharacterView } from '@/components/character/character-view';
 import { Customiser, type OwnedItem } from '@/components/character/customiser';
 import { PanelHeading, PixelPanel, SignPlate } from '@/components/scene/panel';
@@ -90,8 +88,6 @@ export default async function CharacterPage({
                 ))}
               </ul>
             </PixelPanel>
-
-            <BackToProfile />
           </main>
         </Page>
       </>
@@ -132,28 +128,9 @@ export default async function CharacterPage({
               chosen={state.chosen}
             />
           </div>
-
-          <BackToProfile />
         </main>
       </Page>
     </>
   );
 }
 
-/**
- * The way back, named for where it goes.
- *
- * The ruling behind the wording is `ReturnPlate`'s: a back link must never name
- * the page you are already on. This one goes up a level rather than out to the
- * parlor, so it says so.
- */
-function BackToProfile() {
-  return (
-    <Link
-      href="/profile"
-      className={`pixel-edge mt-5 flex min-h-[52px] items-center justify-center border-2 border-ink-500 bg-paper-mid px-4 ${TYPE.action} text-ink-900 active:translate-y-px`}
-    >
-      Back to your keys
-    </Link>
-  );
-}
