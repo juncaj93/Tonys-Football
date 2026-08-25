@@ -2,7 +2,7 @@ import Link from 'next/link';
 
 import { resetPinAction } from '@/app/actions/auth';
 import { ReviewQueue } from '@/components/admin/review-queue';
-import { PanelHeading, PixelPanel, ReturnPlate, SignPlate } from '@/components/scene/panel';
+import { PanelHeading, PixelPanel, SignPlate } from '@/components/scene/panel';
 import { RoomBehind } from '@/components/scene/room-behind';
 import { Page, TAP_TARGET } from '@/components/shell';
 import { TYPE } from '@/lib/design/type';
@@ -36,10 +36,15 @@ import { commissionerQueue, countPending } from '@/lib/publication/queue';
  * The key board keeps its place below, because it is not a task either. It is a
  * power you reach for when somebody texts you.
  *
- * The reset clears the hash rather than setting a new one, so the commissioner
- * can never see or choose somebody's PIN. Every session for that manager is
- * revoked, and the action is written to `admin_audit_logs` in the same
- * transaction, so it cannot happen unrecorded.
+ * ## A mistaken name at launch
+ *
+ * "Release name" was technically capable of fixing the most likely launch mistake
+ * — somebody claims a league-mate's name on the door — but it described the
+ * database implementation instead of the commissioner decision. The real
+ * action is **Release name**: revoke the mistaken claimant's sessions and put
+ * that name back on the door for its actual manager. It never exposes or chooses
+ * a PIN, and the release is written to `admin_audit_logs` in the same
+ * transaction.
  *
  * `requireAdmin()` answers with `notFound()` rather than a 403: a player
  * probing this URL learns nothing about whether it exists.
@@ -169,9 +174,6 @@ export default async function AdminPage({
             </div>
           </PixelPanel>
 
-          <div className="mt-6">
-            <ReturnPlate />
-          </div>
         </main>
       </Page>
 
