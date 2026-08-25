@@ -16,8 +16,8 @@ import { ROOM, type RoomObjectSpec } from '@/lib/parlor/objects';
  * crude rectangles, under-detailed props, weak atmosphere."* There is now an
  * approved reference for what this space is: a real basement under an old pizza
  * place, block walls, exposed joists and pipes, a wooden staircase with light at
- * the top, one hanging enamel lamp, a framed board on the back wall, a pennant,
- * a shelf, a desk, a cork noticeboard, and a rug with room to stand on.
+ * the top, one hanging enamel lamp, a clean display wall on the back wall, a
+ * pennant, a shelf, a desk, and a rug with room to stand on.
  *
  * **Every rectangle below is measured off the delivered storeroom shell**
  * (`zone_room_shell_storeroom`, 2026-08-10), so a tap lands on the furniture a
@@ -98,7 +98,7 @@ export type Slot = (typeof SLOTS)[number];
 export const SLOT_NAMES: Readonly<Record<Slot, string>> = {
   shelf_left: 'the shelf, left',
   shelf_right: 'the shelf, right',
-  wall: 'the frame on the wall',
+  wall: 'the display wall',
   bench: 'the desk',
 };
 
@@ -111,7 +111,7 @@ export const SLOT_NAMES: Readonly<Record<Slot, string>> = {
 export const SLOT_EMPTY: Readonly<Record<Slot, string>> = {
   shelf_left: 'Nothing on this end of the shelf.',
   shelf_right: 'The other end of the shelf is bare.',
-  wall: 'An empty frame, waiting for something.',
+  wall: 'A clean wall, waiting for something worth hanging.',
   bench: 'The desk is clear.',
 };
 
@@ -168,25 +168,26 @@ export const ROOM_OBJECTS: readonly RoomObjectSpec[] = [
   /* --- The four slots ---------------------------------------------------- */
 
   /**
-   * The framed board on the back wall — the room's largest display surface.
+   * The display wall above the hearth — the room's largest display surface.
    *
-   * The reference centres a big empty frame on the back wall under the pennant,
-   * and an empty frame is the most guessable *"something goes here"* an object
-   * can be. It replaces the first version's **nail**, which was four units of
-   * grey and had to be given a drop shadow to be visible at all.
+   * This used to be a permanent empty picture frame. That made every wall item
+   * look like a small object floating inside somebody else's decor — the CRT
+   * television was the obvious failure. The rebuilt shell is intentionally
+   * blank, with discreet hooks: wall decor now owns the wall rather than being
+   * trapped inside a generic frame.
    *
-   * Its hit region is the whole frame; the collectible is drawn 46 × 46 in the
-   * middle of it (`SLOT_ART`), because a sprite stretched to fill a frame would
+   * Its hit region is the deliberate hanging area; the collectible is drawn 46
+   * × 46 at its centre (`SLOT_ART`), because a sprite stretched to fill a wall
    * be the fractional resample the pipeline exists to prevent.
    */
   {
     id: 'wall',
     kind: 'display',
-    label: 'The frame on the wall',
+    label: 'The display wall',
     rect: [150, 140, 100, 72],
   },
 
-  /** The left of the shelf under the frame. */
+/** The left of the shelf under the display wall. */
   {
     id: 'shelf_left',
     kind: 'display',
@@ -281,7 +282,7 @@ export function roomObject(id: string): RoomObjectSpec {
  * furniture around it is.
  *
  * The hit regions are a different question and are sized for a **thumb**: the
- * frame is 116 × 78 because that is the frame, and the desk is 60 × 60 because
+ * display wall is 116 × 78 because that is a reachable hanging area, and the desk is 60 × 60 because
  * that is the desktop. Collapsing the two would either shrink the targets to
  * sprite size or stretch every sprite to its furniture, and the second is the
  * fractional resample this whole pipeline exists to avoid.
@@ -293,7 +294,7 @@ export const SLOT_ART: Readonly<Record<Slot, RoomObjectSpec['rect']>> = {
   // Standing on the shelf, where the hit region already is.
   shelf_left: [140, 216, 46, 46],
   shelf_right: [196, 216, 46, 46],
-  // Centred in the frame's opening.
+  // Centred in the deliberate blank hanging area.
   wall: [177, 153, 46, 46],
   // Standing on the desktop, not floating in the middle of the desk.
   bench: [263, 292, 46, 46],
