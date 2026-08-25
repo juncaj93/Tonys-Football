@@ -320,7 +320,7 @@ export function roomObject(id: string): RoomObjectSpec {
 /**
  * The Tonight board's cream field, measured — `SHELL_AUDIT §4`.
  *
- * `118 × 88` at `(57, 83)`. This is the **art's** extent: where the cream stops
+ * `118 × 88` at `(64.333, 83)`. This is the **art's** extent: where the cream stops
  * and the painted frame begins. Text does not go here — `TONIGHT_FIELD` is inset
  * inside it. Recorded separately so the inset is visibly derived from a
  * measurement rather than guessed.
@@ -331,19 +331,20 @@ export function roomObject(id: string): RoomObjectSpec {
  * for that band gives the inner edges directly:
  *
  * ```
- * horizontal runs at y = 100,120,140,160 → x 57..174
+ * horizontal runs at y = 100,120,140,160 → x 64.333..182
  * vertical   runs at x =  80,120,160     → y 83..170
  * ```
  *
  * A later whole-scene audit caught a second measurement mistake: the previous
  * `[61, 83, 119, 88]` overlay followed a hand-read dark-frame run, not the
- * actual cream field. It displaced the paper four logical pixels right and made
- * the painted frame look off-centre. This is deliberately the raw cream run,
- * not the outer frame, so the overlay can never cover one side of the frame.
+ * actual cream field. It displaced the paper inside the painted frame. The
+ * later whole-scene repair re-centred the **baked board and rail** on the wall,
+ * so this field moved with it. This is deliberately the raw cream run, not the
+ * outer frame, so the overlay can never cover one side of the frame.
  *
  * Re-measure by scanning the art, never by looking at it.
  */
-export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [57, 83, 118, 88];
+export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [64.333, 83, 118, 88];
 
 /**
  * Where the board's words actually go — the cream field **inset by 6 units**.
@@ -362,7 +363,7 @@ export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [57, 83, 118, 88];
  * drawing and text must not crowd it.
  *
  * Six units on every side, so the text block is `106 × 76`, centred on the board's
- * true centre of **116**, and clears the painted frame on all four sides at every
+ * true centre of **123.333**, and clears the painted frame on all four sides at every
  * supported width. What sits inside it is a hero and at most one short fact
  * (`boardFace`), centred — not the two sentences at 8px and 9px that were there
  * before.
