@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition, type ReactNode } from 'react';
+import { useEffect, useState, useTransition, type CSSProperties, type ReactNode } from 'react';
 
 import { blackjackAction, dealBlackjackAction, spinSlotsAction } from '@/app/actions/underground';
 import { AssetView } from '@/lib/assets/placeholder';
@@ -29,6 +29,22 @@ const SLOT_MARK: Readonly<Record<SlotSymbol, { readonly tag: string; readonly to
 const SLOT_SETTLE_MS = 880;
 const DEAL_BEAT_MS = 180;
 
+/*
+ * The rehearsal cabinet is deliberately not a copy of server randomness.
+ *
+ * A visual/gameplay tester needs to see the loss, the returned-chip shape, and
+ * the actual jackpot within a few pulls. The old rehearsal code generated only
+ * three distinct symbols and paid zero forever, so it proved the most important
+ * feedback state did not exist. These rounds stay entirely in the browser:
+ * their apparent payout never touches a wallet, ledger, or live odds table.
+ */
+const PRACTICE_SLOT_ROUNDS: readonly Pick<Extract<CasinoView, { game: 'SLOTS' }>, 'reels' | 'payout'>[] = [
+  { reels: ['BAPPLE', 'PIZZA', 'FREDDY'], payout: 0 },
+  { reels: ['TONY', 'TONY', 'PIZZA'], payout: 0 },
+  { reels: ['SAUNA', 'FREDDY', 'TONY'], payout: 0 },
+  { reels: ['PIZZA', 'PIZZA', 'PIZZA'], payout: 40 },
+];
+
 function pause(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
@@ -45,8 +61,8 @@ function cardKey(roundId: string, card: string, index: number): string {
  * Nothing from this table reaches the ledger or the casino-round audit trail.
  */
 function practiceSlots(sequence: number): Extract<CasinoView, { game: 'SLOTS' }> {
-  const reels = [0, 1, 2].map((index) => SPIN_SYMBOLS[(sequence * 2 + index) % SPIN_SYMBOLS.length]!) as [SlotSymbol, SlotSymbol, SlotSymbol];
-  return { id: crypto.randomUUID(), game: 'SLOTS', wager: 0, settled: true, payout: 0, reels };
+  const round = PRACTICE_SLOT_ROUNDS[sequence % PRACTICE_SLOT_ROUNDS.length]!;
+  return { id: crypto.randomUUID(), game: 'SLOTS', wager: 0, settled: true, payout: round.payout, reels: round.reels };
 }
 
 function practiceHand(): Extract<CasinoView, { game: 'BLACKJACK' }> {
@@ -99,9 +115,14 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
       try {
         if (practiceMode) {
           await pause(SLOT_SETTLE_MS);
-          setSlots(practiceSlots(practiceRound));
+          const round = practiceSlots(practiceRound);
+          setSlots(round);
           setPracticeRound((round) => round + 1);
-          setMessage('Practice spin complete. No tokens were used.');
+          setMessage(
+            round.payout > 0
+              ? `JACKPOT! The machine spits out ${String(round.payout)} test tokens.`
+              : 'Practice spin complete. No tokens were used.',
+          );
         } else {
           const [result] = await Promise.all([spinSlotsAction(wager, crypto.randomUUID()), pause(SLOT_SETTLE_MS)]);
           resolve(result);
@@ -173,6 +194,7 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
   const reelSymbols = slotSpinning
     ? ([0, 1, 2].map((offset) => SPIN_SYMBOLS[(reelTick * 2 + offset * 3) % SPIN_SYMBOLS.length]!) as readonly SlotSymbol[])
     : (slots?.reels ?? ['TONY', 'TONY', 'TONY']);
+  const slotWin = !slotSpinning && (slots?.payout ?? 0) > 0;
 
   if (scene === 'room') {
     return <UndergroundRoom balance={balance} practiceMode={practiceMode} onPracticeMode={setPracticeMode} onEnter={setScene} />;
@@ -181,7 +203,7 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
   if (scene === 'slots') {
     return (
       <GameScreen balance={balance} practiceMode={practiceMode} message={message} onBack={() => setScene('room')} title="Bapple Slots" subtitle="Three reels. Fictional tokens only.">
-        <div className="casino-slot-machine pixel-edge relative mx-auto w-full max-w-[360px] border-4 border-ink-900 p-3 shadow-[5px_5px_0_var(--color-wood-dark)]">
+        <div className={`casino-slot-machine ${slotWin ? 'casino-slot-machine--win' : ''} pixel-edge relative mx-auto w-full max-w-[360px] border-4 border-ink-900 p-3 shadow-[5px_5px_0_var(--color-wood-dark)]`}>
           <div className="casino-slot-marquee pixel-edge relative mx-3 border-2 border-ink-900 px-3 py-2 text-center text-paper-white">
             <span className={TYPE.eyebrow}>BAPPLE SLOTS</span>
             <span aria-hidden="true" className="casino-slot-marquee-slice casino-slot-marquee-slice--left">▲</span>
@@ -199,9 +221,20 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
             </div>
           </div>
           <div className="casino-slot-payline mt-3 flex items-center justify-between border-2 border-ink-900 px-3 py-2 text-ink-900">
-            <span className={TYPE.eyebrow}>3 MATCH · JACKPOT</span><span aria-hidden="true" className="casino-slot-coin">●</span>
+            <span className={TYPE.eyebrow}>{slotWin ? 'JACKPOT · PAID!' : '3 MATCH · JACKPOT'}</span><span aria-hidden="true" className="casino-slot-coin">●</span>
           </div>
           <span aria-hidden="true" className="casino-slot-lever"><i /></span>
+          {slotWin && (
+            <>
+              <div aria-live="polite" className={`casino-slot-win pixel-edge absolute left-1/2 top-[45%] z-20 -translate-x-1/2 border-2 border-ink-900 bg-amber-mid px-3 py-1 text-center text-ink-900`}>
+                <span className={TYPE.eyebrow}>JACKPOT!</span>
+                <span className={`${TYPE.metadata} ml-2`}>{String(slots?.payout ?? 0)} TEST TOKENS</span>
+              </div>
+              <div aria-hidden="true" className="casino-slot-token-spray">
+                {Array.from({ length: 9 }, (_, index) => <i key={index} style={{ '--token-index': index } as CSSProperties} />)}
+              </div>
+            </>
+          )}
         </div>
         <WagerTray wager={wager} pending={pending} onWager={setWager} />
         <button type="button" disabled={!canPlay} onClick={spin} className={`pixel-edge mx-auto mt-3 flex min-h-14 w-full max-w-[360px] items-center justify-center border-4 border-ink-900 bg-red-mid px-4 ${TYPE.action} text-paper-mid shadow-[4px_4px_0_var(--color-wood-dark)] disabled:opacity-50`}>
@@ -254,8 +287,14 @@ function UndergroundRoom({ balance, practiceMode, onPracticeMode, onEnter }: { b
       {/* The room shell supplies Tony's far rail. This companion sprite is
           intentionally waist-up, so the whole apron/card silhouette can sit
           behind that rail. Do not crop it: that was the "peeking" defect. */}
-      <div className="casino-room-tony pointer-events-none absolute left-[36%] top-[40%] aspect-[88/112] w-[28%]" aria-hidden="true">
-        <AssetView resolution={resolveAsset('character_tony_blackjack_room')} className="h-full w-full object-contain object-bottom" />
+      {/*
+       * Tony occupies the dealer's bay, not the felt. The shell owns the table
+       * edge, so this wrapper masks only the lower half of the existing
+       * canonical dealer sprite behind that edge. His head, shoulders, vest and
+       * dealing arm remain visible without laying his body across the cards.
+       */}
+      <div className="casino-room-tony pointer-events-none absolute left-[36%] top-[39%] h-[18%] w-[28%] overflow-hidden" aria-hidden="true">
+        <AssetView resolution={resolveAsset('character_tony_blackjack_room')} className="h-auto w-full object-contain object-top" />
       </div>
       <button type="button" onClick={() => onEnter('slots')} className="casino-room-hotspot absolute left-[1%] top-[29%] h-[31%] w-[29%]" aria-label="Play Bapple Slots">
         <span className={`casino-room-label ${TYPE.eyebrow}`}>BAPPLE SLOTS</span>

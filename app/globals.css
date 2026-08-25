@@ -1741,6 +1741,46 @@ body[data-parlor-focus] .tony-line * {
   box-shadow: inset 0 0 0 3px var(--color-red-deep), inset 0 0 0 6px var(--color-amber-deep);
 }
 
+/*
+ * A paid slot round is a moment, not a sentence under a red rectangle. The
+ * cabinet takes two whole-pixel light frames and throws nine hard token dots
+ * from its tray. `steps(1)` keeps each pose in the same DS-style grid as the
+ * reels; there is no blur, scale tween, or confetti-library motion here.
+ */
+@keyframes casino-jackpot-lights {
+  0%, 45%, 100% { box-shadow: inset 0 0 0 3px var(--color-red-deep), inset 0 0 0 6px var(--color-amber-deep), 0 0 0 transparent; }
+  46%, 88% { box-shadow: inset 0 0 0 3px var(--color-paper-white), inset 0 0 0 6px var(--color-amber-glow), 0 0 0 4px var(--color-red-mid); }
+}
+
+.casino-slot-machine--win {
+  animation: casino-jackpot-lights 420ms steps(1, end) 4;
+}
+
+@keyframes casino-token-spray {
+  0% { opacity: 0; transform: translate(0, 0); }
+  1%, 68% { opacity: 1; transform: translate(calc((var(--token-index) - 4) * 9px), calc(-22px - (var(--token-index) % 3) * 14px)); }
+  69%, 100% { opacity: 0; transform: translate(calc((var(--token-index) - 4) * 12px), 3px); }
+}
+
+.casino-slot-token-spray i {
+  position: absolute;
+  left: 50%;
+  top: 66%;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--color-ink-900);
+  border-radius: 50%;
+  background: var(--color-amber-glow);
+  box-shadow: inset 2px 0 0 var(--color-amber-deep);
+  animation: casino-token-spray 900ms steps(1, end) both;
+  animation-delay: calc(var(--token-index) * 42ms);
+}
+
+.casino-slot-win {
+  animation: casino-jackpot-lights 420ms steps(1, end) 4;
+  white-space: nowrap;
+}
+
 .casino-slot-marquee {
   background: linear-gradient(180deg, var(--color-amber-glow), var(--color-red-mid));
   box-shadow: inset 0 0 0 2px var(--color-paper-mid), 0 3px 0 var(--color-wood-dark);
