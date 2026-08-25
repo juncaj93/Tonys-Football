@@ -1420,8 +1420,10 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'keyboard-focus':
       await home(page);
       await dismissTony(page);
-      // Four tabs lands inside the room rather than on the utility bar.
-      for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
+      // The persistent pocket rail comes before the room in tab order. Focus a
+      // room affordance directly so this state checks the room focus ring, not
+      // an accidental count of page-chrome tabs.
+      await page.locator('.room-shape').first().focus();
       await page.waitForTimeout(250);
       return;
 
@@ -2364,7 +2366,8 @@ const ALL_STATES: readonly StateName[] = [
  */
 async function checkTargets(page: Page, width: number): Promise<void> {
   const boxes = await page.evaluate(() =>
-    [...document.querySelectorAll('a,button,[role="button"]')]
+    /* This gate measures room affordances, not persistent page chrome. */
+    [...document.querySelectorAll('.room-shape')]
       .map((el) => {
         const r = el.getBoundingClientRect();
         return {
