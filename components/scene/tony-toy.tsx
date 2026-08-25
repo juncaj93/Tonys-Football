@@ -160,8 +160,9 @@ export function TonyToy({
         *
         * `inset-x-3` made it span the screen. It is now `max-w-[17.5rem]` in a
         * left-aligned lane under Tony, so at 360 it covers a little over three
-        * quarters of the width and at 390 rather less — and it sits above the
-        * home-indicator gutter rather than in it.
+        * quarters of the width and at 390 rather less — and it sits in the
+        * shared safe lane above the pocket menu, rather than in the
+        * home-indicator gutter or underneath a control.
         *
         * ## Still `fixed`
         *
@@ -173,7 +174,11 @@ export function TonyToy({
       {!dismissed && (
         <div
           className="tony-line pointer-events-none fixed inset-x-3 z-40 flex justify-start"
-          style={{ bottom: 'calc(env(safe-area-inset-bottom) + 1rem)' }}
+          // The menu stays available while Tony talks, so a speaking surface
+          // must reserve its own physical lane above it. This is deliberately
+          // a shared CSS measurement: later fixed room panels can use the same
+          // lane instead of guessing where Safari's bottom chrome is.
+          style={{ bottom: 'var(--pocket-nav-panel-lane)' }}
         >
           <div className="pointer-events-auto relative max-w-[17.5rem]">
             {/*

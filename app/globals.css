@@ -555,6 +555,17 @@ button {
  * cinematic rooms retain their full-bleed art and their in-world doors, while
  * the rail prevents a player ever being stranded in browser chrome.
  * -------------------------------------------------------------------------- */
+:root {
+  /*
+   * A panel cannot simply live above `safe-area-inset-bottom`: the fixed rail
+   * occupies that exact visual territory. This lane clears the 52px rail, its
+   * pixel border, and a readable breath of paper between two interactive
+   * surfaces. Keeping it shared prevents future room dialogue, notices, and
+   * game sheets from rediscovering this overlap independently.
+   */
+  --pocket-nav-panel-lane: calc(env(safe-area-inset-bottom) + 4.75rem);
+}
+
 .pocket-nav {
   position: fixed;
   z-index: 70;
