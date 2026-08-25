@@ -3325,6 +3325,40 @@ async function checkOneTransient(page: Page, width: number, state: string): Prom
 }
 
 /**
+ * A persistent pocket menu must never obscure an in-world speaking surface.
+ *
+ * This is geometry rather than a screenshot heuristic: the failure is a
+ * physical collision between two fixed layers on a phone, so the order pad's
+ * bottom edge must finish before the rail begins. When either surface is
+ * intentionally absent there is nothing to police.
+ */
+async function checkPocketNavClearance(page: Page, width: number, state: string): Promise<void> {
+  const collision = await page.evaluate(() => {
+    const pad = document.querySelector<HTMLElement>('.tony-line');
+    const rail = document.querySelector<HTMLElement>('.pocket-nav');
+    if (pad === null || rail === null) return null;
+
+    const padStyle = getComputedStyle(pad);
+    const railStyle = getComputedStyle(rail);
+    if (padStyle.display === 'none' || railStyle.display === 'none' || Number(padStyle.opacity) < 0.05) return null;
+
+    const padBox = pad.getBoundingClientRect();
+    const railBox = rail.getBoundingClientRect();
+    if (padBox.height < 4 || railBox.height < 4) return null;
+
+    return { padBottom: padBox.bottom, railTop: railBox.top };
+  });
+
+  if (collision !== null && collision.padBottom > collision.railTop) {
+    fail(
+      'pocket-nav-clearance',
+      `@${String(width)} ${state} lets Tony's dialogue overlap the pocket menu ` +
+        `(${collision.padBottom.toFixed(1)} > ${collision.railTop.toFixed(1)}).`,
+    );
+  }
+}
+
+/**
  * A focused room object is visible — WCAG 2.4.7, and `MANDATE §6`.
  *
  * ## Why this gate did not exist and needed to
@@ -5766,6 +5800,9 @@ async function run(): Promise<void> {
          * precisely because only the state designed around it was ever checked.
          */
         await checkOneTransient(page, width, state);
+        // Persistent controls have a lane; speech never shares it. This is a
+        // phone-specific geometry gate, not a judgement left to a screenshot.
+        await checkPocketNavClearance(page, width, state);
         /*
          * Everywhere, not only on `slice-*`. The Slice's paper is also rendered
          * on the review desk's "as it will print" preview, and that is a
