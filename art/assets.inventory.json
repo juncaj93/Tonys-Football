@@ -403,7 +403,7 @@
         "role": "scenery",
         "alt": "A manager's basement, fitted out as a rec room",
         "path": "/assets/zone/zone_room_shell_rec_room.png",
-        "source": "OpenAI image generation, integrated rec-room hearth rebuild 2026-08-24",
+        "source": "OpenAI image generation, rec-room display-wall and integrated-hearth rebuild 2026-08-25",
         "rights_status": "original"
       },
       "object_rec_room_hearth": {
@@ -415,6 +415,17 @@
         "alt": "A warm brick-and-wood fireplace with a small fire",
         "path": "/assets/zone/object_rec_room_hearth.png",
         "source": "OpenAI image generation, rec-room hearth rebuild 2026-08-24",
+        "rights_status": "original"
+      },
+      "object_rec_room_fire_frames": {
+        "family": "zone",
+        "canvas": "288x96",
+        "batch": "B1",
+        "art_status": "generated",
+        "role": "scenery",
+        "alt": "Three small pixel-art fireplace flame frames",
+        "path": "/assets/zone/object_rec_room_fire_frames.png",
+        "source": "OpenAI image generation, rec-room hearth animation frames 2026-08-25",
         "rights_status": "original"
       },
       "zone_room_shell_cold_store": {

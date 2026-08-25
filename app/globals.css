@@ -2151,51 +2151,32 @@ body[data-parlor-focus] .tony-line * {
 }
 
 /*
- * The rec room's hearth flickers in a two-frame rhythm. The movement is an
- * integer pixel nudge expressed in percentages of its tiny room-unit sprite;
- * paired with `steps(1)` it stays crisp at every phone scale instead of turning
- * into a soft CSS flame. It is intentionally local to the rec room — daylight
- * and the parlor's warm ceiling lamps are already cozy without extra motion.
+ * The rec room's fire is three actual painted flame frames, not a CSS rectangle
+ * that hops over a fireplace. The stone, mantle, logs and room lighting remain
+ * in the shell; this tiny sprite strip only changes the flame inside the same
+ * firebox. `steps(1)` makes that read like a game animation rather than a soft
+ * fade, and the background positions are the three equal cells in the strip.
  */
-@keyframes hearth-flickers {
+@keyframes room-fire-frames {
   0%,
-  46% {
-    transform: translate(0, 0);
+  32% {
+    background-position: 0% 0%;
   }
-  47%,
-  91% {
-    transform: translate(-8%, -8%);
+  33%,
+  65% {
+    background-position: 50% 0%;
   }
-  92%,
+  66%,
   100% {
-    transform: translate(0, 0);
+    background-position: 100% 0%;
   }
 }
 
-@keyframes hearth-spark {
-  0%,
-  58% {
-    opacity: 0;
-    transform: translateY(0);
-  }
-  59%,
-  80% {
-    opacity: 1;
-    transform: translateY(-120%);
-  }
-  81%,
-  100% {
-    opacity: 0;
-    transform: translateY(-120%);
-  }
-}
-
-.hearth-ember {
-  animation: hearth-flickers 1.35s steps(1, end) infinite;
-}
-
-.hearth-spark {
-  animation: hearth-spark 2.7s steps(1, end) infinite;
+.room-fire-frames {
+  background-repeat: no-repeat;
+  background-size: 300% 100%;
+  image-rendering: pixelated;
+  animation: room-fire-frames 1.2s steps(1, end) infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -2209,8 +2190,7 @@ body[data-parlor-focus] .tony-line * {
     transform: none;
   }
 
-  .hearth-ember,
-  .hearth-spark,
+  .room-fire-frames,
   .ambient-tick,
   .slot-reel-spinning,
   .casino-dealer img,

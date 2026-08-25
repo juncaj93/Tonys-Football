@@ -41,6 +41,7 @@ import { exteriorLight } from '@/lib/world/light';
  */
 export function ManagerRoomScene({ theme }: { theme: Theme }) {
   const shell = resolveAsset(themeSpec(theme).shell);
+  const fireFrames = resolveAsset('object_rec_room_fire_frames');
   const light = exteriorLight();
 
   if (shell.kind === 'art') {
@@ -53,7 +54,7 @@ export function ManagerRoomScene({ theme }: { theme: Theme }) {
       >
         <AssetView resolution={shell} />
         <RoomWindow />
-        {theme === 'rec_room' && <RecRoomFirelight />}
+        {theme === 'rec_room' && fireFrames.kind === 'art' && <RecRoomFirelight frames={fireFrames.path} />}
       </div>
     );
   }
@@ -80,24 +81,25 @@ function RoomWindow() {
  *
  * The fireplace is painted into the rebuilt room shell; it belongs to the wall,
  * tile, rug and mantle rather than floating above them as a second illustration.
- * These two tiny cells merely animate its already-painted fire. It remains
- * scenery, not a room object: no panel, prize, score or affordance.
- *
- * The cells sit within the baked firebox, not the empty frame, shelf, desk or
- * rug where collectible layers live. A two-frame rhythm adds life without
- * making the architecture wobble.
+ * Three dedicated flame cells are swapped over the baked logs. It remains
+ * scenery, not a room object: no panel, prize, score or affordance. Keeping
+ * the stone surround in the shell avoids the old failure where a second,
+ * floating fireplace was pasted into an otherwise coherent room.
  */
-function RecRoomFirelight() {
+function RecRoomFirelight({ frames }: { frames: string }) {
   return (
-    <div
+    <span
       aria-hidden="true"
       data-room-firelight="rec-room"
-      className="pointer-events-none absolute z-10"
-      style={{ left: '46.9%', top: '48.4%', width: '10.6%', height: '8.2%' }}
-    >
-      <span className="hearth-ember absolute left-[37%] top-[38%] h-[32%] w-[25%] bg-amber-glow" />
-      <span className="hearth-spark absolute left-[58%] top-[16%] h-[15%] w-[13%] bg-amber-mid" />
-    </div>
+      className="room-fire-frames pointer-events-none absolute z-10"
+      style={{
+        left: '45.1%',
+        top: '47.7%',
+        width: '14.5%',
+        height: '11.5%',
+        backgroundImage: `url(${frames})`,
+      }}
+    />
   );
 }
 
