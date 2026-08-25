@@ -1516,7 +1516,8 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await home(page);
       // The pad stays up here too: this is the *real* path, so it is the
       // strongest place to prove the room yields when the box opens.
-      await page.getByRole('button', { name: /Open your pizza box/i }).click({ force: true });
+      await page.getByRole('link', { name: /Open your pizza box/i }).click({ force: true });
+      await page.waitForURL(/\/counter\/open\//, { timeout: 15_000 });
 
       /*
        * **Nothing is said while the box is opening.**
@@ -1967,7 +1968,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'reveal-epic':
     case 'reveal-legendary': {
       const rarity = state.slice('reveal-'.length);
-      await page.goto(`${BASE}/?preview_reveal=${rarity}`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/counter/open/preview?preview_reveal=${rarity}`, { waitUntil: 'networkidle' });
       /*
        * Tony's pad is **not** dismissed here, and that is the point.
        *
@@ -2007,7 +2008,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
               ? 'spare'
 
               : 'broke';
-      await page.goto(`${BASE}/?preview_reveal=rare&preview_stage=${stage}`, {
+      await page.goto(`${BASE}/counter/open/preview?preview_reveal=rare&preview_stage=${stage}`, {
         waitUntil: 'networkidle',
       });
       // Pad left up on purpose — see the note on the four rarity states above.
@@ -4943,7 +4944,7 @@ async function checkRevealPresent(page: Page, width: number, state: string): Pro
       'if (plate === null) return { plate: false, item: false, text: "", padOpacity: padOpacity };' +
       'return {' +
       '  plate: true,' +
-      '  item: document.querySelector(".reveal-rise") !== null,' +
+      '  item: document.querySelector(".loot-reveal__prize") !== null,' +
       '  text: (plate.textContent || "").trim(),' +
       '  padOpacity: padOpacity,' +
       '};' +

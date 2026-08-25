@@ -2277,3 +2277,203 @@ body[data-parlor-focus] .tony-line * {
   background: repeating-linear-gradient(90deg, var(--color-amber-glow) 0 8px, var(--color-amber-deep) 8px 12px);
   border-top: 2px solid var(--color-amber-deep);
 }
+
+/* --- Pizza-box reveal room --------------------------------------------- */
+
+.loot-reveal {
+  position: relative;
+  isolation: isolate;
+  min-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 10rem);
+  overflow: hidden;
+  padding: 1rem 1rem 2rem;
+  background:
+    linear-gradient(90deg, rgba(74, 46, 28, 0.14) 0 3px, transparent 3px calc(100% - 3px), rgba(74, 46, 28, 0.14) calc(100% - 3px)),
+    var(--color-paper-dark);
+}
+
+.loot-reveal__sign {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  max-width: 430px;
+  margin: 0 auto 0.75rem;
+  padding: 0.6rem 0.75rem 0.5rem;
+  color: var(--color-paper-white);
+  border: 2px solid var(--color-wood-dark);
+  background: var(--color-red-dark);
+  box-shadow: 3px 3px 0 var(--color-wood-dark);
+}
+
+.loot-reveal__sign span:last-child { color: var(--color-amber-glow); }
+
+.loot-reveal__stage {
+  position: relative;
+  display: grid;
+  min-height: min(58dvh, 480px);
+  max-width: 430px;
+  margin: 0 auto;
+  overflow: hidden;
+  place-items: center;
+  border: 3px solid var(--color-wood-dark);
+  background:
+    repeating-linear-gradient(90deg, rgba(255, 217, 138, 0.07) 0 2px, transparent 2px 23px),
+    linear-gradient(180deg, #b96c2b 0%, #d9913c 36%, #a65b27 36%, #79441f 100%);
+  box-shadow: inset 0 0 0 4px var(--color-wood-mid), 4px 5px 0 var(--color-wood-dark);
+}
+
+.loot-reveal__stage::before {
+  position: absolute;
+  inset: 18% 14% 20%;
+  content: '';
+  border: 4px solid var(--color-wood-dark);
+  border-bottom-width: 10px;
+  background: #f2a94b;
+  box-shadow: inset 0 0 0 5px #ffd98a, 0 5px 0 rgba(74, 46, 28, 0.35);
+}
+
+.loot-reveal__lamp {
+  position: absolute;
+  z-index: 1;
+  top: 8%;
+  left: calc(50% - 18px);
+  width: 36px;
+  height: 25px;
+  border: 3px solid var(--color-wood-dark);
+  border-radius: 0 0 18px 18px;
+  background: var(--color-amber-glow);
+  box-shadow: 0 0 0 3px var(--color-red-dark), 0 0 24px rgba(255, 217, 138, 0.8);
+}
+
+.loot-reveal__lamp::before {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  width: 3px;
+  height: 30px;
+  content: '';
+  background: var(--color-wood-dark);
+  transform: translateX(-50%);
+}
+
+.loot-reveal__shelf {
+  position: absolute;
+  z-index: 1;
+  bottom: 15%;
+  width: 18%;
+  height: 37%;
+  border: 3px solid var(--color-wood-dark);
+  background: repeating-linear-gradient(180deg, transparent 0 25%, var(--color-wood-dark) 25% 30%);
+}
+.loot-reveal__shelf--left { left: 5%; }
+.loot-reveal__shelf--right { right: 5%; }
+.loot-reveal__counter {
+  position: absolute;
+  z-index: 2;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 16%;
+  border-top: 6px solid var(--color-wood-dark);
+  background: repeating-linear-gradient(90deg, var(--color-wood-mid) 0 20px, #8a5129 20px 24px);
+}
+
+.loot-reveal__plinth {
+  position: relative;
+  z-index: 3;
+  display: grid;
+  width: min(74vw, 300px);
+  height: min(54vw, 215px);
+  margin-top: 2.5rem;
+  place-items: center;
+}
+
+.loot-reveal__box {
+  position: relative;
+  width: min(64vw, 250px);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  filter: drop-shadow(0 7px 0 rgba(74, 46, 28, 0.45)) drop-shadow(0 0 12px rgba(255, 217, 138, 0.25));
+  transition: filter 120ms steps(2, end), transform 120ms steps(2, end);
+}
+.loot-reveal__box:active:not(:disabled) { transform: translateY(2px); }
+.loot-reveal__box:focus-visible { outline: 3px solid var(--color-paper-white); outline-offset: 6px; }
+.loot-reveal__box--opening { animation: loot-box-opens 920ms steps(3, end) both; }
+.loot-reveal__prompt {
+  position: absolute;
+  right: 50%;
+  bottom: -1.65rem;
+  padding: 0.35rem 0.55rem;
+  color: var(--color-paper-white);
+  border: 2px solid var(--color-wood-dark);
+  background: var(--color-red-dark);
+  box-shadow: 2px 2px 0 var(--color-wood-dark);
+  transform: translateX(50%);
+  white-space: nowrap;
+}
+
+.loot-reveal__glow,
+.loot-reveal__burst {
+  position: absolute;
+  width: 76%;
+  aspect-ratio: 1;
+  border: 7px solid var(--color-amber-glow);
+  background: repeating-conic-gradient(from 0deg, rgba(255, 217, 138, 0.7) 0 8deg, transparent 8deg 18deg);
+  opacity: 0.8;
+  animation: loot-burst 620ms steps(3, end) both;
+}
+.loot-reveal__burst.rarity-legendary { border-color: var(--color-amber-glow); }
+.loot-reveal__burst.rarity-epic { border-color: var(--color-violet-mid); }
+.loot-reveal__burst.rarity-rare { border-color: var(--color-blue-mid); }
+.loot-reveal__burst.rarity-common { border-color: var(--color-paper-white); }
+
+.loot-reveal__prize {
+  position: relative;
+  z-index: 2;
+  width: 46px;
+  height: 46px;
+  filter: drop-shadow(0 5px 0 rgba(74, 46, 28, 0.4));
+  animation: loot-prize-arrives 380ms steps(3, end) both;
+}
+.loot-reveal__pixels { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.loot-reveal__pixels i { position: absolute; width: 6px; height: 6px; background: var(--color-amber-glow); animation: loot-pixel-pop 480ms steps(3, end) both; }
+.loot-reveal__pixels i:nth-child(1) { left: 13%; top: 26%; }
+.loot-reveal__pixels i:nth-child(2) { left: 22%; top: 68%; animation-delay: 60ms; }
+.loot-reveal__pixels i:nth-child(3) { left: 38%; top: 14%; animation-delay: 20ms; }
+.loot-reveal__pixels i:nth-child(4) { left: 54%; top: 77%; animation-delay: 80ms; }
+.loot-reveal__pixels i:nth-child(5) { right: 19%; top: 21%; animation-delay: 40ms; }
+.loot-reveal__pixels i:nth-child(6) { right: 12%; top: 55%; animation-delay: 10ms; }
+.loot-reveal__pixels i:nth-child(7) { right: 32%; bottom: 9%; animation-delay: 90ms; }
+.loot-reveal__pixels i:nth-child(8) { left: 8%; top: 48%; animation-delay: 50ms; }
+.loot-reveal__pixels i:nth-child(9) { right: 8%; top: 38%; animation-delay: 75ms; }
+.loot-reveal__pixels i:nth-child(10) { left: 66%; top: 9%; animation-delay: 25ms; }
+
+.loot-reveal__receipt {
+  position: relative;
+  z-index: 4;
+  max-width: 380px;
+  margin: 1rem auto 0;
+  padding: 1rem;
+  color: var(--color-ink-900);
+  border: 3px solid var(--color-wood-dark);
+  background: var(--color-paper-mid);
+  box-shadow: 4px 4px 0 var(--color-wood-dark);
+  animation: loot-receipt-arrives 260ms steps(2, end) both;
+}
+.loot-reveal__receipt--legendary { box-shadow: 4px 4px 0 var(--color-wood-dark), 0 0 0 3px var(--color-amber-glow); }
+.loot-reveal__receipt--epic { box-shadow: 4px 4px 0 var(--color-wood-dark), 0 0 0 3px var(--color-violet-mid); }
+.loot-reveal__action { display: inline-flex; min-height: 44px; align-items: center; padding: 0.45rem 0.7rem; color: var(--color-paper-white); border: 2px solid var(--color-wood-dark); background: var(--color-red-dark); box-shadow: 2px 2px 0 var(--color-wood-dark); }
+.loot-reveal__action--quiet { color: var(--color-ink-900); background: var(--color-paper-dark); }
+
+@keyframes loot-box-opens { 0%, 24% { transform: translateX(0); } 25% { transform: translateX(-4px) rotate(-1deg); } 50% { transform: translateX(4px) rotate(1deg) scale(1.03); } 76% { transform: translateY(-5px) scale(1.07); opacity: 1; } 100% { transform: translateY(-12px) scale(1.1); opacity: 0; } }
+@keyframes loot-burst { from { transform: scale(0.25) rotate(0deg); opacity: 0; } to { transform: scale(1) rotate(24deg); opacity: 0.9; } }
+@keyframes loot-prize-arrives { from { transform: translateY(26px) scale(0.35); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+@keyframes loot-pixel-pop { from { transform: translate(0, 0) scale(0.5); opacity: 0; } 35% { opacity: 1; } to { transform: translateY(-16px) scale(1); opacity: 0; } }
+@keyframes loot-receipt-arrives { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .loot-reveal__box--opening, .loot-reveal__glow, .loot-reveal__burst, .loot-reveal__prize, .loot-reveal__pixels i, .loot-reveal__receipt { animation: none; }
+}
