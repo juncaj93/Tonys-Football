@@ -1,6 +1,3 @@
-Warning: truncated output (original token count: 63352)
-Total output lines: 5997
-
 /**
  * Visual QA — the gate that green CI is not.
  *
@@ -2884,7 +2881,306 @@ async function checkStillUnderReducedMotion(page: Page, width: number): Promise<
     fail(
       'reduced-motion',
       `@${String(width)} the control failed: with motion allowed the homepage is running ` +
-        'no animations at all, …3352 tokens truncated…t new Promise((resolve) => setTimeout(resolve, BUNDLE_DELAY_MS));
+        'no animations at all, so the reduced-motion assertion below would pass for the ' +
+        'wrong reason. The room is meant to breathe — two haze drifts and the sign sway.',
+    );
+  }
+
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  const reduced = await running();
+  if (reduced.count > 0) {
+    fail(
+      'reduced-motion',
+      `@${String(width)} ${String(reduced.count)} animation(s) still running under ` +
+        `prefers-reduced-motion: ${reduced.names}. A manager who asked for less motion is ` +
+        'getting it anyway. CSS cannot suppress an animation started from JavaScript, so ' +
+        'check for element.animate() before reaching for a stylesheet fix.',
+    );
+  }
+
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+}
+
+async function checkTonySteady(page: Page, width: number): Promise<void> {
+  /*
+   * The arrival timeline, from `arrival.tsx`. Duplicated deliberately: a gate
+   * that imports the constants it is checking cannot notice them changing, and
+   * these numbers are the schedule this whole gate exists to sample across. If
+   * they move, this fails and says so, which is the point.
+   *
+   * They are **durations**, not page times. `arrival.tsx` starts its timers from
+   * a `useEffect`, so every one of them is measured from hydration — which is
+   * why `REVEAL_AT` is only ever a fallback here and the windows below are
+   * anchored to the frame the reveal was first seen lit in.
+   */
+  const REVEAL_AT = 1600;
+  const REVEAL_FOR = 3300;
+  const RAMP = 260;
+
+  const firstVisit = async (): Promise<void> => {
+    await page.evaluate(FORGET_ARRIVAL);
+    await page.goto(BASE, { waitUntil: 'networkidle' });
+  };
+
+  const sample = async (ms: number): Promise<TonyFrame[]> => {
+    const frames = (await page.evaluate(tonySampler(ms))) as TonyFrame[] | null | undefined;
+    if (frames === null || frames === undefined) {
+      throw new Error(
+        `@${String(width)} the sampler returned nothing — either .tony-mark or ` +
+          `[data-room-layer="counter-front"] is missing from the homepage`,
+      );
+    }
+    return frames;
+  };
+
+  /**
+   * Sample from now until `page time` reaches `until`.
+   *
+   * The windows this gate needs are fixed points on the *arrival's* clock —
+   * 1600ms, 4900ms — so the sample has to end at a page time rather than run
+   * for a duration measured from whenever the harness happened to get here. A
+   * fixed duration on a loaded machine ends early and the coverage assertions
+   * below start failing for a reason that has nothing to do with Tony.
+   */
+  const sampleUntil = async (until: number): Promise<TonyFrame[]> => {
+    const now = (await page.evaluate('performance.now()')) as number;
+    return sample(Math.max(1200, until - now));
+  };
+
+  const covers = (frames: readonly TonyFrame[], lo: number, hi: number): boolean =>
+    frames.some((f) => f.t >= lo && f.t <= hi);
+
+  /** Frames where nothing is *supposed* to be moving. */
+  const still = (frames: readonly TonyFrame[]): TonyFrame[] =>
+    frames.filter((f) => !f.speaking && !f.arriving);
+
+  /**
+   * When the reveal actually turned on, in page time.
+   *
+   * `arrival.tsx` schedules it 1600ms after **hydration**, so the constant
+   * above is only the right answer on a machine where hydration is free. Every
+   * window below is expressed relative to what the frames say happened, so a
+   * slow runner costs coverage rather than producing a failure about a defect
+   * that is not there. Falls back to the constant when no frame saw it lit,
+   * which keeps a genuinely missing reveal loud.
+   */
+  const revealOnset = (frames: readonly TonyFrame[]): number =>
+    frames.find((f) => f.revealed)?.t ?? REVEAL_AT;
+
+  /** Past the reveal's 4900ms end plus its ramp, with room to spare. */
+  const WINDOW_ENDS = 6600;
+
+  /* --- A. Nobody touches anything ------------------------------------- */
+
+  await firstVisit();
+  /*
+   * Sampled from the first frame there is one. The entrance still moves him —
+   * that is `tony-steps-up`, by design — but its frames are now excluded by the
+   * class that causes them rather than by a constant that hoped to have
+   * outlasted it. See `TonyFrame.arriving`.
+   */
+  const undisturbed = await sampleUntil(WINDOW_ENDS);
+  const quietA = still(undisturbed);
+  assertSteady(quietA, width, 'pass A (untouched homepage)', 60);
+
+  /*
+   * The greeting types from 1150ms for at most 1700ms, so an undisturbed page
+   * has no still frames before the reveal turns on — pass B exists for those.
+   * What A must cover is the reveal *standing* and the reveal *gone*.
+   */
+  const litA = revealOnset(undisturbed);
+  if (!covers(quietA, litA + 1400, litA + REVEAL_FOR - 100)) {
+    fail('tony-steady', `@${String(width)} pass A never sampled a still frame while lit`);
+  }
+  if (!covers(quietA, litA + REVEAL_FOR + RAMP + 200, litA + REVEAL_FOR + 1500)) {
+    fail('tony-steady', `@${String(width)} pass A never sampled a still frame after the reveal`);
+  }
+
+  /* --- B. The same window, with his line put away --------------------- */
+
+  await firstVisit();
+  /*
+   * Dismissed as early as the button can be clicked, and sampled from that
+   * instant rather than after a settling wait.
+   *
+   * Dismissing unmounts `SpokenLine`, whose cleanup clears `speaking`, so
+   * everything from here is a still frame — including the interval **before**
+   * the reveal turns on, which pass A cannot reach because the greeting is
+   * still typing through it, and which is the one that makes the lift visible
+   * as a *change* rather than as a constant.
+   */
+  const dismiss = page.getByRole('button', { name: /Dismiss what Tony said/i });
+  if ((await dismiss.count()) > 0) await dismiss.click({ force: true });
+  /*
+   * Sampled from the moment the dismissal returns, and judged on the frames the
+   * entrance is not running in.
+   *
+   * An earlier version sampled immediately and reported `dy moved 5.52px` at
+   * all three widths — the entrance, judged as a defect. That was patched by
+   * waiting for `performance.now() >= 1300`, which held on a fast machine and
+   * broke on a loaded one for the same reason: the wait is on the navigation
+   * clock and the animation is on the hydration clock. Excluding the frames by
+   * their own class is the version that has no margin to run out.
+   */
+  const dismissed = await sampleUntil(WINDOW_ENDS);
+  const quietB = still(dismissed);
+  assertSteady(quietB, width, 'pass B (line dismissed)', 120);
+
+  const litB = revealOnset(dismissed);
+  for (const [lo, hi, what] of [
+    [0, litB - 50, 'before the reveal'],
+    [litB + RAMP + 100, litB + REVEAL_FOR - 100, 'while the reveal is lit'],
+    [litB + REVEAL_FOR + RAMP + 200, litB + REVEAL_FOR + 1200, 'after the reveal'],
+  ] as const) {
+    if (!covers(quietB, lo, hi)) {
+      fail(
+        'tony-steady',
+        `@${String(width)} pass B sampled nothing ${what} (${String(lo)}-${String(hi)}ms); ` +
+          `the window this gate needs was not covered, so a green result means nothing`,
+      );
+    }
+  }
+
+  const baseline = quietB[quietB.length - 1]!;
+
+  /* --- C. Talking ------------------------------------------------------ */
+
+  await page.getByRole('button', { name: /Talk to Tony/i }).click({ force: true });
+  await page.waitForFunction(() => document.querySelector('.speaking') !== null, undefined, {
+    timeout: 10_000,
+  });
+  const talking = (await sample(1200)).filter((f) => f.speaking);
+
+  if (talking.length < 20) {
+    fail(
+      'tony-steady',
+      `@${String(width)} pass C caught only ${String(talking.length)} speaking frames`,
+    );
+  } else {
+    // Width, height and horizontal position are untouched by `tony-talks`.
+    for (const key of ['dx', 'w', 'h'] as const) {
+      if (spread(talking.map((f) => f[key])) > STEADY_EPS) {
+        fail(
+          'tony-steady',
+          `@${String(width)} pass C (speaking): ${key} moved ${describeSpread(talking, key)}`,
+        );
+      }
+    }
+
+    /*
+     * Vertically he shifts, and that is the point of the animation — but on
+     * `steps(2, end)` he only ever occupies **two positions, one pixel apart**,
+     * never a fraction between them. That is the whole reason this one is safe
+     * and the reveal's eased transition was not: a pixel-art sprite resampled
+     * at 0.4px is the smearing the art direction names.
+     */
+    const offsets = [...new Set(talking.map((f) => Number((f.dy - baseline.dy).toFixed(2))))].sort(
+      (a, b) => a - b,
+    );
+    const whole = offsets.every((o) => Math.abs(o - Math.round(o)) <= STEADY_EPS);
+    if (!whole || offsets.length > 2 || Math.abs(offsets[0]!) > 1 + STEADY_EPS) {
+      fail(
+        'tony-steady',
+        `@${String(width)} pass C (speaking): he takes ${String(offsets.length)} vertical ` +
+          `position(s) [${offsets.join(', ')}] relative to rest; ` +
+          `tony-talks defines exactly two, one whole pixel apart`,
+      );
+    }
+  }
+
+  /* --- D. Done talking ------------------------------------------------- */
+
+  await page.waitForFunction(() => document.querySelector('.speaking') === null, undefined, {
+    timeout: 15_000,
+  });
+  await page.waitForTimeout(400);
+  const after = await sample(900);
+  assertSteady(after, width, 'pass D (after speaking)', 30);
+  if (Math.abs(after[0]!.dy - baseline.dy) > STEADY_EPS) {
+    fail(
+      'tony-steady',
+      `@${String(width)} pass D: he came to rest ${(after[0]!.dy - baseline.dy).toFixed(2)}px ` +
+        `from where he started`,
+    );
+  }
+
+  /* --- E. A room interaction, then out of the room and back ------------- */
+
+  /*
+   * Two interactions, because "room interaction followed by return" has two
+   * readings and both are cheap: a Display opened and closed **without leaving**
+   * — which mounts a panel and a scrim over the room and then unmounts them —
+   * and a Door taken out of the room and a walk back in.
+   */
+  await page.getByRole('button', { name: /receipt/i }).click({ force: true });
+  await page.waitForTimeout(500);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(500);
+  const afterPanel = still(await sample(700));
+  assertSteady(afterPanel, width, 'pass E (a panel opened and closed)', 20);
+
+  /*
+   * The Back Hall doorway rather than the counter: when a box is on the tray the
+   * counter Door is **restated as the box**, so `a[href="/counter"]` is not in
+   * the room for a manager who owns one — which is every seeded manager. The
+   * rear doorway is one of the three Doors in every state of the homepage.
+   */
+  await page.locator('a[href="/back-hall"]').first().click({ force: true });
+  await page.waitForURL((url) => url.pathname.startsWith('/back-hall'), { timeout: 20_000 });
+  await page.goto(BASE, { waitUntil: 'networkidle' });
+  await page.waitForTimeout(1200);
+  const returned = still(await sample(1600));
+  assertSteady(returned, width, 'pass E (back from the Back Hall)', 40);
+  if (returned.length > 0 && Math.abs(returned[0]!.dy - baseline.dy) > STEADY_EPS) {
+    fail(
+      'tony-steady',
+      `@${String(width)} pass E: a return visit stands him ` +
+        `${(returned[0]!.dy - baseline.dy).toFixed(2)}px from where the first visit left him`,
+    );
+  }
+
+  /* --- F. A slow arrival ------------------------------------------------ */
+
+  /*
+   * The entrance may not move a room the manager is already looking at.
+   *
+   * Passes A-E all measure a *fast* arrival, which is the one case where this
+   * defect is invisible: the server renders Tony at the counter, the browser
+   * paints that, and hydration attaches `.arriving` about 150ms later — so
+   * `tony-steps-up`'s opening keyframe, `translate3d(0, 26%, 0)` under
+   * `animation-fill-mode: both`, drops him a quarter of his height before
+   * anybody has focused on him.
+   *
+   * Under an 8x CPU throttle the same sequence measured: **the room paints
+   * complete at 331ms and at 642ms he drops 62.42px** — behind the counter
+   * front, which is drawn over him — and takes three seconds to climb back.
+   * That is the commissioner's *"Tony's bottom half clips, seconds after the
+   * homepage settles"*, and no pass that hydrates in 150ms can see it.
+   *
+   * ## Why the client bundle is delayed rather than the CPU throttled
+   *
+   * CPU throttling was the first attempt and it is the wrong instrument: it
+   * slows paint and hydration *together*, so the gap between them — which is the
+   * entire defect — stays small and the pass reports whatever the runner
+   * happened to do. It passed at two widths and failed at the third on the same
+   * build, which is a measurement that has not measured anything.
+   *
+   * Delaying `/_next/static/chunks/` models the real case exactly and
+   * deterministically: the HTML and the CSS arrive, the room paints complete,
+   * and the script that animates it turns up several hundred milliseconds
+   * later. That is a phone on a real network, and it is reproducible.
+   *
+   * `arrival.tsx` skips the entrance once the finished room has been on screen
+   * longer than `ENTRANCE_STALE_AFTER_MS`, so with that rule he holds still, and
+   * with it removed this reports a sixty-pixel move at every width.
+   *
+   * The route is removed before returning. A gate that leaves every script
+   * delayed would charge every check after it for this one.
+   */
+  const BUNDLE_DELAY_MS = 700;
+  try {
+    await page.route('**/_next/static/chunks/**', async (route) => {
+      await new Promise((resolve) => setTimeout(resolve, BUNDLE_DELAY_MS));
       await route.continue();
     });
     await page.evaluate(FORGET_ARRIVAL);
