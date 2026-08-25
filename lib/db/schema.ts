@@ -783,8 +783,8 @@ export const tokenReason = pgEnum('token_reason', [
   'CASINO_PAYOUT',
 ]);
 
-/** The two commissioner-approved Underground games. Roulette has no enum value. */
-export const casinoGame = pgEnum('casino_game', ['BLACKJACK', 'SLOTS']);
+/** Commissioner-approved Underground games. */
+export const casinoGame = pgEnum('casino_game', ['BLACKJACK', 'SLOTS', 'ROULETTE']);
 
 /** Blackjack may be open between a deal and a stand; slots settle immediately. */
 export const casinoRoundStatus = pgEnum('casino_round_status', ['OPEN', 'SETTLED']);
