@@ -1054,7 +1054,7 @@ body[data-parlor-focus] .tony-line * {
  */
 
 .room-shape:focus-visible {
-  outline: 2px solid var(--color-amber-glow);
+  outline: 2px solid var(--color-amber-glow) !important;
   outline-offset: -2px;
 }
 
