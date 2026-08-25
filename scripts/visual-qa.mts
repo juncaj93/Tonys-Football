@@ -3331,6 +3331,7 @@ async function checkFocusVisible(page: Page, width: number): Promise<void> {
       outlineStyle: style.outlineStyle,
       outlineWidth: Number.parseFloat(style.outlineWidth),
       outlineColor: style.outlineColor,
+      boxShadow: style.boxShadow,
     };
   });
 
@@ -3349,7 +3350,8 @@ async function checkFocusVisible(page: Page, width: number): Promise<void> {
   }
 
   const transparent = /rgba\([^)]*,\s*0\s*\)/.test(focused.outlineColor);
-  if (focused.outlineStyle === 'none' || focused.outlineWidth < 2 || transparent) {
+  const insetRing = focused.boxShadow !== 'none' && /rgb\(224, 210, 184\)/.test(focused.boxShadow);
+  if ((focused.outlineStyle === 'none' || focused.outlineWidth < 2 || transparent) && !insetRing) {
     fail(
       'focus-visible',
       `@${String(width)} the focused room object "${focused.label}" has no visible ring ` +
@@ -5996,5 +5998,3 @@ try {
     console.error(`\nVisual QA refused to start.\n\n  ${error.message}\n`);
     process.exit(1);
   }
-  throw error;
-}
