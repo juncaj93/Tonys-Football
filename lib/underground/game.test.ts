@@ -13,6 +13,9 @@ import {
   settleBlackjack,
   slotMultiplier,
   spinSlots,
+  rouletteColor,
+  rouletteMultiplier,
+  spinRoulette,
 } from './game';
 
 afterEach(() => clearRandomSource());
@@ -60,5 +63,17 @@ describe('Underground game rules', () => {
     // estimate. A returned pair makes the game lively without minting tokens.
     expect(expectedSlotMultiplier()).toBeCloseTo(0.852125, 8);
     expect(expectedSlotMultiplier()).toBeLessThan(0.9);
+  });
+
+  it('uses a single-zero wheel with standard colour and straight-up payouts', () => {
+    expect(rouletteColor(0)).toBe('GREEN');
+    expect(rouletteColor(1)).toBe('RED');
+    expect(rouletteColor(2)).toBe('BLACK');
+    expect(rouletteMultiplier({ pocket: 32, color: 'RED', bet: { kind: 'COLOR', color: 'RED' } })).toBe(2);
+    expect(rouletteMultiplier({ pocket: 32, color: 'RED', bet: { kind: 'NUMBER', number: 32 } })).toBe(36);
+    expect(rouletteMultiplier({ pocket: 32, color: 'RED', bet: { kind: 'NUMBER', number: 31 } })).toBe(0);
+
+    setRandomSource(() => 0);
+    expect(spinRoulette({ kind: 'COLOR', color: 'RED' })).toEqual({ pocket: 0, color: 'GREEN', bet: { kind: 'COLOR', color: 'RED' } });
   });
 });
