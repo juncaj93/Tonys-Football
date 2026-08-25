@@ -2,6 +2,7 @@ import { dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { FlatCompat } from '@eslint/eslintrc';
+import tsParser from '@typescript-eslint/parser';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -69,6 +70,18 @@ const eslintConfig = [
   },
 
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
+
+  /*
+   * NodeNext utility modules intentionally use `.mts`. `eslint-config-next`
+   * configures TypeScript for the app's `.ts`/`.tsx` surface but does not claim
+   * `.mts`, so CI had been parsing the visual-audit driver as plain JavaScript.
+   * Keep it checked with the TypeScript parser; ignoring a release gate would
+   * turn the parse failure into a silent visual-QA blind spot.
+   */
+  {
+    files: ['**/*.mts'],
+    languageOptions: { parser: tsParser },
+  },
 
   {
     rules: {

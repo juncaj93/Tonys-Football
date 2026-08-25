@@ -21,8 +21,9 @@ import { PocketNav } from '@/components/shell/pocket-nav';
  * Room hotspots remain the most fun way to travel, but Safari's expanding URL
  * controls can cover document-flow exits. Normal pages therefore carry a small
  * in-world menu rail: five one-tap destinations, fixed above the safe area.
- * One-screen rooms keep their clean cinematic composition and their own
- * labelled hotspots.
+ * One-screen rooms keep their own labelled hotspots, but also carry this rail:
+ * one tap must always return a manager to a known place, especially when iOS
+ * Safari has expanded its bottom controls over a room exit.
  */
 
 /** The minimum comfortable tap target. Used as a class, never as a guess. */
@@ -66,6 +67,7 @@ export function Page({
     return (
       <div className="relative mx-auto flex h-dvh w-full max-w-3xl flex-col overflow-hidden">
         {children}
+        <PocketNav />
       </div>
     );
   }

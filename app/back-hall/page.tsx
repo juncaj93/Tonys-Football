@@ -5,6 +5,7 @@ import { ShutDoor } from '@/components/scene/shut-door';
 import { Page } from '@/components/shell';
 import { requireUser } from '@/lib/auth/current-user';
 import { characterFor } from '@/lib/character/service';
+import { hallEncounterLine } from '@/lib/backhall/encounter-dialogue';
 import { getDb } from '@/lib/db';
 import { fantasyMatchups, seasons } from '@/lib/db/schema';
 import { BACK_HALL, LOCKED_LINES, backHallObject, openTo } from '@/lib/backhall/objects';
@@ -69,8 +70,7 @@ import { and, desc, eq } from 'drizzle-orm';
 export const dynamic = 'force-dynamic';
 
 /** Pick one of the real league members deterministically for the current day. */
-function dailyVisitorIndex(userId: string, count: number): number {
-  const key = `${now().toISOString().slice(0, 10)}:${userId}`;
+function rotationIndex(key: string, count: number): number {
   let value = 0;
   for (const character of key) value = (value * 31 + character.charCodeAt(0)) >>> 0;
   return value % count;
@@ -104,7 +104,10 @@ export default async function BackHallPage({
    */
   const query = await searchParams;
   const flags = featureFlags(process.env, query['open']);
-  const night = isDetroitNight(now());
+  // One observed instant keeps the visitor, their rotating beat and the room
+  // lighting coherent if this request crosses a clock boundary.
+  const observedAt = now();
+  const night = isDetroitNight(observedAt);
   const stairs = backHallObject('stairs');
   const curtain = backHallObject('curtain');
 
@@ -119,14 +122,16 @@ export default async function BackHallPage({
   const otherManagers = managers.filter((manager) => manager.id !== user.id);
   const player = managers.find((manager) => manager.id === user.id) ?? null;
   const visitor =
-    otherManagers.length === 0 ? null : otherManagers.at(dailyVisitorIndex(user.id, otherManagers.length)) ?? null;
+    otherManagers.length === 0
+      ? null
+      : otherManagers.at(rotationIndex(`${observedAt.toISOString().slice(0, 10)}:${user.id}`, otherManagers.length)) ?? null;
 
   const encounter =
     visitor === null
       ? null
       : await (async () => {
           const [character, year] = await Promise.all([characterFor(db, visitor.id), currentSeasonYear(db)]);
-          let line = `${visitor.displayName} is watching the Lions pregame chatter. “No score predictions in the hallway. That’s bad luck.”`;
+          let receipt: { week: number; visitorPointsCents: number; playerPointsCents: number } | null = null;
 
           if (year !== null) {
             const [season] = await db.select({ id: seasons.id }).from(seasons).where(eq(seasons.year, year)).limit(1);
@@ -158,12 +163,31 @@ export default async function BackHallPage({
               if (shared !== undefined) {
                 const visitorPoints = shared.rosterAId === visitor.rosterId ? shared.pointsACents : shared.pointsBCents;
                 const playerPoints = shared.rosterAId === visitor.rosterId ? shared.pointsBCents : shared.pointsACents;
-                line = `${visitor.displayName} taps the matchup board. “Week ${String(shared.week)} is still on the record: ${
-                  (visitorPoints / 100).toFixed(2)
-                } to ${(playerPoints / 100).toFixed(2)}. I’m not starting the trash talk… unless you are.”`;
+                receipt = { week: shared.week, visitorPointsCents: visitorPoints, playerPointsCents: playerPoints };
               }
             }
           }
+
+          /*
+           * A three-beat, Detroit-time rotation means somebody returning later
+           * finds fresh conversation without treating a real person as an
+           * unbounded prompt. A verified current-season receipt supersedes the
+           * lore beat and is the only path that prints a score.
+           */
+          const hour = Number(
+            new Intl.DateTimeFormat('en-US', {
+              timeZone: 'America/Detroit',
+              hour: 'numeric',
+              hourCycle: 'h23',
+            }).format(observedAt),
+          );
+          const line = hallEncounterLine({
+            visitor,
+            player: player ?? { displayName: user.displayName, teamName: null },
+            receipt,
+            beat: rotationIndex(`${observedAt.toISOString().slice(0, 10)}:${visitor.id}:${String(Math.floor(hour / 3))}`, 3),
+            isNight: night,
+          });
 
           return { name: visitor.displayName, composite: character.composite, line };
         })();

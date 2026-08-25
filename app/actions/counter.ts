@@ -3,7 +3,7 @@
 import { resolveAsset } from '@/lib/assets/registry';
 import { type AssetResolution } from '@/lib/assets/types';
 import { requireUser } from '@/lib/auth/current-user';
-import { openBox, purchaseBox } from '@/lib/counter/boxes';
+import { grantBox, openBox, purchaseBox } from '@/lib/counter/boxes';
 import { type Rarity } from '@/lib/counter/catalog';
 import { collectionFor } from '@/lib/counter/collection';
 import { offerAnotherBox, type BoxOffer } from '@/lib/counter/offer';
@@ -159,6 +159,31 @@ export async function buyBoxAction(clientToken: string): Promise<BuyBoxResponse>
   }
 
   return { ok: true, spent: result.spent };
+}
+
+/**
+ * An administrator-only box supply while the clubhouse is being demonstrated.
+ *
+ * Unlike a production purchase this writes **no token movement at all**: it
+ * grants an ordinary unopened box with an explicit `practice:` source and a
+ * request-scoped natural key. That makes a double tap idempotent, makes each
+ * deliberate tap a new box, and leaves a clean, removable boundary for the
+ * launch reset. A manager can never obtain this path by choosing a client-side
+ * "practice" value; the authorization is the session's `isAdmin` flag.
+ */
+export async function claimPracticeBoxAction(clientToken: string): Promise<BuyBoxResponse> {
+  const { user } = await requireUser();
+  if (!user.isAdmin || !/^[0-9a-f-]{36}$/i.test(clientToken)) {
+    return { ok: false, reason: 'unavailable' };
+  }
+
+  await grantBox(getDb(), {
+    userId: user.id,
+    grantKey: `practice:${user.id}:${clientToken}`,
+    source: 'practice',
+  });
+
+  return { ok: true, spent: 0 };
 }
 
 export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {

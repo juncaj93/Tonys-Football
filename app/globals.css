@@ -271,6 +271,119 @@ button {
     linear-gradient(180deg, #26191b 0%, #1a1214 46%, #120d0e 100%);
 }
 
+/* --------------------------------------------------------------------------
+ * Front-counter ledger — the signed-out entrance
+ * -------------------------------------------------------------------------- */
+.door-ledger-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: -10;
+  background:
+    linear-gradient(90deg, rgba(74, 46, 28, 0.48) 0 7%, transparent 7% 93%, rgba(74, 46, 28, 0.48) 93%),
+    repeating-linear-gradient(0deg, rgba(74, 46, 28, 0.16) 0 1px, transparent 1px 12px),
+    linear-gradient(180deg, #f4ca83 0%, #d99b51 48%, #7c482b 100%);
+}
+
+.door-ledger-backdrop::after {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: 38%;
+  content: '';
+  background:
+    repeating-linear-gradient(90deg, rgba(37, 22, 15, 0.3) 0 2px, transparent 2px 28px),
+    linear-gradient(180deg, #744327, #3f261b);
+  border-top: 4px solid var(--color-wood-dark);
+}
+
+.door-ledger-header {
+  position: relative;
+  height: 164px;
+  overflow: hidden;
+  border-bottom: 4px solid var(--color-wood-dark);
+  background:
+    linear-gradient(90deg, rgba(74, 46, 28, 0.34) 0 10%, transparent 10% 90%, rgba(74, 46, 28, 0.34) 90%),
+    linear-gradient(180deg, #f9d895 0%, #e6ad63 100%);
+}
+
+.door-ledger-header__lamp {
+  position: absolute;
+  top: -44px;
+  left: 50%;
+  width: 190px;
+  height: 150px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, rgba(255, 244, 194, 0.76), rgba(255, 197, 93, 0.2) 45%, transparent 70%);
+}
+
+.door-ledger-header__shelf {
+  position: absolute;
+  top: 20px;
+  right: 8%;
+  left: 8%;
+  height: 12px;
+  border: 2px solid var(--color-wood-dark);
+  background: var(--color-wood-mid);
+  box-shadow: 0 4px 0 rgba(74, 46, 28, 0.45);
+}
+
+.door-ledger-header__shelf i {
+  position: absolute;
+  bottom: 10px;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--color-wood-dark);
+  background: var(--color-red-mid);
+  box-shadow: inset -4px 0 0 rgba(74, 46, 28, 0.22);
+}
+
+.door-ledger-header__shelf i:nth-child(1) { left: 9%; }
+.door-ledger-header__shelf i:nth-child(2) { left: calc(50% - 10px); background: var(--color-amber-mid); }
+.door-ledger-header__shelf i:nth-child(3) { right: 9%; background: #527b62; }
+
+.door-ledger-header__book {
+  position: absolute;
+  bottom: 19px;
+  left: 50%;
+  display: flex;
+  width: min(78%, 330px);
+  min-height: 79px;
+  flex-direction: column;
+  justify-content: center;
+  gap: 5px;
+  transform: translateX(-50%);
+  border: 3px solid var(--color-wood-dark);
+  color: var(--color-ink-900);
+  text-align: center;
+  background:
+    linear-gradient(90deg, transparent 0 16px, rgba(140, 31, 34, 0.3) 16px 18px, transparent 18px),
+    repeating-linear-gradient(0deg, transparent 0 18px, rgba(74, 46, 28, 0.2) 18px 19px),
+    var(--color-paper-white);
+  box-shadow: 5px 5px 0 rgba(74, 46, 28, 0.58);
+}
+
+.door-ledger-header__book b { color: var(--color-red-dark); }
+
+.door-ledger-header__counter {
+  position: absolute;
+  right: -4%;
+  bottom: 0;
+  left: -4%;
+  height: 15px;
+  border-top: 3px solid var(--color-wood-dark);
+  background:
+    repeating-linear-gradient(90deg, rgba(74, 46, 28, 0.38) 0 2px, transparent 2px 32px),
+    var(--color-wood-mid);
+}
+
+.door-ledger-page {
+  position: relative;
+  min-height: calc(100dvh - 164px);
+  background: linear-gradient(180deg, rgba(50, 30, 20, 0.74), rgba(50, 30, 20, 0.9));
+  box-shadow: inset 0 18px 30px rgba(74, 46, 28, 0.32);
+}
+
 /*
  * The cone under a pendant shade.
  *
@@ -438,8 +551,9 @@ button {
 
 /* --------------------------------------------------------------------------
  * Pocket navigation — a small inventory rail that is always clear of iOS
- * Safari's changing bottom chrome. It belongs to sheets and minigames only;
- * cinematic room screens retain their full-bleed art and in-world doors.
+ * Safari's changing bottom chrome. It belongs to every playable public screen;
+ * cinematic rooms retain their full-bleed art and their in-world doors, while
+ * the rail prevents a player ever being stranded in browser chrome.
  * -------------------------------------------------------------------------- */
 .pocket-nav {
   position: fixed;
@@ -501,9 +615,18 @@ button {
 }
 
 .pocket-nav__glyph {
-  font-family: var(--font-display);
-  font-size: 13px;
-  line-height: 1;
+  display: grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  line-height: 0;
+}
+
+.pocket-nav__glyph svg {
+  display: block;
+  width: 18px;
+  height: 18px;
+  shape-rendering: crispEdges;
 }
 
 @media (min-width: 640px) {
@@ -931,8 +1054,12 @@ body[data-parlor-focus] .tony-line * {
  */
 
 .room-shape:focus-visible {
-  outline: 2px solid var(--color-amber-glow);
+  outline: 2px solid var(--color-amber-glow) !important;
   outline-offset: -2px;
+  /* `outline-none` is carried by the hit regions so it cannot leak a browser
+   * ring at rest. A hard inset rail is the durable focus cue when utility
+   * styles own the outline longhand. */
+  box-shadow: inset 0 0 0 3px var(--color-amber-glow) !important;
 }
 
 /* --- The box on the tray ------------------------------------------------- *
@@ -1571,13 +1698,6 @@ body[data-parlor-focus] .tony-line * {
   transform-origin: center bottom;
 }
 
-/* The room shell already contains the table's far rail. Tony belongs behind
- * that rail, not as a free-standing sticker in the player area. Keeping the
- * crop on the sprite means the artwork and hit regions remain one stable scene. */
-.casino-room-tony--behind {
-  clip-path: polygon(0 0, 100% 0, 100% 58%, 0 58%);
-}
-
 .casino-room-hotspot:focus-visible {
   outline: 3px solid var(--color-amber-glow);
   outline-offset: -3px;
@@ -1601,10 +1721,78 @@ body[data-parlor-focus] .tony-line * {
   opacity: 1;
 }
 
-.casino-slot-cabinet {
-  min-height: 222px;
-  background-image: linear-gradient(90deg, var(--color-red-light) 50%, transparent 50%);
-  background-size: 4px 4px;
+.casino-slot-machine {
+  min-height: 286px;
+  background:
+    linear-gradient(90deg, rgba(245, 237, 220, 0.18) 0 2px, transparent 2px 100%),
+    linear-gradient(180deg, var(--color-red-light), var(--color-red-dark) 38%, var(--color-wood-dark) 100%);
+  background-size: 8px 100%, 100% 100%;
+  box-shadow: inset 0 0 0 3px var(--color-red-deep), inset 0 0 0 6px var(--color-amber-deep);
+}
+
+.casino-slot-marquee {
+  background: linear-gradient(180deg, var(--color-amber-glow), var(--color-red-mid));
+  box-shadow: inset 0 0 0 2px var(--color-paper-mid), 0 3px 0 var(--color-wood-dark);
+}
+
+.casino-slot-marquee-slice {
+  position: absolute;
+  top: 50%;
+  color: var(--color-paper-white);
+  font-size: 16px;
+  transform: translateY(-50%);
+}
+
+.casino-slot-marquee-slice--left { left: 8px; }
+.casino-slot-marquee-slice--right { right: 8px; transform: translateY(-50%) scaleX(-1); }
+
+.casino-slot-window {
+  background: var(--color-ink-900);
+  box-shadow: inset 0 0 0 2px var(--color-paper-mid), 0 3px 0 var(--color-wood-dark);
+}
+
+.casino-slot-payline {
+  background: var(--color-amber-mid);
+  box-shadow: inset 0 0 0 2px var(--color-paper-white);
+}
+
+.casino-slot-coin {
+  color: var(--color-amber-deep);
+  font-size: 22px;
+  line-height: 0;
+  text-shadow: 1px 1px 0 var(--color-paper-white);
+}
+
+.casino-slot-lever {
+  position: absolute;
+  right: -15px;
+  top: 43%;
+  width: 15px;
+  height: 55px;
+  border: 3px solid var(--color-ink-900);
+  border-left: 0;
+  background: var(--color-wood-mid);
+}
+
+.casino-slot-lever::before {
+  content: '';
+  position: absolute;
+  right: -7px;
+  top: -10px;
+  width: 15px;
+  height: 15px;
+  border: 3px solid var(--color-ink-900);
+  background: var(--color-red-light);
+  border-radius: 50%;
+}
+
+.casino-slot-lever i {
+  position: absolute;
+  right: 3px;
+  bottom: 7px;
+  width: 4px;
+  height: 28px;
+  background: var(--color-amber-mid);
 }
 
 .casino-slot-face {
@@ -1620,12 +1808,6 @@ body[data-parlor-focus] .tony-line * {
   line-height: 1;
 }
 
-.casino-slot-face-mark {
-  grid-area: 1 / 1;
-  font-size: 26px;
-  text-shadow: 1px 1px 0 var(--color-paper-dark);
-}
-
 .casino-slot-face-tag {
   grid-area: 1 / 1;
   align-self: end;
@@ -1638,6 +1820,77 @@ body[data-parlor-focus] .tony-line * {
 .casino-slot-face--blue { color: var(--color-blue-deep); }
 .casino-slot-face--green { color: var(--color-green-deep); }
 .casino-slot-face--paper { color: var(--color-ink-900); }
+
+.casino-slot-glyph {
+  grid-area: 1 / 1;
+  position: relative;
+  display: block;
+  margin-top: -12px;
+  color: currentColor;
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1;
+  text-shadow: 1px 1px 0 var(--color-paper-dark);
+}
+
+.casino-slot-glyph--pizza {
+  width: 34px;
+  height: 29px;
+  border: 3px solid currentColor;
+  border-radius: 52% 48% 45% 50%;
+  transform: rotate(-27deg) skewX(-11deg);
+  background: var(--color-amber-mid);
+}
+
+.casino-slot-glyph--pizza::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  bottom: -6px;
+  width: 29px;
+  height: 6px;
+  border: 3px solid currentColor;
+  border-top: 0;
+  background: var(--color-paper-mid);
+}
+
+.casino-slot-glyph--pizza b {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border: 1px solid var(--color-red-dark);
+  border-radius: 50%;
+  background: var(--color-red-mid);
+}
+.casino-slot-glyph--pizza b:nth-of-type(1) { left: 8px; top: 8px; }
+.casino-slot-glyph--pizza b:nth-of-type(2) { left: 19px; top: 8px; }
+.casino-slot-glyph--pizza b:nth-of-type(3) { left: 15px; top: 17px; }
+
+.casino-slot-glyph--bapple {
+  width: 26px;
+  height: 35px;
+  border: 3px solid currentColor;
+  border-radius: 5px 5px 9px 9px;
+  background: var(--color-red-mid);
+  box-shadow: inset 4px 0 0 rgba(245, 237, 220, 0.26);
+}
+.casino-slot-glyph--bapple i { position: absolute; left: 6px; right: 6px; top: 7px; border-top: 2px solid var(--color-paper-white); }
+.casino-slot-glyph--bapple b { position: absolute; right: 4px; top: -8px; width: 8px; height: 7px; border: 2px solid var(--color-green-deep); border-radius: 80% 0 80% 0; background: var(--color-green-mid); }
+
+.casino-slot-glyph--token {
+  width: 35px;
+  height: 35px;
+  border: 4px dotted var(--color-paper-white);
+  border-radius: 50%;
+  background: var(--color-blue-deep);
+  color: var(--color-paper-white);
+  font-size: 23px;
+  line-height: 28px;
+  text-align: center;
+}
+
+.casino-slot-glyph--lucky { color: var(--color-green-deep); }
+.casino-slot-glyph--tony { color: var(--color-amber-deep); }
 
 .casino-game-room {
   background-color: var(--color-wood-dark);
@@ -1675,11 +1928,34 @@ body[data-parlor-focus] .tony-line * {
 .casino-blackjack-table {
   background-color: var(--color-green-deep);
   background-image:
-    linear-gradient(90deg, var(--color-green-deep) 0 7px, var(--color-green-neon) 7px 8px, var(--color-green-deep) 8px 15px),
-    linear-gradient(0deg, var(--color-green-deep) 0 7px, var(--color-green-neon) 7px 8px, var(--color-green-deep) 8px 15px);
-  background-size: 5px 5px;
-  box-shadow: inset 0 0 0 2px var(--color-paper-mid);
+    radial-gradient(ellipse at 50% 0%, rgba(104, 163, 87, 0.43), transparent 52%),
+    linear-gradient(90deg, rgba(104, 163, 87, 0.20) 0 2px, transparent 2px 12px),
+    linear-gradient(0deg, rgba(104, 163, 87, 0.18) 0 2px, transparent 2px 12px);
+  background-size: 100% 100%, 12px 12px, 12px 12px;
+  box-shadow: inset 0 0 0 2px var(--color-paper-mid), inset 0 0 0 7px var(--color-green-mid), inset 0 0 0 10px var(--color-wood-dark);
 }
+
+.casino-blackjack-topline {
+  position: absolute;
+  top: 7px;
+  left: 9px;
+  right: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: var(--color-paper-mid);
+  font-family: var(--font-display);
+  font-size: 13px;
+  letter-spacing: 0.06em;
+}
+.casino-blackjack-topline i { width: 22px; border-top: 2px solid var(--color-amber-glow); }
+
+.casino-chip-rack { display: flex; gap: 2px; padding: 3px; border: 2px solid var(--color-wood-dark); background: var(--color-ink-900); }
+.casino-chip-rack i { width: 6px; height: 22px; border: 1px solid var(--color-paper-white); background: var(--color-red-mid); }
+.casino-chip-rack i:nth-child(2), .casino-chip-rack i:nth-child(5) { background: var(--color-amber-mid); }
+.casino-chip-rack i:nth-child(3) { background: var(--color-blue-mid); }
+.casino-chip-rack i:nth-child(4) { background: var(--color-green-mid); }
 
 .casino-table-card-zone {
   filter: drop-shadow(0 2px 0 var(--color-wood-dark));

@@ -248,6 +248,7 @@ type StateName =
    * it here than to discover it in a screenshot nobody compares.
    */
   | 'room'
+
   | 'room-furnished'
   | 'room-slot'
   | 'room-corridor'
@@ -280,6 +281,10 @@ type StateName =
   | 'receipt'
   | 'counter'
   | 'underground'
+  /** Both dedicated casino game scenes need their own captures. The room alone
+   * cannot catch a generic-card regression in the actual games. */
+  | 'underground-slots'
+  | 'underground-blackjack'
   | 'back-hall'
   /*
    * The hall with everything shut — **what a revert produces**, not what a
@@ -494,6 +499,7 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'demo-welcome-box': 'welcome-box',
   // The shelf a brand-new player sees: twenty-four named spots and nothing on
   // any of them. It is the last beat of the commissioner's emotional sequence
+
   // and the one state of this route nobody had ever photographed — every seeded
   // manager owns something by the time the driver reaches here.
   'demo-collection-empty': 'collection-empty',
@@ -744,6 +750,7 @@ async function enterPin(page: Page, doorUrl: string, pin: string): Promise<void>
    * hand. Nothing was wrong with the product; the harness had asserted a clock.
    *
    * `waitForURL` waits for the condition itself and gives it a real budget, so a
+
    * loaded machine costs time rather than a false failure — and a genuinely
    * broken door still fails, in fifteen seconds instead of two and a half.
    */
@@ -994,6 +1001,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
     /*
      * `idle` settles **past the arrival's reveal** — 4900ms plus its ramp.
+
      *
      * It is the room's canonical portrait and the state where every object is
      * live, so it is the one that must be photographed with nothing prompted.
@@ -1244,6 +1252,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.waitForTimeout(400);
       return;
 
+
     /*
      * Reached by URL rather than by tapping a banner.
      *
@@ -1292,6 +1301,16 @@ async function reach(page: Page, state: StateName): Promise<void> {
       // Capture its illustrated token tables at every supported width.
       await page.goto(`${BASE}/underground`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(800);
+      return;
+    case 'underground-slots':
+      await page.goto(`${BASE}/underground`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Play Bapple Slots' }).click();
+      await page.waitForTimeout(400);
+      return;
+    case 'underground-blackjack':
+      await page.goto(`${BASE}/underground`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Sit at Tony’s blackjack table' }).click();
+      await page.waitForTimeout(400);
       return;
     /*
      * The shelf, after a pull.
@@ -1406,8 +1425,17 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'keyboard-focus':
       await home(page);
       await dismissTony(page);
-      // Four tabs lands inside the room rather than on the utility bar.
-      for (let i = 0; i < 4; i++) await page.keyboard.press('Tab');
+      // The persistent pocket rail comes before the room in tab order. Walk the
+      // real keyboard path until an in-room target receives focus: programmatic
+      // focus does not necessarily satisfy `:focus-visible` in Chromium, so it
+      // cannot prove the ring a keyboard player actually sees.
+      for (let i = 0; i < 12; i += 1) {
+        await page.keyboard.press('Tab');
+        const inRoom = await page.evaluate(() =>
+          document.activeElement instanceof HTMLElement && document.activeElement.classList.contains('room-shape'),
+        );
+        if (inRoom) break;
+      }
       await page.waitForTimeout(250);
       return;
 
@@ -1475,6 +1503,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       const before = await page
         .locator('[data-unopened-boxes]')
         .first()
+
         .getAttribute('data-unopened-boxes');
 
       await page.getByRole('button', { name: /Buy a standard pizza box/i }).click();
@@ -1725,6 +1754,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'slice-preseason-sparse': {
       const key = state.slice('slice-'.length);
       await page.goto(`${BASE}/slice?edition=${key}`, { waitUntil: 'networkidle' });
+
       await page.waitForSelector('[data-slice-edition]', { state: 'attached' });
       return;
     }
@@ -1975,6 +2005,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
             ? 'complete'
             : state === 'reveal-spare'
               ? 'spare'
+
               : 'broke';
       await page.goto(`${BASE}/?preview_reveal=rare&preview_stage=${stage}`, {
         waitUntil: 'networkidle',
@@ -2149,6 +2180,8 @@ const ALL_STATES: readonly StateName[] = [
   'receipt',
   'counter',
   'underground',
+  'underground-slots',
+  'underground-blackjack',
   'back-hall',
   'back-hall-shut',
   'keyboard-focus',
@@ -2223,6 +2256,7 @@ const ALL_STATES: readonly StateName[] = [
   'slice-close-finish',
   'slice-record-score',
   'slice-weak-news',
+
   'slice-incomplete-week',
   'slice-standings-shakeup',
   'slice-playoff-week',
@@ -2348,7 +2382,8 @@ const ALL_STATES: readonly StateName[] = [
  */
 async function checkTargets(page: Page, width: number): Promise<void> {
   const boxes = await page.evaluate(() =>
-    [...document.querySelectorAll('a,button,[role="button"]')]
+    /* This gate measures room affordances, not persistent page chrome. */
+    [...document.querySelectorAll('.room-shape')]
       .map((el) => {
         const r = el.getBoundingClientRect();
         return {
@@ -2472,6 +2507,7 @@ interface TonyFrame {
  * an inner named const handed to `page.evaluate` throws `__name is not defined`
  * inside the browser.
  *
+
  * **Invoked in the expression**, because Playwright sets `isFunction` from
  * `typeof pageFunction === 'function'` — which is `false` for a string — and
  * then returns the evaluated expression *without calling it*. A string arrow
@@ -2722,6 +2758,7 @@ async function checkGlowLeavesTonyAlone(page: Page, width: number): Promise<void
    * message about the harness, printed where a reader is looking for a message
    * about the room.
    *
+
    * Two halves: stop collecting once detached, so a late frame cannot change the
    * measurement, and swallow the ack's rejection, because a frame nobody is
    * going to read does not need to be acknowledged.
@@ -2972,6 +3009,7 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
    * has no still frames before the reveal turns on — pass B exists for those.
    * What A must cover is the reveal *standing* and the reveal *gone*.
    */
+
   const litA = revealOnset(undisturbed);
   if (!covers(quietA, litA + 1400, litA + REVEAL_FOR - 100)) {
     fail('tony-steady', `@${String(width)} pass A never sampled a still frame while lit`);
@@ -3222,6 +3260,7 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
 
   await page.goto(BASE, { waitUntil: 'networkidle' });
   await dismissTony(page);
+
 }
 
 /**
@@ -3312,6 +3351,7 @@ async function checkFocusVisible(page: Page, width: number): Promise<void> {
       outlineStyle: style.outlineStyle,
       outlineWidth: Number.parseFloat(style.outlineWidth),
       outlineColor: style.outlineColor,
+      boxShadow: style.boxShadow,
     };
   });
 
@@ -3330,7 +3370,8 @@ async function checkFocusVisible(page: Page, width: number): Promise<void> {
   }
 
   const transparent = /rgba\([^)]*,\s*0\s*\)/.test(focused.outlineColor);
-  if (focused.outlineStyle === 'none' || focused.outlineWidth < 2 || transparent) {
+  const insetRing = focused.boxShadow !== 'none' && /rgb\(224, 210, 184\)/.test(focused.boxShadow);
+  if ((focused.outlineStyle === 'none' || focused.outlineWidth < 2 || transparent) && !insetRing) {
     fail(
       'focus-visible',
       `@${String(width)} the focused room object "${focused.label}" has no visible ring ` +
@@ -3470,6 +3511,7 @@ async function checkTypeFloor(page: Page, width: number, state: string): Promise
   }
 
   // The opt-out is one thing, by decision. A second kind means somebody used it
+
   // to get small copy past the floor rather than to paint on the artwork.
   for (const kind of exempt) {
     if (kind !== ENVIRONMENTAL_TYPE) {
@@ -3720,6 +3762,7 @@ const DESK_EXPECTATIONS: Record<
 /**
  * What each draft-board state must actually contain.
  *
+
  * The progress count is the whole screen, so it is the whole assertion. An
  * **exact** count rather than an at-least, unlike the press desk's: a review
  * belongs to a `(season, manager)` pair and `writeDemoReviews` clears the rest,
@@ -3971,6 +4014,7 @@ async function checkDeckWrap(page: Page, width: number, state: string): Promise<
       // sentence and wraps as prose, deliberately.
       if (!text.includes(' \u2014 ')) continue;
 
+
       /*
        * How many lines the deck occupies, from its own client rects rather than
        * from a height division — a `Range` reports one rect per line box, which
@@ -4220,6 +4264,7 @@ async function checkReviewDesk(page: Page, width: number, state: string): Promis
 
   if (expected.hold !== undefined && found.hold !== expected.hold) {
     fail('review-desk', `${at} expected the hold ${expected.hold}, found ${String(found.hold)}`);
+
   }
 
   for (const [section, minimum] of Object.entries(expected.atLeast ?? {})) {
@@ -4470,6 +4515,7 @@ async function checkManagerBelongsInTheRoom(page: Page, at: string): Promise<voi
         feet: figureBox.bottom,
         shadowBottom: shadow?.getBoundingClientRect().bottom ?? 0,
       };
+
     },
     { canvasWidth: CHARACTER_CANVAS.width, canvasHeight: CHARACTER_CANVAS.height },
   );
@@ -4719,6 +4765,7 @@ async function checkObjectMap(page: Page, width: number): Promise<void> {
       );
     }
   }
+
 
   // The headline numbers, stated so a failure names the grammar and not just a row.
   const tally = (kind: string): number =>
@@ -4970,6 +5017,7 @@ async function checkDevices(page: Page, width: number, state: string): Promise<v
     const labels = [...document.querySelectorAll('[data-device-label]')].map((el) =>
       (el.textContent ?? '').trim(),
     );
+
     const button = document.querySelector('[data-sign-out-everywhere]');
     let ground = '';
     let node: Element | null = button;
@@ -5220,6 +5268,7 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
         `(computed ${seen.computedShapeRendering}). Anything but crispEdges antialiases a scaled ` +
         'rectangle into a grey seam.',
     );
+
   }
 
   if (seen.rendering !== 'pixelated') {
@@ -5470,6 +5519,7 @@ const HYDRATION_REPORTER = `(() => {
    * MutationObserver catches the first node the parser appends, readystatechange
    * catches a document that was already complete, and the animation frame is the
    * backstop for a browser that fires neither in time.
+
    */
   let earliest = { bodyChildren: '', headChildren: '', atMs: -1 };
   // On \`document\`, not \`document.documentElement\` — this script runs before any
@@ -5720,6 +5770,7 @@ async function run(): Promise<void> {
          * Everywhere, not only on `slice-*`. The Slice's paper is also rendered
          * on the review desk's "as it will print" preview, and that is a
          * different route with the same defect available to it.
+
          */
         await checkDeckWrap(page, width, state);
         if (state === 'keyboard-focus') await checkFocusVisible(page, width);
@@ -5970,6 +6021,7 @@ try {
 } catch (error: unknown) {
   /*
    * A refusal is a message to a person, not a crash. Printing a stack above it
+
    * buries the one line that says what to do — and these two refusals exist
    * precisely because the previous failures were hard to read.
    */

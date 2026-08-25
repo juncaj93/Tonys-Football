@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { useRef, useState, useTransition } from 'react';
 
 import { TYPE } from '@/lib/design/type';
-import { buyBoxAction } from '@/app/actions/counter';
+import { buyBoxAction, claimPracticeBoxAction } from '@/app/actions/counter';
 
 /**
  * Buying a box.
@@ -32,7 +32,16 @@ import { buyBoxAction } from '@/app/actions/counter';
  * already exists. So the tap is allowed, the database refuses it, and Tony says
  * so.
  */
-export function BuyBox({ price, balance }: { price: number; balance: number }) {
+export function BuyBox({
+  price,
+  balance,
+  practice = false,
+}: {
+  price: number;
+  balance: number;
+  /** The commissioner-only test supply. Production members never receive it. */
+  practice?: boolean;
+}) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [refused, setRefused] = useState<string | null>(null);
@@ -43,7 +52,7 @@ export function BuyBox({ price, balance }: { price: number; balance: number }) {
     setRefused(null);
 
     startTransition(async () => {
-      const result = await buyBoxAction(token.current);
+      const result = await (practice ? claimPracticeBoxAction(token.current) : buyBoxAction(token.current));
 
       if (result.ok) {
         // A different purchase next time.
@@ -65,13 +74,13 @@ export function BuyBox({ price, balance }: { price: number; balance: number }) {
       <button
         type="button"
         onClick={buy}
-        aria-label={`Buy a standard pizza box for ${String(price)} tokens`}
+        aria-label={practice ? 'Claim an unlimited practice pizza box' : `Buy a standard pizza box for ${String(price)} tokens`}
         className={`pixel-edge mt-3 flex min-h-[48px] w-full items-center justify-between border-2 border-wood-dark bg-red-dark px-4 ${TYPE.action} text-paper-white active:translate-y-px disabled:opacity-60`}
         disabled={pending}
       >
-        <span>{pending ? 'Tony reaches under the counter…' : 'Buy a box'}</span>
+        <span>{pending ? 'Tony reaches under the counter…' : practice ? 'Practice box · ∞' : 'Buy a box'}</span>
         <span aria-hidden="true" className="text-amber-glow">
-          {String(price)}
+          {practice ? 'FREE' : String(price)}
         </span>
       </button>
 
@@ -93,7 +102,7 @@ export function BuyBox({ price, balance }: { price: number; balance: number }) {
         * container.
         */}
       <p className={`mt-2 ${TYPE.eyebrow} text-ink-700/85`}>
-        {String(balance)} tokens on your tab
+        {practice ? 'Practice supply · does not spend tokens' : `${String(balance)} tokens on your tab`}
       </p>
     </>
   );

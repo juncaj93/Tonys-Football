@@ -226,8 +226,8 @@
         "art_status": "generated",
         "role": "scenery",
         "alt": "Tony's Pizza Parlor",
-        "path": "/assets/zone/zone_parlor_shell.png",
-        "source": "OpenAI image generation, bright Back Hall rebuild 2026-08-24",
+        "path": "/assets/zone/zone_parlor_shell_v2.png",
+        "source": "Original bright parlor shell, with a whole-scene-audited board/rail centerline repair 2026-08-24",
         "rights_status": "original"
       },
       "zone_parlor_counter_front": {

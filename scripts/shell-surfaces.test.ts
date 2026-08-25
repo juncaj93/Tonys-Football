@@ -47,7 +47,9 @@ import { loadPalette } from './process-art';
  * phone size is the acceptance criterion"*.
  */
 
-const SHELL = path.join(process.cwd(), 'public/assets/zone/zone_parlor_shell.png');
+// The asset registry ships the whole-scene-audited v2 shell.  This guard must
+// inspect the file the player sees, not the retained pre-centering source.
+const SHELL = path.join(process.cwd(), 'public/assets/zone/zone_parlor_shell_v2.png');
 
 interface Field {
   readonly mean: number;

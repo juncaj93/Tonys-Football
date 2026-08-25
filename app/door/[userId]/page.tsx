@@ -1,9 +1,8 @@
 import { notFound, redirect } from 'next/navigation';
 
 import { PinForm } from '@/components/pin-form';
-import { HangingSign, ShopWindow } from '@/components/scene/fixtures';
 import { SignPlate } from '@/components/scene/panel';
-import { ParlorAir } from '@/components/scene/backdrop';
+import { DoorLedgerBackdrop, DoorLedgerHeader } from '@/components/scene/door-ledger';
 import { Page } from '@/components/shell';
 import { claimAction, signInAction } from '@/app/actions/auth';
 import { TYPE } from '@/lib/design/type';
@@ -45,15 +44,12 @@ export default async function DoorManagerPage({
 
   return (
     <>
-      <ParlorAir tone="cold" />
+      <DoorLedgerBackdrop />
 
       <Page>
-        <header className="relative h-24 overflow-hidden border-b-2 border-wood-dark">
-          <ShopWindow />
-          <HangingSign top="Closed" bottom="back in september" />
-        </header>
+        <DoorLedgerHeader label={claiming ? 'NEW KEY' : 'WELCOME BACK'} />
 
-        <main className="mx-auto w-full max-w-md flex-1 px-5 pt-7">
+        <main className="door-ledger-page mx-auto w-full max-w-md flex-1 px-5 pt-7">
           <SignPlate tone={claiming ? 'red' : 'blue'}>
             {claiming ? 'New key' : 'Welcome back'}
           </SignPlate>

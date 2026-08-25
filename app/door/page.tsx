@@ -1,9 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { HangingSign, ShopWindow } from '@/components/scene/fixtures';
 import { SignPlate } from '@/components/scene/panel';
-import { ParlorAir } from '@/components/scene/backdrop';
+import { DoorLedgerBackdrop, DoorLedgerHeader } from '@/components/scene/door-ledger';
 import { Page, TAP_TARGET } from '@/components/shell';
 import { TYPE } from '@/lib/design/type';
 import { viewer } from '@/lib/auth/current-user';
@@ -43,15 +42,12 @@ export default async function DoorPage() {
 
   return (
     <>
-      <ParlorAir tone="cold" />
+      <DoorLedgerBackdrop />
 
       <Page>
-        <header className="relative h-32 overflow-hidden border-b-2 border-wood-dark">
-          <ShopWindow />
-          <HangingSign top="Closed" bottom="back in september" />
-        </header>
+        <DoorLedgerHeader label="KEY RING" />
 
-        <main className="mx-auto w-full max-w-md flex-1 px-5 pt-7">
+        <main className="door-ledger-page mx-auto w-full max-w-md flex-1 px-5 pt-7">
           <SignPlate tone="red">Keys</SignPlate>
           <h1 className={`mt-4 ${TYPE.headlineQuiet} text-paper-white`}>
             Who&rsquo;s asking?

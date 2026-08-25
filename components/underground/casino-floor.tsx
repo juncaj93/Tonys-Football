@@ -19,12 +19,12 @@ const CHIP = 'pixel-edge min-h-[44px] border-2 px-3 active:translate-y-px';
  */
 const SPIN_SYMBOLS = ['BAPPLE', 'PIZZA', 'FREDDY', 'SAUNA', 'TONY'] as const;
 type SlotSymbol = (typeof SPIN_SYMBOLS)[number];
-const SLOT_MARK: Readonly<Record<SlotSymbol, { readonly mark: string; readonly tag: string; readonly tone: string }>> = {
-  BAPPLE: { mark: 'B', tag: 'BAPPLE', tone: 'red' },
-  PIZZA: { mark: '▲', tag: 'SLICE', tone: 'amber' },
-  FREDDY: { mark: 'T', tag: 'TOKEN', tone: 'blue' },
-  SAUNA: { mark: '16', tag: 'LUCKY', tone: 'green' },
-  TONY: { mark: '★', tag: 'TONY’S', tone: 'paper' },
+const SLOT_MARK: Readonly<Record<SlotSymbol, { readonly tag: string; readonly tone: string }>> = {
+  BAPPLE: { tag: 'BAPPLE', tone: 'red' },
+  PIZZA: { tag: 'SLICE', tone: 'amber' },
+  FREDDY: { tag: 'TOKEN', tone: 'blue' },
+  SAUNA: { tag: 'LUCKY', tone: 'green' },
+  TONY: { tag: 'TONY’S', tone: 'paper' },
 };
 const SLOT_SETTLE_MS = 880;
 const DEAL_BEAT_MS = 180;
@@ -181,10 +181,15 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
   if (scene === 'slots') {
     return (
       <GameScreen balance={balance} practiceMode={practiceMode} message={message} onBack={() => setScene('room')} title="Bapple Slots" subtitle="Three reels. Fictional tokens only.">
-        <div className="casino-slot-cabinet pixel-edge relative mx-auto w-full max-w-[360px] border-4 border-ink-900 bg-red-dark p-3 shadow-[5px_5px_0_var(--color-wood-dark)]">
+        <div className="casino-slot-machine pixel-edge relative mx-auto w-full max-w-[360px] border-4 border-ink-900 p-3 shadow-[5px_5px_0_var(--color-wood-dark)]">
+          <div className="casino-slot-marquee pixel-edge relative mx-3 border-2 border-ink-900 px-3 py-2 text-center text-paper-white">
+            <span className={TYPE.eyebrow}>BAPPLE SLOTS</span>
+            <span aria-hidden="true" className="casino-slot-marquee-slice casino-slot-marquee-slice--left">▲</span>
+            <span aria-hidden="true" className="casino-slot-marquee-slice casino-slot-marquee-slice--right">▲</span>
+          </div>
           <span aria-hidden="true" className="casino-slot-bulb casino-slot-bulb--left" />
           <span aria-hidden="true" className="casino-slot-bulb casino-slot-bulb--right" />
-          <div className="border-4 border-amber-glow bg-ink-900 p-2">
+          <div className="casino-slot-window mt-3 border-4 border-ink-900 p-2">
             <div className={`flex justify-center gap-2 ${slotSpinning ? 'slot-machine-running' : ''}`} aria-label="Slot reels">
               {reelSymbols.map((symbol, index) => (
                 <span key={index} className={`flex h-20 w-20 items-center justify-center border-4 border-wood-dark bg-paper-mid ${slotSpinning ? 'slot-reel-spinning' : ''}`} style={slotSpinning ? { animationDelay: `${String(index * 46)}ms` } : undefined}>
@@ -193,9 +198,10 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
               ))}
             </div>
           </div>
-          <div className="mt-3 flex items-center justify-between border-2 border-ink-900 bg-amber-mid px-3 py-2 text-ink-900">
-            <span className={TYPE.eyebrow}>BAPPLE JACKPOT</span><span aria-hidden="true">🍎</span>
+          <div className="casino-slot-payline mt-3 flex items-center justify-between border-2 border-ink-900 px-3 py-2 text-ink-900">
+            <span className={TYPE.eyebrow}>3 MATCH · JACKPOT</span><span aria-hidden="true" className="casino-slot-coin">●</span>
           </div>
+          <span aria-hidden="true" className="casino-slot-lever"><i /></span>
         </div>
         <WagerTray wager={wager} pending={pending} onWager={setWager} />
         <button type="button" disabled={!canPlay} onClick={spin} className={`pixel-edge mx-auto mt-3 flex min-h-14 w-full max-w-[360px] items-center justify-center border-4 border-ink-900 bg-red-mid px-4 ${TYPE.action} text-paper-mid shadow-[4px_4px_0_var(--color-wood-dark)] disabled:opacity-50`}>
@@ -207,12 +213,14 @@ export function CasinoFloor({ balance }: { balance: number | null }) {
 
   return (
     <GameScreen balance={balance} practiceMode={practiceMode} message={message} onBack={() => setScene('room')} title="Tony’s Blackjack" subtitle="Pull up a chair. Tony deals.">
-      <div className="casino-blackjack-table pixel-edge relative mx-auto min-h-[360px] w-full max-w-[390px] overflow-hidden border-4 border-wood-dark p-3 pt-36 shadow-[5px_5px_0_var(--color-wood-dark)]">
-        <div className="casino-game-dealer pointer-events-none absolute top-1 left-1/2 z-10 h-36 w-36 -translate-x-1/2" aria-hidden="true">
-          <AssetView resolution={resolveAsset('character_tony_dealer')} className="h-full w-full object-contain object-bottom" />
+      <div className="casino-blackjack-table pixel-edge relative mx-auto min-h-[410px] w-full max-w-[390px] overflow-hidden border-4 border-wood-dark p-3 pt-[142px] shadow-[5px_5px_0_var(--color-wood-dark)]">
+        <div aria-hidden="true" className="casino-blackjack-topline"><span>TONY’S TABLE</span><i /><span>BLACKJACK</span></div>
+        <div className="casino-game-dealer pointer-events-none absolute left-1/2 top-6 z-10 h-[112px] w-[88px] -translate-x-1/2" aria-hidden="true">
+          <AssetView resolution={resolveAsset('character_tony_blackjack_room')} className="h-full w-full object-contain object-bottom" />
         </div>
-        <span aria-hidden="true" className="casino-dealer-plaque absolute top-[132px] left-1/2 z-10 -translate-x-1/2">TONY DEALS</span>
-        <div className="casino-table-card-zone relative z-20 pt-4">
+        <span aria-hidden="true" className="casino-dealer-plaque absolute top-[122px] left-1/2 z-10 -translate-x-1/2">DEALER TONY</span>
+        <div aria-hidden="true" className="casino-chip-rack absolute right-3 top-[70px] z-10"><i /><i /><i /><i /><i /></div>
+        <div className="casino-table-card-zone relative z-20 px-2 pt-4">
           <CardRow roundId={blackjack?.id ?? 'new'} label="TONY" cards={blackjack?.dealer ?? []} value={blackjack?.dealerValue ?? null} dealing={tableDealing} dealBeat={dealBeat} hidden={blackjack?.dealerValue === null} />
           <div className="my-7 border-t-2 border-dashed border-paper-mid/60" />
           <CardRow roundId={blackjack?.id ?? 'new'} label="YOU" cards={blackjack?.player ?? []} value={blackjack?.playerValue ?? null} dealing={tableDealing} dealBeat={dealBeat} />
@@ -243,10 +251,10 @@ function UndergroundRoom({ balance, practiceMode, onPracticeMode, onEnter }: { b
       <button type="button" onClick={() => onPracticeMode(!practiceMode)} className="absolute top-[5%] left-[7%] border-2 border-ink-900 bg-paper-mid px-2 py-1 text-ink-900 shadow-[2px_2px_0_var(--color-wood-dark)]">
         <span className={TYPE.eyebrow}>{practiceMode ? 'PRACTICE ∞' : `TOKENS ${balance === null ? '—' : String(balance)}`}</span>
       </button>
-      {/* Tony stays canonical: this is the established dealer sprite, cropped
-          at the far table edge so he is working behind it, never pasted on the
-          felt between the players. */}
-      <div className="casino-room-tony casino-room-tony--behind pointer-events-none absolute left-[27%] top-[20%] h-[45%] w-[46%]" aria-hidden="true">
+      {/* The room shell supplies Tony's far rail. This companion sprite is
+          intentionally waist-up, so the whole apron/card silhouette can sit
+          behind that rail. Do not crop it: that was the "peeking" defect. */}
+      <div className="casino-room-tony pointer-events-none absolute left-[36%] top-[40%] aspect-[88/112] w-[28%]" aria-hidden="true">
         <AssetView resolution={resolveAsset('character_tony_blackjack_room')} className="h-full w-full object-contain object-bottom" />
       </div>
       <button type="button" onClick={() => onEnter('slots')} className="casino-room-hotspot absolute left-[1%] top-[29%] h-[31%] w-[29%]" aria-label="Play Bapple Slots">
@@ -284,10 +292,18 @@ function SlotFace({ symbol }: { symbol: SlotSymbol }) {
   const mark = SLOT_MARK[symbol];
   return (
     <span aria-label={mark.tag} className={`casino-slot-face casino-slot-face--${mark.tone}`}>
-      <span aria-hidden="true" className="casino-slot-face-mark">{mark.mark}</span>
+      <SlotGlyph symbol={symbol} />
       <span aria-hidden="true" className="casino-slot-face-tag">{mark.tag}</span>
     </span>
   );
+}
+
+function SlotGlyph({ symbol }: { symbol: SlotSymbol }) {
+  if (symbol === 'PIZZA') return <span aria-hidden="true" className="casino-slot-glyph casino-slot-glyph--pizza"><i /><b /><b /><b /></span>;
+  if (symbol === 'BAPPLE') return <span aria-hidden="true" className="casino-slot-glyph casino-slot-glyph--bapple"><i /><b /></span>;
+  if (symbol === 'FREDDY') return <span aria-hidden="true" className="casino-slot-glyph casino-slot-glyph--token">T</span>;
+  if (symbol === 'SAUNA') return <span aria-hidden="true" className="casino-slot-glyph casino-slot-glyph--lucky">7</span>;
+  return <span aria-hidden="true" className="casino-slot-glyph casino-slot-glyph--tony">★</span>;
 }
 
 function CardRow({ roundId, label, cards, value, dealing, dealBeat, hidden = false }: { roundId: string; label: string; cards: readonly string[]; value: number | null; dealing: boolean; dealBeat: number; hidden?: boolean }) {
