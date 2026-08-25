@@ -248,6 +248,7 @@ type StateName =
    * it here than to discover it in a screenshot nobody compares.
    */
   | 'room'
+
   | 'room-furnished'
   | 'room-slot'
   | 'room-corridor'
@@ -498,6 +499,7 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'demo-welcome-box': 'welcome-box',
   // The shelf a brand-new player sees: twenty-four named spots and nothing on
   // any of them. It is the last beat of the commissioner's emotional sequence
+
   // and the one state of this route nobody had ever photographed — every seeded
   // manager owns something by the time the driver reaches here.
   'demo-collection-empty': 'collection-empty',
@@ -748,6 +750,7 @@ async function enterPin(page: Page, doorUrl: string, pin: string): Promise<void>
    * hand. Nothing was wrong with the product; the harness had asserted a clock.
    *
    * `waitForURL` waits for the condition itself and gives it a real budget, so a
+
    * loaded machine costs time rather than a false failure — and a genuinely
    * broken door still fails, in fifteen seconds instead of two and a half.
    */
@@ -998,6 +1001,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       return;
     /*
      * `idle` settles **past the arrival's reveal** — 4900ms plus its ramp.
+
      *
      * It is the room's canonical portrait and the state where every object is
      * live, so it is the one that must be photographed with nothing prompted.
@@ -1247,6 +1251,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
       return;
+
 
     /*
      * Reached by URL rather than by tapping a banner.
@@ -1498,6 +1503,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
         `document.querySelector("[data-unopened-boxes]")?.getAttribute("data-unopened-boxes") !== ${JSON.stringify(before)}`,
         undefined,
         { timeout: 15_000 },
+
       );
 
       await home(page);
@@ -1748,6 +1754,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
     /*
      * The body of the paper, which no capture had ever contained.
      *
+
      * `scrollIntoViewIfNeeded` on the tenth section rather than a pixel offset:
      * the sections are different heights at every width, so a number would be
      * three different places on three phones and would silently stop pointing
@@ -1998,6 +2005,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
       // Pad left up on purpose — see the note on the four rarity states above.
       await page.waitForTimeout(1600);
       return;
+
     }
 
     /*
@@ -2248,6 +2256,7 @@ const ALL_STATES: readonly StateName[] = [
   'slice-historical-recap',
   'slice-no-stories',
   'slice-one-story',
+
   'slice-competing-stories',
   'slice-monday-comeback',
   'slice-preseason-draft-review',
@@ -2498,6 +2507,7 @@ interface TonyFrame {
  * as `undefined`. The first run of this gate crashed on exactly that. So the
  * duration is interpolated in and the expression evaluates to the promise.
  */
+
 function tonySampler(ms: number): string {
   return `(() => { const ms = ${String(ms)}; return new Promise((resolve) => {
   const mark = document.querySelector('.tony-mark');
@@ -2748,6 +2758,7 @@ async function checkGlowLeavesTonyAlone(page: Page, width: number): Promise<void
   let listening = true;
   cdp.on('Page.screencastFrame', (frame) => {
     if (!listening) return;
+
     frames.push(Buffer.from(frame.data, 'base64'));
     cdp.send('Page.screencastFrameAck', { sessionId: frame.sessionId }).catch(() => {
       // The session is closing. Ack was best-effort from the start.
@@ -2999,6 +3010,7 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
     fail('tony-steady', `@${String(width)} pass A never sampled a still frame after the reveal`);
   }
 
+
   /* --- B. The same window, with his line put away --------------------- */
 
   await firstVisit();
@@ -3248,6 +3260,7 @@ async function checkTonySteady(page: Page, width: number): Promise<void> {
  *
  * ## What it counts, and why it counts pixels rather than elements
  *
+
  * Visual debt 4 was not two overlapping panels. Tony's order pad sat *behind*
  * the panel's scrim, dimmed, so nothing overlapped and nothing was unreadable —
  * and it was still a second transient surface up at the same time as the first.
@@ -3498,6 +3511,7 @@ async function checkTypeFloor(page: Page, width: number, state: string): Promise
         'type-floor',
         `@${String(width)} ${state}: undeclared environmental type "${kind}" — ` +
           `only "${ENVIRONMENTAL_TYPE}" is exempt from the ${String(TYPE_FLOOR_PX)}px floor`,
+
       );
     }
   }
@@ -3748,6 +3762,7 @@ const DESK_EXPECTATIONS: Record<
  * ten under a name claiming four would be the exact false green this file has
  * been bitten by twice.
  */
+
 const DRAFT_BOARD_EXPECTATIONS: Record<
   string,
   {
@@ -3998,6 +4013,7 @@ async function checkDeckWrap(page: Page, width: number, state: string): Promise<
        * is the browser's own answer to "did this wrap".
        */
       const range = document.createRange();
+
       range.selectNodeContents(deck);
       const lines = new Set(
         [...range.getClientRects()].map((rect) => Math.round(rect.top)),
@@ -4248,6 +4264,7 @@ async function checkReviewDesk(page: Page, width: number, state: string): Promis
     if (actual < minimum) {
       fail(
         'review-desk',
+
         `${at} expected at least ${String(minimum)} in "${section}", found ${String(actual)}`,
       );
     }
@@ -4498,6 +4515,7 @@ async function checkManagerBelongsInTheRoom(page: Page, at: string): Promise<voi
   if (seen === null) {
     fail('room', `${at} draws no manager in the room at all`);
     return;
+
   }
 
   const drift = Math.abs(seen.spriteScaleX - seen.roomScale) / seen.roomScale;
@@ -4748,6 +4766,7 @@ async function checkObjectMap(page: Page, width: number): Promise<void> {
   if (tally('door') !== 3 || tally('display') !== 4 || tally('toy') !== 1) {
     fail(
       'object-map',
+
       `${at} expected 3 Doors · 4 Displays · 1 Toy, found ${String(tally('door'))} · ${String(tally('display'))} · ${String(tally('toy'))}`,
     );
   }
@@ -4998,6 +5017,7 @@ async function checkDevices(page: Page, width: number, state: string): Promise<v
       const bg = getComputedStyle(node).backgroundColor;
       if (bg !== '' && !bg.includes('rgba(0, 0, 0, 0)')) {
         ground = bg;
+
         break;
       }
       node = node.parentElement;
@@ -5248,6 +5268,7 @@ async function checkCharacter(page: Page, width: number, state: string): Promise
       'character',
       `@${String(width)} ${state} sets image-rendering: ${seen.rendering} on the character.`,
     );
+
   }
 
   // Fully on screen, horizontally. A clipped character is the one thing this
@@ -5498,6 +5519,7 @@ const HYDRATION_REPORTER = `(() => {
   // on null. \`document\` is always a Node and subtree covers everything under it.
   const watcher = new MutationObserver(() => { takeEarliest(); });
   const takeEarliest = () => {
+
     if (earliest.bodyChildren !== '') return;
     const { bodyChildren, headChildren } = census();
     if (bodyChildren === '') return;
@@ -5748,6 +5770,7 @@ async function run(): Promise<void> {
         {
 
           /*
+
            * Overlap is only meaningful between targets that are reachable at
            * the same time. Every open panel sits above a scrim that makes the
            * room inert, so a panel's Close button "overlapping" a Door behind
@@ -5998,3 +6021,6 @@ try {
     console.error(`\nVisual QA refused to start.\n\n  ${error.message}\n`);
     process.exit(1);
   }
+
+  throw error;
+}
