@@ -320,7 +320,7 @@ export function roomObject(id: string): RoomObjectSpec {
 /**
  * The Tonight board's cream field, measured — `SHELL_AUDIT §4`.
  *
- * `119 × 88` at `(61, 83)`. This is the **art's** extent: where the cream stops
+ * `118 × 88` at `(57, 83)`. This is the **art's** extent: where the cream stops
  * and the painted frame begins. Text does not go here — `TONIGHT_FIELD` is inset
  * inside it. Recorded separately so the inset is visibly derived from a
  * measurement rather than guessed.
@@ -331,22 +331,19 @@ export function roomObject(id: string): RoomObjectSpec {
  * for that band gives the inner edges directly:
  *
  * ```
- * horizontal runs at y = 100,120,140,160 → (58,60) and (180,182)  → x 61..179
- * vertical   runs at x =  80,120,160     → (79,82) and (171,174)  → y 83..170
+ * horizontal runs at y = 100,120,140,160 → x 57..174
+ * vertical   runs at x =  80,120,160     → y 83..170
  * ```
  *
- * The previous value — `[60, 93, 111, 79]` — was read off a zoomed screenshot by
- * eye, and it was wrong on three sides: nine units short on the right, ten too
- * low on the top. The right-hand error is the one that showed. It put the field's
- * centre at **115** when the board's true centre is **120**, so every line on the
- * board was painted five units left of where a sign painter would have put it.
- * Commissioner, 2026-07-30: *"text is off centered"*. It was, by 5 units — about
- * 20 device pixels on the phone, which is exactly the size of error the eye
- * catches instantly and cannot name.
+ * A later whole-scene audit caught a second measurement mistake: the previous
+ * `[61, 83, 119, 88]` overlay followed a hand-read dark-frame run, not the
+ * actual cream field. It displaced the paper four logical pixels right and made
+ * the painted frame look off-centre. This is deliberately the raw cream run,
+ * not the outer frame, so the overlay can never cover one side of the frame.
  *
  * Re-measure by scanning the art, never by looking at it.
  */
-export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [61, 83, 119, 88];
+export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [57, 83, 118, 88];
 
 /**
  * Where the board's words actually go — the cream field **inset by 6 units**.
@@ -364,8 +361,8 @@ export const TONIGHT_CREAM: RoomObjectSpec['rect'] = [61, 83, 119, 88];
  * border of the frame"*. A sign painter leaves a margin; the frame is part of the
  * drawing and text must not crowd it.
  *
- * Six units on every side, so the text block is `107 × 76`, centred on the board's
- * true centre of **120**, and clears the painted frame on all four sides at every
+ * Six units on every side, so the text block is `106 × 76`, centred on the board's
+ * true centre of **116**, and clears the painted frame on all four sides at every
  * supported width. What sits inside it is a hero and at most one short fact
  * (`boardFace`), centred — not the two sentences at 8px and 9px that were there
  * before.

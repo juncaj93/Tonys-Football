@@ -249,7 +249,9 @@ Fourteen effects require **zero generated assets**. They are CSS, SVG, or a few 
 | Newspaper landing | CSS transform + easing |
 | Playoff / night / offseason lighting | Single CSS filter over the scene |
 
-**Every playable room needs one or two purposeful ambient motions.** They are
+**Every playable room needs at least one or two purposeful ambient motions, and
+should carry additional ones wherever the composition supports them without
+visual noise.** They are
 environmental, not decorative UI: a window can carry a small leaf sway in
 daylight; a pendant can breathe one value; a neon sign can hum; a CRT can tick;
 a plant can move slightly; a fireplace can cycle between two or three matched,

@@ -62,7 +62,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 | Area / workstream | Branch | Owns | Must not touch | Opened |
 |---|---|---|---|---|
 | Cozy rec-room basement rebuild | codex/cozy-rec-room | Bright integrated rec-room shell, built-in hearth/firelight, and runtime-safe manager-room composition | Other room themes, parlor/back-hall shell geometry, casino economics, Sleeper data, collectible ownership, and character layers | 2026-08-24 |
-| Back-hall encounters, pocket navigation, and practice boxes | codex/npc-dialogue-polish | Canon-aware returning-manager dialogue, team-name/schedule receipts, persistent icon-only in-world navigation, and an admin-only token-free test box supply | Basement-room shell geometry, casino economics, production token economics, collectible ownership rules, and Tony’s parlor conversation deck | 2026-08-24 |
+| Back-hall encounters, pocket navigation, practice boxes, and casino visual repair | codex/npc-dialogue-polish | Canon-aware returning-manager dialogue, team-name/schedule receipts, persistent icon-only in-world navigation, an admin-only token-free test box supply, the room-first casino presentation, and measured parlor-board alignment | Basement-room shell geometry, casino odds/economics, production token economics, collectible ownership rules, and Tony’s parlor conversation deck | 2026-08-24 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
