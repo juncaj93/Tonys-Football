@@ -122,6 +122,21 @@ the person out and never exposes a PIN. Leave that flow alone. The missing
 wrong-name correction capability is a planned operator feature recorded above,
 not a visual defect to patch silently.
 
+### Commissioner press desk
+
+At 390px, the desk reads as an ordered paper workflow: waiting, approved but
+unprinted, rack, then drafting. It makes the empty state useful without
+inventing work, and the manual-draft and stop-press controls describe their
+side effects before a commissioner reaches them. Leave the editorial workflow
+alone.
+
+### Commissioner draft board
+
+At 390px, all ten managers are presented as large, separate rows and the empty
+Sleeper state distinguishes “nothing imported yet” from a failed review. The
+action to pull the draft is described before it can be pressed. Leave the draft
+board's mobile hierarchy alone.
+
 ### Fraud Check
 
 At 390px, the all-play explanation is clear before the ledger, every manager
@@ -147,6 +162,12 @@ card hierarchy alone.
 - Commissioner office at 390px: key/PIN recovery is readable and has an
   appropriate self-reset safeguard; manager-name correction is not present and
   is captured as a planned, audited operator feature rather than altered here.
+- Commissioner press desk at 390px: the empty, draft, and stop-press states
+  are ordered and legible before their mutation controls; no adjustment is
+  recommended.
+- Commissioner draft board at 390px: all ten managers have distinct,
+  thumb-sized rows and the no-draft-yet state is clear; no adjustment is
+  recommended.
 - Current `origin/main` route tree, active-work register, feature flags, and
   product/visual boundaries.
 - PR #134 remote gates: CI succeeded; Visual QA failed and remains a release
