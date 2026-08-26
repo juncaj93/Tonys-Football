@@ -89,7 +89,7 @@ export async function grantBox(
   // escaping to the pool and losing the enclosing transaction's atomicity.
   db: Queryable,
   input: { userId: string; grantKey: string; source: string },
-): Promise<{ granted: boolean }> {
+): Promise<{ granted: boolean; boxId: string }> {
   const written = await db
     .insert(lootBoxes)
     .values({
@@ -103,7 +103,32 @@ export async function grantBox(
     .onConflictDoNothing({ target: lootBoxes.grantKey })
     .returning({ id: lootBoxes.id });
 
-  return { granted: written.length > 0 };
+  const boxId =
+    written[0]?.id ??
+    (
+      await db
+        .select({ id: lootBoxes.id })
+        .from(lootBoxes)
+        .where(and(eq(lootBoxes.userId, input.userId), eq(lootBoxes.grantKey, input.grantKey)))
+        .limit(1)
+    )[0]?.id;
+
+  if (boxId === undefined) throw new Error('the granted box was not recorded');
+  return { granted: written.length > 0, boxId };
+}
+
+/**
+ * A route-level ownership check for the dedicated reveal room. It intentionally
+ * accepts an already-opened box: returning to the reveal after a refresh shows
+ * the recorded pull rather than silently replacing it with a new roll.
+ */
+export async function boxBelongsToUser(db: Database, userId: string, boxId: string): Promise<boolean> {
+  const row = await db
+    .select({ id: lootBoxes.id })
+    .from(lootBoxes)
+    .where(and(eq(lootBoxes.id, boxId), eq(lootBoxes.userId, userId)))
+    .limit(1);
+  return row.length > 0;
 }
 
 /**

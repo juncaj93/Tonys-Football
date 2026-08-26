@@ -2,7 +2,7 @@ import { and, eq } from 'drizzle-orm';
 
 import { applyTokenDelta, economyFor } from '@/lib/counter/tokens';
 import { type Database } from '@/lib/db';
-import { seasonMemberships, weeklyRewards } from '@/lib/db/schema';
+import { seasonMemberships, seasons, weeklyRewards } from '@/lib/db/schema';
 import {
   deriveWeeklyAwards,
   rewardDescription,
@@ -332,4 +332,37 @@ export async function rewardsForMembership(
     .where(eq(weeklyRewards.seasonMembershipId, membershipId))
     .orderBy(weeklyRewards.week)
     .limit(limit);
+}
+
+/**
+ * The current reader's settled reward receipt for one printed week.
+ *
+ * The Slice is shared editorial content, while the money earned from that week
+ * belongs to one manager. This query deliberately joins the already-written
+ * reward records rather than re-deriving a winner from the scoreboard: a
+ * receipt may only say that tokens arrived after the Tuesday job has actually
+ * paid and recorded them.
+ */
+export async function rewardsForSlice(
+  db: Database,
+  input: { readonly userId: string; readonly season: number; readonly week: number },
+): Promise<
+  readonly {
+    readonly reason: 'MATCHUP_WIN' | 'WEEKLY_HIGH_SCORE';
+    readonly amount: number;
+  }[]
+> {
+  return db
+    .select({ reason: weeklyRewards.reason, amount: weeklyRewards.amount })
+    .from(weeklyRewards)
+    .innerJoin(seasonMemberships, eq(weeklyRewards.seasonMembershipId, seasonMemberships.id))
+    .innerJoin(seasons, eq(weeklyRewards.seasonId, seasons.id))
+    .where(
+      and(
+        eq(seasonMemberships.userId, input.userId),
+        eq(seasons.year, input.season),
+        eq(weeklyRewards.week, input.week),
+      ),
+    )
+    .orderBy(weeklyRewards.reason);
 }

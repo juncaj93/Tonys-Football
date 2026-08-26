@@ -57,7 +57,10 @@ export function BuyBox({
       if (result.ok) {
         // A different purchase next time.
         token.current = crypto.randomUUID();
-        router.refresh();
+        // Buying hands the box straight to the dedicated opening scene. The
+        // tray remains the place an *existing* unopened box waits; the counter
+        // is not an unnecessary stop between paying and opening.
+        router.push(`/counter/open/${result.boxId}`);
         return;
       }
 

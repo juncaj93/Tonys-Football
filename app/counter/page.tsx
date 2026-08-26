@@ -32,12 +32,11 @@ import { getDb } from '@/lib/db';
  * hardcoded frontend logic."* This page reads `economy_configs`, and every value
  * is flagged provisional until the P3 simulation (`16 §8`).
  *
- * ## Opening still happens at the tray
+ * ## The tray holds boxes; the reveal room opens them
  *
- * Worth restating because it is easy to get backwards later: **an owned box opens
- * at the tray, in place** (`18 §4.1`). This route is for buying and browsing.
- * Routing here to *open* would insert a navigation step into the most exciting
- * moment in the product.
+ * The parlor tray is where an owned box waits, so tapping it is intuitive. The
+ * actual opening happens in its own scene, where the box and prize have one
+ * dependable centre rather than competing with Tony's counter geometry.
  */
 
 export const dynamic = 'force-dynamic';
@@ -113,8 +112,8 @@ export default async function CounterPage() {
             {unopenedBoxes === 0
               ? 'Tony wipes the counter and waits. The tray is empty.'
               : unopenedBoxes === 1
-                ? 'There is a box on the tray with your name on it. Open it out front — Tony likes to watch.'
-                : `There are ${String(unopenedBoxes)} boxes on the tray with your name on them. They open out front — Tony likes to watch.`}
+                ? 'There is a box on Tony’s tray with your name on it. Give it a tap out front.'
+                : `${String(unopenedBoxes)} boxes are waiting on Tony’s tray. The oldest one is up first.`}
           </p>
 
           {/*

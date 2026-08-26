@@ -2,7 +2,7 @@
   "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
-  "totalSlugs": 120,
+  "totalSlugs": 121,
   "statusValues": [
     "placeholder",
     "generated",
@@ -241,7 +241,7 @@
       }
     },
     "_parlorObjects_B1": {
-      "$comment": "Transparent overlays dropped into the shell's prepared places. Glow is filter: drop-shadow() on each overlay's own alpha — no authored masks. Tapping an owned box opens it AT THE TRAY, in place, never after a navigation. CORRECTED 2026-08-03: object_box_standard/rare/legendary are NOT wired into any component today — components/scene/counter-tray.tsx and app/page.tsx resolve only object_box_owned. Every box the product actually grants is kind:'standard' (lib/counter/boxes.ts); the box itself carries no rarity, only its revealed contents do. These three rows are placeholders for a box-rarity feature that does not exist yet — do not generate art for them until that feature is built. Tony's branding is approved on object_box_owned only, per docs/art/BRAND_EXCEPTIONS.md item 5.",
+      "$comment": "Transparent overlays dropped into the shell's prepared places. Glow is filter: drop-shadow() on each overlay's own alpha — no authored masks. An owned box is visibly waiting on the tray and its tap enters the dedicated pizza-box reveal room. CORRECTED 2026-08-03: object_box_standard/rare/legendary are NOT wired into any component today — components/scene/counter-tray.tsx and app/page.tsx resolve only object_box_owned. Every box the product actually grants is kind:'standard' (lib/counter/boxes.ts); the box itself carries no rarity, only its revealed contents do. These three rows are placeholders for a box-rarity feature that does not exist yet — do not generate art for them until that feature is built. Tony's branding is approved on object_box_owned only, per docs/art/BRAND_EXCEPTIONS.md item 5.",
       "object_newspaper_rack": {
         "family": "zone",
         "canvas": "38x38",
@@ -288,10 +288,20 @@
         "batch": "B1",
         "art_status": "generated",
         "role": "door",
-        "route": "opens in place at the tray",
+        "route": "opens in the pizza-box reveal room",
         "alt": "Your unopened pizza box",
-        "$comment": "Canvas corrected 2026-08-03 from a wrong 96x96 to the actual TRAY_BOX footprint (lib/parlor/objects.ts) — non-square, 44 wide x 30 tall. Branded Tony's pizza box approved, docs/art/BRAND_EXCEPTIONS.md item 5; the perspective must match the room's own tray recess, not a product-shot angle.",
+        "$comment": "A small, physical version of the same checkerboard pizza box in the reveal room. Canvas is the actual TRAY_BOX footprint (lib/parlor/objects.ts), so it sits squarely on the counter rather than floating or spilling off the tray.",
         "path": "/assets/zone/object_box_owned.png"
+      },
+      "object_box_reveal": {
+        "family": "zone",
+        "canvas": "154x105",
+        "batch": "B1",
+        "art_status": "generated",
+        "role": "reveal",
+        "alt": "A checkerboard pizza loot box ready to open",
+        "$comment": "The large, same-box presentation asset used only by the dedicated reveal scene. It is intentionally a real prop with transparent margins, never a red web-card or a stretched thumbnail.",
+        "path": "/assets/zone/object_box_reveal.png"
       },
       "object_champion_banner": {
         "family": "zone",

@@ -15,6 +15,8 @@ import { previewBoard } from '@/lib/stakes/boards';
 import { chalkboardFor, openBountyFor } from '@/lib/stakes/chalkboard';
 import { featureFlags } from '@/lib/flags';
 import { openSeason } from '@/lib/counter/tokens';
+import { rewardsForSlice } from '@/lib/rewards/service';
+import { SliceRewardSlip } from '@/components/slice/reward-slip';
 
 /**
  * The rack by the door.
@@ -131,6 +133,15 @@ export default async function SlicePage({
   const issue: Edition | null = state.mode === 'issue' ? state.issue : state.issue;
 
   /*
+   * A manager's token receipt is not part of the immutable newspaper itself.
+   * It is an attached, private acknowledgement of a server-recorded payment,
+   * so every reader gets the same approved paper while seeing only their own
+   * settled fantasy rewards.
+   */
+  const rewards =
+    issue === null ? [] : await rewardsForSlice(getDb(), { userId: user.id, season: issue.season, week: issue.week });
+
+  /*
    * The stamp comes from the rack rather than from the mode.
    *
    * *"Last one Tony printed"* is a claim about **which week this is**, not about
@@ -176,6 +187,8 @@ export default async function SlicePage({
               */
             <Newspaper issue={issue} stamp={stamp} />
           )}
+
+          <SliceRewardSlip rewards={rewards} />
 
           {stakes !== null && (
             <StakesBand

@@ -34,7 +34,6 @@ import {
 import { seasonClock } from '@/lib/parlor/season';
 import { momentTags } from '@/lib/parlor/moment';
 import { boardFace, tonightBoard } from '@/lib/parlor/tonight';
-import { previewReveal } from '@/lib/demo/preview';
 import { featureFlags } from '@/lib/flags';
 import { exteriorLight } from '@/lib/world/light';
 import { BoardPanel, ChalkSlate } from '@/components/scene/chalkboard';
@@ -163,20 +162,7 @@ export default async function ParlorPage({
   // What the league can see of them, so the room reflects the Showcase choice.
   const shown = await showcaseFor(db, user.id);
 
-  /*
-   * `?preview_reveal=legendary&preview_stage=first` — review only, and null
-   * everywhere it matters.
-   *
-   * The reveal's rarity treatment is otherwise unphotographable on purpose: the
-   * roll happens inside `openBox` and no harness can choose it. The same is true
-   * of *where in the loop* the pull happened, which is what decides the plate's
-   * last two lines. `MANDATE §8` names preview-only query parameters as a
-   * sanctioned demo mechanism; the two guards in `lib/demo/guard.ts` are
-   * evaluated here, on the server, so this cannot be turned on from a URL bar in
-   * production.
-   */
   const query = await searchParams;
-  const preview = previewReveal(query['preview_reveal'], process.env, query['preview_stage']);
 
   /*
    * What is written on the small sign.
@@ -422,10 +408,10 @@ export default async function ParlorPage({
               *
               * Still one Door and still the same hit region. What changes is
               * what a tap does: with nothing on the tray it goes to `/counter`
-              * to browse, and with a box on it **the box opens here, in place**
-              * (`18 §4.1`). Routing to `/counter` first would put a navigation
-              * step inside the most exciting moment in the product, which is
-              * the exact failure the ruling names.
+              * to browse, and with a box on it goes straight to the dedicated
+              * pizza-box reveal room. The box remains a state of this tray, not
+              * a ninth object — it is simply too small a surface for a whole
+              * reveal ceremony.
               *
               * The box is a *state of the tray*, not a ninth object — the
               * homepage stays 3 Doors · 4 Displays · 1 Toy.
@@ -433,7 +419,6 @@ export default async function ParlorPage({
             <CounterTray
               spec={roomObject('counter')}
               ownedBoxId={box?.id ?? null}
-              previewReveal={preview}
               boxAsset={resolveAsset('object_box_owned')}
             />
 
