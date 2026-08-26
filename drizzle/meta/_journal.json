@@ -155,6 +155,13 @@
       "when": 1786100700000,
       "tag": "0021_showcase_collectibles_only",
       "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1786100800000,
+      "tag": "0022_early_dues_bonus",
+      "breakpoints": true
     }
   ]
 }

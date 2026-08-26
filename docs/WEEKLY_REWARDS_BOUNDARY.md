@@ -130,6 +130,152 @@ It derives nothing: no running total, no re-summed balance. The balance is a tri
 
 ---
 
+## 11. The early-dues thank-you — a credit that is not a reward
+
+Added 2026-08-26, alongside the receipt read model below. It sits in
+`lib/rewards/` and is deliberately **not** part of `03 §4`'s fantasy-performance
+sources: `deriveWeeklyAwards` does not know it exists, `weekly_reward_reason`
+does not gain a value, and nothing about a roster, a score, a week or a finish
+enters it.
+
+**What it is.** Two managers paid their 2026 league dues before the commissioner
+asked twice, and the commissioner wanted that noticed in the shop. It pays
+**twice the standard box price** — 400 today — once, per named manager, per
+season.
+
+**The amount is derived, never written down.** `earlyDuesAmount` multiplies
+`standardBoxPriceTokens` from the **stored** `economy_configs` row. A literal
+`400` would be a third number for the P3 simulation to argue with and would
+silently stop meaning *"two boxes"* the next time the price moved — which has
+already happened once, when the 2026-08-04 ruling took the box from 50 to 200.
+**No economy value changed here**, and a test in `early-dues.test.ts` pins all
+four of the ones this slice reads.
+
+**Commissioner ruling, 2026-08-26 — 2026 is the whole of this feature.** The two
+names are not a placeholder awaiting generalisation: *"it's actually just this
+season since they paid early, whereas future seasons I will reward potentially
+different managers for paying their dues early."* A later season pays nobody
+until somebody says who, and the recommended route when that day comes is a
+**commissioner surface** rather than an edit to source — `docs/OPEN_ITEMS.md`
+**G6** carries the direction, the two constraints that survive into it (the
+amount stays derived; the idempotency key stays the same), and the fact that it
+is deferred and unauthorized.
+
+**The roster carries its season, and that is the load-bearing part.**
+`EARLY_DUES_ROSTER` is a source-controlled list — the shape
+`content/manager-mappings.json` established for a fact the software cannot
+derive, with a `source` on every row. Each entry names a **season**, because dues
+are paid per season: a roster keyed only by handle would hand the same bonus out
+again the first time a 2027 season was seeded, paying for something nobody had
+done yet. Extending it to another season is a reviewed edit to the array, and a
+test goes red until somebody makes it deliberately.
+
+**Matched on the Sleeper handle, case-insensitively.** `11 §2` keeps the three
+identities apart; the commissioner named these two by the handle Sleeper shows,
+so that is what is matched — never the display name, which is a league decision
+that can be re-approved. Handles are unique case-insensitively, so `NateyDee` and
+`nateydee` are one account and must not be two answers. An **unclaimed** account
+(`sleeper_username IS NULL`) is never eligible, and a test proves a row whose
+*display name* is `NateyDee` is not paid.
+
+**Eligibility is that plus a live seat**, `season_memberships.is_active` — the
+same filter `grantSeasonalBoxes` uses, and the only opinion in this repository
+about who is playing. A named manager holding no seat is **skipped, not an
+error**: `apply_token_delta` would raise *"holds no seat"*, turning an expected
+state into a failed step, which is exactly the inversion §5 above exists to
+avoid.
+
+**Its own `token_reason`, not `COMMISSIONER_ADJUSTMENT`.** The argument `0010`
+made for the stake pair: a manager's statement is a thing they read, and an
+adjustment is the one line on it that ought to be rare and conspicuous. A
+thank-you filed as an adjustment is indistinguishable from the commissioner
+correcting a mistake.
+
+**No table of its own**, unlike weekly rewards, and §7's argument is what decides
+it rather than being contradicted by it. `weekly_rewards` exists because the
+ledger cannot say *on what basis* (a roster, a score, a game) or *against which
+numbers*. This gift has no football basis to record — the basis is a roster in
+source, reviewable in git — and the one fact the ledger cannot otherwise carry,
+the `economy_configs` version the amount was derived from, travels in
+`source_ref` as `economy:<version>`. So `0022` creates no table, no trigger and
+no constraint. It adds one enum value.
+
+**Idempotency is `token_transactions.idempotency_key UNIQUE`, and nothing else.**
+The key is `early-dues:{seasonId}:{userId}` — the occasion, never the run, and
+**never the amount**, for §6's reason exactly: a re-priced replay must raise
+rather than pay twice at two prices. There is no application check that decides
+whether to pay. The single ledger read in `awardEarlyDues` is **a report, never a
+gate** — it exists so a deploy can log *"two paid"* rather than *"two
+considered"*, two concurrent runs can make it over-count by one, and the money is
+correct either way. An integration test races two runs and asserts two rows.
+
+**It is wired into the seed, not the Tuesday job.** The gift is owed the moment
+the season is open — a thank-you for something that happened before a ball was
+thrown — so making a manager wait for the first Tuesday of October would be the
+software deciding when to say thank you. The seed is a deploy step, so this is a
+**catch-up** rather than a schedule: a season seeded late, a manager seated late
+and a redeploy all end in the same place. A step in the Tuesday chain that can
+never do anything after the first deploy is a step that only adds a way for
+Tuesday to fail.
+
+## 12. The receipt — data, and no surface
+
+`lib/rewards/receipt.ts` answers one question — *"what has been credited to this
+manager that they did not do themselves?"* — and **builds no UI, adds no route
+and writes nothing.**
+
+**The rule for what is on it.** A box purchase, a stake placed and a casino wager
+are things a manager did with their thumb, seconds ago, on a screen that told
+them so. What needs a receipt is money that moved **while they were not here**: a
+Tuesday cron paying a week they won, and a thank-you decided off the platform
+entirely. So the receipt is exactly `MATCHUP_WIN`, `WEEKLY_HIGH_SCORE` and
+`EARLY_DUES_BONUS`.
+
+**`STAKE_PAYOUT` and `SEASON_START` are deliberately absent.** A settled stake is
+credited unattended and has an equally good claim — it belongs to `lib/stakes/`,
+and adding it from here would be this slice deciding another module's surface. An
+opening balance is not news on a *first* login; it is the reason there is a
+balance at all. Both are one entry each in `RECEIPT_REASONS` the day somebody
+owns that decision.
+
+**The week comes from `weekly_rewards`, joined on `token_transaction_id`** —
+which is UNIQUE, so it is a genuine one-to-one and a manager who won in week 3
+and week 9 gets the right week on the right line. Matching on the *reason*
+instead would collapse both onto whichever row came back first. Nothing is parsed
+out of an idempotency key: a key is an identifier, and treating it as a record is
+how a format change becomes a data loss.
+
+**The balance is read, never re-summed from the lines.** §9's rule, applied one
+layer earlier: it is a trigger-maintained column, the lines are a filtered subset
+of the ledger, and adding them up would produce a second, wrong opinion about
+money. `credited` is what arrived; `balance` is what is there; a test spends
+tokens so the two disagree on purpose.
+
+**There is no seen/unseen state, and that is a decision.** A receipt that shows
+each credit once needs a per-manager read watermark — precisely the
+`league_events` spine `CLAUDE.md` records as deliberately deferred, to be
+revisited *"when a concrete feature needs … per-manager read/unread state."* No
+surface exists yet, so building it now would be creating the deferred spine for a
+screen nobody has designed. A caller that eventually has somewhere to record a
+watermark passes `since`, which is one argument rather than one table.
+
+## 13. What the weekly high score needed, and what it did not
+
+The 2026-08-26 assignment asked for a weekly highest-scorer bonus paid from
+finalized Sleeper scoring. **It was already built and is unchanged** — 400 from
+`03 §4`, the maximum of a finalized week's stored team scores, paid by the
+Tuesday job. Rebuilding it would have been a second opinion about money.
+
+One genuine gap in its *coverage* was closed. The high score is a **league**
+measurement, and the fixture that would catch a per-game implementation did not
+exist: on a single game, measuring the best score inside the matchup and
+measuring it across the week give the same answer, so a defect that pays every
+winner 400 looks correct. `derive.test.ts` now plays two games where the winner
+of the lower-scoring one is paid a win and nothing else. It fails on a per-game
+implementation.
+
+---
+
 ## Ruling index
 
 | Decision | Where |
@@ -147,3 +293,18 @@ It derives nothing: no running total, no re-summed balance. The balance is a tri
 | No correction path; mistakes are `COMMISSIONER_ADJUSTMENT` | §7 |
 | Rewards are not coupled to Slice approval | §8 |
 | No backfill of closed seasons | §10 |
+| The early-dues thank-you is a credit, not a `03 §4` reward | §11 |
+| The amount is 2x the stored box price, derived rather than written down | §11 |
+| The roster is source-controlled and each entry names its season | §11 |
+| 2026 only; a later season is a deliberate second row, not a widened match | §11 |
+| A commissioner surface is the recommended route for a later season — deferred | §11 · `OPEN_ITEMS` G6 |
+| Matched on the Sleeper handle, case-insensitively; never the display name | §11 |
+| A named manager with no live seat is skipped, not an error | §11 |
+| Its own `token_reason`, never `COMMISSIONER_ADJUSTMENT` | §11 |
+| No table: the basis is in source, the economy version in `source_ref` | §11 |
+| The ledger read is a report, never a gate | §11 |
+| Wired into the seed, not the Tuesday chain | §11 |
+| The receipt is credits the manager did not initiate | §12 |
+| `STAKE_PAYOUT` and `SEASON_START` are deliberately off it | §12 |
+| No seen/unseen watermark; `since` is an argument, not a table | §12 |
+| The weekly high score itself is unchanged | §13 |

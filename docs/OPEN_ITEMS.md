@@ -993,6 +993,41 @@ source of fantasy truth on a page load.
 **Reconsidering it later needs a scoped feature decision of its own**, and it is
 not a launch item: nothing in v1 asks the question.
 
+### G6 · Early-dues thank-yous beyond 2026 — an admin surface, deferred
+
+**Commissioner direction, 2026-08-26.** The early-dues thank-you shipped with a
+roster naming `NateyDee` and `MattyB2317` for **2026 only**. That is not a
+placeholder to be generalised later — it is the correct and complete answer for
+this season, and the commissioner has confirmed it: *"it's actually just this
+season since they paid early, whereas future seasons I will reward potentially
+different managers for paying their dues early."*
+
+**Which managers paid early is a fact about one season**, decided off the
+platform, and the software cannot observe it. `lib/rewards/early-dues.ts` already
+holds that shape — `EARLY_DUES_ROSTER` entries each carry a `seasonYear`, and
+`earlyDuesHandlesFor(2027)` returns nothing, asserted by test. So a later season
+pays nobody until somebody says who, which is the behaviour this entry exists to
+protect. **Do not widen the match, and do not carry a handle forward.**
+
+**The recommended shape when it is next needed: a commissioner surface**, not a
+source edit. The commissioner named the direction — *"maybe that's just something
+we integrate in the commissioner/admin menu"* — and it is right for the same
+reason `G3` is: naming a season's early payers is an intentional human act, and
+an act a person performs every August is a screen rather than a pull request.
+Two constraints carry over unchanged when it is built:
+
+- **The amount stays derived** (`standardBoxPriceTokens x 2`), never typed into a
+  form. A commissioner choosing a number per manager is a token faucet with a
+  text box on it, and P3 gates every value in this economy.
+- **Idempotency stays `token_transactions.idempotency_key UNIQUE`** on
+  `early-dues:{seasonId}:{userId}`, so an admin surface pressing the button twice
+  is the same no-op a redeploy is. It gets no write path of its own
+  (`16 §5.4`).
+
+**This is product direction, not authorization to build.** Nothing here may be
+implemented without a separate instruction, and until it is, 2026 is the whole
+of this feature. `docs/WEEKLY_REWARDS_BOUNDARY.md §11` carries the runtime.
+
 ---
 
 ## H — Closed, or stale documentation now corrected

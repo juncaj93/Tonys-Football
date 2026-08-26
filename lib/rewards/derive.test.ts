@@ -127,6 +127,36 @@ describe('deriveWeeklyAwards', () => {
     expect(high.every((award) => award.amount === 400)).toBe(true);
   });
 
+  it('measures the high score across the whole week, not inside each game', () => {
+    /*
+     * The case a per-game implementation gets wrong, and it looks right on a
+     * single-game fixture: measure the best score inside each matchup and every
+     * winner is also a high scorer, so the week pays four 400s instead of one.
+     *
+     * Ann beats Ben 130-90 and Cal beats Dee 110-100. Cal won, and posted the
+     * third-best score in the league — so Cal is paid 150 and nothing else.
+     * There is exactly one high score in a week and it belongs to the league.
+     */
+    const result = awards([
+      game({ sleeperMatchupId: 1, pointsACents: 13000, pointsBCents: 9000 }),
+      game({
+        sleeperMatchupId: 2,
+        rosterAId: 3,
+        rosterBId: 4,
+        pointsACents: 11000,
+        pointsBCents: 10000,
+      }),
+    ]);
+
+    const high = result.filter((award) => award.reason === 'WEEKLY_HIGH_SCORE');
+    expect(high.map((award) => award.managerId)).toEqual(['u-ann']);
+    expect(high[0]!.pointsCents).toBe(13000);
+
+    // Cal is a winner and is not a high scorer, which is the whole point.
+    const cal = result.filter((award) => award.managerId === 'u-cal');
+    expect(cal.map((award) => award.reason)).toEqual(['MATCHUP_WIN']);
+  });
+
   it('pays nothing for a week with no games', () => {
     expect(awards([])).toEqual([]);
   });
