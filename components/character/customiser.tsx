@@ -399,17 +399,20 @@ export function Customiser({ configuration, equipped, owned, chosen }: Customise
 /**
  * A row that scrolls sideways inside itself.
  *
- * `overflow-x-auto` on the row and never on the page: the one thing
- * `VISUAL_ACCEPTANCE` will not have is the body scrolling horizontally on a
- * phone. The negative margin lets the first and last chip reach the panel's
- * edge, so a half-visible chip is the cue that there is more.
+ * The negative margin lets the first and last chip reach the panel's edge.
+ *
+ * An off-screen chip is not a reliable cue on a phone: the strip has neither a
+ * visible scrollbar nor a spoken prompt, so Beard, Top, Shirt, and Worn can
+ * look absent rather than merely farther right. A trait is a primary choice,
+ * not a long catalog; let these compact rows wrap so every category and every
+ * option is discoverable at 360px.
  */
 function Strip({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div
       role="group"
       aria-label={label}
-      className="-mx-4 flex gap-2.5 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+      className="-mx-4 flex flex-wrap gap-2.5 px-4 pb-1"
     >
       {children}
     </div>
