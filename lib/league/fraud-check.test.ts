@@ -3,8 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { type PlayEveryoneRecord } from '@/lib/stats/luck';
 import { scopeOf } from '@/lib/stats/scope';
 
-import { FRAUD_THRESHOLDS } from './all-play';
-import { fraudCheckFrom } from './fraud-check';
+import { ALL_PLAY_DISCLAIMER, FRAUD_THRESHOLDS } from './all-play';
+import { fraudCheckFrom, seasonToDateBoard, type StoredSeason } from './fraud-check';
 
 /**
  * The presentation adapter over the neutral all-play measurement.
@@ -150,5 +150,171 @@ describe('fraudCheckFrom', () => {
   it('agrees with the thresholds it is judged against', () => {
     expect(FRAUD_THRESHOLDS.minimumGames).toBe(5);
     expect(FRAUD_THRESHOLDS.minimumScheduleDelta).toBe(2);
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* The live, season-to-date board                                            */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * The board during a season, from a loaded season and no database.
+ *
+ * This is the half with the decisions in it: which weeks are closed, which are
+ * unattributable, whether there is enough season to say anything. Every one of
+ * them is reachable from a fixture, which is why `seasonToDateBoard` takes the
+ * facts rather than a handle — `lib/stats/finality.ts` states the pattern.
+ */
+
+const CLOSED_AT = new Date('2026-10-06T12:00:00Z');
+
+const SEATS_2026 = new Map(
+  [
+    'alex',
+    'nathan',
+    'ryan',
+    'zack',
+    'nick',
+    'dan',
+    'mike',
+    'joe',
+    'sam',
+    'pete',
+  ].map((id, index) => [
+    index + 1,
+    { userId: id, displayName: id.charAt(0).toUpperCase() + id.slice(1) },
+  ]),
+);
+
+/** Alex is scheduled beneath the league's worst scorer every single week. */
+const FLATTERED = [90, 80, 120, 130, 140, 150, 160, 170, 180, 190];
+
+function storedWeek(week: number, points: readonly number[], disputedWeeks: readonly number[]) {
+  const pairs: readonly (readonly [number, number])[] = [
+    [1, 2],
+    [3, 4],
+    [5, 6],
+    [7, 8],
+    [9, 10],
+  ];
+  return pairs.map(([a, b]) => ({
+    week,
+    weekType: 'regular',
+    rosterAId: a,
+    rosterBId: b,
+    pointsACents: Math.round((points[a - 1] ?? 0) * 100),
+    pointsBCents: Math.round((points[b - 1] ?? 0) * 100),
+    disputed: disputedWeeks.includes(week),
+  }));
+}
+
+function season2026(input: {
+  readonly weeks: number;
+  /** Which of those weeks the Tuesday job has closed. Defaults to all. */
+  readonly closed?: readonly number[];
+  readonly finalized?: boolean;
+  readonly roster?: ReadonlyMap<number, { userId: string; displayName: string }>;
+  readonly disputed?: readonly number[];
+}): StoredSeason {
+  const weeks = Array.from({ length: input.weeks }, (_, index) => index + 1);
+  const closed = input.closed ?? weeks;
+  return {
+    found: true,
+    finalized: input.finalized ?? false,
+    finalizedAt: input.finalized === true ? CLOSED_AT : null,
+    weekFinalizedAt: new Map(closed.map((week) => [week, CLOSED_AT])),
+    rows: weeks.flatMap((week) => storedWeek(week, FLATTERED, input.disputed ?? [])),
+    roster: input.roster ?? SEATS_2026,
+  };
+}
+
+describe('seasonToDateBoard', () => {
+  it('builds a board once five weeks have closed, and says how far it reaches', () => {
+    const board = seasonToDateBoard(2026, season2026({ weeks: 5 }));
+
+    expect(board).not.toBeNull();
+    expect(board?.season).toBe(2026);
+    expect(board?.weeksCounted).toBe(5);
+    expect(board?.reach?.kind).toBe('season-to-date');
+    expect(board?.reach?.throughWeek).toBe(5);
+    expect(board?.reach?.label).toBe('in 2026 through week 5');
+    expect(board?.lines).toHaveLength(10);
+  });
+
+  it('stamps the manager the schedule is carrying, mid-season', () => {
+    const board = seasonToDateBoard(2026, season2026({ weeks: 5 }));
+    const alex = board?.lines.find((line) => line.managerId === 'alex');
+
+    // 5-0 on the schedule, second-worst score in the league every week.
+    expect(alex?.officialRecord).toBe('5-0');
+    expect(alex?.allPlayRecord).toBe('5-40');
+    expect(alex?.tonyStamp).toBe('FRAUD ALERT');
+    expect(board?.lines[0]?.managerId).toBe('alex');
+  });
+
+  it('counts only the weeks the Tuesday job has closed', () => {
+    // Eight weeks played, five closed. Week 6-8 are still open to correction.
+    const board = seasonToDateBoard(2026, season2026({ weeks: 8, closed: [1, 2, 3, 4, 5] }));
+
+    expect(board?.weeksCounted).toBe(5);
+    expect(board?.reach?.throughWeek).toBe(5);
+    expect(board?.lines.find((line) => line.managerId === 'alex')?.officialRecord).toBe('5-0');
+  });
+
+  it('waits until there is enough season to say anything', () => {
+    expect(seasonToDateBoard(2026, season2026({ weeks: 4 }))).toBeNull();
+    expect(seasonToDateBoard(2026, season2026({ weeks: 8, closed: [1, 2, 3, 4] }))).toBeNull();
+    // Played but never closed is the ordinary Sunday-to-Tuesday state.
+    expect(seasonToDateBoard(2026, season2026({ weeks: 8, closed: [] }))).toBeNull();
+  });
+
+  it('hands a finished season back to the historical board', () => {
+    /*
+     * Both paths would be correct on a closed season, and the historical one
+     * reconciles against `lib/stats/luck.ts` on every run. Two paths answering
+     * for one season is how two answers start.
+     */
+    expect(seasonToDateBoard(2026, season2026({ weeks: 14, finalized: true }))).toBeNull();
+  });
+
+  it('drops a week whole when a roster resolves to nobody', () => {
+    const short = new Map(SEATS_2026);
+    short.delete(10);
+
+    const board = seasonToDateBoard(2026, season2026({ weeks: 6, roster: short }));
+
+    // Every week loses its unattributable game, so every week goes.
+    expect(board).toBeNull();
+  });
+
+  it('drops a disputed week whole rather than the disputed game', () => {
+    const board = seasonToDateBoard(2026, season2026({ weeks: 6, disputed: [3] }));
+
+    expect(board?.excludedWeeks).toEqual([3]);
+    expect(board?.weeksCounted).toBe(5);
+    for (const line of board?.lines ?? []) {
+      expect(line.stamp.conditions.find((entry) => entry.condition === 'sample')?.detail).toContain(
+        '5 games played',
+      );
+    }
+  });
+
+  it('reports nothing for a season that is not there', () => {
+    expect(
+      seasonToDateBoard(2026, {
+        found: false,
+        finalized: false,
+        finalizedAt: null,
+        weekFinalizedAt: new Map(),
+        rows: [],
+        roster: new Map(),
+      }),
+    ).toBeNull();
+  });
+
+  it('carries the computed-not-played disclaimer, exactly as the historical board does', () => {
+    expect(seasonToDateBoard(2026, season2026({ weeks: 5 }))?.disclaimer).toBe(
+      ALL_PLAY_DISCLAIMER,
+    );
   });
 });

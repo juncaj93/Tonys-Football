@@ -67,6 +67,7 @@
  * produce deep-equal output, and the ordering is stable three deep.
  */
 
+import { describeScope } from '@/lib/stats/scope';
 import { fromCents } from '@/lib/sleeper/reconcile';
 
 /** A ten-team league. `CLAUDE.md`: one private ten-person league. */
@@ -122,6 +123,46 @@ export interface AllPlayWeek {
   readonly teams: number;
   readonly counted: boolean;
   readonly excludedBecause: WeekExclusion | null;
+}
+
+/**
+ * How far the table reaches, and the approved wording for it.
+ *
+ * ## Why the scope has to travel on the table
+ *
+ * *Nine wins and a losing all-play record* is the same sentence in week six and
+ * in January, produced by the same correct arithmetic over the same correct
+ * rows — and only one of them is a season. `16 §12`'s rule, as
+ * `docs/HISTORICAL_ANALYSIS_BOUNDARY.md` applies it: the scope travels on the
+ * fact, because the number cannot carry it, and a renderer **prints the label**
+ * rather than deciding how far a claim reaches.
+ *
+ * ## Why this is not `HistoricalScope`
+ *
+ * `lib/stats/scope.ts` owns the wording and this reuses {@link describeScope}
+ * for it, so there is one place a scope is worded. It deliberately does **not**
+ * reuse the `HistoricalScope` *type*, whose `finalizedOnly` field is documented
+ * as structural — a historical population is finalized **seasons** only,
+ * because an open season's numbers can still move.
+ *
+ * This population is the finalized **weeks** of a possibly-open season, which
+ * is the distinction `lib/stats/finality.ts` exists to draw and which weekly
+ * rewards and stake settlement have relied on since they were built: a week is
+ * final on Tuesday, a season closes in January. Borrowing the type would have
+ * quietly redefined another module's invariant to mean something it does not.
+ */
+export interface AllPlayReach {
+  readonly kind: 'season' | 'season-to-date';
+  readonly season: number;
+  /** The last week counted. Null only on a season whose books are shut. */
+  readonly throughWeek: number | null;
+  /** Approved wording: `in the 2024 season` · `in 2026 through week 6`. */
+  readonly label: string;
+  /**
+   * Every week counted carried its own finalization, or belongs to a closed
+   * season. Structural: the caller filters, and a table cannot say otherwise.
+   */
+  readonly finalizedWeeksOnly: true;
 }
 
 /** One manager's two records over the same counted weeks. */
@@ -201,6 +242,8 @@ export interface AllPlayTable {
   readonly countedWeeks: readonly number[];
   readonly excludedWeeks: readonly number[];
   readonly integrity: AllPlayIntegrity;
+  /** How far it reaches. Null when the caller named no season. */
+  readonly reach: AllPlayReach | null;
   /** Always {@link ALL_PLAY_DISCLAIMER}. On the table so it cannot be dropped. */
   readonly disclaimer: string;
 }
@@ -210,6 +253,16 @@ export interface AllPlayOptions {
   readonly leagueTeams?: number;
   /** Weeks the caller has already ruled uncountable, dropped whole. */
   readonly excludedWeeks?: readonly number[];
+  /** Name the season and the table can say how far it reaches. */
+  readonly season?: number;
+  /**
+   * Are the books shut on that season?
+   *
+   * Defaults to **false**, so an unqualified table reaches only as far as its
+   * last counted week and says so. A claim that overstates its reach is the
+   * failure this defaults against.
+   */
+  readonly seasonFinalized?: boolean;
 }
 
 /**
@@ -407,6 +460,7 @@ export function allPlayTable(
       managers: lines.length,
       faults,
     },
+    reach: reachOf(options.season, options.seasonFinalized ?? false, countedWeeks),
     disclaimer: ALL_PLAY_DISCLAIMER,
   };
 }
@@ -613,6 +667,39 @@ export function pct(value: number): string {
 /* ------------------------------------------------------------------------- */
 /* Internals                                                                 */
 /* ------------------------------------------------------------------------- */
+
+/**
+ * The reach of a table, from the season it was told about and the weeks it
+ * actually counted.
+ *
+ * A finished season reaches the whole season; anything else reaches its last
+ * counted week — **counted**, not the last week played, because a week dropped
+ * for a short field or a dispute is not in the measurement and a label saying
+ * otherwise would overstate it.
+ */
+function reachOf(
+  season: number | undefined,
+  seasonFinalized: boolean,
+  countedWeeks: readonly number[],
+): AllPlayReach | null {
+  if (season === undefined) return null;
+
+  const throughWeek = seasonFinalized ? null : (countedWeeks.at(-1) ?? 0);
+  const kind = seasonFinalized ? 'season' : 'season-to-date';
+
+  return {
+    kind,
+    season,
+    throughWeek,
+    label: describeScope({
+      kind,
+      firstSeason: season,
+      lastSeason: season,
+      throughWeek,
+    }),
+    finalizedWeeksOnly: true,
+  };
+}
 
 function round(value: number, places: number): number {
   const factor = 10 ** places;

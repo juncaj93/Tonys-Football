@@ -269,6 +269,44 @@ describe('the schedule-neutral record', () => {
     expect(allPlayTable(games)).toEqual(allPlayTable(games));
   });
 
+  it('reaches only as far as its last counted week, and says so', () => {
+    const table = allPlayTable([...week(1, ASCENDING), ...week(2, DESCENDING)], { season: 2026 });
+
+    expect(table.reach?.kind).toBe('season-to-date');
+    expect(table.reach?.throughWeek).toBe(2);
+    expect(table.reach?.label).toBe('in 2026 through week 2');
+    expect(table.reach?.finalizedWeeksOnly).toBe(true);
+  });
+
+  it('reaches the whole season only when told the books are shut', () => {
+    const table = allPlayTable(week(1, ASCENDING), { season: 2024, seasonFinalized: true });
+
+    expect(table.reach?.kind).toBe('season');
+    expect(table.reach?.throughWeek).toBeNull();
+    expect(table.reach?.label).toBe('in the 2024 season');
+  });
+
+  it('reaches the last week it counted, not the last week it saw', () => {
+    /*
+     * Week 3 is dropped for a short field. A label saying `through week 3`
+     * would claim a week that is not in the measurement.
+     */
+    const short = week(3, ASCENDING, [
+      [0, 1],
+      [2, 3],
+    ]);
+    const table = allPlayTable([...week(1, ASCENDING), ...week(2, DESCENDING), ...short], {
+      season: 2026,
+    });
+
+    expect(table.excludedWeeks).toEqual([3]);
+    expect(table.reach?.throughWeek).toBe(2);
+  });
+
+  it('says nothing about reach when no season was named', () => {
+    expect(allPlayTable(week(1, ASCENDING)).reach).toBeNull();
+  });
+
   it('carries the computed-not-played disclaimer on the table', () => {
     expect(allPlayTable(week(1, ASCENDING)).disclaimer).toBe(ALL_PLAY_DISCLAIMER);
   });
