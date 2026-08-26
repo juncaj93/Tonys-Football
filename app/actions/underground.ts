@@ -3,7 +3,8 @@
 import { requireUser } from '@/lib/auth/current-user';
 import { openSeason } from '@/lib/counter/tokens';
 import { getDb } from '@/lib/db';
-import { playBlackjack, playSlots, startBlackjack, type CasinoView } from '@/lib/underground/service';
+import { playBlackjack, playRoulette, playSlots, startBlackjack, type CasinoView } from '@/lib/underground/service';
+import { type RouletteBet } from '@/lib/underground/game';
 
 export type UndergroundResponse =
   | { readonly ok: true; readonly round: CasinoView }
@@ -29,6 +30,15 @@ export async function dealBlackjackAction(wager: number, requestToken: string): 
   const season = await openSeason(db);
   if (season === null) return { ok: false, reason: 'unavailable' };
   return startBlackjack(db, { userId: user.id, seasonId: season.id, wager, requestKey: `blackjack:${user.id}:${requestToken}` });
+}
+
+export async function spinRouletteAction(wager: number, bet: RouletteBet, requestToken: string): Promise<UndergroundResponse> {
+  const { user } = await requireUser();
+  if (!validToken(requestToken)) return { ok: false, reason: 'invalid' };
+  const db = getDb();
+  const season = await openSeason(db);
+  if (season === null) return { ok: false, reason: 'unavailable' };
+  return playRoulette(db, { userId: user.id, seasonId: season.id, wager, bet, requestKey: `roulette:${user.id}:${requestToken}` });
 }
 
 export async function blackjackAction(roundId: string, action: 'HIT' | 'STAND'): Promise<UndergroundResponse> {

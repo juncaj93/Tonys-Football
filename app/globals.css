@@ -1950,6 +1950,17 @@ body[data-parlor-focus] .tony-line * {
     linear-gradient(0deg, var(--color-wood-dark) 0 3px, transparent 3px 16px);
 }
 
+.casino-game-header {
+  background: linear-gradient(90deg, var(--color-wood-mid), var(--color-wood-dark));
+  box-shadow: inset 0 2px 0 rgba(245, 237, 220, 0.15);
+}
+
+.casino-game-announcer {
+  min-height: 43px;
+  background: rgba(25, 15, 16, 0.92);
+  box-shadow: inset 0 2px 0 rgba(245, 237, 220, 0.08);
+}
+
 .casino-slot-bulb {
   position: absolute;
   top: 46%;
@@ -1984,6 +1995,19 @@ body[data-parlor-focus] .tony-line * {
     linear-gradient(0deg, rgba(104, 163, 87, 0.18) 0 2px, transparent 2px 12px);
   background-size: 100% 100%, 12px 12px, 12px 12px;
   box-shadow: inset 0 0 0 2px var(--color-paper-mid), inset 0 0 0 7px var(--color-green-mid), inset 0 0 0 10px var(--color-wood-dark);
+}
+
+.casino-blackjack-table::after {
+  content: '';
+  position: absolute;
+  left: 12%;
+  right: 12%;
+  bottom: 12px;
+  height: 33%;
+  border: 2px solid rgba(245, 237, 220, 0.32);
+  border-bottom: 0;
+  border-radius: 50% 50% 0 0 / 32% 32% 0 0;
+  pointer-events: none;
 }
 
 .casino-blackjack-topline {
@@ -2030,6 +2054,90 @@ body[data-parlor-focus] .tony-line * {
     var(--color-paper-mid);
   background-size: 6px 6px;
 }
+
+/* A painted-in-code roulette table: a real circular wheel, a felt number grid,
+   and crisp step motion rather than a generic red panel or blurred CSS spinner. */
+.casino-roulette-table {
+  background:
+    linear-gradient(90deg, rgba(245, 237, 220, 0.10) 0 2px, transparent 2px 12px),
+    linear-gradient(180deg, var(--color-green-mid), var(--color-green-deep) 68%, var(--color-wood-dark));
+  box-shadow: inset 0 0 0 2px var(--color-paper-mid), inset 0 0 0 7px var(--color-green-deep);
+}
+
+.casino-roulette-fixture {
+  position: relative;
+  width: 156px;
+  height: 234px;
+}
+
+.casino-roulette-ball {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  top: 39px;
+  width: 8px;
+  height: 8px;
+  border: 1px solid var(--color-ink-900);
+  border-radius: 50%;
+  background: var(--color-paper-white);
+  box-shadow: 1px 1px 0 var(--color-amber-deep);
+  transform: translateX(-50%);
+  transform-origin: 4px 45px;
+}
+
+@keyframes casino-roulette-spin {
+  0% { transform: translateX(-50%) rotate(0deg); }
+  100% { transform: translateX(-50%) rotate(1080deg); }
+}
+.casino-roulette-ball--spinning { animation: casino-roulette-spin 1250ms steps(12, end) both; }
+
+.casino-roulette-result {
+  position: absolute;
+  z-index: 5;
+  left: 50%;
+  top: 76px;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 2px solid var(--color-paper-white);
+  border-radius: 50%;
+  color: var(--color-paper-white);
+  font-family: var(--font-display);
+  font-size: 13px;
+  transform: translate(-50%, -50%);
+}
+.casino-roulette-result--red { background: var(--color-red-dark); }
+.casino-roulette-result--black { background: var(--color-ink-900); }
+.casino-roulette-result--green { background: var(--color-green-deep); }
+
+.casino-roulette-numbers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 2px;
+  padding: 3px;
+  border: 2px solid var(--color-amber-mid);
+  background: var(--color-ink-900);
+}
+.casino-roulette-number,
+.casino-roulette-colour {
+  min-height: 27px;
+  border: 1px solid var(--color-paper-mid);
+  color: var(--color-paper-white);
+  font-family: var(--font-display);
+  font-size: 13px;
+  line-height: 1;
+}
+.casino-roulette-number--red,
+.casino-roulette-colour--red { background: var(--color-red-mid); }
+.casino-roulette-number--black,
+.casino-roulette-colour--black { background: var(--color-ink-900); }
+.casino-roulette-number--green { grid-column: 1 / -1; background: var(--color-green-deep); }
+.casino-roulette-number.is-selected,
+.casino-roulette-colour.is-selected { box-shadow: inset 0 0 0 3px var(--color-amber-glow); color: var(--color-amber-glow); }
+.casino-roulette-number:disabled,
+.casino-roulette-colour:disabled { opacity: 0.72; }
+.casino-roulette-colour { min-height: 34px; border: 2px solid var(--color-paper-mid); }
 
 /*
  * Time outside the parlor. The shell stays the same welcoming place; only the

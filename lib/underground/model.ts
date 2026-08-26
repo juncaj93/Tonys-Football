@@ -1,4 +1,4 @@
-import { type BlackjackOutcome, type SlotsState } from './game';
+import { type BlackjackOutcome, type RouletteState, type SlotsState } from './game';
 
 /** The three visible table chips. Kept separate from server execution for UI reuse. */
 export const UNDERGROUND_WAGERS = [10, 20, 40] as const;
@@ -25,4 +25,14 @@ export type CasinoView =
       readonly dealer: readonly string[];
       readonly dealerValue: number | null;
       readonly outcome: BlackjackOutcome | null;
+    }
+  | {
+      readonly id: string;
+      readonly game: 'ROULETTE';
+      readonly wager: number;
+      readonly settled: true;
+      readonly payout: number;
+      readonly pocket: RouletteState['pocket'];
+      readonly color: RouletteState['color'];
+      readonly bet: RouletteState['bet'];
     };
