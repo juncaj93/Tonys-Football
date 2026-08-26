@@ -1083,8 +1083,6 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'profile':
       await onlyThisDevice(page);
       await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
-      await page.getByRole('button', { name: /Open your pizza box/i }).click();
-      await page.waitForTimeout(400);
       return;
 
     /*
