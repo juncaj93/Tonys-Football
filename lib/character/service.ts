@@ -224,6 +224,49 @@ export async function grantWearable(
 }
 
 /**
+ * Put one owned wearable on immediately.
+ *
+ * This is the reveal-screen counterpart to the customiser's full save: a box
+ * award should not make a manager find a second room just to try on the thing
+ * Tony has handed them. The slot still comes from the catalog, ownership still
+ * comes from the database, and the existing item in that one slot is replaced
+ * atomically. Nothing else about the character changes.
+ */
+export async function equipWearable(
+  db: Database,
+  userId: string,
+  slug: string,
+): Promise<ChangeResult> {
+  const item = wearable(slug);
+  if (item === null) {
+    return { ok: false, refusal: 'not-wearable', detail: `${slug} is not a wearable` };
+  }
+
+  const held = await db
+    .select({ collectibleId: collectibles.id })
+    .from(collectibles)
+    .where(and(eq(collectibles.userId, userId), eq(collectibles.slug, slug)))
+    .limit(1);
+  const collectible = held[0];
+  if (collectible === undefined) {
+    return { ok: false, refusal: 'not-owned', detail: `${slug} is not in this manager’s wardrobe` };
+  }
+
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(wearableEquips)
+      .where(and(eq(wearableEquips.userId, userId), eq(wearableEquips.slot, item.slot)));
+    await tx.insert(wearableEquips).values({
+      userId,
+      collectibleId: collectible.collectibleId,
+      slot: item.slot,
+    });
+  });
+
+  return { ok: true, state: await characterFor(db, userId) };
+}
+
+/**
  * Save a chosen appearance **and** what is worn, together, in one transaction.
  *
  * ## Why this exists rather than the customiser calling several actions

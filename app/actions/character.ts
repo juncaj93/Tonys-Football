@@ -3,7 +3,7 @@
 import { requireUser } from '@/lib/auth/current-user';
 import { type CharacterConfiguration } from '@/lib/character/composite';
 import { BASE_TRAITS, isWearableSlot, type WearableSlot } from '@/lib/character/layers';
-import { saveCharacter } from '@/lib/character/service';
+import { equipWearable, saveCharacter } from '@/lib/character/service';
 import { getDb } from '@/lib/db';
 
 /**
@@ -58,6 +58,25 @@ export interface SaveCharacterInput {
   readonly topColour: number;
   /** Collectible id per slot. A slot absent from this is emptied. */
   readonly equipment: Record<string, string | null>;
+}
+
+/** Equip a newly unlocked wardrobe item without leaving its reveal. */
+export async function equipWearableNowAction(slug: string): Promise<SaveCharacterResult> {
+  const { user } = await requireUser();
+  if (typeof slug !== 'string' || !slug.startsWith('wear_')) {
+    return { ok: false, reason: 'That is not something anybody can wear.' };
+  }
+
+  const result = await equipWearable(getDb(), user.id, slug);
+  if (result.ok) return { ok: true };
+
+  const said: Record<string, string> = {
+    invalid: 'That is not a character Tony can draw.',
+    'not-owned': 'That one is not in your collection.',
+    'not-wearable': 'That is not something anybody can wear.',
+    'wrong-slot': 'That does not go there.',
+  };
+  return { ok: false, reason: said[result.refusal] ?? 'Tony could not put that on.' };
 }
 
 function readIndex(value: unknown): number | null {

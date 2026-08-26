@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
+import { equipWearableNowAction } from '@/app/actions/character';
 import { openBoxAction, type RevealPayload } from '@/app/actions/counter';
 import { TYPE } from '@/lib/design/type';
 import { RoomDoor, roomObjectAttributes } from '@/components/scene/room-object';
@@ -325,6 +326,10 @@ function Revealed({
   onDone: () => void;
 }) {
   const heading = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const [equipped, setEquipped] = useState(false);
+  const [equipProblem, setEquipProblem] = useState<string | null>(null);
+  const [equipPending, startEquipTransition] = useTransition();
 
   useEffect(() => {
     heading.current?.focus();
@@ -337,6 +342,25 @@ function Revealed({
       document.removeEventListener('keydown', onKey);
     };
   }, [onDone]);
+
+  const equipNow = (): void => {
+    const wardrobe = reveal.unlockedWearable;
+    if (wardrobe === null || equipped || equipPending) return;
+
+    setEquipProblem(null);
+    startEquipTransition(async () => {
+      const result = await equipWearableNowAction(wardrobe.slug);
+      if (!result.ok) {
+        setEquipProblem(result.reason);
+        return;
+      }
+
+      setEquipped(true);
+      // The player model in every room is server-resolved. Re-read it now so
+      // putting a prize on here is not merely a promise for their next visit.
+      router.refresh();
+    });
+  };
 
   return (
     <>
@@ -449,9 +473,22 @@ function Revealed({
         </p>
 
         {reveal.unlockedWearable !== null && (
-          <p className={`mt-1.5 border-t border-wood/30 pt-1.5 ${TYPE.bodyCompact} text-ink-900`}>
-            Wardrobe unlocked: {reveal.unlockedWearable.name}.
-          </p>
+          <div className="mt-1.5 border-t border-wood/30 pt-1.5">
+            <p className={`${TYPE.bodyCompact} text-ink-900`}>
+              Wardrobe unlocked: {reveal.unlockedWearable.name}.
+            </p>
+            <button
+              type="button"
+              onClick={equipNow}
+              disabled={equipPending || equipped}
+              className={`mt-1.5 flex min-h-[28px] items-center border border-wood-dark bg-amber-mid px-2 ${TYPE.eyebrow} text-ink-900 shadow-[2px_2px_0_var(--color-wood-dark)] active:translate-x-px active:translate-y-px disabled:cursor-default disabled:bg-paper-deep disabled:text-ink-700 disabled:shadow-none`}
+            >
+              {equipPending ? 'Putting it on…' : equipped ? 'Equipped' : 'Equip now'}
+            </button>
+            {equipProblem !== null && (
+              <p className={`mt-1 ${TYPE.bodyCompact} text-red-dark`}>{equipProblem}</p>
+            )}
+          </div>
         )}
 
         {/*
