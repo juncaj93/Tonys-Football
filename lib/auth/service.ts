@@ -427,6 +427,27 @@ export async function listDevices(
 // ---------------------------------------------------------------------------
 
 /**
+ * Why a key came off somebody.
+ *
+ * The **decision**, not the mechanism. Both reasons do exactly the same thing to
+ * the database — that is the point — and what separates them is what
+ * `admin_audit_logs` will be able to say a season later. A trail that recorded
+ * every one of these as `pin_reset` could not tell *"Matty forgot his PIN"* from
+ * *"somebody claimed Matty's name on launch night"*, and those are different
+ * events with different follow-ups.
+ */
+export type KeyResetReason =
+  /** `09 §8.3`'s original case: the manager cannot get in. */
+  | 'FORGOTTEN_PIN'
+  /** A launch-week mis-tap: the wrong person is holding this name. */
+  | 'WRONG_IDENTITY';
+
+const RESET_ACTIONS: Readonly<Record<KeyResetReason, string>> = {
+  FORGOTTEN_PIN: 'pin_reset',
+  WRONG_IDENTITY: 'identity_release',
+};
+
+/**
  * Reset a manager's PIN (`09 §8.3`).
  *
  * Clears the hash rather than setting a new one — the commissioner must never
@@ -435,12 +456,20 @@ export async function listDevices(
  *
  * Every existing session is revoked in the same transaction as the reset and
  * the audit row, so a reset cannot half-happen and cannot happen unrecorded.
+ *
+ * `reason` decides only what the audit row is called. It defaults to
+ * `FORGOTTEN_PIN` so the key board keeps writing `pin_reset` exactly as it
+ * always has; `lib/admin/corrections.ts` passes `WRONG_IDENTITY` for the launch
+ * correction. **It must never become a parameter that changes what happens** —
+ * two reasons that did different things to the sessions or the hash would be
+ * two operations sharing one name.
  */
 export async function resetPin(
   db: Database,
-  input: { actorUserId: string; subjectUserId: string },
+  input: { actorUserId: string; subjectUserId: string; reason?: KeyResetReason },
 ): Promise<void> {
   const at = now();
+  const reason: KeyResetReason = input.reason ?? 'FORGOTTEN_PIN';
 
   await db.transaction(async (tx) => {
     await tx
@@ -455,9 +484,14 @@ export async function resetPin(
 
     await tx.insert(adminAuditLogs).values({
       actorUserId: input.actorUserId,
-      action: 'pin_reset',
+      action: RESET_ACTIONS[reason],
       subjectUserId: input.subjectUserId,
-      details: { revokedSessions: true },
+      /*
+       * The reason is recorded beside the action name as well as in it. The
+       * name is what a person reads; the field is what a query filters on
+       * without having to know the mapping above.
+       */
+      details: { revokedSessions: true, reason },
       occurredAt: at,
     });
   });

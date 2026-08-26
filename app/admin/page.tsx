@@ -46,6 +46,12 @@ import { commissionerQueue, countPending } from '@/lib/publication/queue';
  * a PIN, and the release is written to `admin_audit_logs` in the same
  * transaction.
  *
+ * The **mechanism** for that is the key board's, and it now records which
+ * decision it was: `resetPin` takes a reason, and the correction writes
+ * `identity_release` where the key board writes `pin_reset`. The correction
+ * itself lives one screen down, at `/admin/corrections`, because reading what a
+ * correction touches has to come before pressing it.
+ *
  * `requireAdmin()` answers with `notFound()` rather than a 403: a player
  * probing this URL learns nothing about whether it exists.
  */
@@ -171,6 +177,29 @@ export default async function AdminPage({
                   own — and you cannot clear your own from here, because it would sign you out
                   mid-action.
               </p>
+            </div>
+
+            {/*
+              * Corrections — the drawer, not a fourth control on every row.
+              *
+              * The key board's one button answers *"they cannot get in."* A
+              * correction changes what somebody's identity **is**, so it is a
+              * decision to be read before it is a gesture to be made, and it
+              * lives on its own screen for the same reason the press desk keeps
+              * Approve off the queue row.
+              */}
+            <div className="mt-4 border-t-2 border-dashed border-ink-300 pt-3">
+              <Link
+                href="/admin/corrections"
+                className={`pixel-edge flex ${TAP_TARGET} w-full flex-col justify-center border-2 border-wood-dark bg-[#1c1113] px-3 py-2.5 active:translate-y-px`}
+              >
+                <span className={`${TYPE.stamp} text-paper-mid`}>
+                  Corrections
+                </span>
+                <span className={`mt-1 ${TYPE.bodyCompact} text-paper-mid/70`}>
+                  Wrong name off the door, or a look saved by accident
+                </span>
+              </Link>
             </div>
           </PixelPanel>
 

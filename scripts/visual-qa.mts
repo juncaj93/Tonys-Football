@@ -277,6 +277,22 @@ type StateName =
   | 'office-blocked'
   | 'office-printed'
   | 'office-queue'
+  /**
+   * The corrections drawer, in the two states that matter.
+   *
+   * `corrections` is the league — names and nothing else, because the decision
+   * is deliberately one screen further in. `corrections-confirm` is that screen:
+   * one manager, one correction, what it does and what it leaves alone, and the
+   * only button in the feature.
+   *
+   * The confirmation is reached by **tapping**, not by URL. Its query carries a
+   * real user id, and a driver that typed one would either need a fixture id or
+   * photograph the league list under the confirmation's name — the false green
+   * the nine reveal states cost a milestone to.
+   */
+  | 'corrections'
+  | 'corrections-manager'
+  | 'corrections-confirm'
   | 'prediction'
   | 'receipt'
   | 'counter'
@@ -583,6 +599,17 @@ const DEMO_BACKED: Partial<Record<StateName, string>> = {
   'office-blocked': 'office-blocked',
   'office-printed': 'office-printed',
   'office-queue': 'office-queue',
+
+  /*
+   * The corrections drawer. `review-empty` for the same reason `office` borrows
+   * it — the screen needs a commissioner's keys and **nothing arranged** — and
+   * unlike the queue there is nothing league-scoped on it to drift between
+   * widths: it lists the seeded league, which is the same league at 390, 375 and
+   * 360.
+   */
+  corrections: 'review-empty',
+  'corrections-manager': 'review-empty',
+  'corrections-confirm': 'review-empty',
 
   /*
    * Tony's draft board. Commissioner seats, like the press desk, and for the
@@ -1251,6 +1278,58 @@ async function reach(page: Page, state: StateName): Promise<void> {
       await page.goto(`${BASE}/admin`, { waitUntil: 'networkidle' });
       await page.waitForTimeout(400);
       return;
+
+    /*
+     * The corrections drawer: the league, names only.
+     *
+     * Deterministic without a parameter. It lists the door's managers, which the
+     * seed fixes, and nothing on it is arranged by another state — a correction
+     * is the only thing that could change a row, and no state performs one.
+     */
+    case 'corrections':
+      await page.goto(`${BASE}/admin/corrections`, { waitUntil: 'networkidle' });
+      await page.waitForTimeout(200);
+      return;
+
+    /*
+     * The confirmation, reached the way a commissioner reaches it.
+     *
+     * Tapped rather than typed, because the URL needs a real manager's id.
+     * `data-correction` marks a correction that is actually on offer, so the
+     * first one is a manager the screen is willing to correct — and if the seed
+     * ever stops offering any, `waitForSelector` fails loudly rather than
+     * photographing the list under this state's name.
+     *
+     * **It stops at the confirmation and presses nothing.** The screen is the
+     * deliverable; pressing the button would release a seeded manager's name and
+     * every state after this one would meet a different league.
+     */
+    /*
+     * One manager, and what can be corrected about them.
+     *
+     * Tapped for the same reason the confirmation is: the URL needs a real
+     * manager's id. This is the screen where a correction that is **not** on
+     * offer says why instead of appearing greyed out, so it is worth its own
+     * photograph rather than being a step on the way to the next one.
+     */
+    case 'corrections-manager':
+      await page.goto(`${BASE}/admin/corrections`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-correction-subject]', { timeout: 5_000 });
+      await page.locator('[data-correction-subject]').first().click();
+      await page.waitForSelector('[data-corrections="subject"]', { timeout: 5_000 });
+      await page.waitForTimeout(200);
+      return;
+
+    case 'corrections-confirm': {
+      await page.goto(`${BASE}/admin/corrections`, { waitUntil: 'networkidle' });
+      await page.waitForSelector('[data-correction-subject]', { timeout: 5_000 });
+      await page.locator('[data-correction-subject]').first().click();
+      await page.waitForSelector('[data-correction]', { timeout: 5_000 });
+      await page.locator('[data-correction]').first().click();
+      await page.waitForSelector('[data-corrections="confirm"]', { timeout: 5_000 });
+      await page.waitForTimeout(200);
+      return;
+    }
 
 
     /*
@@ -2358,6 +2437,17 @@ const ALL_STATES: readonly StateName[] = [
   'office-blocked',
   'office-printed',
   'office-queue',
+
+  /*
+   * The corrections drawer, after the queue and before the door.
+   *
+   * Order-independent in both directions: it reads the league and writes
+   * nothing — the confirmation state deliberately stops short of the button —
+   * so it neither disturbs a later state nor depends on an earlier one.
+   */
+  'corrections',
+  'corrections-manager',
+  'corrections-confirm',
 
   /*
    * Last, and that is load-bearing: `reach` signs *out* to get here, so any
