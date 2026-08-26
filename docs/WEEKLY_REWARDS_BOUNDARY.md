@@ -151,6 +151,16 @@ already happened once, when the 2026-08-04 ruling took the box from 50 to 200.
 **No economy value changed here**, and a test in `early-dues.test.ts` pins all
 four of the ones this slice reads.
 
+**Commissioner ruling, 2026-08-26 — 2026 is the whole of this feature.** The two
+names are not a placeholder awaiting generalisation: *"it's actually just this
+season since they paid early, whereas future seasons I will reward potentially
+different managers for paying their dues early."* A later season pays nobody
+until somebody says who, and the recommended route when that day comes is a
+**commissioner surface** rather than an edit to source — `docs/OPEN_ITEMS.md`
+**G6** carries the direction, the two constraints that survive into it (the
+amount stays derived; the idempotency key stays the same), and the fact that it
+is deferred and unauthorized.
+
 **The roster carries its season, and that is the load-bearing part.**
 `EARLY_DUES_ROSTER` is a source-controlled list — the shape
 `content/manager-mappings.json` established for a fact the software cannot
@@ -286,6 +296,8 @@ implementation.
 | The early-dues thank-you is a credit, not a `03 §4` reward | §11 |
 | The amount is 2x the stored box price, derived rather than written down | §11 |
 | The roster is source-controlled and each entry names its season | §11 |
+| 2026 only; a later season is a deliberate second row, not a widened match | §11 |
+| A commissioner surface is the recommended route for a later season — deferred | §11 · `OPEN_ITEMS` G6 |
 | Matched on the Sleeper handle, case-insensitively; never the display name | §11 |
 | A named manager with no live seat is skipped, not an error | §11 |
 | Its own `token_reason`, never `COMMISSIONER_ADJUSTMENT` | §11 |

@@ -37,10 +37,15 @@ describe('the early-dues roster', () => {
 
   it('names no season but 2026, so no later season pays for something nobody has done', () => {
     /*
-     * The defect this exists to stop: a roster keyed only by handle would hand
-     * the bonus out again the first time a 2027 season was seeded — a payment
-     * for dues nobody had paid yet. Extending it is a reviewed edit to the
-     * array, and this goes red until somebody makes that edit deliberately.
+     * **Commissioner ruling, 2026-08-26**: 2026 is the whole of this feature.
+     * These two are not a placeholder to be generalised — a future season may
+     * reward entirely different managers, and which managers paid early is a
+     * fact about one season that this software cannot observe.
+     *
+     * The defect it stops: a roster keyed only by handle would hand the bonus
+     * out again the first time a 2027 season was seeded, paying for dues nobody
+     * had paid yet. This goes red the day somebody widens the match, and stays
+     * green only for a deliberate, reviewed second row.
      */
     expect(EARLY_DUES_ROSTER.every((entry) => entry.seasonYear === 2026)).toBe(true);
     expect(earlyDuesHandlesFor(2027).size).toBe(0);

@@ -62,9 +62,19 @@ export interface EarlyDuesEntry {
 /**
  * Who paid early, and for which season.
  *
- * Adding a row is the whole mechanism for extending this. Do not add one without
- * a `source`, and do not reuse an entry across seasons by widening the match —
- * a second season is a second row.
+ * **Commissioner ruling, 2026-08-26: 2026 is the whole of this feature.** These
+ * two are not a placeholder to be generalised — *"it's actually just this season
+ * since they paid early, whereas future seasons I will reward potentially
+ * different managers."* Which managers paid early is a fact about **one** season,
+ * decided off the platform, and a later season must pay nobody until somebody
+ * says who. So: do not widen the match, do not carry a handle forward, and do not
+ * add a row without a `source`. A second season is a second row.
+ *
+ * The recommended route when a later season needs one is a **commissioner
+ * surface** rather than an edit here (`docs/OPEN_ITEMS.md` **G6**) — naming a
+ * season's early payers is an intentional human act somebody performs every
+ * August. That is deferred and unauthorized; when it is built, the amount stays
+ * derived and the idempotency key stays the one below.
  */
 export const EARLY_DUES_ROSTER: readonly EarlyDuesEntry[] = [
   {
