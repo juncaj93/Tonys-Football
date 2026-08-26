@@ -63,7 +63,7 @@ maintained, that is evidence the convention failed, not a reason to automate it.
 |---|---|---|---|---|
 | Cozy rec-room basement rebuild | codex/cozy-rec-room | Bright integrated rec-room shell, built-in hearth/firelight, and runtime-safe manager-room composition | Other room themes, parlor/back-hall shell geometry, casino economics, Sleeper data, collectible ownership, and character layers | 2026-08-24 |
 | Back-hall encounters, pocket navigation, practice boxes, and casino visual repair | codex/npc-dialogue-polish | Canon-aware returning-manager dialogue, team-name/schedule receipts, persistent icon-only in-world navigation, an admin-only token-free test box supply, the room-first casino presentation, and measured parlor-board alignment | Basement-room shell geometry, casino odds/economics, production token economics, collectible ownership rules, and Tony’s parlor conversation deck | 2026-08-24 |
-| Consumer UX / visual / navigation audit | codex/consumer-ux-audit | Canonical audit report, cross-route iPhone evidence, and only unclaimed runtime UX fixes confirmed by that audit | Rec-room shell, back-hall/pocket navigation, casino presentation, collectible ownership, character layers, art generation, product mechanics, and token economics | 2026-08-25 |
+| Manager character-art rebuild | codex/manager-character-art | Manager sprite visual language, base-body proportions, layered face/hair/clothing asset composition, and visual review evidence | Tony's canonical sprite, room geometry, pocket navigation, casino presentation, collectible rules, and token economics | 2026-08-26 |
 
 **Empty is a real state**, and it means what it says: no session is holding any
 area. It does not mean there is no work — `docs/OPEN_ITEMS.md` is the list of
