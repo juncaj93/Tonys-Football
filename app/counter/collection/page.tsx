@@ -20,17 +20,11 @@ import { getDb } from '@/lib/db';
  * surface that closes the loop — before it existed a manager could pull something
  * and then never look at it again, which made the whole box a dead end.
  *
- * ## It shows what is missing, not only what is held
+ * ## It protects the surprise
  *
- * **Set progress is a statement about the gap**, so the grid walks the full
- * 24-item catalog and draws the unowned ones as empty shelf spots. Nine owned
- * reads as *nine of twenty-four* at a glance rather than as nine things.
- *
- * The blanks are drawn as **deliberately** empty — opaque backing, a real border,
- * a named label — because `VISUAL_ACCEPTANCE.md §4` rejects a surface that looks
- * *unloaded* rather than quiet. The first attempt was translucent over an already
- * dimmed room and the spots read as ghosts, which is the same defect wearing
- * different clothes.
+ * The catalog is an implementation detail, not a manager-facing checklist. A
+ * shelf names only what its owner has pulled; an empty space never leaks an
+ * upcoming item's name, rarity, or silhouette.
  *
  * ## Filters are links, not state
  *
@@ -61,10 +55,11 @@ export default async function CollectionPage({
   const db = getDb();
   const collection = await collectionFor(db, user.id);
   const rings = await ringsFor(db, user.id);
+  const owned = collection.entries.filter((entry) => entry.count > 0);
   const shown =
     filter === 'all'
-      ? collection.entries
-      : collection.entries.filter((entry) => entry.rarity === filter);
+      ? owned
+      : owned.filter((entry) => entry.rarity === filter);
 
   return (
     <>
@@ -78,8 +73,8 @@ export default async function CollectionPage({
 
           <p className={`mt-4 ${TYPE.body} text-paper-mid/80`}>
             {collection.distinct === 0
-              ? 'Empty shelves. Whatever you pull is yours permanently, across every season.'
-              : `${String(collection.distinct)} of ${String(collection.total)} on the shelves.` +
+              ? 'Empty shelves. Tony keeps the rest of the collection behind the counter until you find it.'
+              : `${String(collection.distinct)} ${collection.distinct === 1 ? 'discovery' : 'discoveries'} on your shelves.` +
                 (collection.copies > collection.distinct
                   ? ` ${String(collection.copies)} pieces in all.`
                   : '')}
@@ -101,11 +96,11 @@ export default async function CollectionPage({
             * Four columns at 360 is 88 css px each, well over the AA floor, and
             * the row is a 44px hit target throughout.
             */}
-          <nav aria-label="Filter by rarity" className="mt-4 grid grid-cols-4 gap-px border-2 border-wood-dark bg-wood-dark">
-            {RARITIES.map((rarity) => {
+          {owned.length > 0 && (
+          <nav aria-label="Filter your discoveries by rarity" className="mt-4 grid grid-cols-4 gap-px border-2 border-wood-dark bg-wood-dark">
+            {RARITIES.filter((rarity) => collection.byRarity[rarity].held > 0).map((rarity) => {
               const tier = collection.byRarity[rarity];
               const active = filter === rarity;
-              const complete = tier.held === tier.total;
               return (
                 <Link
                   key={rarity}
@@ -143,15 +138,9 @@ export default async function CollectionPage({
                     {rarity}
                   </span>
                   <span
-                    className={`${TYPE.ledgerValue} ${
-                      active
-                        ? 'text-ink-900'
-                        : complete
-                          ? 'text-paper-white'
-                          : 'text-paper-mid/85'
-                    }`}
+                    className={`${TYPE.ledgerValue} ${active ? 'text-ink-900' : 'text-paper-white'}`}
                   >
-                    {String(tier.held)}/{String(tier.total)}
+                    {String(tier.held)} found
                   </span>
                   {/*
                     * A stripe of the tier's own colour along the bottom.
@@ -172,6 +161,7 @@ export default async function CollectionPage({
               );
             })}
           </nav>
+          )}
 
           {filter !== 'all' && (
             /*
@@ -184,7 +174,7 @@ export default async function CollectionPage({
               href="/counter/collection"
               className={`mt-2 flex min-h-[44px] items-center ${TYPE.eyebrow} text-paper-mid/85 underline decoration-paper-mid/30 underline-offset-4 active:translate-y-px`}
             >
-              Show everything
+              Show everything you found
             </Link>
           )}
 
@@ -250,7 +240,7 @@ export default async function CollectionPage({
 
           {shown.length === 0 && (
             <p className={`mt-5 ${TYPE.body} text-paper-mid/80`}>
-              Nothing in that tier yet.
+              {filter === 'all' ? 'The first box is waiting at the counter.' : 'Nothing you found belongs to that rarity.'}
             </p>
           )}
 
@@ -267,7 +257,7 @@ export default async function CollectionPage({
               href="/counter/showcase"
               className={`pixel-edge flex min-h-[48px] w-full items-center justify-center border-2 border-wood-dark bg-red-dark ${TYPE.action} text-paper-white active:translate-y-px`}
             >
-              Put one in the showcase
+              Choose your showcase piece
             </Link>
 
             <div className="mt-4 flex items-center justify-between gap-4">

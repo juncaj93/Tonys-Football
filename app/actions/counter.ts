@@ -105,7 +105,7 @@ export type OpenBoxResponse =
   | { readonly ok: false };
 
 export type BuyBoxResponse =
-  | { readonly ok: true; readonly spent: number }
+  | { readonly ok: true; readonly spent: number; readonly boxId: string }
   /** Not enough tokens. The only failure worth explaining, because it is actionable. */
   | { readonly ok: false; readonly reason: 'insufficient'; readonly price: number; readonly balance: number }
   /** No open season, no seat, or a malformed request. Nothing was charged. */
@@ -158,7 +158,7 @@ export async function buyBoxAction(clientToken: string): Promise<BuyBoxResponse>
     };
   }
 
-  return { ok: true, spent: result.spent };
+  return { ok: true, spent: result.spent, boxId: result.boxId };
 }
 
 /**
@@ -177,13 +177,13 @@ export async function claimPracticeBoxAction(clientToken: string): Promise<BuyBo
     return { ok: false, reason: 'unavailable' };
   }
 
-  await grantBox(getDb(), {
+  const granted = await grantBox(getDb(), {
     userId: user.id,
     grantKey: `practice:${user.id}:${clientToken}`,
     source: 'practice',
   });
 
-  return { ok: true, spent: 0 };
+  return { ok: true, spent: 0, boxId: granted.boxId };
 }
 
 export async function openBoxAction(boxId: string): Promise<OpenBoxResponse> {

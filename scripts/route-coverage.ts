@@ -101,6 +101,16 @@ export function driverRoutes(source: string): ReadonlySet<string> {
     seen.add('/admin/slice/draft/*');
   }
 
+  /*
+   * A newly purchased box lands on its concrete reveal URL. The driver waits on
+   * that navigation rather than knowing a database UUID, so the dynamic route's
+   * coverage evidence is the wait itself, just as it is for the door and press
+   * desk routes above.
+   */
+  if (source.includes('waitForURL(/\\/counter\\/open\\//')) {
+    seen.add('/counter/open/*');
+  }
+
   // A dynamic segment in the route table matches a driver path that reached
   // *some* value for it. `/door/[userId]` is covered by `/door/*`.
   const expanded = new Set<string>();

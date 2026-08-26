@@ -1040,6 +1040,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'display-over-tony':
       await home(page);
       await page.getByRole('button', { name: /Read the board/i }).click({ force: true });
+      await page.getByRole('button', { name: /Open your pizza box/i }).click();
       await page.waitForTimeout(400);
       return;
     case 'banner-completed':
@@ -1490,33 +1491,8 @@ async function reach(page: Page, state: StateName): Promise<void> {
      */
     case 'tray-reveal': {
       await page.goto(`${BASE}/counter`, { waitUntil: 'networkidle' });
-
-      /*
-       * Wait on the **count**, not on the copy.
-       *
-       * This used to wait for the words "unopened box" to appear, which broke
-       * the day the counter stopped saying them — a driver coupled to prose
-       * fails as a fifteen-second timeout in an unrelated-looking place. The
-       * page publishes `data-unopened-boxes`, so the wait is now "the number
-       * went up", which is what a purchase actually means.
-       */
-      const before = await page
-        .locator('[data-unopened-boxes]')
-        .first()
-
-        .getAttribute('data-unopened-boxes');
-
       await page.getByRole('button', { name: /Buy a standard pizza box/i }).click();
-      await page.waitForFunction(
-        `document.querySelector("[data-unopened-boxes]")?.getAttribute("data-unopened-boxes") !== ${JSON.stringify(before)}`,
-        undefined,
-        { timeout: 15_000 },
-      );
-
-      await home(page);
-      // The pad stays up here too: this is the *real* path, so it is the
-      // strongest place to prove the room yields when the box opens.
-      await page.getByRole('button', { name: /Open your pizza box/i }).click({ force: true });
+      await page.waitForURL(/\/counter\/open\//, { timeout: 15_000 });
 
       /*
        * **Nothing is said while the box is opening.**
@@ -1540,8 +1516,10 @@ async function reach(page: Page, state: StateName): Promise<void> {
         );
       }
 
-      // The anticipation beat is 1100ms and the rise is 420ms.
-      await page.waitForTimeout(1800);
+      // The dedicated scene holds a 920ms tactile opening beat before the
+      // receipt appears. The screenshot therefore catches an actual prize, not
+      // the route shell or a counter redirect.
+      await page.waitForTimeout(1400);
       return;
     }
 
@@ -1967,7 +1945,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'reveal-epic':
     case 'reveal-legendary': {
       const rarity = state.slice('reveal-'.length);
-      await page.goto(`${BASE}/?preview_reveal=${rarity}`, { waitUntil: 'networkidle' });
+      await page.goto(`${BASE}/counter/open/preview?preview_reveal=${rarity}`, { waitUntil: 'networkidle' });
       /*
        * Tony's pad is **not** dismissed here, and that is the point.
        *
@@ -2007,7 +1985,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
               ? 'spare'
 
               : 'broke';
-      await page.goto(`${BASE}/?preview_reveal=rare&preview_stage=${stage}`, {
+      await page.goto(`${BASE}/counter/open/preview?preview_reveal=rare&preview_stage=${stage}`, {
         waitUntil: 'networkidle',
       });
       // Pad left up on purpose — see the note on the four rarity states above.
@@ -3284,12 +3262,12 @@ async function checkOneTransient(page: Page, width: number, state: string): Prom
     /*
      * The room's transient surfaces, by the marker each one already carries.
      * `[data-room-panel]` is every `RoomPanel`; `.tony-line` is the order pad;
-     * `.reveal-rise` is the collectible plate.
+     * the reveal receipt is the dedicated prize surface.
      */
     const surfaces = [
       ['panel', '[data-room-panel]'],
       ['tony-line', '.tony-line'],
-      ['reveal', '.reveal-rise'],
+      ['reveal', '.loot-reveal__receipt'],
     ] as const;
 
     const shown: string[] = [];
@@ -4943,7 +4921,7 @@ async function checkRevealPresent(page: Page, width: number, state: string): Pro
       'if (plate === null) return { plate: false, item: false, text: "", padOpacity: padOpacity };' +
       'return {' +
       '  plate: true,' +
-      '  item: document.querySelector(".reveal-rise") !== null,' +
+      '  item: document.querySelector(".loot-reveal__prize") !== null,' +
       '  text: (plate.textContent || "").trim(),' +
       '  padOpacity: padOpacity,' +
       '};' +
