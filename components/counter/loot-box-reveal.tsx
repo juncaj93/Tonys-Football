@@ -128,6 +128,11 @@ function PrizeReceipt({ reveal }: { reveal: RevealPayload }) {
           Wardrobe unlocked: {reveal.unlockedWearable.name}.
         </p>
       )}
+      {reveal.offer !== null && (
+        <p className={`mt-3 border-t border-wood/30 pt-2 ${TYPE.bodyCompact} text-ink-700`}>
+          <span className={TYPE.eyebrow}>Tony</span> {reveal.offer.line}
+        </p>
+      )}
       <div className="mt-4 flex flex-wrap gap-3">
         <Link href="/counter/collection" className={`loot-reveal__action ${TYPE.eyebrow}`}>Put it on the shelf</Link>
         {reveal.offer !== null && <Link href="/counter" className={`loot-reveal__action loot-reveal__action--quiet ${TYPE.eyebrow}`}>Another box</Link>}
