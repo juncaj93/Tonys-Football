@@ -2,6 +2,8 @@ import { loadTrackedEra } from '@/lib/stats/era';
 import { playEveryoneRecord, type PlayEveryoneRecord } from '@/lib/stats/luck';
 import { type Queryable } from '@/lib/db';
 
+import { formatRecord, fraudStamp, pct, signed, type FraudStamp } from './all-play';
+
 /**
  * A readable presentation of the neutral all-play measurement.
  *
@@ -9,6 +11,13 @@ import { type Queryable } from '@/lib/db';
  * re-count a score or invent a second standings table. It picks the latest
  * complete season, formats its fixed values once, and makes Tony's optional
  * editorial stamp explicit as a joke rather than a fact about the manager.
+ *
+ * The stamp itself is `lib/league/all-play.ts`'s, and that is where the four
+ * conditions and their fixed thresholds are documented. It used to be decided
+ * inline here on the schedule gap alone, which stamped a manager whose real
+ * record nobody would call strong — a gap is large whenever the scores were
+ * poor, and a 3-3 season with the worst scores in the league clears it. Nothing
+ * about the numbers on the board changed; what changed is when the sign hangs.
  */
 export interface FraudCheckLine {
   readonly managerId: string;
@@ -16,8 +25,13 @@ export interface FraudCheckLine {
   readonly officialRecord: string;
   readonly allPlayRecord: string;
   readonly scheduleDelta: string;
+  /** The all-play rate, `.400`, and the record it scales onto the real season. */
+  readonly allPlayWinPct: string;
+  readonly expectedRecord: string;
   /** Tony's editorial sticker. Never an official league determination. */
   readonly tonyStamp: 'FRAUD ALERT' | null;
+  /** The whole decision, met conditions and unmet ones alike. */
+  readonly stamp: FraudStamp;
 }
 
 export interface FraudCheck {
@@ -59,37 +73,41 @@ export function fraudCheckFrom(record: PlayEveryoneRecord): FraudCheck {
       )
       .map((line): FraudCheckLine => {
         const officialGames = line.actualWins + line.actualLosses + line.actualTies;
+        const comparisons =
+          line.playEveryoneWins + line.playEveryoneLosses + line.playEveryoneTies;
+        const rate =
+          comparisons === 0
+            ? 0
+            : (line.playEveryoneWins + line.playEveryoneTies / 2) / comparisons;
+        const stamp = fraudStamp({
+          wins: line.actualWins,
+          losses: line.actualLosses,
+          ties: line.actualTies,
+          allPlayWins: line.playEveryoneWins,
+          allPlayLosses: line.playEveryoneLosses,
+          allPlayTies: line.playEveryoneTies,
+        });
+
         return {
           managerId: line.managerId,
           displayName: line.displayName,
-          officialRecord: compactRecord(line.actualWins, line.actualLosses, line.actualTies),
-          allPlayRecord: compactRecord(
+          officialRecord: formatRecord(line.actualWins, line.actualLosses, line.actualTies),
+          allPlayRecord: formatRecord(
             line.playEveryoneWins,
             line.playEveryoneLosses,
             line.playEveryoneTies,
           ),
           scheduleDelta: signed(line.scheduleDelta),
-          /*
-           * Two or more schedule-assisted wins over at least five official
-           * games is the point where Tony gets to hang the sign. This is a
-           * stable editorial threshold, not a hidden model and not a claim
-           * about who deserved what.
-           */
-          tonyStamp: officialGames >= 5 && line.scheduleDelta >= 2 ? 'FRAUD ALERT' : null,
+          allPlayWinPct: pct(rate),
+          expectedRecord: `${stamp.expectedWins.toFixed(2)}-${(
+            officialGames - stamp.expectedWins
+          ).toFixed(2)}`,
+          tonyStamp: stamp.label,
+          stamp,
         };
       }),
     weeksCounted: record.includedWeeks.length,
     excludedWeeks: record.excludedWeeks,
     disclaimer: record.disclaimer,
   };
-}
-
-function compactRecord(wins: number, losses: number, ties: number): string {
-  return ties === 0
-    ? `${String(wins)}-${String(losses)}`
-    : `${String(wins)}-${String(losses)}-${String(ties)}`;
-}
-
-function signed(value: number): string {
-  return `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
 }
