@@ -25,6 +25,7 @@ import { readManagerNames, seedManagerNames } from '@/lib/content/managers';
 import { ensureRewardTable, grantBox } from '@/lib/counter/boxes';
 import { grantChampionshipRings } from '@/lib/counter/rings';
 import { grantSeasonalBoxes } from '@/lib/counter/grants';
+import { awardEarlyDues } from '@/lib/rewards/service';
 import { applyTokenDelta, ensureEconomyConfig, openSeason } from '@/lib/counter/tokens';
 import { CATALOG_SIZE } from '@/lib/counter/catalog';
 import { standardRewardTable } from '@/lib/counter/rewards';
@@ -303,6 +304,37 @@ async function main(): Promise<void> {
           : `Grants   ${String(seasonal.granted)} season-opening boxes granted · ` +
               `${String(seasonal.alreadyGranted)} seats already had theirs · ` +
               `${String(seasonal.seats)} active seats`,
+      );
+
+      /*
+       * The early-dues thank-you, for the managers named in
+       * `lib/rewards/early-dues.ts`.
+       *
+       * Here rather than in the Tuesday job, and the choice is deliberate. The
+       * gift is owed the moment the season is open — it is a thank-you for
+       * something that happened before a ball was thrown, so making a manager
+       * wait for the first Tuesday of October would be the software deciding
+       * when to say thank you. The seed runs on every deploy
+       * (`npm run vercel-build`), which makes it a **catch-up** rather than a
+       * schedule: a season seeded late, a manager seated late and a redeploy all
+       * end in the same place.
+       *
+       * Idempotent through `token_transactions.idempotency_key UNIQUE`, like
+       * every other token movement in the product, so running it on every deploy
+       * for the rest of the season costs one no-op each time.
+       *
+       * It is **not** added to the Tuesday chain. Nothing about it needs a
+       * finalized week, and a step in that chain that can never do anything
+       * after the first deploy is a step that only adds a way for Tuesday to
+       * fail.
+       */
+      const thanks = await awardEarlyDues(db, { seasonYear: open.year });
+      console.log(
+        thanks.refusal !== null
+          ? `Dues     none — ${thanks.refusal}`
+          : `Dues     ${String(thanks.paid.length)} early-dues thank-yous paid ` +
+              `at ${String(thanks.amount)} each · ` +
+              `${String(thanks.alreadyPaid.length)} already on the books`,
       );
     }
 

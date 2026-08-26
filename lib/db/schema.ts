@@ -781,6 +781,23 @@ export const tokenReason = pgEnum('token_reason', [
   'CASINO_WAGER',
   /** An Underground round returned a resolved fictional-token payout. */
   'CASINO_PAYOUT',
+  /**
+   * The early-dues thank-you (`0022`), for the managers named in
+   * `lib/rewards/early-dues.ts`.
+   *
+   * Its own reason rather than a reused `COMMISSIONER_ADJUSTMENT`, for the
+   * reason the stake pair above gives: a manager's statement is a thing they
+   * read, and an adjustment is the one line on it that ought to be rare and
+   * conspicuous. A thank-you filed as an adjustment would be indistinguishable
+   * from the commissioner correcting a mistake.
+   *
+   * It is **not** a fantasy-performance source and is deliberately absent from
+   * {@link weeklyRewardReason}: nothing about a roster, a score or a week enters
+   * it, and the occasion happened off the platform entirely. Adding the value is
+   * the whole schema change — `apply_token_delta`, the balance trigger and the
+   * overdraft CHECK are untouched, and it gets no write path of its own.
+   */
+  'EARLY_DUES_BONUS',
 ]);
 
 /** The two commissioner-approved Underground games. Roulette has no enum value. */

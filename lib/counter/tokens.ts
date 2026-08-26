@@ -175,7 +175,9 @@ export type LiveTokenReason =
   /** An Underground game accepted this fictional-token wager. */
   | 'CASINO_WAGER'
   /** An Underground game returned this fictional-token payout. */
-  | 'CASINO_PAYOUT';
+  | 'CASINO_PAYOUT'
+  /** The early-dues thank-you, once per named manager per season (`lib/rewards/`). */
+  | 'EARLY_DUES_BONUS';
 
 export interface TokenDelta {
   readonly userId: string;

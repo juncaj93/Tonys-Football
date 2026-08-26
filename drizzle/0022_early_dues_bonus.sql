@@ -1,0 +1,36 @@
+-- The early-dues thank-you — one additive enum value, and nothing else.
+--
+-- Two managers paid their 2026 league dues before the commissioner asked twice.
+-- The gift is a single append-only ledger row per manager per season, paid
+-- through `apply_token_delta` like every other token movement in the product
+-- (`16 §5.4`: no feature gets its own balance-writing path). So there is
+-- nothing here to create: no table, no trigger, no constraint, no function
+-- change.
+--
+-- WHY ITS OWN REASON, AND NOT `COMMISSIONER_ADJUSTMENT`
+--
+-- The same argument `0010` made for the stake pair. A manager's statement is a
+-- thing they read, and an adjustment is the one line on it that ought to be rare
+-- and conspicuous — a thank-you filed as an adjustment would be
+-- indistinguishable from the commissioner correcting a mistake, and the receipt
+-- this feeds would have to guess which it was.
+--
+-- WHY NOT A ROW IN `weekly_rewards`
+--
+-- `weekly_rewards` records a fantasy-performance award and its basis: a roster,
+-- a score, a game key, a week. This has none of those. The occasion happened off
+-- the platform entirely, so a row there would be four columns of nulls or four
+-- columns of fiction, and `weekly_reward_reason` stays the two values `03 §4`
+-- names.
+--
+-- WHY NO TABLE OF ITS OWN
+--
+-- `lib/counter/grants.ts` states the rule: a record kept beside the thing it
+-- describes is a fact stored twice. The gift *is* the ledger row, the roster of
+-- who is owed one is source-controlled and reviewable in git, and the one fact
+-- the ledger cannot otherwise carry — the economy version the amount was derived
+-- from — travels in `source_ref`. Idempotency is
+-- `token_transactions.idempotency_key UNIQUE`, which already exists and is
+-- already the authority for every replayed token movement.
+
+ALTER TYPE "public"."token_reason" ADD VALUE IF NOT EXISTS 'EARLY_DUES_BONUS';
