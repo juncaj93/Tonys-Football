@@ -58,8 +58,15 @@ composition, unlock rule, or saved data changes.
 
 ## D. Product decisions required
 
-None at this point. The signed-in audit session supplies the access needed for
-the remaining read-only route review.
+### Commissioner correction desk — planned feature, not an audit patch
+
+The live office cleanly supports a PIN reset and clearly explains its effect,
+but it has no way to correct a manager selected under the wrong known name at
+launch. The requested commissioner correction flow needs explicit identity,
+audit-log, and session-revocation rules; it must not be improvised as a display
+name edit in a UI-only audit. Add it to the operator backlog with the intended
+scope: correct the manager-name mapping, preserve the account's history, log
+the commissioner action, and let the affected person set their own PIN again.
 
 ## E. Art follow-ups
 
@@ -107,6 +114,14 @@ is readable. The visiting manager sprite is oversized and floats slightly, but
 that sprite placement is owned by `codex/npc-dialogue-polish`; report it there
 rather than moving it from this audit lane.
 
+### Commissioner office
+
+At 390px, the office's first screen makes its two current jobs clear: open the
+press desk or reset a taken key. The reset explanation is specific about signing
+the person out and never exposes a PIN. Leave that flow alone. The missing
+wrong-name correction capability is a planned operator feature recorded above,
+not a visual defect to patch silently.
+
 ### Fraud Check
 
 At 390px, the all-play explanation is clear before the ledger, every manager
@@ -129,6 +144,9 @@ card hierarchy alone.
 - Fraud Check at 390px: ten-manager, nine-opponent all-play language and
   card labels remain legible in the first viewport; no computation or content
   change is recommended.
+- Commissioner office at 390px: key/PIN recovery is readable and has an
+  appropriate self-reset safeguard; manager-name correction is not present and
+  is captured as a planned, audited operator feature rather than altered here.
 - Current `origin/main` route tree, active-work register, feature flags, and
   product/visual boundaries.
 - PR #134 remote gates: CI succeeded; Visual QA failed and remains a release
