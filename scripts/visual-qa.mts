@@ -1040,7 +1040,6 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'display-over-tony':
       await home(page);
       await page.getByRole('button', { name: /Read the board/i }).click({ force: true });
-      await page.getByRole('button', { name: /Open your pizza box/i }).click();
       await page.waitForTimeout(400);
       return;
     case 'banner-completed':
@@ -1084,6 +1083,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
     case 'profile':
       await onlyThisDevice(page);
       await page.goto(`${BASE}/profile`, { waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: /Open your pizza box/i }).click();
       await page.waitForTimeout(400);
       return;
 
@@ -1507,6 +1507,7 @@ async function reach(page: Page, state: StateName): Promise<void> {
        * `Revealed`, which only renders at `phase === 'reveal'`. The check is
        * cheap and the construction is one `&&` away from changing.
        */
+      await page.getByRole('button', { name: /Open your pizza box/i }).click();
       await page.waitForTimeout(400);
       if ((await page.locator('[role="status"]').count()) > 0) {
         fail(
