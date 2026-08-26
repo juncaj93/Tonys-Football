@@ -424,19 +424,42 @@ export function allPlayTable(
  * - `minimumGames` — a two-game sample can produce any gap at all.
  * - `strongWinPct` — *fraud* is a joke about a good record. A .500 team with a
  *   soft schedule is an anecdote, not a fraud.
- * - `poorAllPlayWinPct` — in an all-play the field averages exactly .500 by
- *   construction, so this is *below the middle of the league by a margin* and
- *   is the half that says the scores did not earn it.
+ * - `poorAllPlayWinPct` — a **losing** record against the whole league. In an
+ *   all-play the field averages exactly .500 by construction — every comparison
+ *   is somebody's win and somebody's loss — so .500 is the structural middle
+ *   rather than a number anybody chose. This is the half that says the scores
+ *   did not earn it, and with the condition above it the stamp reads as one
+ *   sentence: *a winning record on the schedule, a losing record against the
+ *   field.*
  * - `minimumScheduleDelta` — two whole wins. The gap has to be worth a sign.
  *
  * The first three are not implied by the fourth: a short season can clear the
  * delta on three games, and a poor real record can clear it while nobody would
- * call the record strong.
+ * call the record strong. Nor is the fourth implied by the first three — a .600
+ * record against a .499 all-play rate over fourteen games is a gap of 1.41, and
+ * the sign stays down.
+ *
+ * ## Calibrated against the league, not chosen
+ *
+ * `poorAllPlayWinPct` was **.450 in the first draft of this file and it was
+ * wrong**, and the recorded seasons are what said so. Across 2024 and 2025 the
+ * one manager the joke is actually about — 9-5 on the schedule, **seventh of
+ * ten** on the scores — posts an all-play rate of **.452**, and a threshold
+ * that turns on two thousandths is a threshold that turns on noise. The
+ * 2026-08-10 **R1** ruling is the standing principle: a significance threshold
+ * is deterministic, documented, and calibrated against the actual verified
+ * league distribution.
+ *
+ * At .500 the two recorded seasons produce **exactly one stamp** — the 9-5
+ * manager above — and refuse the 11-3 manager whose all-play record is
+ * **76-50**, which is the case the old inline rule got wrong. `all-play.test.ts`
+ * pins both against the recorded fixtures, so a future change to these numbers
+ * has to face what it does to real seasons.
  */
 export const FRAUD_THRESHOLDS = Object.freeze({
   minimumGames: 5,
   strongWinPct: 0.6,
-  poorAllPlayWinPct: 0.45,
+  poorAllPlayWinPct: 0.5,
   minimumScheduleDelta: 2,
 });
 
@@ -525,11 +548,11 @@ export function fraudStamp(input: FraudInput): FraudStamp {
     },
     {
       condition: 'all-play-record',
-      met: allPlayWinPct <= FRAUD_THRESHOLDS.poorAllPlayWinPct,
+      met: allPlayWinPct < FRAUD_THRESHOLDS.poorAllPlayWinPct,
       detail:
         `all-play ${formatRecord(input.allPlayWins, input.allPlayLosses, input.allPlayTies)} ` +
-        `(${pct(allPlayWinPct)}) against the ${pct(FRAUD_THRESHOLDS.poorAllPlayWinPct)} ` +
-        'a poor one needs',
+        `(${pct(allPlayWinPct)}) against the whole league, which averages ` +
+        `${pct(FRAUD_THRESHOLDS.poorAllPlayWinPct)} by construction`,
     },
     {
       condition: 'schedule-gap',

@@ -1,3 +1,6 @@
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+
 import { describe, expect, it } from 'vitest';
 
 import { scanEditorialCopy } from '@/lib/slice/validate';
@@ -620,5 +623,189 @@ describe('the words it prints', () => {
     for (const text of everyString()) {
       expect(text).not.toMatch(/expected wins?/i);
     }
+  });
+});
+
+/* ------------------------------------------------------------------------- */
+/* Calibration, against the recorded league                                  */
+/* ------------------------------------------------------------------------- */
+
+/**
+ * The thresholds, against the seasons this league actually played.
+ *
+ * The 2026-08-10 **R1** ruling is the standing principle behind this block: a
+ * significance threshold is deterministic, documented, and **calibrated against
+ * the actual verified league distribution** — and a word like *fraud* has to
+ * identify a meaningfully unusual outcome rather than half the league.
+ *
+ * So this reads the recorded 2024 and 2025 matchups off disk and runs the real
+ * regular seasons through the calculation. It needs no database and no network:
+ * `fixtures/sleeper/` is the recorded archive the deploy seed itself reads.
+ *
+ * It is not a second derivation. `agreement with lib/stats/luck.ts` above pins
+ * the arithmetic; this pins the **numbers on the dial**, and it exists so that
+ * moving one has to face what it does to two real seasons.
+ */
+describe('calibration against the recorded seasons', () => {
+  const ROOT = path.join(process.cwd(), 'fixtures', 'sleeper', 'league');
+
+  interface RecordedSeason {
+    readonly season: number;
+    readonly games: readonly AllPlayGame[];
+  }
+
+  function recordedSeasons(): readonly RecordedSeason[] {
+    const seasons: RecordedSeason[] = [];
+
+    for (const leagueId of readdirSync(ROOT).sort()) {
+      const dir = path.join(ROOT, leagueId);
+      if (!existsSync(path.join(dir, 'matchups'))) continue;
+
+      const league = JSON.parse(readFileSync(path.join(dir, 'league.json'), 'utf8')) as {
+        season: string;
+        settings: { playoff_week_start: number };
+      };
+      const users = JSON.parse(readFileSync(path.join(dir, 'users.json'), 'utf8')) as {
+        user_id: string;
+        display_name: string;
+      }[];
+      const rosters = JSON.parse(readFileSync(path.join(dir, 'rosters.json'), 'utf8')) as {
+        roster_id: number;
+        owner_id: string;
+      }[];
+
+      const nameOf = new Map(users.map((user) => [user.user_id, user.display_name]));
+      const seat = new Map(
+        rosters.map((roster) => [
+          roster.roster_id,
+          {
+            managerId: roster.owner_id,
+            displayName: nameOf.get(roster.owner_id) ?? roster.owner_id,
+          },
+        ]),
+      );
+
+      const games: AllPlayGame[] = [];
+      for (const file of readdirSync(path.join(dir, 'matchups')).sort()) {
+        const weekNumber = Number(file.replace('.json', ''));
+        // Regular season only, and never a week nobody has played.
+        if (weekNumber >= league.settings.playoff_week_start) continue;
+        const rows = JSON.parse(readFileSync(path.join(dir, 'matchups', file), 'utf8')) as {
+          matchup_id: number;
+          roster_id: number;
+          points: number;
+        }[];
+        if (rows.reduce((sum, row) => sum + (row.points ?? 0), 0) === 0) continue;
+
+        const byMatchup = new Map<number, { roster_id: number; points: number }[]>();
+        for (const row of rows) {
+          byMatchup.set(row.matchup_id, [...(byMatchup.get(row.matchup_id) ?? []), row]);
+        }
+        for (const pair of byMatchup.values()) {
+          const [left, right] = pair;
+          if (left === undefined || right === undefined) continue;
+          games.push({
+            week: weekNumber,
+            a: { ...seat.get(left.roster_id)!, pointsCents: Math.round(left.points * 100) },
+            b: { ...seat.get(right.roster_id)!, pointsCents: Math.round(right.points * 100) },
+          });
+        }
+      }
+
+      seasons.push({ season: Number(league.season), games });
+    }
+
+    return seasons;
+  }
+
+  const seasons = recordedSeasons();
+
+  it('finds two complete recorded seasons to calibrate against', () => {
+    expect(seasons.map((entry) => entry.season)).toEqual([2024, 2025]);
+  });
+
+  it('holds the ten-team shape on real data', () => {
+    for (const { games } of seasons) {
+      const table = allPlayTable(games);
+
+      expect(table.integrity.faults).toEqual([]);
+      expect(table.integrity.fullField).toBe(true);
+      expect(table.integrity.comparisonsExact).toBe(true);
+      expect(table.lines).toHaveLength(10);
+      expect(table.countedWeeks).toHaveLength(14);
+
+      for (const line of table.lines) {
+        expect(line.gamesPlayed).toBe(14);
+        expect(line.comparisons).toBe(14 * OPPONENTS_PER_WEEK);
+      }
+    }
+  });
+
+  it('averages exactly .500 across the field, which is why .500 is the threshold', () => {
+    for (const { games } of seasons) {
+      const table = allPlayTable(games);
+      const wins = table.lines.reduce((sum, line) => sum + line.allPlayWins, 0);
+      const total = table.lines.reduce((sum, line) => sum + line.comparisons, 0);
+
+      expect(wins * 2).toBe(total);
+      expect(FRAUD_THRESHOLDS.poorAllPlayWinPct).toBe(0.5);
+    }
+  });
+
+  it('stamps one manager across two seasons, and it is the right one', () => {
+    const stamped = seasons.flatMap(({ season, games }) =>
+      fraudBoard(allPlayTable(games))
+        .filter((row) => row.stamp.label !== null)
+        .map((row) => ({ season, displayName: row.displayName })),
+    );
+
+    // Rare enough to mean something. A sign on half the league is not a joke.
+    expect(stamped).toHaveLength(1);
+    expect(stamped[0]?.season).toBe(2024);
+
+    const board = fraudBoard(allPlayTable(seasons[0]?.games ?? []));
+    const fraud = board.find((row) => row.displayName === stamped[0]?.displayName);
+
+    /*
+     * 9-5, with exactly one manager in the league winning more games — and
+     * seventh of ten on the scores. That divergence is the whole joke.
+     *
+     * `realRank` reads 5 rather than 2 because four managers finished 9-5 and
+     * the real ranking separates equal records on points for, where this one
+     * comes last of the four. The record is what the standings show, so the
+     * record is what the assertion is about.
+     */
+    expect(fraud?.wins).toBe(9);
+    expect(fraud?.losses).toBe(5);
+    expect(board.filter((row) => row.wins > (fraud?.wins ?? 0))).toHaveLength(1);
+    expect(fraud?.allPlayRank).toBe(7);
+    expect(fraud?.allPlayWinPct).toBeLessThan(0.5);
+    expect(fraud?.realRank).toBe(5);
+  });
+
+  it('refuses the season the old rule got wrong', () => {
+    /*
+     * 2024's 11-3 manager clears the old `games >= 5 && delta >= 2` rule with a
+     * schedule gap of 2.56 — and posts an all-play record of 76-50. A winning
+     * record against the whole league is not a fraud, and this is the case that
+     * moved the decision out of an inline conditional.
+     */
+    const board = fraudBoard(allPlayTable(seasons[0]?.games ?? []));
+    const best = board.find((row) => row.wins === 11);
+
+    expect(best?.allPlayWins).toBe(76);
+    expect(best?.allPlayLosses).toBe(50);
+    expect(best?.scheduleDelta).toBeGreaterThanOrEqual(FRAUD_THRESHOLDS.minimumScheduleDelta);
+    expect(best?.stamp.label).toBeNull();
+    expect(best?.stamp.conditions.find((entry) => entry.condition === 'all-play-record')?.met).toBe(
+      false,
+    );
+  });
+
+  it('leaves 2025 unstamped, and the largest gap in it short of the line', () => {
+    const board = fraudBoard(allPlayTable(seasons[1]?.games ?? []));
+
+    expect(board.every((row) => row.stamp.label === null)).toBe(true);
+    expect(board[0]?.scheduleDelta).toBeLessThan(FRAUD_THRESHOLDS.minimumScheduleDelta);
   });
 });
