@@ -10,6 +10,7 @@ import {
   type AssetRegistry,
   type AssetResolution,
   type AssetStatus,
+  type AssetVariantSet,
   type SafeArea,
 } from './types';
 
@@ -56,6 +57,24 @@ function readSuppresses(source: Record<string, unknown>): readonly string[] | un
   return value;
 }
 
+function readVariants(source: Record<string, unknown>): AssetVariantSet | undefined {
+  const raw = source['variants'];
+  if (!isRecordObject(raw)) return undefined;
+  const paint = raw['paint'];
+  const pathTemplate = raw['pathTemplate'];
+  if (paint !== 'skin' && paint !== 'hair' && paint !== 'top') {
+    throw new Error('Asset variants require paint to be skin, hair, or top.');
+  }
+  if (
+    typeof pathTemplate !== 'string' ||
+    !pathTemplate.startsWith('/assets/') ||
+    pathTemplate.split('{index}').length !== 2
+  ) {
+    throw new Error('Asset variants require one /assets/ pathTemplate {index} token.');
+  }
+  return { paint, pathTemplate };
+}
+
 function parseRecord(slug: string, group: string, raw: unknown): AssetRecord {
   if (!isRecordObject(raw)) {
     throw new Error(`Asset "${slug}" in group "${group}" is not an object.`);
@@ -89,6 +108,7 @@ function parseRecord(slug: string, group: string, raw: unknown): AssetRecord {
 
   const pathValue = raw['path'];
   const path = typeof pathValue === 'string' && pathValue !== '' ? pathValue : null;
+  const variants = readVariants(raw);
 
   const rarity = readOptionalString(raw, 'rarity');
   const anchor = readOptionalString(raw, 'anchor');
@@ -108,6 +128,7 @@ function parseRecord(slug: string, group: string, raw: unknown): AssetRecord {
     alt,
     group,
     path,
+    ...(variants !== undefined ? { variants } : {}),
     ...(rarity !== undefined ? { rarity } : {}),
     ...(anchor !== undefined ? { anchor } : {}),
     ...(slot !== undefined ? { slot } : {}),

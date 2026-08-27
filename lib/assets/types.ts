@@ -35,6 +35,19 @@ export type AssetBatch = (typeof ASSET_BATCHES)[number];
 /** `[x, y, width, height]` — where runtime text may be rendered. */
 export type SafeArea = readonly [number, number, number, number];
 
+/**
+ * An authored layer whose visible colour comes from the manager configuration.
+ *
+ * The asset still has a normal default `path`, so every existing consumer can
+ * render it. CharacterView alone substitutes `{index}` with the active paint
+ * index. Keeping the variant contract in the registry means future art batches
+ * do not need to teach the compositor a new filename convention.
+ */
+export interface AssetVariantSet {
+  readonly paint: 'skin' | 'hair' | 'top';
+  readonly pathTemplate: string;
+}
+
 export interface AssetRecord {
   readonly slug: string;
   readonly family: AssetFamily;
@@ -47,6 +60,7 @@ export interface AssetRecord {
   readonly group: string;
   /** Resolved file path once art exists; `null` while placeholder. */
   readonly path: string | null;
+  readonly variants?: AssetVariantSet;
 
   readonly rarity?: string;
   /**
