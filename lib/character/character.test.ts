@@ -39,7 +39,7 @@ import {
 } from './layers';
 import { HAIR_COLOURS, HOUSE, SKIN_TONES, TOP_COLOURS } from './palette';
 import { bounds, coverage } from './sprite';
-import { characterFor, saveCharacter, unequip } from './service';
+import { characterFor, equipWearable, saveCharacter, unequip } from './service';
 
 /**
  * The character system, checked where it can actually be wrong.
@@ -653,6 +653,41 @@ describe.skipIf(!hasDatabase)('saving and wearing', () => {
     const result = await saveCharacter(db!, manager, chosen, { head: id });
     expect(result.ok).toBe(true);
     if (result.ok) expect(result.state.equipment).toEqual({ head: 'wear_head_pizza_visor' });
+  });
+
+  it('puts a newly unlocked wearable on without replacing the chosen character', async () => {
+    await saveCharacter(db!, manager, chosen, {});
+    await give(manager, 'wear_head_pizza_visor');
+
+    const result = await equipWearable(db!, manager, 'wear_head_pizza_visor');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.state.equipment).toEqual({ head: 'wear_head_pizza_visor' });
+      expect(result.state.configuration).toEqual(chosen);
+    }
+  });
+
+  it('replaces only the unlocked wearable\'s slot when equipping it now', async () => {
+    const visor = await give(manager, 'wear_head_pizza_visor');
+    await give(manager, 'wear_head_beanie_winter');
+    const slice = await give(manager, 'wear_hand_slice');
+    await saveCharacter(db!, manager, chosen, { head: visor, hand: slice });
+
+    const result = await equipWearable(db!, manager, 'wear_head_beanie_winter');
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.state.equipment).toEqual({
+        head: 'wear_head_beanie_winter',
+        hand: 'wear_hand_slice',
+      });
+    }
+  });
+
+  it('does not let a reveal equip a wearable its manager does not own', async () => {
+    await give(other, 'wear_head_pizza_visor');
+    const result = await equipWearable(db!, manager, 'wear_head_pizza_visor');
+    expect(result.ok).toBe(false);
+    if (!result.ok) expect(result.refusal).toBe('not-owned');
   });
 
   it('refuses a collectible that is not a wearable', async () => {
