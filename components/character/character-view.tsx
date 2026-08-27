@@ -1,10 +1,10 @@
-import { assetRegistry } from '@/lib/assets/registry';
 import {
   compositeRuns,
   describeCharacter,
   type Composite,
   type CompositeLayer,
 } from '@/lib/character/composite';
+import { characterLayerArtPath } from '@/lib/character/art-path';
 
 /**
  * A manager's character, drawn.
@@ -88,8 +88,8 @@ export { describeCharacter };
  */
 function pngLayers(composite: Composite): readonly (CompositeLayer & { path: string })[] {
   return composite.layers.flatMap((layer) => {
-    const resolution = assetRegistry.resolve(layer.slug);
-    return resolution.kind === 'art' ? [{ ...layer, path: resolution.path }] : [];
+    const path = characterLayerArtPath(layer);
+    return path === null ? [] : [{ ...layer, path }];
   });
 }
 

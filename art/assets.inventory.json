@@ -1,5 +1,5 @@
 {
-  "$comment": "Every v1 asset slug. This file exists BEFORE any image does — engineering builds against these slugs while every one of them resolves to a placeholder. Swapping a placeholder for final art is a registry row change, never a code change. See ASSET_PIPELINE.md.",
+  "$comment": "Every v1 asset slug. Engineering builds against these stable names while unmade art resolves to a placeholder. Generated manager starter layers use an indexed raster template, so skin, hair, facial hair, and top colours remain independent. Swapping placeholder art for final art is a registry row change, never a component rewrite. See ASSET_PIPELINE.md.",
   "version": "1.0",
   "generatedFor": "v1 (Phases 0-5)",
   "totalSlugs": 120,
@@ -472,69 +472,83 @@
       }
     },
     "_avatarLayers_B2": {
-      "$comment": "Free/starter layers available to every manager at claim time. Canvas raised 32x48 -> 64x96 (character-customisation rebuild) -> 112x168 (sprite-quality pass, 2026-08-10). The last raise is a measurement rather than a preference: roomObject('manager').rect is 112x168 room units, so at 64x96 a manager pixel covered 1.75 room units while the painted shell behind them covered exactly 1 -- the only thing in the world drawn coarser than the world, then magnified into it. No art existed at any of the three sizes; every row here is art_status placeholder, so each raise cost nothing to re-cut. See lib/character/art/geometry.ts for the derivation. art_status placeholder means there is no PNG: these layers are drawn at runtime from lib/character/art/, and a PNG dropped in with a path takes over per layer without a code change.",
+      "$comment": "Free/starter layers available to every manager at claim time. Canvas raised 32x48 -> 64x96 (character-customisation rebuild) -> 112x168 (sprite-quality pass, 2026-08-10). The last raise is a measurement rather than a preference: roomObject('manager').rect is 112x168 room units, so at 64x96 a manager pixel covered 1.75 room units while the painted shell behind them covered exactly 1 -- the only thing in the world drawn coarser than the world, then magnified into it. The starter rows now resolve to anchored 112x168 PNG layers; their indexed variant templates preserve independent skin, hair, facial-hair and top-colour choices. See lib/character/art/geometry.ts for the derivation.",
       "avatar_body_base": {
         "family": "avatar",
         "canvas": "112x168",
         "anchor": "bottom-center",
         "slot": "body",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "The figure every manager starts as"
+        "art_status": "generated",
+        "alt": "The figure every manager starts as",
+        "path": "/assets/avatar/manager-v2/base/0.png",
+        "variants": { "paint": "skin", "pathTemplate": "/assets/avatar/manager-v2/base/{index}.png" }
       },
       "avatar_hair_01": {
         "family": "avatar",
         "canvas": "112x168",
         "batch": "B2",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "slot": "hair",
         "alt": "Short hair",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/avatar/manager-v2/hair/01/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/hair/01/{index}.png" }
       },
       "avatar_hair_02": {
         "family": "avatar",
         "canvas": "112x168",
         "batch": "B2",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "slot": "hair",
         "alt": "Buzzed hair",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/avatar/manager-v2/hair/02/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/hair/02/{index}.png" }
       },
       "avatar_hair_03": {
         "family": "avatar",
         "canvas": "112x168",
         "batch": "B2",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "slot": "hair",
         "alt": "Long hair",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/avatar/manager-v2/hair/03/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/hair/03/{index}.png" }
       },
       "avatar_hair_04": {
         "family": "avatar",
         "canvas": "112x168",
         "batch": "B2",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "slot": "hair",
         "alt": "Curly hair",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/avatar/manager-v2/hair/04/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/hair/04/{index}.png" }
       },
       "avatar_hair_05": {
         "family": "avatar",
         "canvas": "112x168",
         "batch": "B2",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "slot": "hair",
         "alt": "Receding hair",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/avatar/manager-v2/hair/05/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/hair/05/{index}.png" }
       },
       "avatar_hair_06": {
         "family": "avatar",
         "canvas": "112x168",
         "batch": "B2",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "slot": "hair",
         "alt": "Ponytail",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/avatar/manager-v2/hair/06/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/hair/06/{index}.png" }
       },
       "avatar_face_hair_01": {
         "family": "avatar",
@@ -542,8 +556,10 @@
         "anchor": "bottom-center",
         "slot": "facial-hair",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "Stubble"
+        "art_status": "generated",
+        "alt": "Stubble",
+        "path": "/assets/avatar/manager-v2/face/01/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/face/01/{index}.png" }
       },
       "avatar_face_hair_02": {
         "family": "avatar",
@@ -551,8 +567,10 @@
         "anchor": "bottom-center",
         "slot": "facial-hair",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "Moustache"
+        "art_status": "generated",
+        "alt": "Moustache",
+        "path": "/assets/avatar/manager-v2/face/02/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/face/02/{index}.png" }
       },
       "avatar_face_hair_03": {
         "family": "avatar",
@@ -560,8 +578,10 @@
         "anchor": "bottom-center",
         "slot": "facial-hair",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "Goatee"
+        "art_status": "generated",
+        "alt": "Goatee",
+        "path": "/assets/avatar/manager-v2/face/03/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/face/03/{index}.png" }
       },
       "avatar_face_hair_04": {
         "family": "avatar",
@@ -569,26 +589,32 @@
         "anchor": "bottom-center",
         "slot": "facial-hair",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "Full beard"
+        "art_status": "generated",
+        "alt": "Full beard",
+        "path": "/assets/avatar/manager-v2/face/04/0.png",
+        "variants": { "paint": "hair", "pathTemplate": "/assets/avatar/manager-v2/face/04/{index}.png" }
       },
       "avatar_body_starter_02": {
         "family": "avatar",
         "canvas": "112x168",
         "batch": "B2",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "slot": "top",
         "alt": "Hoodie",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/avatar/manager-v2/top/02/0.png",
+        "variants": { "paint": "top", "pathTemplate": "/assets/avatar/manager-v2/top/02/{index}.png" }
       },
       "avatar_body_starter_03": {
         "family": "avatar",
         "canvas": "112x168",
         "batch": "B2",
-        "art_status": "placeholder",
+        "art_status": "generated",
         "slot": "top",
         "alt": "Button-up shirt",
-        "anchor": "bottom-center"
+        "anchor": "bottom-center",
+        "path": "/assets/avatar/manager-v2/top/03/0.png",
+        "variants": { "paint": "top", "pathTemplate": "/assets/avatar/manager-v2/top/03/{index}.png" }
       },
       "avatar_body_starter_04": {
         "family": "avatar",
@@ -596,8 +622,10 @@
         "anchor": "bottom-center",
         "slot": "top",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "T-shirt"
+        "art_status": "generated",
+        "alt": "T-shirt",
+        "path": "/assets/avatar/manager-v2/top/04/0.png",
+        "variants": { "paint": "top", "pathTemplate": "/assets/avatar/manager-v2/top/04/{index}.png" }
       },
       "avatar_body_starter_05": {
         "family": "avatar",
@@ -605,8 +633,10 @@
         "anchor": "bottom-center",
         "slot": "top",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "Football jersey"
+        "art_status": "generated",
+        "alt": "Football jersey",
+        "path": "/assets/avatar/manager-v2/top/05/0.png",
+        "variants": { "paint": "top", "pathTemplate": "/assets/avatar/manager-v2/top/05/{index}.png" }
       },
       "avatar_body_starter_06": {
         "family": "avatar",
@@ -614,8 +644,10 @@
         "anchor": "bottom-center",
         "slot": "top",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "Flannel shirt"
+        "art_status": "generated",
+        "alt": "Flannel shirt",
+        "path": "/assets/avatar/manager-v2/top/06/0.png",
+        "variants": { "paint": "top", "pathTemplate": "/assets/avatar/manager-v2/top/06/{index}.png" }
       },
       "avatar_body_starter_07": {
         "family": "avatar",
@@ -623,8 +655,10 @@
         "anchor": "bottom-center",
         "slot": "top",
         "batch": "B2",
-        "art_status": "placeholder",
-        "alt": "Crew-neck sweater"
+        "art_status": "generated",
+        "alt": "Crew-neck sweater",
+        "path": "/assets/avatar/manager-v2/top/07/0.png",
+        "variants": { "paint": "top", "pathTemplate": "/assets/avatar/manager-v2/top/07/{index}.png" }
       }
     },
     "_wearables_B2": {

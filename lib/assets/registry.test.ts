@@ -75,6 +75,22 @@ describe('buildRegistry — parsing', () => {
     expect(reg.get('surf')?.safeArea).toEqual([8, 12, 80, 40]);
   });
 
+  it('parses a paint-indexed variant template and refuses malformed ones', () => {
+    const rich = {
+      ...validRecord,
+      family: 'avatar',
+      path: '/assets/avatar/base.png',
+      art_status: 'generated',
+      variants: { paint: 'skin', pathTemplate: '/assets/avatar/manager/{index}.png' },
+    };
+    expect(buildRegistry(inventory({ _g: { alpha: rich } })).get('alpha')?.variants).toEqual(
+      rich.variants,
+    );
+
+    const bad = { ...rich, variants: { paint: 'face', pathTemplate: '/no-token.png' } };
+    expect(() => buildRegistry(inventory({ _g: { alpha: bad } }))).toThrow(/variants require paint/);
+  });
+
   it('reads the provisional zone-canvas flag', () => {
     const reg = buildRegistry(
       inventory({ _g: { alpha: validRecord } }, { provisional: { zoneCanvas: '320x200', settlesAt: 'B0' } }),
@@ -219,6 +235,20 @@ describe('the committed inventory', () => {
         existsSync(path.join(process.cwd(), 'public', record.path ?? '')),
         `${record.slug} declares ${record.path ?? 'null'}, which does not exist`,
       ).toBe(true);
+    }
+  });
+
+  it('has every painted starter-raster variant on disk', () => {
+    for (const record of assetRegistry.all()) {
+      if (record.variants === undefined) continue;
+      const count = record.variants.paint === 'skin' ? 4 : 8;
+      for (let index = 0; index < count; index += 1) {
+        const artPath = record.variants.pathTemplate.replace('{index}', String(index));
+        expect(
+          existsSync(path.join(process.cwd(), 'public', artPath)),
+          `${record.slug} is missing painted variant ${artPath}`,
+        ).toBe(true);
+      }
     }
   });
 
