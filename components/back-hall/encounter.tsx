@@ -31,7 +31,19 @@ export function BackHallEncounter({
         <section
           aria-live="polite"
           data-back-hall-dialogue="true"
-          className="pixel-edge absolute bottom-[7%] left-[6%] z-40 w-[88%] border-[3px] border-ink-900 bg-paper-mid px-3 py-2 text-ink-900 shadow-[4px_4px_0_#5b2b1b]"
+          /*
+           * This is a viewport panel, not an object painted onto the hall.
+           *
+           * The pocket rail is intentionally present on every playable room,
+           * so anchoring a dialogue box to the bottom seven percent of a tall
+           * scene meant the rail could cover its last lines on iPhone Safari.
+           * The parlor's Tony line already has a shared lane above that rail;
+           * visitors use the same lane rather than creating a second, slightly
+           * wrong bottom measurement. `max-h` leaves a long taunt readable and
+           * scrollable rather than squeezing the type into a tiny web-card.
+           */
+          className="pixel-edge fixed inset-x-3 z-40 mx-auto max-h-[min(13rem,calc(100dvh-var(--pocket-nav-panel-lane)-2rem))] w-auto max-w-[24rem] overflow-y-auto border-[3px] border-ink-900 bg-paper-mid px-3 py-2 text-ink-900 shadow-[4px_4px_0_#5b2b1b]"
+          style={{ bottom: 'var(--pocket-nav-panel-lane)' }}
         >
           <div className="mb-1 flex items-center justify-between border-b-2 border-ink-300 pb-1">
             <span className="font-display text-role-label text-ink-700">{name}</span>
